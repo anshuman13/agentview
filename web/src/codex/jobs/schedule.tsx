@@ -46,7 +46,15 @@ export const tasksOf = (items: ItemRow[], j: Job) => items
   .filter((i) => !i.deleted && i.profile === j.profile && i.source === 'job' && i.people === j.name)
   .sort((a, b) => Number(a.status === 'done') - Number(b.status === 'done') || madeAt(b) - madeAt(a));
 
-export const queued = (j: Job, runs: Run[], now: number) => j.next_run_at != null && j.next_run_at <= now && !runsOf(runs, j).some((r) => r.status === 'running');
+// The fields a name and prompt edit changes: a blank name saves as "Untitled job", a blank prompt stays blank.
+export function jobEdits(j: Pick<Job, 'name' | 'prompt'>, name: string, prompt: string) {
+  const patch: { name?: string; prompt?: string } = {};
+  if (name !== (j.name ?? '')) patch.name = name.trim() || 'Untitled job';
+  if (prompt !== (j.prompt ?? '')) patch.prompt = prompt;
+  return patch;
+}
+
+export const queued =(j: Job, runs: Run[], now: number) => j.next_run_at != null && j.next_run_at <= now && !runsOf(runs, j).some((r) => r.status === 'running');
 
 // Until when the hub holds the job's runs for its profile's usage limit (the `jobs:<profile>` pause), or null.
 export const heldUntil = (j: Job, paused: Paused[], now: number) => paused.find((p) => p.scan === `jobs:${j.profile}` && p.until > now)?.until ?? null;

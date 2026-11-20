@@ -51,6 +51,7 @@ class TaskActions(private val store: CodexStore, private val snack: (String, (()
     }
 
     fun reopen(r: Row) = change(r, mapOf("status" to "open"), "Moved back to Today")
+    fun logTime(r: Row, minutes: Long) = change(r, mapOf("spent" to (r.long("spent") ?: 0L) + minutes), "Logged ${minutesText(minutes)}")
     fun snooze(r: Row, at: Long) = change(r, mapOf("at" to at) + unrollFor(at, now()), "Snoozed to ${whenText(at, now())}")
     fun tomorrow(r: Row) { val at = nextNine(now(), r.profile); change(r, mapOf("at" to at, "rolls" to null, "rolled_from" to null), "Moved to ${whenText(at, now())}") }
     fun snoozeLater(r: Row) = snooze(r, snoozeLaterAt(r.at, now(), r.profile))

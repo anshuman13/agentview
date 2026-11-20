@@ -156,6 +156,13 @@ fun EditorSheet(row: Row, items: List<Row>, now: Long, actions: TaskActions, rai
                     }
                 }
             }
+            if (row.status == "open" || row.status == "done") {
+                val spent = row.long("spent") ?: 0L
+                FieldLabel(if (spent > 0) "Time spent · ${minutesText(spent)}" else "Time spent")
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
+                    listOf(15L, 30L, 60L).forEach { n -> Chip("+${minutesText(n)}", { actions.logTime(row, n) }) }
+                }
+            }
             if (raiseWith.isNotEmpty()) {
                 FieldLabel("Raise next time")
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(Tokens.sp4), verticalArrangement = Arrangement.spacedBy(Tokens.sp4)) {

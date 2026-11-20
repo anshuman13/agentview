@@ -121,6 +121,7 @@ import no.pradhan.agentview.nativeapp.net.modeSteps
 import no.pradhan.agentview.nativeapp.net.providerMark
 import no.pradhan.agentview.nativeapp.net.providerModes
 import no.pradhan.agentview.nativeapp.codex.jobs.heldUntil
+import no.pradhan.agentview.nativeapp.codex.jobs.jobEdits
 import no.pradhan.agentview.nativeapp.codex.jobs.money
 import no.pradhan.agentview.nativeapp.codex.jobs.tasksOf
 import no.pradhan.agentview.nativeapp.codex.meetings.actionCount
@@ -528,6 +529,14 @@ class SharedCasesTest {
             val paused = c.getValue("paused").jsonArray.map { it.jsonObject }.map { SyncPaused(it.str("scan"), it.getValue("until").jsonPrimitive.long) }
             val job = Row("jobs", "j", c.getValue("job").jsonObject.str("profile"))
             assertEquals(c.str("name"), c.prim("expected")?.long, heldUntil(job, paused, c.getValue("now").jsonPrimitive.long))
+        }
+    }
+
+    @Test fun jobEdit() {
+        for (c in cases("job-edit")) {
+            val job = Row("jobs", "j", "work", f = c.getValue("job").jsonObject)
+            val expected = c.getValue("expected").jsonObject.mapValues { it.value.jsonPrimitive.content }
+            assertEquals(c.str("name"), expected, jobEdits(job, c.str("name_in"), c.str("prompt_in")))
         }
     }
 

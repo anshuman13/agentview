@@ -1,7 +1,12 @@
 package no.pradhan.agentview.nativeapp.codex.jobs
 
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row as LayoutRow
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.Text
@@ -12,6 +17,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalClipboardManager
@@ -36,6 +42,7 @@ import no.pradhan.agentview.nativeapp.ui.ButtonSize
 import no.pradhan.agentview.nativeapp.ui.ButtonVariant
 import no.pradhan.agentview.nativeapp.ui.Chevron
 import no.pradhan.agentview.nativeapp.ui.EmptyState
+import no.pradhan.agentview.nativeapp.ui.FieldLabel
 import no.pradhan.agentview.nativeapp.ui.Group
 import no.pradhan.agentview.nativeapp.ui.Hairline
 import no.pradhan.agentview.nativeapp.ui.ListRow
@@ -44,6 +51,7 @@ import no.pradhan.agentview.nativeapp.ui.MenuSeparator
 import no.pradhan.agentview.nativeapp.ui.MoreButton
 import no.pradhan.agentview.nativeapp.ui.SectionHeader
 import no.pradhan.agentview.nativeapp.ui.Sheet
+import no.pradhan.agentview.nativeapp.ui.TextField
 import no.pradhan.agentview.nativeapp.ui.Toggle
 import no.pradhan.agentview.nativeapp.ui.Tokens
 import no.pradhan.agentview.nativeapp.ui.Type
@@ -66,8 +74,31 @@ private fun runJobNow(hub: Hub, actions: TaskActions, j: Row) {
 private fun deleteJob(actions: TaskActions, j: Row) = actions.change(j, mapOf("deleted" to true), "Deleted ${j.str("name")?.ifEmpty { null } ?: "job"}")
 
 @Composable
-private fun JobMenu(hub: Hub, actions: TaskActions, j: Row, canRun: Boolean, close: () -> Unit) {
+private fun JobEditSheet(actions: TaskActions, j: Row, onDismiss: () -> Unit) {
+    var name by remember(j.key) { mutableStateOf(j.str("name") ?: "") }
+    var prompt by remember(j.key) { mutableStateOf(j.str("prompt") ?: "") }
+    Sheet(onDismiss, "Edit job") {
+        Column(Modifier.imePadding().padding(vertical = Tokens.sp4), verticalArrangement = Arrangement.spacedBy(Tokens.sp6)) {
+            FieldLabel("Name")
+            TextField(name, { name = it }, placeholder = "Job name", singleLine = true)
+            FieldLabel("Prompt")
+            TextField(prompt, { prompt = it }, placeholder = "What should it do?", minLines = 4)
+            LayoutRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Tokens.sp4, Alignment.End)) {
+                Button("Cancel", onDismiss, variant = ButtonVariant.Plain)
+                Button("Save", {
+                    val patch = jobEdits(j, name, prompt)
+                    if (patch.isNotEmpty()) actions.change(j, patch, "Job updated")
+                    onDismiss()
+                }, variant = ButtonVariant.Filled)
+            }
+        }
+    }
+}
+
+@Composable
+private fun JobMenu(hub: Hub, actions: TaskActions, j: Row, canRun: Boolean, close: () -> Unit, onEdit: (() -> Unit)? = null) {
     val on = isEnabled(j)
+    if (onEdit != null) MenuItem("Edit", "edit", { close(); onEdit() })
     MenuItem("Run now", "play", { close(); runJobNow(hub, actions, j) }, enabled = canRun)
     MenuItem(if (on) "Disable" else "Enable", if (on) "circle-slash" else "play", { close(); toggleJob(hub, j, !on) })
     MenuSeparator()
@@ -118,6 +149,7 @@ fun JobPageView(hub: Hub, st: CodexState, job: Row, now: Long, actions: TaskActi
     val state = jobState(job, runs, now)
     var runsOpen by rememberSaveable(job.key) { mutableStateOf(false) }
     var allTasks by rememberSaveable(job.key) { mutableStateOf(false) }
+    var editing by remember(job.key) { mutableStateOf(false) }
     val tools = job.str("tools")?.takeIf { it.isNotBlank() }
     var servers by remember { mutableStateOf<List<String>>(emptyList()) }
     LaunchedEffect(tools) { if (tools != null) runCatching { servers = hub.mcpProbe(false).map { it.name } } }
@@ -127,11 +159,11 @@ fun JobPageView(hub: Hub, st: CodexState, job: Row, now: Long, actions: TaskActi
             SectionHeader("${profileLabel(job.profile)} account", action = {
                 if (state != null) StateBadge(state)
                 Button("Run now", { runJobNow(hub, actions, job) }, variant = ButtonVariant.Filled, size = ButtonSize.Sm, icon = "play", enabled = canRunNow(job, runs, now))
-                MoreButton { close -> JobMenu(hub, actions, job, canRunNow(job, runs, now), close) }
+                MoreButton { close -> JobMenu(hub, actions, job, canRunNow(job, runs, now), close, onEdit = { editing = true }) }
             })
         }
         item { SectionHeader("Prompt") }
-        item { Group { Text(job.str("prompt")?.ifEmpty { null } ?: "No prompt", Modifier.padding(horizontal = Tokens.listPad, vertical = Tokens.sp5), style = Type.body, color = av.fg) } }
+        item { Group { Text(job.str("prompt")?.ifEmpty { null } ?: "No prompt", Modifier.fillMaxWidth().clickable { editing = true }.padding(horizontal = Tokens.listPad, vertical = Tokens.sp5), style = Type.body, color = av.fg) } }
         item {
             Group(Modifier.padding(top = Tokens.sp4)) {
                 ListRow("When", jobMeta(job, runs, st.paused, now)); Hairline()
@@ -157,6 +189,7 @@ fun JobPageView(hub: Hub, st: CodexState, job: Row, now: Long, actions: TaskActi
         }
         item { Spacer(Modifier.padding(bottom = Tokens.sp16)) }
     }
+    if (editing) JobEditSheet(actions, job) { editing = false }
     if (runsOpen) RunsSheet(runs, now, { hub.notice.value = it }) { runsOpen = false }
 }
 

@@ -43,7 +43,7 @@ import { setSystemTime } from '../../testing';
 import { guessProfile } from './codex/data/ask/ask';
 import type { Profile } from './codex/data/sync';
 import { rememberChanges, type Fact, type Job, type Meeting } from './codex/data/wiki/wiki';
-import { heldUntil, tasksOf } from './codex/jobs/schedule';
+import { heldUntil, jobEdits, tasksOf } from './codex/jobs/schedule';
 import type { ItemRow } from './codex/data/sync';
 import { followUpText, hasContent, toMarkdown } from './codex/data/meetings/meetingMarkdown';
 import { actionCount, displayName, filterMeetings, groupMeetings, inSeries, isEvent, meetingState, sameName, seriesTitle, type MeetingChip } from './codex/data/meetings/meetings';
@@ -232,6 +232,10 @@ describe('cases shared with the Android app', () => {
 
   for (const c of cases<{ name: string; job: { profile: Profile }; paused: { scan: string; until: number }[]; now: number; expected: number | null }>('job-held')) {
     it(`heldUntil: ${c.name}`, () => expect(heldUntil(c.job as Job, c.paused.map((p) => ({ ...p, reason: 'Claude usage limit' })), c.now)).toBe(c.expected));
+  }
+
+  for (const c of cases<{ name: string; job: Pick<Job, 'name' | 'prompt'>; name_in: string; prompt_in: string; expected: object }>('job-edit')) {
+    it(`jobEdits: ${c.name}`, () => expect(jobEdits(c.job, c.name_in, c.prompt_in)).toEqual(c.expected));
   }
 
   for (const c of cases<{ name: string; id: string; people: string; links: string | null; expected: boolean }>('event-rule')) {

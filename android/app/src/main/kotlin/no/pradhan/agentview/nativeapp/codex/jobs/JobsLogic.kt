@@ -79,6 +79,12 @@ fun nextText(t: Long, now: Long): String {
     return "$day ${clock(t)}"
 }
 
+// The fields a name and prompt edit changes: a blank name saves as "Untitled job", a blank prompt stays blank.
+fun jobEdits(j: Row, name: String, prompt: String): Map<String, Any?> = buildMap {
+    if (name != (j.str("name") ?: "")) put("name", name.trim().ifEmpty { "Untitled job" })
+    if (prompt != (j.str("prompt") ?: "")) put("prompt", prompt)
+}
+
 // Until when the hub holds the job's runs for its profile's usage limit (the `jobs:<profile>` pause), or null.
 fun heldUntil(j: Row, paused: List<SyncPaused>, now: Long) = paused.firstOrNull { it.scan == "jobs:${j.profile}" && it.until > now }?.until
 
