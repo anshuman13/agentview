@@ -245,7 +245,7 @@ private fun AppNavHost(hub: Hub, nav: NavHostController, twoPane: Boolean, modif
     val openAgent = { id: String -> nav.navigate("agent/${Uri.encode(id)}") }
     val openWork = { id: String -> nav.navigate("work/${Uri.encode(id)}") }
     NavHost(nav, startDestination = Tab.Codex.route, modifier = modifier) {
-        composable(Tab.Codex.route) { ReadingWidth(Tab.Codex.route) { CodexScreen(hub) } }
+        composable(Tab.Codex.route) { CodexScreen(hub) }
         composable(Tab.Chat.route) { if (twoPane) TwoPane(hub, openAgent, openWork) else ChatScreen(hub, openAgent, openWork) }
         composable(Tab.Sessions.route) { if (twoPane) TwoPane(hub, openAgent, openWork) else SessionsScreen(hub, onOpen = { nav.goTab(Tab.Chat.route) }) }
         composable("agent/{id}", arguments = listOf(navArgument("id") { type = NavType.StringType })) { e ->

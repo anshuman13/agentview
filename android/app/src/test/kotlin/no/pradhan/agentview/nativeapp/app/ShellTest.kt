@@ -35,9 +35,9 @@ class ShellTest {
     }
 
     @Test fun listPagesKeepAReadingWidth() {
-        val capped = setOf("assistant", "settings", "mcp", "github", "observe", "deploy", "advisors")
+        val capped = setOf("settings", "mcp", "github", "observe", "deploy", "advisors")
         val routes = Tab.entries.map { it.route } + (MORE_TOOLS + MORE_PAGES).map { it.route }
-        assertEquals(capped + setOf("chat", "sessions", "files", "browser", "terminal", "changes", "sketches"), routes.toSet())
+        assertEquals(capped + setOf("assistant", "chat", "sessions", "files", "browser", "terminal", "changes", "sketches"), routes.toSet())
         routes.forEach { assertEquals(it, it in capped, cappedRoute(it)) }
         listOf("agent", "work", "origin", "unknown").forEach { assertEquals(it, false, cappedRoute(it)) }
     }

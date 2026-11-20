@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'bun:test';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { stubGlobal } from '../../../testing';
 
-const store = { runs: [] as unknown[], live: [] as unknown[], pending: [] as unknown[], session: { id: 'c1', cwd: '/w' }, recentFiles: [] as string[], ui: { sketch: null } };
+const store = { runs: [] as unknown[], live: [] as unknown[], pending: [] as unknown[], events: [] as unknown[], session: { id: 'c1', cwd: '/w' }, recentFiles: [] as string[], ui: { sketch: null } };
 vi.mock('../codex/data', () => ({ useAssistantStore: vi.fn(), assistantStore: vi.fn(), useAssistant: vi.fn(), useAssistantData: () => ({ jobs: [], runs: [] }), useAssistantTable: vi.fn() }));
 
 const doc = { documentElement: { dataset: {}, style: {} }, visibilityState: 'visible', addEventListener: () => {}, removeEventListener: () => {} };
@@ -15,7 +15,7 @@ stubGlobal('location', { search: '', hash: '' });
 const realStore = await import('./store');
 vi.mock('./store', () => ({ ...realStore, useStore: (select: (s: unknown) => unknown) => select(store) }));
 
-const { LoopCard } = await import('../chat/cards/LoopCard');
+const { RailHead } = await import('../sessions/brief/RailHead');
 const { GoalsBlock } = await import('../codex/overview/GoalsBlock');
 const { GoalField } = await import('../codex/tasks/Goals');
 const { weekStart } = await import('../codex/data/dates');
@@ -23,9 +23,9 @@ const { PrivacyGroup } = await import('./shell/Settings');
 const { SketchFrame, SketchList, Sketches } = await import('../workspace/Sketches');
 
 describe('page smoke', () => {
-  it('the loop card of a job run waiting for review is its review card', () => {
+  it('the rail head of a job run waiting for review is its review card', () => {
     store.runs = [{ id: 'r1', kind: 'job', sessionId: 's', chatId: 'c1', title: 'Fix the parser', what: '', startedAt: 1, endedAt: null, state: 'paused', why: '', round: 1, max: 1, nextAt: null, costUsd: 0, needsYou: true, branch: 'job/fix-parser', review: 'pending', rounds: [] }];
-    const html = renderToStaticMarkup(<LoopCard />);
+    const html = renderToStaticMarkup(<RailHead />);
     expect(html).toContain('Commit, push and open a PR');
   });
 

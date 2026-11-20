@@ -24,7 +24,8 @@ val MORE_PAGES = listOf(
     MoreItem("settings", "Settings", "settings-gear"),
 )
 
-private val CAPPED_ROUTES = setOf(Tab.Codex.route, "settings", "mcp", "github", "observe", "deploy", "advisors")
+// The pages the shell keeps to a reading width; Codex caps its own content so its Add task button stays at the screen edge.
+private val CAPPED_ROUTES = setOf("settings", "mcp", "github", "observe", "deploy", "advisors")
 
 fun cappedRoute(route: String) = route in CAPPED_ROUTES
 

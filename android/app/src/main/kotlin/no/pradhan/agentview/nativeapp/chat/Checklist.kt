@@ -45,7 +45,7 @@ fun visibleChecklist(items: List<ChecklistItem>?, running: Boolean) = items?.tak
 
 private val cardChoices = mutableStateMapOf<String, Boolean>()
 
-// Web chat/cards/useCardOpen.ts: a card is closed until tapped, opens itself while it needs you and then stays as the last tap left it; kept in memory per chat and card.
+// A card is closed until tapped, opens itself while it needs you and then stays as the last tap left it; kept in memory per chat and card.
 @Composable
 fun rememberCardOpen(key: String, needsYou: Boolean): Pair<Boolean, () -> Unit> {
     LaunchedEffect(key, needsYou) {

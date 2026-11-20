@@ -5,7 +5,7 @@ export type BadgeSpec = {
 };
 
 // The status each label may replace the word on.
-const LABEL_ON: Record<NonNullable<BadgeSpec['label']>, BadgeSpec['status']> = { 'Needs you': 'waiting', 'Near cap': 'waiting', Live: 'running', Connected: 'done', Conflicts: 'waiting', 'In wiki': 'skipped', Stale: 'skipped' };
+export const LABEL_ON: Record<NonNullable<BadgeSpec['label']>, BadgeSpec['status']> = { 'Needs you': 'waiting', 'Near cap': 'waiting', Live: 'running', Connected: 'done', Conflicts: 'waiting', 'In wiki': 'skipped', Stale: 'skipped' };
 
 export function Badge({ status, label, reason, count }: BadgeSpec & { count?: number }) {
   const word = label && LABEL_ON[label] === status ? label : status[0].toUpperCase() + status.slice(1);

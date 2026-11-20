@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -171,7 +172,7 @@ fun CodexScreen(hub: Hub) {
     val refresh = { scope.launch { refreshing = true; hub.codex.sync(); refreshing = false }; Unit }
 
     Box(Modifier.fillMaxSize().background(av.groupPage)) {
-        Column(Modifier.fillMaxSize()) {
+        Column(Modifier.align(Alignment.TopCenter).widthIn(max = Tokens.pageMax).fillMaxSize()) {
             CodexHeader(hub, st, nav, profile, filterKey, now)
             if (st.reconnecting) Group { ListRow("Reconnecting to the hub…", syncedAt(st.lastSync, now), muted = true) }
             else st.error?.let { error -> Group { ListRow(error, syncedAt(st.lastSync, now), trailing = { Button("Retry", { refresh() }, size = ButtonSize.Sm) }) } }

@@ -11,7 +11,7 @@ import { Sheet } from '../../ui/Sheet';
 import { fileRequest } from '../../workspace/fileApi';
 import { showSnack } from '../../codex/view';
 import { useAssistantTable } from '../../codex/data';
-import { Badge } from '../../ui/Badge';
+import { Badge, LABEL_ON } from '../../ui/Badge';
 import { profileOfPath } from '../../../../shared/workspace';
 import { Markdown } from '../Chat';
 import { fetchMemory, saveMemory } from '../chatApi';
@@ -19,8 +19,7 @@ import { moveMemoryToWiki } from '../chatActions';
 import { isMemoryIndex } from '../transcript/workFold';
 import { markLine, memoryMark, type MemoryFile, type MemoryMark } from './memoryLogic';
 
-const MARK_BADGE = { Conflicts: 'waiting', 'In wiki': 'skipped', Stale: 'skipped' } as const;
-const markBadge = (m: MemoryMark | null) => (m ? <Badge status={MARK_BADGE[m.mark]} label={m.mark} /> : null);
+const markBadge = (m: MemoryMark | null) => (m ? <Badge status={LABEL_ON[m.mark]} label={m.mark} /> : null);
 
 // Where a memory file comes from; android MemoryUi.kt memoryWhere says the same.
 export function memoryWhere(f: Pick<MemoryFile, 'path'>, cwd: string) {

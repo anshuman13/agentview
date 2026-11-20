@@ -134,8 +134,7 @@ fun Hub.moveMemoryToWiki(file: MemoryFile, cwd: String, restored: () -> Unit, do
     writes.run(MOVE_FAILED, { removed = runCatching { protocolJson.parseToJsonElement(api.post("/api/memory/remove", body, pageChat)).jsonObject }.getOrElse { throw ApiError(MOVE_FAILED) } }) { ok ->
         if (!ok) claim.undo()
         else undoable.tryEmit(Undoable(if (claim.replaced) "Moved to wiki, replacing a similar claim" else "Moved to wiki") {
-            claim.undo()
-            write("/api/memory/restore", JsonObject(removed + ("path" to JsonPrimitive(file.path))).toString(), "Could not restore the memory") { if (it) restored() }
+            write("/api/memory/restore", JsonObject(removed + ("path" to JsonPrimitive(file.path))).toString(), "Could not restore the memory") { if (it) { claim.undo(); restored() } }
         })
         done(ok)
     }

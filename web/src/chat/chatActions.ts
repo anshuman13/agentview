@@ -84,8 +84,7 @@ export async function moveMemoryToWiki(file: MemoryFile, restored: () => void) {
     return false;
   }
   showSnack(claim.replaced ? 'Moved to wiki, replacing a similar claim' : 'Moved to wiki', () => {
-    claim.undo();
-    restoreMemory(file.path, removed).then(restored, () => showSnack('Could not restore the memory'));
+    restoreMemory(file.path, removed).then(() => { claim.undo(); restored(); }, () => showSnack('Could not restore the memory'));
   });
   return true;
 }

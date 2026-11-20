@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { appSettings } from '../app/appSettings';
-import { knownModels, recentInRepo, startChat, startModel } from '../app/newChat';
+import { knownModels, recentInRepo, startChat, startModel, startProvider } from '../app/newChat';
 import { useStore } from '../app/store';
 import { Button, Chip } from '../ui/Button';
 import { Icon } from '../ui/Icon';
@@ -22,8 +22,8 @@ export function NewChatSheet({ repo: fixed, onClose }: { repo?: string; onClose:
   const { folders, chats } = useWorkspace(null);
   const dirs = useMemo(() => dirChoices(folders, cwd), [folders, cwd]);
   const [start, setStart] = useState(START_MODES[0]);
-  const [provider, setProvider] = useState<Provider>(defaultProvider);
-  const [model, setModel] = useState(() => startModel(defaultProvider));
+  const [provider, setProvider] = useState<Provider>(() => startProvider(defaultProvider, providers));
+  const [model, setModel] = useState(() => startModel(provider));
   const [picked, setPicked] = useState<string>();
   const repo = fixed ?? picked ?? dirs[0]?.cwd;
   const models = newestModels(knownModels(provider), model);

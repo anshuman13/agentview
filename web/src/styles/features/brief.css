@@ -22,6 +22,9 @@
 .brief-rail .page-work { flex: 1 1 auto; background: none; }
 .rail-s { flex: none; padding: var(--sp-2) var(--sp-8) 0; border: 0; background: none; font: inherit; font-size: var(--fs-sm); color: var(--fg-muted); text-align: left; }
 button.rail-s { cursor: pointer; }
+.rail-run { flex: none; display: flex; flex-direction: column; margin-top: var(--sp-2); }
+.rail-run > .ov-more { margin: 0 var(--list-pad); }
+.brief-sheet .rail-run { margin: var(--sp-2) calc(-1 * var(--sp-6)) 0; }
 :is(.brief-rail, .brief-sheet) .ag.stack { flex: none; margin: var(--sp-4) 0 0; padding-top: var(--sp-2); border-top: 1px solid var(--border); }
 :is(.brief-rail, .brief-sheet) .ag.stack .as-group { border: 0; border-radius: 0; background: none; }
 :is(.brief-rail, .brief-sheet) .ag.stack .as-group + .ui-section { margin-top: var(--sp-2); border-top: 1px solid var(--border); }

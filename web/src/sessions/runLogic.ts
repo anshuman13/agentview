@@ -45,18 +45,10 @@ export function loopNow(run: ChatRun, now?: LiveNow): LoopNow {
   return { title: firstRound(run.nextAt), at: null, source: 'none' };
 }
 
-// How long an agent has run, as "12 min" or "1 h 5 min".
-export function agentAge(startedAt: number, now: number) {
-  const min = Math.max(1, Math.floor((now - startedAt) / 60_000));
-  return min < 60 ? `${min} min` : `${Math.floor(min / 60)} h ${min % 60} min`;
-}
-
 export const stoppedText = (run: ChatRun, running: boolean) => `${KIND[run.kind]} stopped${running && run.round > 0 && (run.kind === 'goal' || run.kind === 'loop') ? ` · round ${run.round} was running` : ''}`;
 
 export const OUTCOME_DOT: Record<RoundOutcome, string> = { blocked: 'warn', question: 'warn', failed: 'bad', done: 'ok', quiet: '', progress: '' };
 
-
-export const loopOpenByDefault = (run: ChatRun, working: boolean, waiting: boolean) => working || waiting || run.needsYou;
 
 // What a waiting loop or goal asked in its last round: the row's meta line carries it after the age.
 export const askLine = (run: LiveChat['run']) => (run?.needsYou && (run.outcome === 'question' || run.outcome === 'blocked') ? run.line : undefined);

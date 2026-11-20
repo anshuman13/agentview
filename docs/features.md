@@ -526,7 +526,8 @@ its one-line summary and its cost. Loop and goal rounds tell Claude to answer fi
 transcript, the chat row and push bodies. A round without the line counts as progress. A round pushes "Loop in <repo>: <outcome>" ("Goal in <repo>: <outcome>" for a goal; the body is the first sentence of the ROUND line) only for done, blocked, question or failed, and a run that ends pushes its reason unless you
 stopped it (a goal reads "Goal met in <repo>", "Goal stopped in <repo>" or "Goal not met in <repo>"). A usage limit or a pending approval marks the run paused until the next round or the answer.
 
-The loop card sits above the composer while the chat has an active run, as a box that opens by default while the loop is working or needs you, otherwise starts collapsed, and collapses to its header (the state line with Pause and More): a state line ("Loop · round 4 · next 14:20",
+On the web a chat's run heads its Agents rail (`RailHead`): the state line with "next HH:MM", which opens the goal detail when the run has one, Pause or Resume, Stop and, on tries, Open board, then the cap row and the Rounds row described below.
+On Android the loop card sits above the composer while the chat has an active run, as a box that opens by default while the loop is working or needs you, otherwise starts collapsed, and collapses to its header (the state line with Pause and More): a state line ("Loop · round 4 · next 14:20",
 "Paused · usage limit until 18:00", "Goal · round 3 of 20"), then a Now row with what is
 happening: the agent's latest status (with "Next: ..." and the steps left) or the last round ("Round 4 · 02:10 · progress: merged X", "nothing to do" for a quiet round, "First round 02:00" before the first), whichever is newer, with a
 running dot while a turn or an agent runs. One running agent gets a row (slug or description, type and minutes) that

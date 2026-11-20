@@ -27,7 +27,10 @@ export const startModel = (provider?: Provider) => {
   return knownModels(provider).some((m) => m.value === last) ? last ?? undefined : undefined;
 };
 
-type NewSession = Omit<Extract<ClientMessage, { type: 'new_session' }>, 'type'>;
+// The provider a new chat starts on: the default while it is enabled, else the first enabled one (Android NewChatSheet).
+export const startProvider = (fallback: Provider, options: ProviderOption[]) => (options.find((o) => o.id === fallback && o.enabled) ?? options.find((o) => o.enabled))?.id ?? fallback;
+
+type NewSession =Omit<Extract<ClientMessage, { type: 'new_session' }>, 'type'>;
 
 export function newChat(msg: NewSession = {}) {
   if (msg.model) rememberModel(msg.provider, msg.model);
@@ -36,23 +39,25 @@ export function newChat(msg: NewSession = {}) {
   send({ type: 'new_session', ...msg, ...(model && { model }) });
 }
 
-// A chat from the New chat sheet (Android Hub.newChat): the start mode is set once the chat is in view, then Spec puts the spec prompt in the composer and the others send the first text.
+// A chat from the New chat sheet (Android Hub.newChat): the start mode is set once the new chat is in view, then Spec puts the spec prompt in the composer and the others send the first text.
+// A chat that was already open when the sheet sent its request is one the user switched to, not the new one.
 export function startChat({ text, ...msg }: NewSession, start: StartMode) {
   const { draft, first } = startTexts(start, text);
   const mode = startModeFor(start.mode, msg.provider);
   if (!mode) return newChat({ ...msg, text: first ?? undefined });
-  const from = getState().session.id;
+  const known = new Set([getState().session.id, ...getState().live.map((c) => c.id)]);
+  const timer = setTimeout(() => { stop(); notice('The chat did not open'); }, 30_000);
   newChat(msg);
   const stop = subscribe(() => {
     const now = getState().session.id;
-    if (!now || now === from) return;
+    if (!now || known.has(now)) return;
     stop();
+    clearTimeout(timer);
     send({ type: 'set_permission_mode', mode });
     // After the composer has loaded the new chat's draft, so the insert is not overwritten.
     if (draft) setTimeout(() => window.dispatchEvent(new CustomEvent('agentview:insert', { detail: { text: draft } })));
     if (first) prompt(first, () => notice('The message was not sent'));
   });
-  setTimeout(stop, 30_000);
 }
 
 // The saved chats of a repo that are not open, newest first, for the Continue section of the New chat sheet (Android recentInRepo).

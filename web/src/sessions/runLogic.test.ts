@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test';
-import { agentAge, askLine, loopNow, loopOpenByDefault, runLine, sendsAt } from './runLogic';
+import { askLine, loopNow, runLine, sendsAt } from './runLogic';
 import type { ChatRun, LiveChat } from '../../../shared/protocol';
 
 describe('runLine', () => {
@@ -39,28 +39,11 @@ describe('sendsAt', () => {
   });
 });
 
-describe('loopOpenByDefault', () => {
-  const run = (needsYou: boolean) => ({ needsYou, rounds: [] }) as unknown as ChatRun;
-  it('opens the loop card by default only when working, waiting or needing you', () => {
-    expect(loopOpenByDefault(run(true), false, false)).toBe(true);
-    expect(loopOpenByDefault(run(false), false, true)).toBe(true);
-    expect(loopOpenByDefault(run(false), true, false)).toBe(true);
-    expect(loopOpenByDefault(run(false, 'progress'), false, false)).toBe(false);
-    expect(loopOpenByDefault({ ...run(false), state: 'paused' } as ChatRun, false, false)).toBe(false);
-    expect(loopOpenByDefault({ ...run(false), state: 'done' } as ChatRun, false, false)).toBe(false);
-  });
-});
-
 describe('loopNow', () => {
   const run = (rounds: { at: number; line: string }[], startedAt = 100) => ({ startedAt, nextAt: null, rounds: rounds.map((r) => ({ n: 1, outcome: 'progress', costUsd: 0, ...r })) }) as unknown as ChatRun;
   it('takes the newer of the status and the last round, and ignores a status from before the run', () => {
     expect(loopNow(run([{ at: 200, line: 'round' }]), { text: 'Working', at: 300, next: ['a', 'b'] })).toMatchObject({ source: 'status', title: 'Working', next: 'a', stepsLeft: 2 });
     expect(loopNow(run([{ at: 400, line: 'round' }]), { text: 'Working', at: 300 })).toMatchObject({ source: 'round', title: expect.stringMatching(/^Round 1 · \d\d:\d\d · progress: round$/) });
     expect(loopNow(run([]), { text: 'Old', at: 50 })).toMatchObject({ source: 'none', title: 'First round' });
-  });
-  it('words agent ages', () => {
-    expect(agentAge(0, 5_000)).toBe('1 min');
-    expect(agentAge(0, 12 * 60_000)).toBe('12 min');
-    expect(agentAge(0, 65 * 60_000)).toBe('1 h 5 min');
   });
 });
