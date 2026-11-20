@@ -89,6 +89,20 @@ describe('planToday', () => {
     ]);
     expect(planToday(tasks, [], at(16, 30))).toEqual([]);
   });
+
+  it('leaves timed tasks where they are and keeps their span busy', () => {
+    const tasks = [
+      { title: 'Call ~1h', due: at(9), timed: true },
+      { title: 'Review', due: at(10, 30), timed: true },
+      { title: 'Write doc ~30m', due: null },
+    ];
+    const out = planToday(tasks, [], at(8, 30));
+    expect(out.map((p) => [p.task.title, p.span])).toEqual([['Write doc ~30m', [at(8, 30), at(9)]]]);
+    expect(planToday([...tasks, { title: 'Long ~2h', due: null }], [], at(8, 30)).map((p) => [p.task.title, p.span])).toEqual([
+      ['Write doc ~30m', [at(8, 30), at(9)]],
+      ['Long ~2h', [at(11), at(13)]],
+    ]);
+  });
 });
 
 describe('weekly goals', () => {

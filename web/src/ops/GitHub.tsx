@@ -270,7 +270,7 @@ function Detail({ pr, onBack }: { pr: PullRequest; onBack: () => void }) {
             </div>
             <Section label="Checks" count={d.checks.length} />
             <div className="as-group gh-group">
-              {d.checks.map((c, i) => <Row key={i} href={c.url || undefined} plain={!c.url} leading={<CheckIcon state={c.state} />} title={c.name} trailing={c.state === 'failure' && <Button size="sm" icon="sparkle" disabled={!!busy} onClick={(e) => { e.preventDefault(); e.stopPropagation(); void fix(c); }}>Fix with Claude</Button>} />)}
+              {d.checks.map((c, i) => <Row key={i} href={c.url || undefined} plain={!c.url} leading={<CheckIcon state={c.state} />} title={c.name} action={c.state === 'failure' && <Button size="sm" icon="sparkle" disabled={!!busy} onClick={() => void fix(c)}>Fix with Claude</Button>} />)}
               {!d.checks.length && <EmptyState size="sm" title="No checks" />}
             </div>
             <Section label="Reviews" count={d.reviews.length} />

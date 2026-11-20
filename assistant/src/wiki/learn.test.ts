@@ -76,6 +76,21 @@ describe('learn from chats', () => {
     expect(offered).toEqual([['p1'], [], null]);
   });
 
+  it('does not take encodings, versions or colours for tickets, and ignores assistant text', async () => {
+    const db = openDb(':memory:');
+    const offered: (unknown[] | null)[] = [];
+    const run = async (_c: Chat, _e: Chat['events'], _m: string[], pages: unknown[] | null) => {
+      offered.push(pages);
+      return { claims: [], decisions: [] };
+    };
+    const ask = (text: string, i: number, assistant = 'see OPS-2') => learnFromChat(db, chat([user(`u${i}`, 10 * i, text), { id: `a${i}`, kind: 'assistant', text: assistant, at: 10 * i + 1 }]), 100, run);
+    for (const [i, text] of ['save as UTF-8', 'use SHA-1 and ISO-8601', 'GPT-4 is slow', 'color: #3a3a3a', 'mix &#123; in'].entries()) await ask(text, i + 1);
+    expect(offered).toEqual([null, null, null, null, null]);
+    offered.length = 0;
+    for (const [i, text] of ['fix ABC-123', 'see #42', 'https://github.com/a/b/pull/9'].entries()) await ask(text, i + 10, 'ok');
+    expect(offered.map((p) => p !== null)).toEqual([true, true, true]);
+  });
+
   it('skips claims that exist in any state or look like secrets', async () => {
     const db = openDb(':memory:');
     const row = (id: string, state: string, text: string, page_id: string | null = null) => ({ table: 'facts', id, profile: 'work' as const, updated_at: 1, fields: { text, state, page_id } });

@@ -13,7 +13,7 @@ export function Row({ leading, title, meta, state, trailing, menu, lines = 2, hr
   trailing?: ReactNode;
   lines?: 1 | 2;
   onLongPress?: () => void;
-} & ({ href?: undefined; plain?: boolean; action?: ReactNode; menu?: ReactNode } | { href?: string; plain?: boolean; action?: never; menu?: never })) {
+} & ({ href?: undefined; plain?: boolean; action?: ReactNode; menu?: ReactNode } | { href?: string; plain?: boolean; action?: ReactNode; menu?: never })) {
   const [open, setOpen] = useState(false);
   const more = useRef<HTMLButtonElement>(null);
   const press = useLongPress(onLongPress ?? (menu ? () => setOpen(true) : undefined));
@@ -37,7 +37,10 @@ export function Row({ leading, title, meta, state, trailing, menu, lines = 2, hr
       {trailing && <span className="ui-row-trail">{trailing}</span>}
     </>
   );
-  if (href && !plain) return <a className={cls} href={href} target="_blank" rel="noreferrer" onMouseDown={rest.onMouseDown as React.MouseEventHandler<HTMLAnchorElement> | undefined}>{body}</a>;
+  if (href && !plain) {
+    const link = <a className={cls} href={href} target="_blank" rel="noreferrer" onMouseDown={rest.onMouseDown as React.MouseEventHandler<HTMLAnchorElement> | undefined}>{body}</a>;
+    return action ? <div className="ui-row-wrap">{link}{action}</div> : link;
+  }
   const button = plain
     ? <div className={cls} {...(rest as ComponentPropsWithoutRef<'div'>)} {...handlers}>{body}</div>
     : <button type="button" className={cls} {...rest} {...handlers}>{body}</button>;

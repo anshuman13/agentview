@@ -14,7 +14,7 @@ import { searchWiki } from './wikiSearch.js';
 const MAX_CLAIMS = 3;
 const MAX_DECISIONS = 2;
 const SECRET = /[a-z0-9]{24,}|sk-|ghp_|xox|password/i;
-const TICKET_OR_PR = /\b[A-Z][A-Z0-9]+-\d+\b|(?<![\w&])#\d+\b|github\.com\/[\w.-]+\/[\w.-]+\/pull\/\d+/;
+const TICKET_OR_PR = /\b(?!(?:UTF|SHA|ISO|AES|RSA|GPT)-)[A-Z]{2}[A-Z0-9]*-\d+\b|(?<![\w&#])#\d{1,6}\b(?![0-9a-fA-F])|github\.com\/[\w.-]+\/[\w.-]+\/pull\/\d+/;
 
 export type ChatEvent = { id: string; kind: string; text: string; at: number };
 export type Chat = { chat: string; title: string; folder?: string; profile: Profile; events: ChatEvent[] };
@@ -119,9 +119,9 @@ async function decide(c: Chat, events: ChatEvent[], memory: string[], pages: Pag
 
 // Up to 5 wiki pages the chat may belong on, or null when the chat names no ticket or pull request.
 function decisionPages(db: Database, c: Chat, events: ChatEvent[]) {
-  const text = events.map((e) => e.text).join('\n');
-  if (!TICKET_OR_PR.test(text)) return null;
-  const query = `${c.title} ${events.filter((e) => e.kind === 'user').map((e) => e.text).join(' ')}`;
+  const said = events.filter((e) => e.kind === 'user').map((e) => e.text);
+  if (!said.some((t) => TICKET_OR_PR.test(t))) return null;
+  const query = `${c.title} ${said.join(' ')}`;
   return searchWiki(db, query, c.profile).pages.slice(0, 5) as Page[];
 }
 

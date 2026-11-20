@@ -8,6 +8,8 @@ import { clock } from '../../../../shared/util';
 // Times are picked as a part of the day, not a minute.
 export const MORNING = 9;
 export const EVENING = 19;
+// True when a due time has a time of day; 09:00 sharp is how a date-only due is stored.
+export const hasTime = (at: number | null) => at != null && (new Date(at).getHours() !== MORNING || new Date(at).getMinutes() !== 0);
 const slot = (now: Date, days: number, hour: number) => new Date(now.getFullYear(), now.getMonth(), now.getDate() + days, hour).getTime();
 
 // Mirrors the hub's quiet hours (assistant/src/jobs/remind.ts): no reminders from 17:00 to 08:00.

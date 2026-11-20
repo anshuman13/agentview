@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { appendRule } from '../../../../shared/steering';
+import { appendRule, removeRule } from '../../../../shared/steering';
 import { setUi, useStore } from '../../app/store';
 import { Button } from '../../ui/Button';
 import { Icon } from '../../ui/Icon';
@@ -33,39 +33,47 @@ export async function writeRepoFile(file: string, text: string, chat?: string) {
   if (!r.ok) throw new Error(await r.text());
 }
 
-// Enter appends a bullet to the repo instruction file; Undo writes the earlier text back.
+// Appends a bullet to the instruction file and returns an undo that reads the file again and removes only that bullet.
+export async function addRepoRule(file: string, text: string, chat?: string) {
+  await writeRepoFile(file, appendRule(await readRepoFile(file, chat), text)!, chat);
+  return async () => {
+    const left = removeRule(await readRepoFile(file, chat), text);
+    if (left !== null) await writeRepoFile(file, left, chat);
+  };
+}
+
+// Enter appends a bullet to the repo instruction file; Undo removes it again.
 function AddRule({ file, onSaved }: { file: string; onSaved: () => void }) {
   const [text, setText] = useState('');
   const [note, setNote] = useState('');
-  const [before, setBefore] = useState<string | null>(null);
+  const [back, setBack] = useState<(() => Promise<void>) | null>(null);
   const add = async () => {
     if (appendRule('', text) === null) return;
     try {
-      const old = await readRepoFile(file);
-      await writeRepoFile(file, appendRule(old, text)!);
+      const remove = await addRepoRule(file, text);
+      setBack(() => remove);
       setText('');
       setNote('Rule added');
-      setBefore(old);
       onSaved();
     } catch {
       setNote('Could not save the rule. Your text is still here.');
-      setBefore(null);
+      setBack(null);
     }
   };
   const undo = async () => {
     try {
-      await writeRepoFile(file, before!);
+      await back!();
       setNote('Rule removed');
       onSaved();
     } catch {
       setNote('Could not undo the rule.');
     }
-    setBefore(null);
+    setBack(null);
   };
   return (
     <>
       <div className="ui-fields"><input value={text} placeholder="Add a rule" aria-label="Add a rule" enterKeyHint="done" onChange={(e) => setText(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && void add()} /></div>
-      {note && <div className="muted" role="status">{note}{before !== null && <Button size="sm" variant="plain" onClick={() => void undo()}>Undo</Button>}</div>}
+      {note && <div className="muted" role="status">{note}{back &&<Button size="sm" variant="plain" onClick={() => void undo()}>Undo</Button>}</div>}
     </>
   );
 }

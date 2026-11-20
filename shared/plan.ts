@@ -144,8 +144,12 @@ export function packDay<T extends { title: string | null; due: number | null; go
 }
 
 // Slots for the tasks with a "~30m" estimate, in due time order, in today's work gaps from now around busy spans.
-export const planToday = <T extends { title: string | null; due: number | null }>(tasks: T[], busy: Span[], now: number) =>
-  packDay(tasks.filter((t) => estimateMin(t.title) != null), workGaps(busy, now));
+// Tasks with a set time of day stay where they are: from their due time for their estimate or 30 minutes they are busy.
+export function planToday<T extends { title: string | null; due: number | null; timed?: boolean }>(tasks: T[], busy: Span[], now: number) {
+  const set = tasks.filter((t) => t.timed && t.due != null);
+  const held = set.map((t) => [t.due!, t.due! + taskMin(t.title) * 60_000] as Span);
+  return packDay(tasks.filter((t) => !set.includes(t) && estimateMin(t.title) != null), workGaps([...busy, ...held], now));
+}
 
 // Work gaps for each remaining workday from now through Friday, and the days left after today; null on Saturday and Sunday.
 function weekGaps(busy: Span[], now: number, startHour: number, endHour: number) {

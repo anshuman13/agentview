@@ -14,9 +14,8 @@ import { useClaimEdits } from './useClaimEdits';
 import { REVIEW, shortDate } from './shared';
 import { UNTITLED } from '../../../../shared/util';
 import { repeatedInFolder } from '../../../../shared/claimMatch';
-import { appendRule } from '../../../../shared/steering';
 import { useStore } from '../../app/store';
-import { readRepoFile, writeRepoFile } from '../../chat/cards/Memory';
+import { addRepoRule } from '../../chat/cards/Memory';
 
 // On phones the replaced claim is clamped to two lines; a tap shows all of it.
 export function Replaces({ old }: { old: Fact }) {
@@ -24,7 +23,7 @@ export function Replaces({ old }: { old: Fact }) {
   return <div className={`wk-old wk-replaces${open ? ' open' : ''}`} onClick={() => setOpen(!open)}><s>{old.text}</s><span>Replaces</span></div>;
 }
 
-function ReviewCard({ fact }: { fact: Fact }) {
+function ReviewCard({ fact, repeated }: { fact: Fact; repeated: boolean }) {
   const { store, pages, facts, meetings } = useCodex();
   const [editing, setEditing] = useState(false);
   const [text, setText] = useState(fact.text ?? '');
@@ -40,18 +39,15 @@ function ReviewCard({ fact }: { fact: Fact }) {
     : fact.added_by?.startsWith('pr:') ? sourcesOf(fact).find((s) => s.kind === 'pr')?.label ?? 'a pull request' : fromChat ? `chat ${fromChat.label || UNTITLED}` : null;
   const folder = fromChat?.folder;
   const repoChat = useStore((s) => s.live.find((c) => c.cwd === folder)?.id);
-  const repeated = useMemo(() => repeatedInFolder(facts.flatMap((f) => {
-    const dir = sourcesOf(f).find((s) => s.kind === 'chat')?.folder;
-    return dir && !f.deleted && !f.page_id && (f.state === 'proposed' || (f.state ?? 'live') === 'live') ? [{ id: f.profile + f.id, text: f.text ?? '', folder: dir }] : [];
-  })).has(fact.profile + fact.id), [facts, fact]);
+  const [added, setAdded] = useState(false);
   const review = useReview();
   const approve = () => review.approve([fact]);
   const reject = () => review.reject([fact]);
   const addRule = async () => {
     try {
-      const old = await readRepoFile('CLAUDE.md', repoChat);
-      await writeRepoFile('CLAUDE.md', appendRule(old, fact.text ?? '')!, repoChat);
-      showSnack('Added to CLAUDE.md', () => void writeRepoFile('CLAUDE.md', old, repoChat));
+      const undo = await addRepoRule('CLAUDE.md', fact.text ?? '', repoChat);
+      setAdded(true);
+      showSnack('Added to CLAUDE.md', () => { setAdded(false); void undo(); });
     } catch {
       showSnack('Could not add to CLAUDE.md');
     }
@@ -89,7 +85,7 @@ function ReviewCard({ fact }: { fact: Fact }) {
         ) : (
           <>
             <button className="wk-act" onClick={() => { setText(fact.text ?? ''); setEditing(true); }}><Icon name="edit" small /> Edit</button>
-            {repeated && repoChat && <button className="wk-act" onClick={() => void addRule()}><Icon name="add" small /> Add to CLAUDE.md</button>}
+            {repeated && repoChat && !added && <button className="wk-act" onClick={() => void addRule()}><Icon name="add" small /> Add to CLAUDE.md</button>}
             <span className="spacer" />
             <IconButton icon="close" label="Reject" className="mt-reject" onClick={reject} />
             <Button variant="primary" icon="check" className="mt-approve" onClick={approve}>Approve</Button>
@@ -186,8 +182,12 @@ function Decided({ n }: { n: number }) {
 }
 
 export function ToReview({ facts }: { facts: Fact[] }) {
-  const { pages } = useCodex();
+  const { pages, facts: everyFact } = useCodex();
   const { byPage, chats, loose } = useMemo(() => reviewGroups(pages, facts), [pages, facts]);
+  const repeated = useMemo(() => repeatedInFolder(everyFact.flatMap((f) => {
+    const dir = sourcesOf(f).find((s) => s.kind === 'chat')?.folder;
+    return dir && !f.deleted && !f.page_id && (f.state === 'proposed' || (f.state ?? 'live') === 'live') ? [{ id: f.profile + f.id, text: f.text ?? '', folder: dir }] : [];
+  })), [everyFact]);
   const [all, setAll] = useState(false);
   const order = useRef<Map<string, { n: number; page: boolean }>>(new Map());
   const live = new Map<string, ReactNode>();
@@ -203,7 +203,7 @@ export function ToReview({ facts }: { facts: Fact[] }) {
   }
   for (const f of loose) {
     const k = f.profile + f.id;
-    live.set(k, <ReviewCard key={k} fact={f} />);
+    live.set(k, <ReviewCard key={k} fact={f} repeated={repeated.has(k)} />);
     if (!order.current.has(k)) order.current.set(k, { n: 1, page: false });
   }
   if (!order.current.size) return null;

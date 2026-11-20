@@ -15,7 +15,7 @@ import { Sheet } from '../../ui/Sheet';
 import { FILTER_LABEL, type Filter } from '../view';
 import { ProfileDot } from '../ProfileDot';
 import { Voice, useDictation } from '../../chat/composer/Voice';
-import { EVENING, MORNING, when } from './time';
+import { EVENING, MORNING, hasTime, when } from './time';
 
 type Pick = { at: number | null; cadence: Cadence; remind?: number | null };
 
@@ -37,7 +37,6 @@ export function Flag({ priority }: { priority: number | null | undefined }) {
 
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 const startOf = (t: number) => new Date(t).setHours(0, 0, 0, 0);
-const hasTime = (at: number | null) => at != null && (new Date(at).getHours() !== MORNING || new Date(at).getMinutes() !== 0);
 
 // A day and an optional time make a due time: today without a time is no due time, a later day without one is 09:00.
 const compose = (day: number, time: string | null) => {

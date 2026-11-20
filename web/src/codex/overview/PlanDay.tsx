@@ -9,7 +9,7 @@ import { Section } from '../../ui/Section';
 import { plural } from '../../ui/util';
 import { showSnack } from '../view';
 import { useActions } from '../useActions';
-import { clock } from '../tasks/time';
+import { clock, hasTime } from '../tasks/time';
 
 type Slot = { task: ItemRow; span: Span };
 
@@ -25,13 +25,13 @@ export function PlanDay({ meetings, tasks, now }: { meetings: Meeting[]; tasks: 
   };
   const propose = () => {
     const busy = timedMeetings(meetings).map((m) => [m.starts_at!, m.ends_at!] as Span);
-    const slots = planToday(tasks.map((task) => ({ task, title: task.title, due: atTime(task.at) })), busy, now).map((p) => ({ task: p.task.task, span: p.span }));
+    const slots = planToday(tasks.map((task) => ({ task, title: task.title, due: atTime(task.at), timed: hasTime(atTime(task.at)) })), busy, now).map((p) => ({ task: p.task.task, span: p.span }));
     if (slots.length) setPlan(slots);
     else showSnack('No estimated task fits the free time today');
   };
-  if (!plan) return tasks.some((r) => estimateMin(r.title) != null) ? <Button variant="quiet" size="sm" onClick={propose}>Plan my day</Button> : null;
+  if (!plan) return tasks.some((r) => !hasTime(atTime(r.at)) && estimateMin(r.title) != null) ? <Button variant="quiet" size="sm" onClick={propose}>Plan my day</Button> : null;
   return (
-    <section className="ov-plan">
+    <section>
       <Section label="Plan my day" action={<Button variant="quiet" size="sm" onClick={() => setPlan(null)}>Close</Button>} />
       <div className="as-group">
         {[...plan].sort((a, b) => a.span[0] - b.span[0]).map((x) => (
