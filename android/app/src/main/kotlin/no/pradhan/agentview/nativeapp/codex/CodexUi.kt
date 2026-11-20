@@ -13,17 +13,21 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.SwipeToDismissBox
+import androidx.compose.material3.SwipeToDismissBoxState
 import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -79,7 +83,11 @@ fun taskMeta(row: Row, now: Long, inDay: Boolean, showProfile: Boolean): android
     }
 }
 
-// An open task: tap opens it, the circle checks it off, a right swipe marks it done, a left swipe snoozes it, a long press opens the menu.
+// A left swipe past this share of the row deletes instead of snoozing.
+private const val SWIPE_DELETE = 0.55f
+fun deletesOnSwipe(dx: Float, width: Float) = -dx > width * SWIPE_DELETE
+
+// An open task: tap opens it, the circle checks it off, a right swipe marks it done, a left swipe snoozes it, a long left swipe deletes it, a long press opens the menu.
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TaskRowView(row: Row, now: Long, actions: TaskActions, showProfile: Boolean, inDay: Boolean = false, onOpen: () -> Unit) {
@@ -87,10 +95,12 @@ fun TaskRowView(row: Row, now: Long, actions: TaskActions, showProfile: Boolean,
     val isDone = row.status == "done"
     val swipeable = row.status == "open"
     val current by rememberUpdatedState(row)
-    val state = rememberSwipeToDismissBoxState(confirmValueChange = { v ->
+    var width by remember { mutableFloatStateOf(1f) }
+    lateinit var state: SwipeToDismissBoxState
+    state = rememberSwipeToDismissBoxState(confirmValueChange = { v ->
         when (v) {
             SwipeToDismissBoxValue.StartToEnd -> { haptic.performHapticFeedback(HapticFeedbackType.Confirm); actions.done(current) }
-            SwipeToDismissBoxValue.EndToStart -> actions.snooze(current, nextNine(now, current.profile))
+            SwipeToDismissBoxValue.EndToStart -> if (deletesOnSwipe(state.requireOffset(), width)) actions.delete(current) else actions.snooze(current, nextNine(now, current.profile))
             else -> {}
         }
         false
@@ -113,10 +123,13 @@ fun TaskRowView(row: Row, now: Long, actions: TaskActions, showProfile: Boolean,
     if (!swipeable) { body(); return }
     SwipeToDismissBox(
         state = state,
+        modifier = Modifier.onSizeChanged { width = it.width.toFloat() },
         backgroundContent = {
             val dir = state.dismissDirection
-            Box(Modifier.fillMaxSize().background(if (dir == SwipeToDismissBoxValue.StartToEnd) av.okContainer else if (dir == SwipeToDismissBoxValue.EndToStart) av.warnContainer else av.groupCard).padding(horizontal = Tokens.sp8), contentAlignment = if (dir == SwipeToDismissBoxValue.StartToEnd) Alignment.CenterStart else Alignment.CenterEnd) {
+            val deleting = dir == SwipeToDismissBoxValue.EndToStart && deletesOnSwipe(state.requireOffset(), width)
+            Box(Modifier.fillMaxSize().background(if (dir == SwipeToDismissBoxValue.StartToEnd) av.okContainer else if (deleting) av.errContainer else if (dir == SwipeToDismissBoxValue.EndToStart) av.warnContainer else av.groupCard).padding(horizontal = Tokens.sp8), contentAlignment = if (dir == SwipeToDismissBoxValue.StartToEnd) Alignment.CenterStart else Alignment.CenterEnd) {
                 if (dir == SwipeToDismissBoxValue.StartToEnd) Row(verticalAlignment = Alignment.CenterVertically) { AvIcon("check", null, Tokens.icon, tint = av.onOkContainer); Text("  Done", color = av.onOkContainer, style = Type.callout) }
+                else if (deleting) Row(verticalAlignment = Alignment.CenterVertically) { Text("Delete  ", color = av.onErrContainer, style = Type.callout); AvIcon("trash", null, Tokens.icon, tint = av.onErrContainer) }
                 else if (dir == SwipeToDismissBoxValue.EndToStart) Row(verticalAlignment = Alignment.CenterVertically) { Text("${whenText(later, now)}  ", color = av.onWarnContainer, style = Type.callout); AvIcon("calendar", null, Tokens.icon, tint = av.onWarnContainer) }
             }
         },

@@ -8,6 +8,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -60,6 +63,17 @@ private fun MeetingListRow(m: Row, now: Long, showProfile: Boolean, noDay: Boole
 }
 
 @Composable
+private fun WaitingRowView(g: Waiting, hub: Hub) {
+    val clip = LocalClipboardManager.current
+    val uri = LocalUriHandler.current
+    val links = g.rows.mapNotNull { r -> safeHref(r.url)?.let { r.title to it } }
+    ListRow(g.name, g.rows.joinToString(", ") { "${it.title} (${it.days}d)" }, trailing = {
+        Button("Copy nudge", { clip.setText(AnnotatedString(nudgeText(g))); hub.notice.value = "Nudge copied" }, variant = ButtonVariant.Plain, size = ButtonSize.Sm)
+        if (links.isNotEmpty()) MoreButton { close -> links.forEach { (title, href) -> MenuItem("Open $title", "link-external", { close(); uri.openUri(href) }) } }
+    })
+}
+
+@Composable
 fun MeetingsListPage(hub: Hub, st: CodexState, profile: String?, now: Long, chips: Set<String>, decisions: Boolean, onChip: (String) -> Unit, onOpen: (Row) -> Unit) {
     val resolved by hub.resolvedQuestions.collectAsState()
     var query by rememberSaveable { mutableStateOf("") }
@@ -70,6 +84,7 @@ fun MeetingsListPage(hub: Hub, st: CodexState, profile: String?, now: Long, chip
     val groups = remember(found, minute) { groupMeetings(found, now) }
     val coming = remember(mine, minute) { comingDays(mine, now) }
     val log = remember(mine) { decisionLog(mine) }
+    val waiting = remember(st.items, st.briefs, profile, minute) { waitingByPerson(st.items, st.briefs, profile, now) }
     val showProfile = profile == null
     val questions = remember(mine, resolved, minute) { visibleQuestions(openQuestions(mine, now), resolved) }
     var allQuestions by rememberSaveable { mutableStateOf(false) }
@@ -110,6 +125,10 @@ fun MeetingsListPage(hub: Hub, st: CodexState, profile: String?, now: Long, chip
                 item { Group { g.rows.forEachIndexed { i, m -> if (i > 0) Hairline(); MeetingListRow(m, now, showProfile, noDay = true) { onOpen(m) } } } }
             }
             if (coming.isEmpty()) item { EmptyState("Nothing on the calendar this week") }
+            if (waiting.isNotEmpty()) {
+                item { SectionHeader("Waiting on", waiting.size.toString()) }
+                item { Group { waiting.forEachIndexed { i, g -> if (i > 0) Hairline(); WaitingRowView(g, hub) } } }
+            }
         }
         val folded = query.isEmpty() && chips.isEmpty() && !showPast
         val older = groups.filter { it.label != "Today" }.sumOf { it.rows.size }

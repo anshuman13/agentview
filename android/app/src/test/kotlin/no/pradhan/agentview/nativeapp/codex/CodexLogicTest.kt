@@ -259,4 +259,10 @@ class CodexLogicTest {
         val live = listOf(LiveChat("a", running = true), LiveChat("b", pending = 1), LiveChat("c", running = true, stalled = true), LiveChat("d"), LiveChat("e", failed = true))
         assertEquals(listOf("b", "a"), runningChats(live).map { it.id })
     }
+
+    @Test fun deletesOnSwipePastTheThreshold() {
+        assertTrue(deletesOnSwipe(-56f, 100f))
+        assertFalse(deletesOnSwipe(-55f, 100f))
+        assertFalse(deletesOnSwipe(80f, 100f))
+    }
 }
