@@ -227,13 +227,14 @@ private fun CodexBody(hub: Hub, st: CodexState, nav: CodexNav, profile: String?,
     val extra = nav.extra
     val meeting = { r: Row -> nav.push("meeting:${r.key}") }
     val openNeeds = { hub.track("sheet:needsYou"); nav.needsOpen = true }
+    var searchQuery by rememberSaveable { mutableStateOf("") }
     when {
         !st.loaded -> Loading("Loading Codex…")
         extra != null -> ExtraContent(extra, hub, st, profile, now, actions, ops, nav.chips, nav.decisions, nav::toggleChip, nav::push, nav::pop, { nav.pop(); openNeeds() }, nav::openRow)
         page == "overview" -> OverviewPage(hub, st, profile, now, actions, nav::openRow, openNeeds, { nav.page = "goals" }, { nav.adding = true }, meeting) { nav.push("meeting:${it.key}#notes") }
         page == "tasks" -> TasksPage(st, profile, now, actions, nav.searching, nav.query, { nav.query = it }, nav::openRow, { nav.page = "tag:$it" }, nav.picked, { nav.picked = it }, meeting)
         page == "goals" -> GoalsPage(st, profile, now, actions, ops.goals, nav::openRow) { nav.addingGoal = it.id; nav.adding = true }
-        page == "search" -> SearchPage(st, profile, nav::openRow, meeting)
+        page == "search" -> SearchPage(st, profile, searchQuery, { searchQuery = it }, nav::openRow, meeting, nav::push)
         else -> TagPage(st, page.removePrefix("tag:"), now, actions, profile == null, nav::openRow)
     }
 }

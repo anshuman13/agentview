@@ -104,6 +104,7 @@ fun WikiIndexPage(st: CodexState, profile: String?, now: Long, actions: TaskActi
     val stale = remember(pages, facts, st.meetings, profile, now / 60_000) { staleFacts(facts, pages, st.meetings.filter { matchesProfile(profile, it) }, now) }
     var allStale by rememberSaveable { mutableStateOf(false) }
     var allLoose by rememberSaveable { mutableStateOf(false) }
+    var creating by remember { mutableStateOf(false) }
     val waiting = remember(facts) { proposals(facts).size }
     val grouped = remember(pages, facts) { reviewGroups(pages, facts) }
     val reviewRows = grouped.byPage.map { g ->
@@ -130,7 +131,12 @@ fun WikiIndexPage(st: CodexState, profile: String?, now: Long, actions: TaskActi
             }
             return@LazyColumn
         }
-        if (!readOnly) item { Box(Modifier.padding(horizontal = Tokens.listPad, vertical = Tokens.sp4)) { ProposeClaim(null, profile, actions) } }
+        if (!readOnly) item {
+            LayoutRow(Modifier.padding(horizontal = Tokens.listPad, vertical = Tokens.sp4), horizontalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
+                ProposeClaim(null, profile, actions)
+                Button("New page", { creating = true }, variant = ButtonVariant.Plain, icon = "add")
+            }
+        }
         if (waiting > 0) {
             item { SectionHeader("To review", waiting.toString(), action = { Button("One at a time", onReview, variant = ButtonVariant.Plain, size = ButtonSize.Sm) }) }
             lazyGroup(reviewRows, key = { it.key }) { r ->
@@ -156,7 +162,9 @@ fun WikiIndexPage(st: CodexState, profile: String?, now: Long, actions: TaskActi
         overview?.let { o ->
             item { Group(Modifier.padding(top = Tokens.sp4)) { ListRow(o.title ?: "Overview", o.str("summary")?.let { firstLine(it) }, onClick = { onOpen(o) }) } }
         }
-        if (sections.isEmpty() && overview == null) item { EmptyState("No pages yet", icon = "book") }
+        if (sections.isEmpty() && overview == null) item {
+            EmptyState("No pages yet", icon = "book", action = if (readOnly) null else ({ Button("New page", { creating = true }, variant = ButtonVariant.Tinted) }))
+        }
         sections.forEach { s ->
             item { SectionHeader(s.name, s.pages.size.toString()) }
             item {
@@ -177,6 +185,10 @@ fun WikiIndexPage(st: CodexState, profile: String?, now: Long, actions: TaskActi
         }
         item { Spacer(Modifier.padding(bottom = Tokens.sp16)) }
     }
+    if (creating) TextDialog("New page", "", "Create", { title ->
+        val sort = (sections.firstOrNull { it.name == "Pages" }?.pages.orEmpty().maxOfOrNull { it.long("sort") ?: 0L } ?: 0L).coerceAtLeast(0L) + 1
+        newPage(title, "Pages", sort, proposalProfile(null, profile), System.currentTimeMillis())?.let { actions.create(it, "Page created"); onOpen(it) }
+    }, { creating = false }, maxLength = 120)
 }
 
 @Composable

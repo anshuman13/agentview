@@ -8,6 +8,7 @@ import java.time.ZonedDateTime
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonPrimitive
 import no.pradhan.agentview.nativeapp.app.ParsedTask
+import no.pradhan.agentview.nativeapp.codex.wiki.newPage
 import no.pradhan.agentview.nativeapp.net.LiveChat
 import no.pradhan.agentview.nativeapp.net.protocolJson
 import org.junit.Assert.assertEquals
@@ -287,10 +288,45 @@ class CodexLogicTest {
 
     @Test fun searchHitsEveryWord() {
         val items = listOf(item("a", "open", null, WORK, "text" to "pay the invoice today"), item("b", "dismissed", null, WORK, "text" to "pay invoice"), item("c", GOAL, null, WORK, "text" to "pay invoice"))
-        val hits = searchAll(items, emptyList(), "Invoice PAY", null)
+        val hits = searchAll(CodexState(items = items), "Invoice PAY", null)
         assertEquals(listOf("a"), hits.tasks.map { it.row.id })
         assertEquals("pay the invoice today", hits.tasks[0].snippet)
-        assertEquals(0, searchAll(items, emptyList(), "  ", null).total)
+        assertEquals(0, searchAll(CodexState(items = items), "  ", null).total)
+    }
+
+    @Test fun searchFindsWikiPagesClaimsAndJobsOfTheProfile() {
+        fun row(table: String, id: String, profile: String, vararg v: Pair<String, Any?>) =
+            Row(table, id, profile, f = SYNCED_FIELDS.getValue(table).associateWith { JsonNull as kotlinx.serialization.json.JsonElement } + v.map { (k, x) -> k to toJson(x) })
+        val st = CodexState(
+            pages = listOf(row("pages", "p1", WORK, "title" to "Roadmap", "summary" to "What ships when on the roadmap"), row("pages", "p2", PERSONAL, "title" to "Roadmap at home")),
+            facts = listOf(row("facts", "f1", WORK, "text" to "The roadmap is set each quarter", "page_id" to "p1", "state" to "live")),
+            jobs = listOf(
+                row("jobs", "j1", WORK, "name" to "Weekly digest", "prompt" to "Sum up the roadmap changes"),
+                row("jobs", "j2", WORK, "prompt" to "roadmap check"),
+                row("jobs", "j3", PERSONAL, "name" to "Roadmap at home"),
+            ).plus(row("jobs", "j4", WORK, "name" to "Old roadmap").copy(deleted = true)),
+        )
+        val hits = searchAll(st, "roadmap", WORK)
+        assertEquals(listOf("p1", "f1"), hits.wiki.map { it.row.id })
+        assertEquals(listOf("Roadmap", "The roadmap is set each quarter"), hits.wiki.map { it.title })
+        assertEquals("What ships when on the roadmap", hits.wiki[0].snippet)
+        assertEquals(listOf("wiki:$WORK:p1", "wiki:$WORK:p1#f1"), hits.wiki.map { it.route })
+        assertEquals(listOf("j2", "j1"), hits.jobs.map { it.row.id })
+        assertEquals(listOf("Untitled job", "Weekly digest"), hits.jobs.map { it.title })
+        assertEquals("Sum up the roadmap changes", hits.jobs[1].snippet)
+        assertEquals("job:$WORK:j1", hits.jobs[1].route)
+        assertEquals(4, hits.total)
+    }
+
+    @Test fun newPageIsALiveDirtyPageInItsSection() {
+        val p = newPage("  Roadmap ", "Pages", 3, PERSONAL, NOW)!!
+        assertEquals("Roadmap", p.title)
+        assertEquals("Pages", p.str("section"))
+        assertEquals(3L, p.long("sort"))
+        assertEquals(PERSONAL, p.profile)
+        assertTrue(p.dirty)
+        assertEquals(listOf(p), liveRows(listOf(p)))
+        assertNull(newPage("  ", "Pages", 1, WORK, NOW))
     }
 
     @Test fun runningChatsListWaitingBeforeRunningAndSkipsStalled() {

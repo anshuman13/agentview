@@ -199,19 +199,23 @@ internal fun GoalsPage(st: CodexState, profile: String?, now: Long, actions: Tas
 }
 
 @Composable
-internal fun SearchPage(st: CodexState, profile: String?, onOpen: (Row) -> Unit, onMeeting: (Row) -> Unit) {
-    var query by rememberSaveable { mutableStateOf("") }
+internal fun SearchPage(st: CodexState, profile: String?, query: String, onQuery: (String) -> Unit, onOpen: (Row) -> Unit, onMeeting: (Row) -> Unit, onRoute: (String) -> Unit) {
     val settled = rememberSettled(query)
-    val hits = remember(st.items, st.meetings, profile, settled) { searchAll(st.items, st.meetings, settled, profile) }
+    val hits = remember(st.items, st.meetings, st.pages, st.facts, st.jobs, profile, settled) { searchAll(st, settled, profile) }
+    var opened by remember(settled) { mutableStateOf(emptySet<String>()) }
     LazyColumn(Modifier.fillMaxSize()) {
-        item { SearchField(query, { query = it }, "Search tasks and meetings") }
-        fun section(label: String, list: List<Hit>, open: ((Row) -> Unit)?) {
+        item { SearchField(query, onQuery, "Search tasks, meetings, wiki and jobs") }
+        fun section(label: String, list: List<Hit>, open: (Hit) -> Unit) {
             if (list.isEmpty()) return
+            val all = label in opened
             item { SectionHeader(label, list.size.toString()) }
-            item { Group { list.take(30).forEachIndexed { i, h -> if (i > 0) Hairline(); ListRow(h.title, listOf(profileLabel(h.row.profile), h.snippet).filter { it.isNotEmpty() }.joinToString(" · "), onClick = open?.let { o -> { o(h.row) } }) } } }
+            item { Group { (if (all) list else list.take(5)).forEachIndexed { i, h -> if (i > 0) Hairline(); ListRow(h.title, listOf(profileLabel(h.row.profile), h.snippet).filter { it.isNotEmpty() }.joinToString(" · "), onClick = { open(h) }) } } }
+            if (!all && list.size > 5) item { Button("Show all ${list.size}", { opened = opened + label }, Modifier.padding(start = Tokens.listPad), variant = ButtonVariant.Plain, size = ButtonSize.Sm) }
         }
-        section("Tasks and notes", hits.tasks, onOpen)
-        section("Meetings", hits.meetings, onMeeting)
+        section("Tasks and notes", hits.tasks) { onOpen(it.row) }
+        section("Meetings", hits.meetings) { onMeeting(it.row) }
+        section("Wiki", hits.wiki) { h -> h.route?.let(onRoute) }
+        section("Jobs", hits.jobs) { h -> h.route?.let(onRoute) }
         if (query.isNotBlank() && hits.total == 0) item { EmptyState("No matches") }
     }
 }

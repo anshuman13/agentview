@@ -13,6 +13,9 @@ import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.contentOrNull
 import no.pradhan.agentview.nativeapp.codex.meetings.linksOf
 import no.pradhan.agentview.nativeapp.codex.wiki.proposals
+import no.pradhan.agentview.nativeapp.codex.wiki.searchWiki
+import no.pradhan.agentview.nativeapp.codex.jobs.jobsOf
+import no.pradhan.agentview.nativeapp.app.claimRoute
 import no.pradhan.agentview.nativeapp.net.Ask
 import no.pradhan.agentview.nativeapp.net.protocolJson
 import no.pradhan.agentview.nativeapp.sessions.queryWords
@@ -218,9 +221,9 @@ fun moveBlock(items: List<Row>, goal: Row, now: Long): String? {
     return if (mine.any { titleKey(it.title) == titleKey(goal.title) }) "Already a goal next week with this title" else null
 }
 
-// Item and meeting hits of the search: every word of the query must appear in the row.
-class Hit(val row: Row, val title: String, val snippet: String)
-class Hits(val tasks: List<Hit>, val meetings: List<Hit>) { val total get() = tasks.size + meetings.size }
+// Item, meeting, wiki and job hits of the search (web codex/data/ask/search.ts): every word of the query must appear in the row. route is the Codex route a wiki or job hit opens.
+class Hit(val row: Row, val title: String, val snippet: String, val route: String? = null)
+class Hits(val tasks: List<Hit>, val meetings: List<Hit>, val wiki: List<Hit> = emptyList(), val jobs: List<Hit> = emptyList()) { val total get() = tasks.size + meetings.size + wiki.size + jobs.size }
 
 fun snippet(words: List<String>, vararg texts: String?): String {
     for (t in texts) {
@@ -233,13 +236,18 @@ fun snippet(words: List<String>, vararg texts: String?): String {
     return ""
 }
 
-fun searchAll(items: List<Row>, meetings: List<Row>, query: String, profile: String?): Hits {
+fun searchAll(st: CodexState, query: String, profile: String?): Hits {
     val words = queryWords(query)
     if (words.isEmpty()) return Hits(emptyList(), emptyList())
     fun hits(vararg texts: String?) = texts.joinToString(" ") { it.orEmpty() }.lowercase().let { hay -> words.all { hay.contains(it) } }
-    val tasks = items.filter { !it.deleted && matchesProfile(profile, it) && it.status !in listOf("dismissed", "point", "raised", GOAL) && hits(it.title, it.text, it.people, it.source) }
+    val tasks = st.items.filter { !it.deleted && matchesProfile(profile, it) && it.status !in listOf("dismissed", "point", "raised", GOAL) && hits(it.title, it.text, it.people, it.source) }
         .sortedByDescending { it.updatedAt }.map { Hit(it, it.title ?: it.text ?: UNTITLED, snippet(words, it.text, it.people, it.source)) }
-    val found = meetings.filter { !it.deleted && matchesProfile(profile, it) && hits(it.title, it.str("people"), it.str("notes"), it.str("summary"), it.str("decisions")) }
+    val found = st.meetings.filter { !it.deleted && matchesProfile(profile, it) && hits(it.title, it.str("people"), it.str("notes"), it.str("summary"), it.str("decisions")) }
         .sortedByDescending { it.startsAt ?: 0L }.map { Hit(it, it.title ?: "Meeting", snippet(words, it.str("summary"), it.str("decisions"), it.str("notes"), it.str("people"))) }
-    return Hits(tasks, found)
+    val wikiHits = searchWiki(st.pages.filter { matchesProfile(profile, it) }, st.facts.filter { matchesProfile(profile, it) }, query)
+    val wiki = wikiHits.pages.map { Hit(it, it.title ?: UNTITLED, snippet(words, it.str("summary")), "wiki:${it.key}") } +
+        wikiHits.claims.take(30).map { Hit(it, it.str("text") ?: "", "", claimRoute(it)) }
+    val jobs = jobsOf(st.jobs, profile).filter { hits(it.str("name"), it.str("prompt")) }
+        .map { Hit(it, it.str("name") ?: "Untitled job", snippet(words, it.str("prompt")), "job:${it.key}") }
+    return Hits(tasks, found, wiki, jobs)
 }
