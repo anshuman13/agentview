@@ -24,6 +24,10 @@ val MORE_PAGES = listOf(
     MoreItem("settings", "Settings", "settings-gear"),
 )
 
+private val CAPPED_ROUTES = setOf(Tab.Codex.route, "settings", "mcp", "github", "observe", "deploy", "advisors")
+
+fun cappedRoute(route: String) = route in CAPPED_ROUTES
+
 fun morePages(deploy: Boolean, hidden: Collection<String>) = MORE_PAGES.filter { (it.route != "deploy" || deploy) && shownFeature("page:${it.route}", hidden) }
 
 fun moreTools(hidden: Collection<String>) = MORE_TOOLS.filter { shownFeature("more:${it.route}", hidden) }

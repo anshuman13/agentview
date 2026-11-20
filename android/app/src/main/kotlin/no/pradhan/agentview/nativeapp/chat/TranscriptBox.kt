@@ -60,8 +60,8 @@ internal fun TranscriptBox(
             horizontalArrangement = Arrangement.spacedBy(Tokens.sp2, Alignment.End), verticalAlignment = Alignment.CenterVertically,
         ) {
             AvIcon("chevron-right", null, Tokens.iconSm, tint = av.fgFaint)
-            if (title is AnnotatedString) Text(title, style = Type.footnote, color = av.fgFaint, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            else Text(title.toString(), style = Type.footnote, color = av.fgFaint, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            if (title is AnnotatedString) Text(title, style = Type.footnote, color = av.fgMuted, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            else Text(title.toString(), style = Type.footnote, color = av.fgMuted, maxLines = 1, overflow = TextOverflow.Ellipsis)
             state?.invoke(this)
         }
         return

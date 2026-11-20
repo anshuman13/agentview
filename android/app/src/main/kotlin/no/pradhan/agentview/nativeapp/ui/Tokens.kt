@@ -464,6 +464,7 @@ object Tokens {
     val rowTwo = 72.dp
     val rowThree = 88.dp
     val fabClear = 88.dp
+    val pageMax = 760.dp
 }
 
 object Type {

@@ -34,6 +34,14 @@ class ShellTest {
         assertEquals(false, moreTools(listOf("more:files")).any { it.route == "files" })
     }
 
+    @Test fun listPagesKeepAReadingWidth() {
+        val capped = setOf("assistant", "settings", "mcp", "github", "observe", "deploy", "advisors")
+        val routes = Tab.entries.map { it.route } + (MORE_TOOLS + MORE_PAGES).map { it.route }
+        assertEquals(capped + setOf("chat", "sessions", "files", "browser", "terminal", "changes", "sketches"), routes.toSet())
+        routes.forEach { assertEquals(it, it in capped, cappedRoute(it)) }
+        listOf("agent", "work", "origin", "unknown").forEach { assertEquals(it, false, cappedRoute(it)) }
+    }
+
     @Test fun parsesDeepLinks() {
         assertEquals(DeepLink(view = "github"), parseDeepLink("agentview://open?view=github"))
         assertEquals(DeepLink(chat = "a b"), parseDeepLink("agentview://open?chat=a%20b&beside=x"))

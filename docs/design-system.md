@@ -374,6 +374,7 @@ Rules for the native app in `android/`. TokenGen applies `NATIVE_OVERRIDES`, `NA
 - **Loading and EmptyState**: a loading page shows `Loading` (spinner and one line). A page-level EmptyState has an icon and `small = false`. A section's EmptyState is small and sits under its SectionHeader, never inside a Group.
 
 - **Separation** is by tone (see Colour below): `bg` page, `surface` for bars and cards, `raised` for menus and dialogs. Hairlines only sit between rows of a group.
+- **Reading width**: the Codex tab and the list pages of More (Settings, MCP, Pull Requests, Observe, Deploy, Advisors; `cappedRoute` in `app/Tabs.kt`) sit in a centred column of at most `pageMax` (760dp, as web's `.assistant`) on wider windows. Chat, Sessions, agent and work screens and the tools (Files, Source Control, Terminal, Browser, Sketches) use the full width.
 
 ### Colour
 Colours are Material 3 roles. `NATIVE_COLORS` in TokenGen sets each value for both themes, and `Theme.kt` maps every `colorScheme` slot, so Switch, pickers, dialogs and sheets need no call-site colours.
@@ -420,7 +421,8 @@ Contrast ratios (worst case is text on `sunken`; `ContrastTest` checks them).
 | Both | fg, fgMuted, accent and status at least 4.5 on every surface (light ok, at 5.1, is lowest) | fgFaint, borderStrong and profile dots at least 3 on bg and surface | every on-colour pair at least 4.5 |
 
 Rules:
-- Text is `fg` or `fgMuted`, never `fgFaint`.
+- Text is `fg` or `fgMuted`, never `fgFaint`; `UiRulesTest` fails on a `Text(` line coloured `fgFaint`.
+- A search match is `accentSoft` under the line's text colour, and the current match `primaryContainer` with `onPrimaryContainer` text. Text backgrounds are tokens, never `.copy(alpha)` (`UiRulesTest` checks it).
 - Accent is only for the primary action, links and selection, never for status.
 - A status colour always appears with an icon or a word. There is no decorative colour.
 - Profile hues are only 8dp dots beside the profile word.

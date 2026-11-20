@@ -30,6 +30,7 @@ object TokenGen {
         "rowTwo" to "72",
         "rowThree" to "88",
         "fabClear" to "88",
+        "pageMax" to "760",
     )
 
     // Material wins over the web touch tokens in the native app (docs/design-system.md, Phone).

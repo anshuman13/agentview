@@ -35,6 +35,22 @@ class UiRulesTest {
         fails("PageHeader with more than one IconBtn", lines().filter { it.third.contains("PageHeader(") && Regex("""\bIconBtn\(""").findAll(it.third).count() > 1 })
     }
 
+    @Test fun textIsNeverFaint() {
+        fails("Text coloured fgFaint", lines().filter { Regex("""\bText\(""").containsMatchIn(it.third) && it.third.contains("color = av.fgFaint") })
+    }
+
+    @Test fun textBackgroundsHaveNoAlpha() {
+        val faded = Regex("""val (\w+) = .*\.copy\(alpha""")
+        val bad = lines().groupBy { it.first }.flatMap { (_, ls) ->
+            val names = ls.mapNotNull { faded.find(it.third)?.groupValues?.get(1) }
+            ls.filter { l ->
+                val bg = l.third.substringAfter("SpanStyle(", "").substringAfter("background = ", "")
+                bg.contains(".copy(alpha") || names.any { Regex("""\b$it\b""").containsMatchIn(bg) }
+            }
+        }
+        fails("Text background with .copy(alpha", bad)
+    }
+
     @Test fun everyCopyOutsideUiSaysSo() {
         val all = lines { it.path.contains("/ui/") }.groupBy { it.first }
         val bad = all.flatMap { (_, ls) -> ls.filter { l -> l.third.contains("clip.setText(") && ls.filter { it.second in l.second..l.second + 2 }.none { it.third.contains("opied") } } }

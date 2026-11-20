@@ -394,11 +394,11 @@ private fun LazyListScope.meetingTranscript(folds: MeetingFolds, transcript: Res
                 }
             }
             itemsIndexed(segments) { i, line ->
-                val soft = av.accentSoft
-                val strong = av.accent.copy(alpha = 0.4f)
+                val soft = SpanStyle(background = av.accentSoft)
+                val strong = SpanStyle(background = av.primaryContainer, color = av.onPrimaryContainer)
                 var k = 0
                 val shown = buildAnnotatedString {
-                    for (s in line) if (s.hit) withStyle(SpanStyle(background = if (starts[i] + k++ == cur) strong else soft)) { append(s.text) } else append(s.text)
+                    for (s in line) if (s.hit) withStyle(if (starts[i] + k++ == cur) strong else soft) { append(s.text) } else append(s.text)
                 }
                 Text(shown, Modifier.padding(horizontal = Tokens.listPad, vertical = Tokens.sp2), style = Type.subheadline, color = av.fgMuted, fontFamily = FontFamily.Default)
             }

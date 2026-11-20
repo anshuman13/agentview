@@ -25,6 +25,7 @@ import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -244,7 +245,7 @@ private fun AppNavHost(hub: Hub, nav: NavHostController, twoPane: Boolean, modif
     val openAgent = { id: String -> nav.navigate("agent/${Uri.encode(id)}") }
     val openWork = { id: String -> nav.navigate("work/${Uri.encode(id)}") }
     NavHost(nav, startDestination = Tab.Codex.route, modifier = modifier) {
-        composable(Tab.Codex.route) { CodexScreen(hub) }
+        composable(Tab.Codex.route) { ReadingWidth(Tab.Codex.route) { CodexScreen(hub) } }
         composable(Tab.Chat.route) { if (twoPane) TwoPane(hub, openAgent, openWork) else ChatScreen(hub, openAgent, openWork) }
         composable(Tab.Sessions.route) { if (twoPane) TwoPane(hub, openAgent, openWork) else SessionsScreen(hub, onOpen = { nav.goTab(Tab.Chat.route) }) }
         composable("agent/{id}", arguments = listOf(navArgument("id") { type = NavType.StringType })) { e ->
@@ -254,9 +255,19 @@ private fun AppNavHost(hub: Hub, nav: NavHostController, twoPane: Boolean, modif
             WorkScreen(hub, e.arguments?.getString("id") ?: "", onBack = { nav.popBackStack() }, onOpenAgent = openAgent)
         }
         (MORE_TOOLS + MORE_PAGES).forEach { m ->
-            composable("more/${m.route}") { MorePage(m, hub, onBack = { nav.popBackStack() }, onTab = nav::goTab, onOrigin = { nav.navigate(ORIGIN_ROUTE) { launchSingleTop = true } }) }
+            composable("more/${m.route}") {
+                ReadingWidth(m.route) { MorePage(m, hub, onBack = { nav.popBackStack() }, onTab = nav::goTab, onOrigin = { nav.navigate(ORIGIN_ROUTE) { launchSingleTop = true } }) }
+            }
         }
         composable(ORIGIN_ROUTE) { Column(Modifier.fillMaxSize()) { OriginScreen(hub, onDone = { nav.popBackStack() }) } }
+    }
+}
+
+@Composable
+private fun ReadingWidth(route: String, content: @Composable () -> Unit) {
+    if (!cappedRoute(route)) return content()
+    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
+        Box(Modifier.widthIn(max = Tokens.pageMax).fillMaxSize()) { content() }
     }
 }
 

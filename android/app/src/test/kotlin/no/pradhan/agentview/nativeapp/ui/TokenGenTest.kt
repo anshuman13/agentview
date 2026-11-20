@@ -77,6 +77,7 @@ class TokenGenTest {
         assertTrue(out.contains("    accentSoft = Color(0xFFEDE4FF),"))
         assertTrue(!out.contains("hover2"))
         assertTrue(out.contains("    val listPad = 8.dp"))
+        assertTrue(out.contains("    val pageMax = 760.dp"))
         assertTrue(out.contains("    val body = TextStyle(fontFamily = AppFont, fontSize = 16.sp, lineHeight = 24.sp, fontWeight = FontWeight(400))"))
     }
 

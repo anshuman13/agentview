@@ -31,6 +31,7 @@ class ContrastTest {
                     c.inverseOnSurface to c.inverseSurface, c.inversePrimary to c.inverseSurface,
                     c.onOkContainer to c.okContainer, c.onWarnContainer to c.warnContainer, c.onErrContainer to c.errContainer,
                     c.onAgentContainer to c.agentContainer, c.onInfoContainer to c.infoContainer, c.onErr to c.err, c.onAgent to c.agent,
+                    c.fgMuted to c.accentSoft,
                 ),
             )
         }

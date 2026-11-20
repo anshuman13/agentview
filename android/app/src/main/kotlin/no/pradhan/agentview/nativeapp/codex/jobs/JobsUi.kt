@@ -300,13 +300,13 @@ private fun SearchedOutput(output: String) {
         IconBtn("arrow-up", "Previous match", { step(-1) }, enabled = count > 0)
         IconBtn("arrow-down", "Next match", { step(1) }, enabled = count > 0)
     }
-    val soft = av.accentSoft
-    val strong = av.accent.copy(alpha = 0.4f)
+    val soft = SpanStyle(background = av.accentSoft)
+    val strong = SpanStyle(background = av.primaryContainer, color = av.onPrimaryContainer)
     Column(Modifier.padding(start = Tokens.sp8, end = Tokens.sp8, bottom = Tokens.sp6)) {
         lines.forEachIndexed { i, line ->
             var k = 0
             val shown = buildAnnotatedString {
-                for (s in line) if (s.hit) withStyle(SpanStyle(background = if (starts[i] + k++ == cur) strong else soft)) { append(s.text) } else append(s.text)
+                for (s in line) if (s.hit) withStyle(if (starts[i] + k++ == cur) strong else soft) { append(s.text) } else append(s.text)
             }
             Text(shown, Modifier.bringIntoViewRequester(views[i]), style = Type.body, color = av.fg)
         }
