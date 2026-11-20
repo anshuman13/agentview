@@ -211,7 +211,7 @@ internal sealed interface BuildSheet {
     data class Spec(val initial: String? = null) : BuildSheet
     data class Step(val key: String) : BuildSheet
     data class Criterion(val n: Int) : BuildSheet
-    data class File(val path: String) : BuildSheet
+    data class File(val path: String, val line: Int? = null) : BuildSheet
 }
 
 internal class BuildActions(val approve: (String, (Boolean) -> Unit) -> Unit, val saveReview: (String, String, String, (Boolean) -> Unit) -> Unit, val setHold: (String) -> Unit)
@@ -317,7 +317,7 @@ internal fun BuildSheets(hub: Hub, d: BuildDetail, stack: SnapshotStateList<Buil
                 is BuildSheet.Spec -> SpecSheet(hub, d, s.initial, actions, run, close)
                 is BuildSheet.Step -> StepSheet(hub, d, s.key, actions, stack, close)
                 is BuildSheet.Criterion -> d.criteria.firstOrNull { it.n == s.n }?.let { CriterionSheet(it, close) }
-                is BuildSheet.File -> Sheet(close, "File", padded = false) { Box(Modifier.height(sheetHeight())) { FileScreen(hub, s.path, close) } }
+                is BuildSheet.File -> Sheet(close, "File", padded = false) { Box(Modifier.height(sheetHeight())) { FileScreen(hub, s.path, close, line = s.line) } }
             }
         }
     }

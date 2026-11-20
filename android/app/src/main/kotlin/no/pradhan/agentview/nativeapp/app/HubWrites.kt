@@ -50,7 +50,7 @@ fun Hub.write(path: String, body: String, failure: String, done: (Boolean) -> Un
 
 // A review action on a job run (/api/runs/<action>); a failure shows "<failure>: <server error>".
 fun Hub.runReview(action: String, run: String, failure: String, body: String = "{}", done: (Boolean) -> Unit = {}) =
-    writes.run(failure, { try { api.post("/api/runs/$action?run=${enc(run)}", body, pageChat) } catch (e: ApiError) { throw ApiError("$failure: ${e.message}", e.code) } }, done)
+    writes.run(failure, { try { api.post("/api/runs/$action?run=${enc(run)}", body, pageChat) } catch (e: ApiError) { throw ApiError("$failure: ${loadErrorText(e.message.orEmpty())}", e.code) } }, done)
 
 fun Hub.saveFile(path: String, content: String, failure: String = "Could not save ${path.substringAfterLast('/')}", done: (Boolean) -> Unit) = writes.run(failure, { api.put("/api/file?path=${enc(path)}", content, pageChat) }, done)
 

@@ -296,7 +296,7 @@ private fun SpecBody(hub: Hub, d: BuildDetail, open: (BuildSheet) -> Unit) {
         }
     }
     Criteria(d.criteria, if (all || failed) d.criteria.size else 0, { all = true }) { open(BuildSheet.Criterion(it)) }
-    Findings(hub, "spec:${d.slug}") { open(BuildSheet.File(it.file)) }
+    Findings(hub, "spec:${d.slug}") { open(BuildSheet.File(it.file, it.line)) }
 }
 
 // A spec write that no longer holds the live card, shown plain.

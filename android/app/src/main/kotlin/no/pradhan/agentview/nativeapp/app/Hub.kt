@@ -344,7 +344,7 @@ class Hub(internal val app: Application, private val saved: SavedStateHandle) : 
 
     // A permission notification gets Allow and Deny, a question one Reply; the kind of request is read from the chat first.
     internal fun notify(n: Notice) {
-        if (n.kind != NoticeKind.Approval) return notifier.post(n, silentNotice(n.kind, LocalTime.now().let { it.hour * 60 + it.minute }, quietWindow(quietHours.value)))
+        if (n.kind != NoticeKind.Approval) return notifier.post(n, silentNotice(n.kind, n.outcome, LocalTime.now().let { it.hour * 60 + it.minute }, quietWindow(quietHours.value)))
         viewModelScope.launch { notifier.post(withContext(Dispatchers.IO) { noticeAsk(api, n) }) }
     }
 

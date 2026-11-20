@@ -80,6 +80,9 @@ fun hubRetry(failures: Int, error: Throwable): Long? {
     return if (status in listOf(0, 502, 503, 504)) RETRY_AFTER_MS.getOrNull(failures) else null
 }
 
+private fun syncErrorText(error: Throwable) =
+    if (error is IOException || (error as? ApiError)?.code in listOf(502, 503, 504)) "Can't reach the hub" else error.message ?: "Sync failed"
+
 // The hub's items, meetings and chats (web/src/codex/data/remote.ts RemoteStore without the on-device cache): pulled over
 // /api/assistant/changes, edited here with per-column times and pushed over /api/assistant/sync.
 private const val DONE_KEEP_MS = 60 * 86_400_000L
@@ -146,7 +149,7 @@ class CodexStore(
             saved.putAll(tables.mapValues { it.value.values.toList() })
             // A cache from a build with other columns lacks the new ones, so the next pull is full.
             if (meta["columns"]?.jsonPrimitive?.contentOrNull == COLUMNS) since = version
-            publish(loaded = true)
+            publish(loaded = true, lastSync = meta["synced"]?.jsonPrimitive?.content?.toLongOrNull() ?: 0)
         } catch (e: Exception) {
             clearCache()
         }
@@ -162,7 +165,7 @@ class CodexStore(
         if (rows.values.any { l -> l.any { it.dirty && !parked(it) } }) return
         // Rows are immutable, so a table whose rows are the same objects as last time is unchanged.
         val changed = rows.filter { (t, l) -> saved[t]?.let { s -> s.size == l.size && s.indices.all { s[it] === l[it] } } != true }
-        val head = buildJsonObject { put("version", since); put("columns", COLUMNS) }.toString()
+        val head = buildJsonObject { put("version", since); put("columns", COLUMNS); put("synced", state.value.lastSync) }.toString()
         val bodies = withContext(parsing) { changed.mapValues { (_, l) -> JsonArray(l.map(::rowToCache)).toString() } }
         withContext(Dispatchers.IO) {
             runCatching {
@@ -234,7 +237,7 @@ class CodexStore(
                     return
                 }
                 val wait = hubRetry(failures++, error)
-                if (wait == null) return publish(error = error.message ?: "Sync failed", loaded = true, reconnecting = false)
+                if (wait == null) return publish(error = syncErrorText(error), loaded = true, reconnecting = false)
                 publish(reconnecting = true)
                 if (again) continue
                 val woken = CompletableDeferred<Unit>().also { retryWait = it }
@@ -254,7 +257,6 @@ class CodexStore(
             val parked = mutableListOf<Row>()
             val rejected = mutableListOf<JsonObject>()
             var more = true
-            var changed = false
             while (more) {
                 val batch = queue.take(PUSH_BATCH)
                 queue = queue.drop(batch.size)
@@ -262,7 +264,6 @@ class CodexStore(
                 val (version, changes, hasMore, refused, health, held) = parse(body)
                 if (health != null) scans = health
                 if (held != null) paused = held
-                changed = changed || batch.isNotEmpty() || changes.isNotEmpty()
                 for (r in refused) {
                     val sent = batch.find { it.table == r["table"]?.jsonPrimitive?.contentOrNull && it.id == r["id"]?.jsonPrimitive?.contentOrNull }
                     val count = if (sent == null) 0 else (rejects[rejectKey(sent)] ?: 0) + 1
@@ -282,9 +283,10 @@ class CodexStore(
                 since = version
             }
             if (parked.isNotEmpty()) notify(parkedNotice(parked.size))
+            publish(lastSync = System.currentTimeMillis())
+            save()
             if (rejected.isNotEmpty()) error("${rejected.size} change${if (rejected.size > 1) "s" else ""} rejected: ${rejected[0]["reason"]?.jsonPrimitive?.contentOrNull}")
-            if (changed) save()
-            publish(error = null, loaded = true, reconnecting = false, lastSync = System.currentTimeMillis())
+            publish(error = null, loaded = true, reconnecting = false)
             null
         } catch (e: Exception) {
             e

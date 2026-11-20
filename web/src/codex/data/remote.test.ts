@@ -231,6 +231,7 @@ describe('RemoteStore save', () => {
     release({ version: 3, changes: [] });
     await sync;
     store.dispose();
+    await internal.saving;
   });
 
   it('keeps unsynced rows when a table is missing from the cache', async () => {
@@ -289,6 +290,16 @@ describe('RemoteStore save', () => {
     expect(rowsOf(stored, 'items').map((r) => r.id).sort()).toEqual(['a', 'b']);
     expect([...stored.keys()].some((k) => k.startsWith('table:'))).toBe(false);
     expect(internal.since).toBe(7);
+    store.dispose();
+  });
+
+  it('starts from the last sync time kept with the cache', async () => {
+    const stored = fakeIndexedDb([]);
+    stored.set('meta', { since: 7, columns: JSON.stringify(TABLE_FIELDS), layout: 2, synced: 1234 });
+    fakeDom();
+    const store = await freshStore();
+    await (store as unknown as { loaded: Promise<void> }).loaded;
+    expect(store.snapshot().sync.last).toBe(1234);
     store.dispose();
   });
 

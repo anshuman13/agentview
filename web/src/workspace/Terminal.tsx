@@ -3,7 +3,7 @@ import { Icon } from '../ui/Icon';
 import { IconButton } from '../ui/Button';
 import { closeTerm, createTerm, listTerms } from './termApi';
 import { notice } from '../app/store';
-import { ariaKeys, keyText } from '../app/shell/keys';
+import { ariaKeys, keyText, MAC } from '../app/shell/keys';
 
 const Pane = lazy(() => import('./TermPane').then((m) => ({ default: m.Pane })));
 
@@ -34,7 +34,7 @@ function TermBar({ tabs, active, pick, close, add, clear, max, toggleMax }: BarP
         </span>
       ))}
       <IconButton icon="add" small label="New terminal" onClick={() => add().catch(() => notice('Terminal unavailable'))} />
-      <IconButton icon="clear-all" small label="Clear" title={`Clear (${keyText('⌘K')})`} aria-keyshortcuts={ariaKeys('⌘K')} onClick={clear} />
+      <IconButton icon="clear-all" small label="Clear" title={MAC ? 'Clear (⌘K)' : 'Clear'} aria-keyshortcuts={MAC ? 'Meta+K' : undefined} onClick={clear} />
       <IconButton icon={max ? 'screen-normal' : 'screen-full'} small label={max ? 'Restore panel size' : 'Maximize panel size'} onClick={toggleMax} />
     </span>
   );

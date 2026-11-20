@@ -245,17 +245,26 @@ class CodexStoreTest {
         s.sync()
         assertEquals(4, calls)
         assertFalse(s.state.value.reconnecting)
-        assertEquals("Assistant hub unreachable", s.state.value.error)
+        assertEquals("Can't reach the hub", s.state.value.error)
+    }
+
+    @Test fun aServerErrorKeepsItsMessage() = runTest {
+        val s = flaky(this) { throw ApiError("Unknown column", 400) }
+        s.sync()
+        assertEquals("Unknown column", s.state.value.error)
     }
 
     @Test fun aRestartShowsTheCachedRowsAndPullsOnlyWhatChanged() = runTest {
         val file = File.createTempFile("codex", ".json").also { it.delete() }
-        store(this, Fake(mutableListOf(reply(5, change("a", "one", "open", 100, 1)))), cache = file).sync()
+        val first = store(this, Fake(mutableListOf(reply(5, change("a", "one", "open", 100, 1)))), cache = file)
+        first.sync()
         val fake = Fake(mutableListOf(reply(6, change("a", "two", "open", 200, 2))))
         val s = store(this, fake, cache = file)
         s.restore()
         assertEquals(listOf("one"), s.state.value.items.map { it.title })
         assertTrue(s.state.value.loaded)
+        assertEquals(first.state.value.lastSync, s.state.value.lastSync)
+        assertTrue(s.state.value.lastSync > 0)
         s.sync()
         assertEquals(listOf(5L to false), fake.pulled)
         assertEquals(listOf("two"), s.state.value.items.map { it.title })

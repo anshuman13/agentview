@@ -89,7 +89,7 @@ fun AutopilotPage(hub: Hub, st: CodexState, now: Long, onReplies: () -> Unit, on
         if (ap.error.isNotEmpty()) item { Group(Modifier.padding(top = Tokens.sp4)) { ListRow("Could not load or save", ap.error) } }
         if (s != null) item {
             Group(Modifier.padding(top = Tokens.sp4)) {
-                ListRow("Read and draft", trailing = { Toggle(s.config.enabled) { ap.save(togglePatch("enabled", it)) } }); Hairline()
+                ListRow("Read and draft", toggle = Toggle(s.config.enabled) { ap.save(togglePatch("enabled", it)) }); Hairline()
                 SettingRow("Covers", coversValue(s)) { sheet = Which.Covers.name }; Hairline()
                 SettingRow("Activity", activityValue(s, now)) { sheet = Which.Activity.name }; Hairline()
                 SettingRow("How it works", null) { sheet = Which.Info.name }
@@ -97,12 +97,12 @@ fun AutopilotPage(hub: Hub, st: CodexState, now: Long, onReplies: () -> Unit, on
             // Sending on its own is a beta: its settings show only with Auto send on.
             val auto = s.config.auto_send
             Group(Modifier.padding(top = Tokens.sp4)) {
-                ListRow("Auto send (beta)", if (auto) "Sends replies itself while away" else "Off: every draft waits for you", trailing = { Toggle(auto) { ap.save(togglePatch("auto_send", it)) } })
+                ListRow("Auto send (beta)", if (auto) "Sends replies itself while away" else "Off: every draft waits for you", toggle = Toggle(auto) { ap.save(togglePatch("auto_send", it)) })
                 if (auto) {
                     Hairline(); SettingRow("Away", awayValue(s)) { sheet = Which.Away.name }; Hairline()
                     SettingRow("Never answers", neverValue(s)) { sheet = Which.Never.name }; Hairline()
                     SettingRow("Model", modelValue(s)) { sheet = Which.Model.name }; Hairline()
-                    ListRow("Dry run", trailing = { Toggle(s.config.dry_run) { ap.save(togglePatch("dry_run", it)) } })
+                    ListRow("Dry run", toggle = Toggle(s.config.dry_run) { ap.save(togglePatch("dry_run", it)) })
                 }
             }
         }
@@ -176,10 +176,10 @@ private fun FormSheet(away: Boolean, s: AutopilotState, save: (String) -> Unit, 
 private fun CoversSheet(s: AutopilotState, save: (String) -> Unit, close: () -> Unit) {
     Sheet(close, "Covers", padded = false) {
         Group {
-            ListRow("DMs", trailing = { Toggle(s.config.dms) { save(togglePatch("dms", it)) } })
+            ListRow("DMs", toggle = Toggle(s.config.dms) { save(togglePatch("dms", it)) })
             s.watched.forEach { n ->
                 Hairline()
-                ListRow("#$n", trailing = { Toggle(n in s.covered) { save(channelsPatch(s, n)) } })
+                ListRow("#$n", toggle = Toggle(n in s.covered) { save(channelsPatch(s, n)) })
             }
         }
     }

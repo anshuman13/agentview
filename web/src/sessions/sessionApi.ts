@@ -1,5 +1,5 @@
 import { api } from '../app/store';
-import { apiUrl, fetchJson } from '../app/api';
+import { apiUrl, fetchJson, SLOW_READ_MS } from '../app/api';
 import type { AdvisorInfo, Audit, BacklogItem } from '../../../shared/advisors';
 import type { ChatRun, GitCommit } from '../../../shared/protocol';
 import type { BuildDetail, ReviewPhase, SpecHomeItem } from '../../../shared/builds';
@@ -49,7 +49,7 @@ export type RunDiff = { branch?: string; base: string; files: { path: string; ad
 
 const runUrl = (action: string, run: string) => api(`/api/runs/${action}?run=${encodeURIComponent(run)}`);
 
-export const fetchRunDiff = (run: string) => fetchJson<RunDiff>(runUrl('diff', run));
+export const fetchRunDiff = (run: string) => fetchJson<RunDiff>(runUrl('diff', run), undefined, SLOW_READ_MS);
 
 export const postRunApprove = (run: string) => fetchJson<{ url: string }>(runUrl('approve', run), { method: 'POST' });
 

@@ -16,7 +16,7 @@ class Writes(private val scope: CoroutineScope, private val readOnly: () -> Bool
     fun run(failure: String, block: suspend () -> Unit, done: (Boolean) -> Unit = {}) {
         if (!allowed()) { done(false); return }
         scope.launch {
-            val ok = runCatching { block() }.onFailure { notice(it.message?.ifEmpty { null } ?: failure) }.isSuccess
+            val ok = runCatching { block() }.onFailure { notice(it.message?.ifEmpty { null }?.let(::loadErrorText) ?: failure) }.isSuccess
             done(ok)
         }
     }

@@ -125,14 +125,20 @@ export function Changes() {
   const [picked, setPicked] = useState<Set<string>>(new Set());
   const anchor = useRef<string | null>(null);
   const [branch, setBranch] = useState<BranchDiff | null>(null);
+  const branchSeq = useRef(0);
+  // A reply that lands after a newer request is dropped; a failed load keeps the diff shown.
   const reload = () => {
     void refresh();
-    fetchBranchDiff().then(setBranch, () => setBranch(null));
+    const n = ++branchSeq.current;
+    fetchBranchDiff().then((b) => n === branchSeq.current && setBranch(b), () => {});
   };
 
-  useEffect(reload, [id]);
+  useEffect(() => {
+    setBranch(null);
+    reload();
+  }, [id]);
   // ChangesBadge refreshes after each file change; this catches git commands run outside.
-  usePoll(root, 30_000, reload, [id]);
+  usePoll(root, 30_000, () => void refresh(), [id]);
 
   const run: Run = async (action, body) => {
     setFailed('');

@@ -15,6 +15,7 @@ export class RemoteStore extends BaseStore implements AssistantStore {
   readonly kind = 'remote';
   private tables: Record<string, Map<string, SyncRow>> = Object.fromEntries(['items', ...WIKI_TABLES].map((t) => [t, new Map()]));
   private since = 0;
+  private synced = 0;
   private rejects = new Map<string, number>();
   private loaded = this.load();
   private saving: Promise<void> = Promise.resolve();
@@ -66,7 +67,11 @@ export class RemoteStore extends BaseStore implements AssistantStore {
 
   private async load() {
     const read = <T>(key: string) => cacheOp<T | undefined>('readonly', (s) => s.get(key)).catch(() => undefined);
-    const meta = await read<{ since: number; columns?: string; layout?: number }>(META_KEY);
+    const meta = await read<{ since: number; columns?: string; layout?: number; synced?: number }>(META_KEY);
+    if (meta?.synced) {
+      this.synced = meta.synced;
+      this.setSync({ last: meta.synced });
+    }
     let cached: Cached | undefined;
     if (meta?.layout === 2) {
       cached = { since: meta.columns === COLUMNS ? meta.since : 0, tables: {} };
@@ -140,7 +145,7 @@ export class RemoteStore extends BaseStore implements AssistantStore {
             }
           }
           stale.forEach((k) => s.delete(k));
-          s.put({ since, columns: COLUMNS, layout: 2 }, META_KEY);
+          s.put({ since, columns: COLUMNS, layout: 2, synced: this.synced }, META_KEY);
         });
         this.stale = this.stale.filter((k) => !stale.includes(k));
         this.setSync({ saveError: false });
@@ -184,7 +189,7 @@ export class RemoteStore extends BaseStore implements AssistantStore {
 
   protected async syncOnce() {
     await this.loaded;
-    return this.track(runSync({
+    const changed = await this.track(runSync({
       active: () => true,
       since: async () => this.since,
       saveSince: async (since) => void (this.since = since),
@@ -219,6 +224,11 @@ export class RemoteStore extends BaseStore implements AssistantStore {
       rejects: this.rejects,
       parked: (rows) => void import('../view').then((v) => v.snackParked(rows)),
     }));
+    // The time of the last sync is kept with the version, so a reload shows it over the cached rows.
+    this.synced = Date.now();
+    this.saveDue = true;
+    this.saveTimer ??= setTimeout(() => this.flush(), SAVE_DELAY);
+    return changed;
   }
 
   private applySynced(change: PulledChange) {

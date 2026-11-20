@@ -1,9 +1,9 @@
 import type { GrafanaDashboards, GrafanaLogs, GrafanaPanels, GrafanaPatterns, ObserveInfo, SnowflakeObjects, SnowflakeResult, SnowflakeTest } from '../../../shared/observe';
 import type { DeployJob, PullRequest, PullRequestDetail, Repo, ReviewFindings } from '../../../shared/protocol';
-import { apiUrl, fetchJson } from '../app/api';
+import { apiUrl, fetchJson, SLOW_READ_MS } from '../app/api';
 import { api } from '../app/store';
 
-const get = <T>(path: string) => fetchJson<T>(api(path));
+const get = <T>(path: string) => fetchJson<T>(api(path), undefined, SLOW_READ_MS);
 
 const post = <T>(path: string, body?: unknown) =>
   fetchJson<T>(api(path), body === undefined ? { method: 'POST' } : { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });

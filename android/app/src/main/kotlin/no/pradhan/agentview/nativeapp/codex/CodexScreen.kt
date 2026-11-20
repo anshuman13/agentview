@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
@@ -43,6 +42,7 @@ import no.pradhan.agentview.nativeapp.app.popRoute
 import no.pradhan.agentview.nativeapp.app.pushRoute
 import no.pradhan.agentview.nativeapp.app.routeTitle
 import no.pradhan.agentview.nativeapp.app.routesOf
+import no.pradhan.agentview.nativeapp.app.SNACK_MS
 import no.pradhan.agentview.nativeapp.codex.wiki.proposals
 import no.pradhan.agentview.nativeapp.app.Hub
 import no.pradhan.agentview.nativeapp.app.track
@@ -61,6 +61,7 @@ import no.pradhan.agentview.nativeapp.ui.MenuItem
 import no.pradhan.agentview.nativeapp.ui.MoreButton
 import no.pradhan.agentview.nativeapp.ui.PageHeader
 import no.pradhan.agentview.nativeapp.ui.SnackHost
+import no.pradhan.agentview.nativeapp.ui.rememberShowSnack
 import no.pradhan.agentview.nativeapp.ui.Tokens
 import no.pradhan.agentview.nativeapp.ui.WhileStarted
 import no.pradhan.agentview.nativeapp.ui.av
@@ -151,11 +152,11 @@ fun CodexScreen(hub: Hub) {
     val now = rememberCodexNow(hub, st)
     val snack = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
-    val say = remember(hub) {
+    val show = rememberShowSnack(snack)
+    val say = remember(hub, show) {
         { text: String, undo: (() -> Unit)? ->
             scope.launch {
-                snack.currentSnackbarData?.dismiss()
-                val r = snack.showSnackbar(text, if (undo != null) "Undo" else null, duration = SnackbarDuration.Short)
+                val r = show(text, if (undo != null) "Undo" else null, SNACK_MS)
                 if (r == SnackbarResult.ActionPerformed) undo?.invoke()
             }
             Unit
@@ -173,7 +174,7 @@ fun CodexScreen(hub: Hub) {
         Column(Modifier.fillMaxSize()) {
             CodexHeader(hub, st, nav, profile, filterKey, now)
             if (st.reconnecting) Group { ListRow("Reconnecting to the hub…", syncedAt(st.lastSync, now), muted = true) }
-            else if (st.error != null) Group { ListRow("Can't reach the hub", syncedAt(st.lastSync, now), trailing = { Button("Retry", { refresh() }, size = ButtonSize.Sm) }) }
+            else st.error?.let { error -> Group { ListRow(error, syncedAt(st.lastSync, now), trailing = { Button("Retry", { refresh() }, size = ButtonSize.Sm) }) } }
             PullToRefreshBox(refreshing, { refresh() }, Modifier.weight(1f)) { CodexBody(hub, st, nav, profile, now, actions, ops) }
             if (nav.page == "overview" && nav.route == null && st.loaded) AskBar(hub, st, profile)
         }
@@ -239,6 +240,7 @@ private fun CodexBody(hub: Hub, st: CodexState, nav: CodexNav, profile: String?,
 @Composable
 private fun CodexSheetsHost(hub: Hub, st: CodexState, nav: CodexNav, profile: String?, now: Long, actions: TaskActions, ops: CodexOps, editing: Row?, snack: SnackbarHostState) {
     val scope = rememberCoroutineScope()
+    val show = rememberShowSnack(snack)
     var chatText by remember { mutableStateOf<((String?) -> String)?>(null) }
     val askAbout = { r: Row -> hub.askCodex(askText("Help me with this item.", r.profile, st.items.filter { !it.deleted && it.profile == r.profile }, r, st.meetings.filter { it.profile == r.profile }), r.profile) }
     editing?.let { row ->
@@ -255,7 +257,7 @@ private fun CodexSheetsHost(hub: Hub, st: CodexState, nav: CodexNav, profile: St
         NewChatSheet(hub, null, choices, onDismiss = { chatText = null }, initial = here, text = text)
     }
     if (nav.adding) AddSheet(hub, profile, st.items, nav.addingGoal, now, { nav.adding = false; nav.addingGoal = null }) { added ->
-        scope.launch { snack.currentSnackbarData?.dismiss(); snack.showSnackbar("Task · $added", duration = SnackbarDuration.Short) }
+        scope.launch { show("Task · $added", null, SNACK_MS) }
     }
     if (nav.needsOpen) {
         val view by hub.needed.collectAsState()

@@ -222,7 +222,7 @@ fun JobPageView(hub: Hub, st: CodexState, job: Row, now: Long, actions: TaskActi
             Group(Modifier.padding(top = Tokens.sp4)) {
                 ListRow("When", jobMeta(job, runs, st.paused, now), onClick = if (hub.readOnly) null else ({ scheduling = true }), trailing = if (hub.readOnly) null else ({ Chevron() })); Hairline()
                 repoLabel(job.str("repo"))?.let { ListRow("Repo", it); Hairline() }
-                if (job.str("repo") == null) { ListRow("Only push when it found something", "A reply starting with NOTHING NEW is kept in the runs but not pushed", trailing = { Toggle(job.long("quiet") == 1L) { hub.codex.update(job, mapOf("quiet" to if (it) 1 else 0)) } }); Hairline() }
+                if (job.str("repo") == null) { ListRow("Only push when it found something", "A reply starting with NOTHING NEW is kept in the runs but not pushed", toggle = Toggle(job.long("quiet") == 1L) { hub.codex.update(job, mapOf("quiet" to if (it) 1 else 0)) }); Hairline() }
                 if (tools != null) { ListRow("Tools", toolLabels(tools, servers).joinToString(", ")); Hairline() }
                 val latest = runs.firstOrNull()
                 if (latest == null) ListRow("Runs", "Not run yet")

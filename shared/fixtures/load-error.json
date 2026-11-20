@@ -9,5 +9,6 @@
   { "name": "connect failure", "raw": "Failed to connect to /100.64.1.2:7777", "expected": "Can't reach the Mac" },
   { "name": "unknown host", "raw": "Unable to resolve host \"mini.netbird.cloud\": No address associated with hostname", "expected": "Can't reach the Mac" },
   { "name": "a server message is kept", "raw": "Not a git repository", "expected": "Not a git repository" },
+  { "name": "a server timeout message is kept", "raw": "gh pr timed out after 60s", "expected": "gh pr timed out after 60s" },
   { "name": "a word containing timeout is kept", "raw": "Set timeouts in settings", "expected": "Set timeouts in settings" }
 ]

@@ -37,11 +37,17 @@ const listeners = new Set<() => void>();
 
 export const apiBase = () => base;
 
+// gh and MCP reads on the server may take 60 s before they answer.
+export const SLOW_READ_MS = 70_000;
+
 // The parsed JSON body; throws the server's error, or `Request failed (status)` when the body has none or is not JSON.
-// A read with no signal of its own gives up after 20 s; writes wait, so a commit with slow hooks is not cut off.
-export async function fetchJson<T>(url: string, init?: RequestInit): Promise<T> {
+// A read with no signal of its own gives up when its headers take longer than timeoutMs (the body may take longer);
+// writes wait, so a commit with slow hooks is not cut off.
+export async function fetchJson<T>(url: string, init?: RequestInit, timeoutMs = 20_000): Promise<T> {
   const get = !init?.method || init.method === 'GET';
-  const r = await fetch(url, get && !init?.signal ? { ...init, signal: AbortSignal.timeout(20_000) } : init);
+  const ctrl = get && !init?.signal ? new AbortController() : null;
+  const timer = ctrl && setTimeout(() => ctrl.abort(new DOMException('The operation timed out.', 'TimeoutError')), timeoutMs);
+  const r = await fetch(url, ctrl ? { ...init, signal: ctrl.signal } : init).finally(() => timer && clearTimeout(timer));
   const body = await r.json().catch(() => null);
   if (!r.ok || body?.error) throw new Error(body?.error ?? `Request failed (${r.status})`);
   return body as T;

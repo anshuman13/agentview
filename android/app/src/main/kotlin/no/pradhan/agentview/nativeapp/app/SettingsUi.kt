@@ -88,7 +88,7 @@ fun SettingsScreen(hub: Hub, onBack: () -> Unit, onOrigin: () -> Unit) {
                 }
                 SectionHeader("Phone")
                 Group {
-                    ListRow("Notifications", if (notify && granted) "On" else "Off", trailing = { Toggle(notify && granted, onChange = hub::setNotify) })
+                    ListRow("Notifications", if (notify && granted) "On" else "Off", toggle = Toggle(notify && granted, onChange = hub::setNotify))
                     if (notify && granted) {
                         Hairline()
                         // Each kind is its own Android channel, so the system page turns each on or off and sets its sound.
@@ -111,9 +111,7 @@ fun SettingsScreen(hub: Hub, onBack: () -> Unit, onOrigin: () -> Unit) {
                 }
                 SectionHeader("Privacy", action = { IconBtn("info", "About feature analytics", { dialog = "info" }) })
                 Group {
-                    ListRow("Feature analytics", if (analytics) "On" else "Off", trailing = {
-                        Toggle(analytics, enabled = !hub.readOnly) { if (it) hub.setFeatureUse(true) else dialog = "off" }
-                    })
+                    ListRow("Feature analytics", if (analytics) "On" else "Off", toggle = Toggle(analytics, enabled = !hub.readOnly) { if (it) hub.setFeatureUse(true) else dialog = "off" })
                     if (analytics || anyHidden) {
                         Hairline()
                         ListRow("Feature use", onClick = { dialog = "use" }, trailing = { Chevron() })
