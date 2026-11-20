@@ -10,7 +10,7 @@ import { Menu, MenuItem, MenuSeparator } from '../../ui/Menu';
 import { Section, sectionCount } from '../../ui/Section';
 import { ShowMore, useWindow } from '../../ui/useWindow';
 import { CardRow } from '../overview/CardRow';
-import { setView, showSnack, useFocusBack, useSpotBack } from '../view';
+import { setView, showSnack, useFocusBack, useSpotBack, useView } from '../view';
 import { AskBar } from './AskBar';
 import { Feed } from './Feed';
 import { Notes } from './Notes';
@@ -88,12 +88,13 @@ function PageRow({ page, proposed }: { page: Page; proposed: Set<string | null> 
 
 function NewPageField({ sort, onDone }: { sort: number; onDone: () => void }) {
   const store = useAssistantStore();
+  const { filter } = useView();
   const [title, setTitle] = useState('');
   const create = () => {
     const t = title.trim();
     onDone();
     if (!t) return;
-    const page = newPage(t, 'Pages', sort);
+    const page = newPage(t, 'Pages', sort, filter === 'all' ? 'work' : filter);
     void store.editRow('pages', page, {});
     setView({ open: page.id, anchor: null });
   };

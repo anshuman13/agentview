@@ -14,6 +14,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -62,6 +63,7 @@ import no.pradhan.agentview.nativeapp.ui.Chevron
 import no.pradhan.agentview.nativeapp.ui.ChoiceRow
 import no.pradhan.agentview.nativeapp.ops.McpServer
 import no.pradhan.agentview.nativeapp.ops.mcpScope
+import no.pradhan.agentview.nativeapp.ops.mcpHideKey
 import no.pradhan.agentview.nativeapp.ui.Chip
 import no.pradhan.agentview.nativeapp.ui.TimeDialog
 import no.pradhan.agentview.nativeapp.ui.EmptyState
@@ -151,19 +153,18 @@ private fun JobScheduleSheet(actions: TaskActions, j: Row, onDismiss: () -> Unit
 
 // JobTools of web/src/codex/jobs/JobParts.tsx: Chrome, each MCP server, then any other saved entry; a tap adds or removes it.
 @Composable
-private fun JobToolsSheet(hub: Hub, j: Row, onDismiss: () -> Unit) {
-    var probe by remember { mutableStateOf<List<McpServer>?>(null) }
-    var failed by remember { mutableStateOf(false) }
-    LaunchedEffect(Unit) { runCatching { hub.mcpProbe(false) }.onSuccess { probe = it }.onFailure { failed = true } }
+private fun JobToolsSheet(hub: Hub, j: Row, probe: List<McpServer>?, failed: Boolean, onDismiss: () -> Unit) {
+    val groups by hub.mcpGroups.collectAsState()
     val tools = j.str("tools") ?: ""
-    val picked = tools.split(',').map { it.trim() }.filter { it.isNotEmpty() }
+    val picked = toolIds(tools)
     val toggle = { id: String -> hub.codex.update(j, mapOf("tools" to toggleConnector(tools, id).ifEmpty { null })) }
-    val known = listOf("browser") + probe.orEmpty().map { mcpToolId(it.name) }
+    val shown = probe.orEmpty().filter { groups[mcpHideKey(it.name)] != "hidden" }
+    val known = listOf("browser") + shown.map { mcpToolId(it.name) }
     Sheet(onDismiss, "Allowed tools") {
         Group {
             ChoiceRow("Chrome", checked = "browser" in picked, onClick = { toggle("browser") })
             if (probe == null && !failed) { Hairline(); ListRow("Loading servers…", muted = true) }
-            probe.orEmpty().forEach { s -> Hairline(); ChoiceRow(s.name, mcpScope(s.scope).first, checked = mcpToolId(s.name) in picked, onClick = { toggle(mcpToolId(s.name)) }) }
+            shown.forEach { s -> Hairline(); ChoiceRow(s.name, mcpScope(s.scope).first, checked = mcpToolId(s.name) in picked, onClick = { toggle(mcpToolId(s.name)) }) }
             picked.filter { it !in known }.forEach { id -> Hairline(); ChoiceRow(id, checked = true, onClick = { toggle(id) }) }
         }
         if (failed) Footnote("Could not load the MCP servers")
@@ -221,7 +222,7 @@ private const val TASKS_SHOWN = 5
 
 fun mcpToolId(server: String) = toolId(server, "*")
 
-fun toolLabels(tools: String, servers: List<String> = emptyList()): List<String> = tools.split(',').map { it.trim() }.filter { it.isNotEmpty() }.map { id ->
+fun toolLabels(tools: String, servers: List<String> = emptyList()): List<String> = toolIds(tools).map { id ->
     if (id == "browser") "Chrome" else servers.firstOrNull { mcpToolId(it) == id } ?: id
 }
 
@@ -236,8 +237,9 @@ fun JobPageView(hub: Hub, st: CodexState, job: Row, now: Long, actions: TaskActi
     var scheduling by remember(job.key) { mutableStateOf(false) }
     var pickingTools by remember(job.key) { mutableStateOf(false) }
     val tools = job.str("tools")?.takeIf { it.isNotBlank() }
-    var servers by remember { mutableStateOf<List<String>>(emptyList()) }
-    LaunchedEffect(tools) { if (tools != null) runCatching { servers = hub.mcpProbe(false).map { it.name } } }
+    var probe by remember(job.key) { mutableStateOf<List<McpServer>?>(null) }
+    var probeFailed by remember(job.key) { mutableStateOf(false) }
+    LaunchedEffect(job.key) { runCatching { hub.mcpProbe(false) }.onSuccess { probe = it }.onFailure { probeFailed = true } }
     LazyColumn(Modifier.fillMaxWidth()) {
         item {
             Text(job.str("name")?.ifEmpty { null } ?: "Untitled job", Modifier.padding(start = Tokens.sp8, end = Tokens.sp4, top = Tokens.sp4), style = Type.title)
@@ -255,7 +257,7 @@ fun JobPageView(hub: Hub, st: CodexState, job: Row, now: Long, actions: TaskActi
                 repoLabel(job.str("repo"))?.let { ListRow("Repo", it); Hairline() }
                 if (job.str("repo") == null) { ListRow("Only push when it found something", "A reply starting with NOTHING NEW is kept in the runs but not pushed", toggle = Toggle(job.long("quiet") == 1L) { hub.codex.update(job, mapOf("quiet" to if (it) 1 else 0)) }); Hairline() }
                 if (job.str("repo") == null) {
-                    ListRow("Allowed tools", tools?.let { toolLabels(it, servers).joinToString(", ") } ?: "None", onClick = if (hub.readOnly) null else ({ pickingTools = true }), trailing = if (hub.readOnly) null else ({ Chevron() }))
+                    ListRow("Allowed tools", tools?.let { toolLabels(it, probe.orEmpty().map { s -> s.name }).joinToString(", ") } ?: "None", onClick = if (hub.readOnly) null else ({ pickingTools = true }), trailing = if (hub.readOnly) null else ({ Chevron() }))
                     Hairline()
                 }
                 val latest = runs.firstOrNull()
@@ -279,7 +281,7 @@ fun JobPageView(hub: Hub, st: CodexState, job: Row, now: Long, actions: TaskActi
     }
     if (editing) JobEditSheet(actions, job) { editing = false }
     if (scheduling) JobScheduleSheet(actions, job) { scheduling = false }
-    if (pickingTools) JobToolsSheet(hub, job) { pickingTools = false }
+    if (pickingTools) JobToolsSheet(hub, job, probe, probeFailed) { pickingTools = false }
     val ask = if (hub.readOnly) null else ({ r: Row, output: String ->
         runsOpen = false
         hub.askCodex(runAsk(job.str("name")?.ifEmpty { null } ?: "Untitled job", r.long("started_at") ?: 0L, output), job.profile)

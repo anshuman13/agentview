@@ -179,8 +179,10 @@ fun jobsOf(jobs: List<Row>, profile: String?) = jobs.filter { !it.deleted && mat
 // The folder name of a job's repo, or null for a job that only reads.
 fun repoLabel(repo: String?): String? = repo?.trimEnd('/')?.substringAfterLast('/')?.ifEmpty { null }
 
+fun toolIds(tools: String) = tools.split(',').map { it.trim() }.filter { it.isNotEmpty() }
+
 // toggleConnector of web/src/ops/mcpHelpers.ts; shared/fixtures/toggle-connector.json holds the cases. Adds or removes one entry of a job's tools.
 fun toggleConnector(tools: String, id: String): String {
-    val list = tools.split(',').map { it.trim() }.filter { it.isNotEmpty() }.distinct()
+    val list = toolIds(tools).distinct()
     return (if (id in list) list - id else list + id).joinToString(", ")
 }
