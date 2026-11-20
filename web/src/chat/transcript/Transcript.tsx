@@ -224,13 +224,12 @@ function TranscriptView({ events, earlier, cwd, running, bill }: { events: ChatE
       })}
       </div>
     </div>
-    {!stuck && (behind || running) && <>
-      <button className="tr-jump" onClick={jump}><Icon name="arrow-down" small />{jumpLabel}</button>
-      <span className="tr-jump-fab">
-        <IconButton icon="arrow-down" label={jumpLabel} onClick={jump} />
+    {!stuck && (behind || running) && (
+      <button className="tr-jump" aria-label={jumpLabel} title={jumpLabel} onClick={jump}>
+        <Icon name="arrow-down" small /><span className="tr-jump-text">Jump to latest</span>
         {replies > 0 && <span className="badge quiet">{replies > 9 ? '9+' : replies}</span>}
-      </span>
-    </>}
+      </button>
+    )}
     </div>
   );
 }
