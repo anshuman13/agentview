@@ -2,7 +2,7 @@ import { useState, type ReactNode } from 'react';
 import { useActions } from '../useActions';
 import { AskRow } from '../../ui/AskRow';
 import { MenuItem } from '../../ui/Menu';
-import { Section } from '../../ui/Section';
+import { Section, sectionCount } from '../../ui/Section';
 import { CardRow } from '../overview/CardRow';
 import { dueText, taskMenu } from '../tasks/Task';
 import { openMeeting, openTask, setView } from '../view';
@@ -11,8 +11,6 @@ import type { ItemRow } from '../data/sync';
 import type { commitmentsOf } from '../data/meetings/meetings';
 import type { Fact } from '../data/wiki/wiki';
 import type { personInbox } from '../data/tasks/review';
-
-export const pill = (n: number) => (n > 0 ? <span className="mt-of">{n}</span> : null);
 
 const FIRST = 5;
 const firstRows = <T,>(rows: T[], all: boolean) => (all ? rows : rows.slice(0, FIRST));
@@ -99,7 +97,7 @@ export function UnansweredMail({ mail }: { mail: Inbox['mail'] }) {
   if (!mail.length) return null;
   return (
     <section className="mt-sec">
-      <h2>Unanswered mail{pill(mail.length)}</h2>
+      <Section label="Unanswered mail" count={sectionCount(mail.length)} />
       <ul className="wk-claims">
         {mail.map((w) => (
           <li key={w.thread} className="wk-claim">
@@ -116,7 +114,7 @@ export function Commitments({ commitments }: { commitments: ReturnType<typeof co
   if (!commitments.length) return null;
   return (
     <section className="mt-sec">
-      <h2>Commitments{pill(commitments.length)}</h2>
+      <Section label="Commitments" count={sectionCount(commitments.length)} />
       <ul className="wk-claims">
         {commitments.map((c, i) => (
           <li key={i} className="wk-claim">
@@ -133,7 +131,7 @@ export function WikiClaims({ claims, pageTitle }: { claims: Fact[]; pageTitle: M
   if (!claims.length) return null;
   return (
     <section className="mt-sec">
-      <h2>In the wiki{pill(claims.length)}</h2>
+      <Section label="In the wiki" count={sectionCount(claims.length)} />
       <ul className="wk-claims">
         {claims.map((f) => (
           <li key={f.id} className="wk-claim">

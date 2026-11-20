@@ -3,6 +3,7 @@ import { useCodex } from '../data';
 import { openQuestions, questionKey, type Question } from '../data/meetings/meetings';
 import { when } from '../tasks/time';
 import { save, stored } from '../../ui/util';
+import { Section, sectionCount } from '../../ui/Section';
 import { openMeeting } from '../view';
 
 const RESOLVED = 'agentview.questionsResolved';
@@ -22,7 +23,7 @@ export function OpenQuestions({ questions }: { questions: Question[] }) {
   };
   return (
     <section className="mt-sec">
-      <h2>Open questions<span className="mt-of">{rows.length}</span></h2>
+      <Section label="Open questions" count={sectionCount(rows.length)} />
       <ul className="wk-claims">
         {rows.map((q) => (
           <li key={questionKey(q)} className="wk-claim">

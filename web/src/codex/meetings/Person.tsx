@@ -10,7 +10,7 @@ import { Avatars, MeetingRow } from './list/MeetingRow';
 import { PinList } from './Pins';
 import { OpenQuestions, resolvedQuestions } from './OpenQuestions';
 import { AddPoint, PointList, useMarkRaised } from './Raise';
-import { Asks, Commitments, Group, OpenTasks, SlackDm, UnansweredMail, WikiClaims, pill } from './PersonParts';
+import { Asks, Commitments, Group, OpenTasks, SlackDm, UnansweredMail, WikiClaims } from './PersonParts';
 import { usePerson } from './usePerson';
 import { firstName } from '../data/meetings/points';
 import '../../styles/features/wiki.css';
@@ -48,7 +48,7 @@ export function Person({ name }: { name: string }) {
           <Commitments commitments={commitments} />
 
           <section className="mt-sec">
-            <h2>Raise with {firstName(shown)}{pill(points.length)}</h2>
+            <Section label={`Raise with ${firstName(shown)}`} count={sectionCount(points.length)} />
             {points.length > 0 && <PointList points={points} person={false} />}
             <AddPoint person={name} profile={mine[0]?.profile ?? 'work'} />
           </section>
@@ -57,7 +57,7 @@ export function Person({ name }: { name: string }) {
 
           {pins.length > 0 && (
             <section className="mt-sec">
-              <h2>Pinned{pill(pins.length)}</h2>
+              <Section label="Pinned" count={sectionCount(pins.length)} />
               <PinList pins={pins} onOpen={(r) => openMeeting({ profile: r.profile, id: r.meeting_id! })} />
             </section>
           )}

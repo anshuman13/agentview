@@ -9,7 +9,7 @@ import { actionCount, actionsOf, isEvent, isSolo, meetingState, peopleOf, pinsOf
 import { clock } from '../tasks/time';
 import { useMinute } from '../tasks/split';
 import { Button } from '../../ui/Button';
-import { Section } from '../../ui/Section';
+import { Section, sectionCount } from '../../ui/Section';
 import { Icon } from '../../ui/Icon';
 import { safeHref } from '../../ui/util';
 import { notesFocusFor, setView, showSnack, useEscapeBack } from '../view';
@@ -94,7 +94,7 @@ export function MeetingPage({ m }: { m: Meeting }) {
 
           {links.length > 0 && (
             <section className="mt-sec">
-              <h2>Links<span className="mt-of">{links.length}</span></h2>
+              <Section label="Links" count={sectionCount(links.length)} />
               <div className="ui-group">{links.map((l) => <Row key={l.url} href={l.url} title={l.title} meta={linkDomain(l.url)} trailing={<Icon name="link-external" small />} />)}</div>
             </section>
           )}
@@ -114,7 +114,7 @@ export function MeetingPage({ m }: { m: Meeting }) {
             <>
               {review.length > 0 && (
                 <section className="mt-sec">
-                  <h2>To review<span className="mt-of">{review.length}</span>{review.length > 1 && <button className="btn sm mt-sync" onClick={() => confirmAll(store, review)}><Icon name="check-all" small /> Confirm all</button>}</h2>
+                  <Section label="To review" count={sectionCount(review.length)} action={review.length > 1 && <Button size="sm" className="mt-sync" onClick={() => confirmAll(store, review)}><Icon name="check-all" small /> Confirm all</Button>} />
                   <div className="mt-tasks">{review.map((r) => <ActionRow key={r.profile + r.id} row={r} meeting={m} />)}</div>
                 </section>
               )}
@@ -127,14 +127,14 @@ export function MeetingPage({ m }: { m: Meeting }) {
 
               {!m.summary && pins.length > 0 && (
                 <section className="mt-sec">
-                  <h2>Pinned<span className="mt-of">{pins.length}</span></h2>
+                  <Section label="Pinned" count={sectionCount(pins.length)} />
                   <PinList pins={pins} />
                 </section>
               )}
 
               {decisions.length > 0 && (
                 <section className="mt-sec">
-                  <h2>Decisions</h2>
+                  <Section label="Decisions" count={sectionCount(decisions.length)} />
                   <ul className="mt-decisions">{decisions.map((d, i) => <li key={i}>{d}<RaiseWith text={d} profile={m.profile} people={raiseTo} /></li>)}</ul>
                 </section>
               )}
