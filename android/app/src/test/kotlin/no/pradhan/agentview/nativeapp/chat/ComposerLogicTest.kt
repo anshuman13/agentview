@@ -60,7 +60,7 @@ class ComposerLogicTest {
 
     @Test fun usedAgainPromptJoinsANonEmptyDraftWithItsMarkersAsChips() {
         val back = splitMarks(appendPrompt("half typed [Image: /a/one.png] ", "look at this\n[Image: /a/two.png] "))
-        assertEquals("half typed\n\nlook at this", back.body.trim().replace(" \n", "\n"))
+        assertEquals("half typed \n\nlook at this\n", back.body)
         assertEquals(listOf("[Image: /a/one.png]", "[Image: /a/two.png]"), back.marks)
     }
 

@@ -146,7 +146,7 @@ private fun ClaimTextSheet(title: String, initial: String, save: String, onDismi
         TextField(text, { text = it }, Modifier.padding(vertical = Tokens.sp4), placeholder = "What is true?", minLines = 2)
         LayoutRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Tokens.sp4, Alignment.End)) {
             Button("Cancel", onDismiss, variant = ButtonVariant.Plain)
-            Button(save, { onDismiss(); onSave(text) }, variant = ButtonVariant.Filled)
+            Button(save, { onDismiss(); onSave(text) }, variant = ButtonVariant.Filled, enabled = text.isNotBlank())
         }
     }
 }

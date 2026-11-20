@@ -48,6 +48,8 @@ import no.pradhan.agentview.nativeapp.chat.handoffText
 import no.pradhan.agentview.nativeapp.chat.joinMarks
 import no.pradhan.agentview.nativeapp.chat.markLabel
 import no.pradhan.agentview.nativeapp.chat.splitMarks
+import no.pradhan.agentview.nativeapp.chat.Part
+import no.pradhan.agentview.nativeapp.chat.userParts
 import no.pradhan.agentview.nativeapp.chat.latestChecklist
 import no.pradhan.agentview.nativeapp.chat.reviewLabel
 import no.pradhan.agentview.nativeapp.chat.s
@@ -257,6 +259,16 @@ class SharedCasesTest {
             assertEquals(c.str("name"), c.getValue("marks").jsonArray.map { it.jsonPrimitive.content }, s.marks)
             assertEquals(c.str("name"), c.getValue("names").jsonArray.map { it.jsonPrimitive.content }, s.marks.map { markLabel(it) })
             assertEquals(c.str("name"), c.str("joined"), joinMarks(s.body, s.marks))
+        }
+    }
+
+    @Test fun userParts() {
+        for (c in cases("user-parts")) {
+            val expected = c.getValue("parts").jsonArray.map {
+                val p = it.jsonObject
+                p["image"]?.let { i -> Part.Image(i.jsonPrimitive.content) } ?: Part.Text(p.str("text"))
+            }
+            assertEquals(c.str("name"), expected, userParts(c.str("text")))
         }
     }
 

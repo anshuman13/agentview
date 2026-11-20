@@ -68,11 +68,11 @@ import no.pradhan.agentview.nativeapp.ui.plural
 
 // The claim a proposal replaces or repeats, clamped to two lines; a tap shows all of it.
 @Composable
-private fun OldClaim(claim: Row, label: String, key: String) {
+private fun OldClaim(claim: Row, label: String, struck: Boolean, key: String) {
     var full by remember(key, label) { mutableStateOf(false) }
     Column(Modifier.heightIn(min = Tokens.touchSm).clickable { full = !full }) {
         Text(label, style = Type.meta, color = av.metaFg)
-        Text(claim.str("text") ?: "", style = Type.subheadline, color = av.fgMuted, textDecoration = if (label == "Replaces") TextDecoration.LineThrough else null, maxLines = if (full) Int.MAX_VALUE else 2, overflow = TextOverflow.Ellipsis)
+        Text(claim.str("text") ?: "", style = Type.subheadline, color = av.fgMuted, textDecoration = if (struck) TextDecoration.LineThrough else null, maxLines = if (full) Int.MAX_VALUE else 2, overflow = TextOverflow.Ellipsis)
     }
 }
 
@@ -97,15 +97,15 @@ fun ReviewModePage(st: CodexState, ops: ReviewOps, onBack: () -> Unit, onPage: (
     }
     val page = fact.str("page_id")?.let { id -> st.pages.firstOrNull { it.id == id && it.profile == fact.profile } }
     val old = fact.str("replaces")?.let { id -> st.facts.firstOrNull { it.id == id && it.profile == fact.profile } }
-    val similar = similarLive(fact, st.facts)
+    val similar = remember(fact, st.facts) { similarLive(fact, st.facts) }
     Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(vertical = Tokens.sp8), verticalArrangement = Arrangement.spacedBy(Tokens.sp6)) {
         Text("${total - left + 1} of $total", Modifier.padding(horizontal = Tokens.listPad), style = Type.label, color = av.fgMuted)
         Group {
             Column(Modifier.padding(Tokens.listPad), verticalArrangement = Arrangement.spacedBy(Tokens.sp6)) {
                 Text(listOfNotNull(page?.title, if (page?.str("state") == "proposed") "(new page)" else null, fact.str("heading")?.ifEmpty { null }).joinToString(" · ").ifEmpty { "Memory" }, style = Type.callout, color = av.fgMuted)
                 Text(fact.str("text") ?: "", style = Type.body, color = av.fg)
-                if (old != null) OldClaim(old, "Replaces", fact.key)
-                if (similar != null) OldClaim(similar, "Similar to", fact.key)
+                if (old != null) OldClaim(old, "Replaces", true, fact.key)
+                if (similar != null) OldClaim(similar, "Similar to", false, fact.key)
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(Tokens.sp4), verticalArrangement = Arrangement.spacedBy(Tokens.sp4), itemVerticalAlignment = Alignment.CenterVertically) {
                     sourcesOf(fact).forEach { s -> Chip(s.label, safeHref(s.url)?.let { u -> { uri.openUri(u) } }) }
                     fact.long("at")?.let { Text(shortDate(it, System.currentTimeMillis()), style = Type.meta, color = av.metaFg) }

@@ -454,12 +454,14 @@ class Hub(internal val app: Application, private val saved: SavedStateHandle) : 
     // Puts a prompt in the composer of the chat on screen and shows the chat, without sending it.
     fun draftPrompt(text: String) {
         val chat = store.wanted
-        setDraft(chat, appendPrompt(draft(chat), text))
+        appendDraft(chat, text)
         link.value = DeepLink(chat = chat)
     }
 
     // Adds a sent prompt to the composer of a chat that is already on screen (web agentview:insert).
-    fun useAgain(chat: String, text: String) {
+    fun useAgain(chat: String, text: String) = appendDraft(chat, text)
+
+    private fun appendDraft(chat: String, text: String) {
         setDraft(chat, appendPrompt(draft(chat), text))
         draftChanged.tryEmit(chat)
     }

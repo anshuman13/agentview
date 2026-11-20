@@ -151,10 +151,10 @@ private class ComposerState(val hub: Hub, val chatId: String) {
     }
 
     fun sendAt(time: String, uploading: Int) {
-        val t = text.text
+        val t = full
         if (t.isBlank()) return
         if (uploading > 0) { hub.notice.value = "Wait for the upload to finish"; return }
-        set(TextFieldValue(""))
+        clear()
         hub.sendAt(time, t) { restore(t) }
     }
 
