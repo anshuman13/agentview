@@ -34,7 +34,10 @@
     "replaces",
     "added_by",
     "used_count",
-    "used_at"
+    "used_at",
+    "why",
+    "decided_at",
+    "reject_reason"
   ],
   "pages": [
     "title",
@@ -98,7 +101,8 @@
     "next_run_at",
     "tools",
     "repo",
-    "quiet"
+    "quiet",
+    "account"
   ],
   "runs": [
     "job_id",

@@ -22,8 +22,8 @@ val SYNCED_FIELDS = mapOf(
     "meetings" to listOf("title", "starts_at", "ends_at", "people", "calendar_url", "recorded_ms", "notes", "summary", "decisions", "transcript", "tries", "room", "room_me", "organizer_me", "others", "links"),
     "chats" to listOf("name", "kind", "url", "summary", "last_at", "waiting"),
     "pages" to listOf("title", "section", "summary", "sort", "state"),
-    "facts" to listOf("text", "item_id", "superseded_by", "page_id", "heading", "sources", "at", "contested", "state", "replaces", "added_by", "used_count", "used_at"),
-    "jobs" to listOf("name", "schedule", "prompt", "enabled", "next_run_at", "tools", "repo", "quiet"),
+    "facts" to listOf("text", "item_id", "superseded_by", "page_id", "heading", "sources", "at", "contested", "state", "replaces", "added_by", "used_count", "used_at", "why", "decided_at", "reject_reason"),
+    "jobs" to listOf("name", "schedule", "prompt", "enabled", "next_run_at", "tools", "repo", "quiet", "account"),
     "runs" to listOf("job_id", "started_at", "finished_at", "status", "output", "cost"),
     "briefs" to listOf("kind", "text", "rows", "from_at", "to_at", "dismissed"),
 )

@@ -24,6 +24,9 @@ export type Fact = Common & {
   added_by: string | null;
   used_count: number | null;
   used_at: number | null;
+  why: string | null;
+  decided_at: number | null;
+  reject_reason: string | null;
 };
 
 export type Meeting = Common & {
@@ -56,7 +59,7 @@ export type Action = Common & {
   result_url: string | null;
 };
 
-export type Job = Common & { name: string | null; schedule: string | null; prompt: string | null; enabled: number | null; next_run_at: number | null; tools: string | null; repo: string | null; quiet: number | null };
+export type Job = Common & { name: string | null; schedule: string | null; prompt: string | null; enabled: number | null; next_run_at: number | null; tools: string | null; repo: string | null; quiet: number | null; account: string | null };
 export type Run = Common & { job_id: string | null; started_at: number | null; finished_at: number | null; status: string | null; output: string | null; cost: number | null };
 
 export type Chat = Common & { name: string | null; kind: string | null; url: string | null; summary: string | null; last_at: number | null; waiting?: number | null };
@@ -210,7 +213,7 @@ export function newFact(text: string, pageId: string | null, profile: Profile = 
   return {
     id: newId(), profile, version: 0, updated_at: now, deleted: 0, dirty: 1,
     field_times: JSON.stringify({ text: now, page_id: now, at: now, state: now, added_by: now }),
-    text, item_id: null, superseded_by: null, page_id: pageId, heading: null, sources: null, at: now, contested: null, state: 'proposed', replaces: null, added_by: 'you', used_count: null, used_at: null,
+    text, item_id: null, superseded_by: null, page_id: pageId, heading: null, sources: null, at: now, contested: null, state: 'proposed', replaces: null, added_by: 'you', used_count: null, used_at: null, why: null, decided_at: null, reject_reason: null,
   };
 }
 

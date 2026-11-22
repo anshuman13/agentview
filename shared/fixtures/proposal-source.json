@@ -1,0 +1,13 @@
+[
+  {"name": "chat learning by id", "id": "learn:abc", "added_by": "claude:chat1", "expected": {"key": "chat", "label": "Chat learning"}},
+  {"name": "decision update by id", "id": "upd:abc", "added_by": "slack:123", "expected": {"key": "update", "label": "Decision update"}},
+  {"name": "faq keeps its channel", "id": "f1", "added_by": "faq:general", "expected": {"key": "faq:general", "label": "Slack FAQ"}},
+  {"name": "corrections", "id": "f2", "added_by": "corrections", "expected": {"key": "corrections", "label": "Draft edits"}},
+  {"name": "voice", "id": "f3", "added_by": "voice", "expected": {"key": "voice", "label": "Your voice"}},
+  {"name": "people", "id": "f4", "added_by": "people", "expected": {"key": "people", "label": "People"}},
+  {"name": "slack", "id": "f5", "added_by": "slack:123", "expected": {"key": "slack", "label": "Slack"}},
+  {"name": "pull request", "id": "f6", "added_by": "pr:owner/repo#12", "expected": {"key": "pr", "label": "Pull request"}},
+  {"name": "agent", "id": "f7", "added_by": "claude:chat2", "expected": {"key": "agent", "label": "Agent proposal"}},
+  {"name": "empty is not a proposal", "id": "f8", "added_by": "", "expected": null},
+  {"name": "null is not a proposal", "id": "f9", "added_by": null, "expected": null}
+]
