@@ -1,5 +1,5 @@
 import type { AdvisorId } from '../../../shared/advisors.js';
-import type { ChatRun, ClientMessage, LiveChat, Provider } from '../../../shared/protocol.js';
+import type { Account, ChatRun, ClientMessage, LiveChat, Provider } from '../../../shared/protocol.js';
 
 export type HostRequest =
   | { op: 'hello' }
@@ -10,7 +10,7 @@ export type HostRequest =
   | { op: 'open'; sessionId: string }
   | { op: 'advisor'; id: AdvisorId; fresh: boolean; text?: string }
   | { op: 'new'; cwd: string; from: string; fork?: string; model?: string; provider?: Provider; text?: string }
-  | { op: 'job'; cwd: string; title: string; prompt: string; jobId: string; branch: string; repo: string; paseo: boolean }
+  | { op: 'job'; cwd: string; title: string; prompt: string; jobId: string; branch: string; repo: string; paseo: boolean; account?: Account }
   | { op: 'run_end'; id: string; why: string; pr?: string }
   | { op: 'run_drop'; id: string; why: string }
   | { op: 'run_revise'; id: string; text: string }

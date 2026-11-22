@@ -21,6 +21,7 @@ const { removeChat } = await import('../agent/claude/pins.js');
 const { UNATTENDED_INSTRUCTION } = await import('../session/prompts.js');
 const { jobRepo } = await import('../workspace/testRepo.js');
 const { createChat, endRun, jobChat, reviewJob } = await import('./chats.js');
+const { AgentSession } = await import('../session/session.js');
 const { live } = await import('./state.js');
 
 const unattended = (chat: { driver: unknown }) => (chat.driver as { unattended: boolean }).unattended;
@@ -39,6 +40,22 @@ describe('jobChat', () => {
     expect(unattended(chat)).toBe(true);
     expect(chat.title).toBe('Fix the test');
     await waitFor(() => expect(chat.state.events.find((e) => e.kind === 'user')).toMatchObject({ text: `Fix it\n\n${UNATTENDED_INSTRUCTION}` }));
+  });
+
+  it('switches to the job\'s account before the first prompt', async () => {
+    const order: string[] = [];
+    const account = vi.spyOn(AgentSession.prototype, 'setAccount').mockImplementation((a: string) => void order.push(`account ${a}`));
+    const send = vi.spyOn(AgentSession.prototype, 'prompt').mockImplementation(async () => void order.push('prompt'));
+    try {
+      await jobChat({ op: 'job', cwd: '/tmp', title: 'Fix', prompt: 'Fix it', jobId: 'j2', branch: 'jobs/fix-2', repo: '/r', paseo: false, account: 'alt' });
+      expect(order).toEqual(['account alt', 'prompt']);
+      order.length = 0;
+      await jobChat({ op: 'job', cwd: '/tmp', title: 'Fix', prompt: 'Fix it', jobId: 'j3', branch: 'jobs/fix-3', repo: '/r', paseo: false });
+      expect(order).toEqual(['prompt']);
+    } finally {
+      account.mockRestore();
+      send.mockRestore();
+    }
   });
 
   it('a chat reopened on a session with an open job run comes back unattended, one without does not', async () => {

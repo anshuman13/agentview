@@ -28,7 +28,8 @@ is an assistant, and every send is logged and reversible by me.
   job can call `ask_context` to read my wiki claims, decisions and open tasks
 - A job with a repo (picked on the job page, on the web only; the phone shows it read-only) codes instead: the hub posts it to
   `POST /api/jobs/start` on the server of its own Mac, which makes a `jobs/<slug>-<stamp>` worktree of that repo and opens
-  an unattended claude chat in it (no push, no `gh`, changes left uncommitted). The run shows in its chat's run head as
+  an unattended claude chat in it (no push, no `gh`, changes left uncommitted), on the job's picked account when it has
+  one (an optional `account` in the post; any other value than `main`, `alt` or `alt2` is a 400), else the folder's. The run shows in its chat's run head as
   "Job · <branch>"; a permission prompt pauses it as Needs you, a restart keeps it, and a job whose last run is still
   open is skipped. When its turn ends the server checks the worktree: a run with nothing changed ends "No changes" and its
   chat and worktree go (a failed one ends "Failed" and keeps its chat); a run with changes waits as "Ready for review"

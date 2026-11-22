@@ -16,6 +16,7 @@ import { advisorsMac, askAdvisorsMac, assistantRoute } from '../integrations/ass
 import { linkTitleRoute } from '../integrations/linkTitle.js';
 import { otherMacs } from './macs.js';
 import { hideableIds } from '../../../shared/featureUse.js';
+import { ACCOUNT_LABEL, type Account } from '../../../shared/protocol.js';
 import { clearFeatureUse, featureUseDays, recordRoute } from '../featureUse.js';
 import { expandHome, homeRelative, loadSettings, publicSettings, saveSettings } from '../settings.js';
 import { listPorts, openPort } from './preview.js';
@@ -116,6 +117,8 @@ export function workspaceRoutes(d: RouteDeps): Record<string, Entry<Ctx>> {
     'POST /api/jobs/start': entry(async ({ req, body }) => {
       const [jobId, title, repo, prompt] = ['jobId', 'title', 'repo', 'prompt'].map((k) => String(body[k] ?? ''));
       if (!jobId || !prompt.trim()) return failed(400, 'jobId and prompt are required');
+      const account = body.account == null ? undefined : String(body.account);
+      if (account !== undefined && !Object.hasOwn(ACCOUNT_LABEL, account)) return failed(400, 'Unknown account');
       if (!isWorkspaceRepo(repo)) return failed(400, 'Not a workspace repo');
       if (d.runs().some((r) => r.kind === 'job' && r.jobId === jobId && r.state !== 'done')) return failed(409, 'The last run is still open');
       const branch = `jobs/${branchSlug(title)}`;
@@ -129,7 +132,7 @@ export function workspaceRoutes(d: RouteDeps): Record<string, Entry<Ctx>> {
           await drop();
           return failed(499, 'The caller gave up');
         }
-        const chatId = await d.host.req<string>({ op: 'job', cwd: dir, title, prompt, jobId, branch, repo, paseo }).catch(async (err) => {
+        const chatId = await d.host.req<string>({ op: 'job', cwd: dir, title, prompt, jobId, branch, repo, paseo, ...(account && { account: account as Account }) }).catch(async (err) => {
           await drop();
           throw err;
         });

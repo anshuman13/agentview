@@ -168,9 +168,10 @@ export async function prompt(cwd: string, text: string, from?: string, fresh = f
   return chat.id;
 }
 
-// A scheduled coding job: a claude chat in a worktree the server made, with a run that holds the job's branch and worktree.
+// A scheduled coding job: a claude chat in a worktree the server made, on the job's account when it picked one, with a run that holds the job's branch and worktree.
 export async function jobChat(job: Extract<HostRequest, { op: 'job' }>) {
   const chat = await createChat(job.cwd, undefined, job.title, false, 'claude', true);
+  if (job.account) chat.setAccount(job.account);
   const runId = runs.start({ kind: 'job', sessionId: '', chatId: chat.id, title: job.title, what: job.prompt, provider: 'claude', jobId: job.jobId, branch: job.branch, repo: job.repo, worktree: job.cwd, paseo: job.paseo });
   chat.prompt(`${job.prompt}\n\n${UNATTENDED_INSTRUCTION}`).catch((err) => runs.end(runId, errText(err).split('\n')[0]));
   return chat.id;

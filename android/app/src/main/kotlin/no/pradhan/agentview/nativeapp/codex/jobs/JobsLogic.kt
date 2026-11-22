@@ -1,6 +1,7 @@
 package no.pradhan.agentview.nativeapp.codex.jobs
 
 import kotlinx.serialization.json.JsonNull
+import no.pradhan.agentview.nativeapp.chat.ACCOUNT_LABEL
 import no.pradhan.agentview.nativeapp.codex.Row
 import no.pradhan.agentview.nativeapp.codex.SYNCED_FIELDS
 import no.pradhan.agentview.nativeapp.codex.SyncPaused
@@ -135,8 +136,14 @@ fun jobEdits(j: Row, name: String, prompt: String): Map<String, Any?> = buildMap
     if (prompt != (j.str("prompt") ?: "")) put("prompt", prompt)
 }
 
-// Until when the hub holds the job's runs for its profile's usage limit (the `jobs:<profile>` pause), or null.
-fun heldUntil(j: Row, paused: List<SyncPaused>, now: Long) = paused.firstOrNull { it.scan == "jobs:${j.profile}" && it.until > now }?.until
+// PROFILE_ACCOUNT of shared/protocol.ts, and pickedAccount, jobAccount and jobScan of shared/jobRuns.ts: the account picked on the job's page (null for Auto), the one it runs on, and the pause it waits under.
+fun profileAccount(profile: String) = if (profile == "work") "alt" else "main"
+fun pickedAccount(j: Row) = j.str("account")?.takeIf { it in ACCOUNT_LABEL }
+fun jobAccount(j: Row) = pickedAccount(j) ?: profileAccount(j.profile)
+fun jobScan(j: Row) = pickedAccount(j)?.let { "jobs:${j.profile}:$it" } ?: "jobs:${j.profile}"
+
+// Until when the hub holds the job's runs for its account's usage limit (the `jobScan` pause), or null.
+fun heldUntil(j: Row, paused: List<SyncPaused>, now: Long) = paused.firstOrNull { it.scan == jobScan(j) && it.until > now }?.until
 
 // The row's second line: the schedule, then why the job is queued or when it runs next.
 fun jobMeta(j: Row, own: List<Row>, paused: List<SyncPaused>, now: Long): String {

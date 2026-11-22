@@ -36,7 +36,9 @@ Collection stays per account. claude.ai connectors belong to the Claude account,
 | personal | personal account | Gmail, Calendar, Drive |
 
 Each profile has its own Claude config folder on the mini (nothing linked to `~/.claude`) and its own MCP list.
-Jobs are pinned to their account with no fallback: at a usage limit they wait and retry. Questions that need both
+Jobs are pinned to their account with no fallback: at a usage limit they wait and retry. A job runs on its profile's account
+unless its page picked one (the jobs `account` column: `main`, `alt` or `alt2`); a repo job sends the picked account to
+`/api/jobs/start`, whose chat switches to it before the first prompt. Questions that need both
 sides run on the personal account.
 Before a Claude call, and before a job or scan is skipped for a limit, the hub checks the limit mark against live
 usage the same way chats do (see [features.md](features.md#personal-and-work-claude-accounts)).
@@ -68,7 +70,7 @@ with other attendees they are held and sent as one push when it ends.
 Scan slots follow the hub's local clock, so half hours start at :00 and :30 in any time zone.
 While a Claude account is at its usage limit, the Slack and Gmail scans and the calendar import of its profiles skip
 their runs, and the scans catch up from their last read afterwards. The hub logs the pause once per limit, and each sync reply lists the paused scans so the apps can show them
-until the limit ends. A job whose profile's account is at its limit is skipped the same way and stays queued, with the pause `jobs:<profile>` in the same list; the Jobs list and job page show "Usage limit until 14:20" for it in place of "Queued", and it runs at the next tick after the limit ends.
+until the limit ends. A job whose account is at its limit is skipped the same way and stays queued, with the pause `jobs:<profile>` in the same list (`jobs:<profile>:<account>` for a job with a picked account); the Jobs list and job page show "Usage limit until 14:20" for it in place of "Queued", and it runs at the next tick after the limit ends.
 Each Slack and Gmail run, and each profile's calendar import (`calendar:work`, `calendar:personal`), records its last success with counts and its last error in meta `scan:<name>`, and
 the sync reply returns them as `scans`. A pushed change that fails validation is skipped while the rest of the batch applies; the reply lists the skipped ones as `rejected` (table, id, reason), and the app keeps those rows dirty and shows the first reason as its sync error. `POST /scan?name=slack|gmail` runs one scan now outside its slot; it still
 honors the usage-limit pause and joins a scan that is already running.

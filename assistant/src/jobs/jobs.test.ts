@@ -3,7 +3,7 @@ import { markLimited } from '../../../server/src/agent/claude/accounts.js';
 import { pausedScans, type Paused } from '../core/claude.js';
 import { openDb } from '../core/db.js';
 import { applyChanges } from '../core/sync.js';
-import { canRead, dropOrphanRuns, dueJobs, jobAllows, nextRun, orphansDue, runDue } from './jobs.js';
+import { canRead, dropOrphanRuns, dueJobs, jobAllows, nextRun, orphansDue, runDue, runJob } from './jobs.js';
 import { HOUR } from '../core/time.js';
 import { queueCommands, replyToCommand } from '../slack/commands.js';
 
@@ -122,6 +122,30 @@ describe('runDue', () => {
     expect((db.prepare("SELECT next_run_at FROM jobs WHERE id = 'a'").get() as { next_run_at: number }).next_run_at).toBe(now - 1);
     expect(JSON.parse((db.prepare("SELECT value FROM meta WHERE key = 'paused:jobs:work:alt'").get() as { value: string }).value)).toMatchObject({ scan: 'jobs:work', until });
   });
+  test('a job with a picked account pauses under its own key', async () => {
+    const { db, now } = seed(1);
+    applyChanges(db, [{ table: 'jobs', id: 'a', profile: 'work', updated_at: 2, fields: { account: 'alt2' } }]);
+    const until = Date.now() + HOUR;
+    markLimited('alt2', until);
+    try {
+      await runDue(db, now, ok, async () => true, reply);
+      expect(pausedScans(db)).toEqual([{ scan: 'jobs:work:alt2', reason: 'Claude usage limit', until }]);
+    } finally {
+      markLimited('alt2', 0);
+    }
+  });
+  test('a prompt job runs on its picked account, else on its profile\'s', async () => {
+    const db = openDb(':memory:');
+    const job = { id: 'a', profile: 'personal' as const, name: 'A', schedule: null, prompt: 'x', enabled: 1, next_run_at: null, tools: null, repo: null, quiet: null };
+    const used: string[] = [];
+    const query = async function* (account: string) {
+      used.push(account);
+      yield { type: 'result', subtype: 'success', result: 'done', total_cost_usd: 0 };
+    };
+    await runJob(db, { ...job, account: 'alt2' }, async () => true, query as never);
+    await runJob(db, { ...job, account: null }, async () => true, query as never);
+    expect(used).toEqual(['alt2', 'main']);
+  });
   test('a disabled job runs once and stays off', async () => {
     const { db, now } = seed(0);
     await runDue(db, now, ok, async () => true, reply);
@@ -182,6 +206,14 @@ describe('runDue', () => {
       expect(calls).toEqual([{ url: 'http://127.0.0.1:7777/api/jobs/start', body: { jobId: 'a', title: 'Fix tests', repo: '/Users/me/workspace/app', prompt: 'push the fix' } }]);
       expect(run).toEqual({ status: 'ok', output: 'Started jobs/fix-tests-1105 in app' });
       expect(pushes).toEqual([]);
+    });
+    test('sends the picked account', async () => {
+      const { db, now } = seedRepo();
+      applyChanges(db, [{ table: 'jobs', id: 'a', profile: 'work', updated_at: 2, fields: { account: 'alt' } }]);
+      const bodies: unknown[] = [];
+      globalThis.fetch = (async (_url: string, init: RequestInit) => (bodies.push(JSON.parse(String(init.body))), Response.json({ branch: 'jobs/x' }))) as never;
+      await runDue(db, now, never, async () => true, reply);
+      expect(bodies).toEqual([{ jobId: 'a', title: 'Fix tests', repo: '/Users/me/workspace/app', prompt: 'push the fix', account: 'alt' }]);
     });
     test('a 2xx answer that is not JSON still counts as started', async () => {
       const { run } = await go(() => new Response('ok'));

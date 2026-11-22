@@ -77,6 +77,8 @@ export function appendTo(ev: ChatEvent, offset: number, text: string): ChatEvent
 export type Account = 'main' | 'alt' | 'alt2';
 // The labels are replaced at startup by the ones in ~/.agentview/settings.json.
 export const ACCOUNT_LABEL: Record<Account, string> = { main: 'Account 1', alt: 'Account 2', alt2: 'Account 3' };
+// The account each hub profile runs on.
+export const PROFILE_ACCOUNT = { work: 'alt', personal: 'main' } as const;
 // Accounts only picked by hand, never for new chats or after a usage limit.
 export const ACCOUNT_NOTE: Partial<Record<Account, string>> = { alt2: 'Only picked by hand' };
 // What the clients read from /api/settings: the features that are on and the account labels.

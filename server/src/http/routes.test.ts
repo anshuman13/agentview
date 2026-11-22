@@ -112,6 +112,12 @@ describe('routes', () => {
         mocks.createWorktree.mockRejectedValue(new Error('paseo is not installed'));
       });
 
+      it('answers 400 for an unknown account', async () => {
+        mocks.isWorkspaceRepo.mockReturnValue(true);
+        const r = await call('POST', '/api/jobs/start', JSON.stringify({ jobId: 'j1', title: 't', repo: '/tmp/none', prompt: 'do it', account: 'x' }));
+        expect([r.code, r.json]).toEqual([400, { error: 'Unknown account' }]);
+      });
+
       it('answers 400 for a repo that is not a workspace repo', async () => {
         mocks.isWorkspaceRepo.mockReturnValue(false);
         const r = await start();
@@ -138,6 +144,9 @@ describe('routes', () => {
         expect(existsSync(dir)).toBe(true);
         expect(execFileSync('git', ['-C', dir, 'branch', '--show-current']).toString().trim()).toBe(r.json.branch);
         expect(req).toHaveBeenCalledWith({ op: 'job', cwd: dir, title: 'Fix the flaky test', prompt: 'do it', jobId: 'j1', branch: r.json.branch, repo, paseo: false });
+        const picked = await call('POST', '/api/jobs/start', JSON.stringify({ jobId: 'j2', title: 'Other job', repo, prompt: 'do it', account: 'alt' }), { host: { req }, runs: () => [] } as unknown as Partial<RouteDeps>);
+        expect(req).toHaveBeenLastCalledWith(expect.objectContaining({ jobId: 'j2', account: 'alt' }));
+        expect(picked.json.chatId).toBe('chat9');
         rmSync(root, { recursive: true, force: true });
       });
     });

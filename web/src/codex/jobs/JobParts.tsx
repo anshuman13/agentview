@@ -16,6 +16,8 @@ import { madeAt, type ItemRow } from '../data/sync';
 import { Group } from '../meetings/PersonParts';
 import { openTask } from '../view';
 import { UNTITLED } from '../../../../shared/util';
+import { pickedAccount } from '../../../../shared/jobRuns';
+import { ACCOUNT_LABEL, type Account } from '../../../../shared/protocol';
 
 export function JobActions({ j, prompt, nameInput, back }: { j: Job; prompt: string; nameInput: RefObject<HTMLInputElement | null>; back: () => void }) {
   const store = useAssistantStore();
@@ -131,6 +133,29 @@ export function JobRepo({ j }: { j: Job }) {
         </Menu>
       )}
       {j.repo && <div className="jb-tools"><Chip size="sm" icon="close" aria-label={`Remove ${repoName(j.repo)}`} onClick={() => set(null)}>{repoName(j.repo)}</Chip></div>}
+    </section>
+  );
+}
+
+export function JobAccount({ j }: { j: Job }) {
+  const store = useAssistantStore();
+  const [picking, setPicking] = useState(false);
+  const pick = useRef<HTMLButtonElement>(null);
+  const current = pickedAccount(j);
+  const set = (account: Account | null) => {
+    setPicking(false);
+    void store.editRow('jobs', j, { account });
+  };
+  return (
+    <section className="mt-sec">
+      <h2>Account</h2>
+      <Button ref={pick} size="sm" icon="account" aria-haspopup="menu" aria-expanded={picking} onClick={() => setPicking(!picking)}>Pick account</Button>
+      {picking && (
+        <Menu trigger={pick} onClose={() => setPicking(false)}>
+          <MenuItem icon={current ? undefined : 'check'} onClick={() => set(null)}>Auto</MenuItem>
+          {(Object.keys(ACCOUNT_LABEL) as Account[]).map((a) => <MenuItem key={a} icon={a === current ? 'check' : undefined} onClick={() => set(a)}>{ACCOUNT_LABEL[a]}</MenuItem>)}
+        </Menu>
+      )}
     </section>
   );
 }

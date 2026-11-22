@@ -8,9 +8,10 @@ import { MIN, workSlotDue } from '../core/time.js';
 import { loop, once } from '../core/once.js';
 import { backoff, recordScan } from '../core/scan.js';
 import { errText } from '../../../shared/util.js';
+import { PROFILE_ACCOUNT } from '../../../shared/protocol.js';
 
 const CALENDAR = 'mcp__claude_ai_Google_Calendar__';
-export const ACCOUNT_OF = { work: 'alt', personal: 'main' } as const;
+export const ACCOUNT_OF = PROFILE_ACCOUNT;
 
 const Event = z.object({
   id: z.string(),

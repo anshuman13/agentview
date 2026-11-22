@@ -11,7 +11,9 @@ import { useAssistantTable } from '../data';
 import { Row } from '../../ui/Row';
 import { Switch } from './Switch';
 import { RunsRow, RunsSheet } from './RunsSheet';
-import { JobActions, JobRepo, JobTasks, JobTools, JobWhen, repoName } from './JobParts';
+import { JobAccount, JobActions, JobRepo, JobTasks, JobTools, JobWhen, repoName } from './JobParts';
+import { jobAccount, pickedAccount } from '../../../../shared/jobRuns';
+import { ACCOUNT_LABEL } from '../../../../shared/protocol';
 
 const EXAMPLE = 'List my Linear issues that changed since yesterday and add a task for anything that needs me.';
 
@@ -46,6 +48,7 @@ export function JobPage({ j }: { j: Job }) {
   useReturnFocus(runsOpen);
   const list = runsOf(runs, j);
   const tasks = tasksOf(useAssistantTable('items'), j);
+  const picked = pickedAccount(j);
   return (
     <div className="wk narrow">
       <header className="wk-head">
@@ -60,9 +63,10 @@ export function JobPage({ j }: { j: Job }) {
           <section className="mt-sec">
             <h2>Prompt</h2>
             <textarea className="jb-prompt" rows={4} value={prompt} placeholder={EXAMPLE} aria-label="Prompt" onChange={(e) => setPrompt(e.target.value)} onBlur={save} />
-            <div className="muted small">{j.repo ? `Runs in a new worktree of ${repoName(j.repo)} on the hub's Mac. Nothing is pushed until you approve it.` : `Runs on the ${j.profile} Claude account. It reads, adds tasks to Codex, can push you a notification, and sends you its reply.`}</div>
+            <div className="muted small">{j.repo ? `Runs in a new worktree of ${repoName(j.repo)} on the hub's Mac${picked ? ` on ${ACCOUNT_LABEL[picked]}` : ''}. Nothing is pushed until you approve it.` : `Runs on ${ACCOUNT_LABEL[jobAccount(j)]}${picked ? '' : ', the profile\'s account'}. It reads, adds tasks to Codex, can push you a notification, and sends you its reply.`}</div>
           </section>
           <JobRepo j={j} />
+          <JobAccount j={j} />
           {!j.repo && <JobTools j={j} />}
           <div className="as-group" key={j.id}>
             {!j.repo && <Row plain title="Only push when it found something" meta="A reply starting with NOTHING NEW is kept in the runs but not pushed" trailing={<Switch on={!!j.quiet} label="Only push when it found something" onChange={(on) => void store.editRow('jobs', j, { quiet: on ? 1 : 0 })} />} />}

@@ -1,4 +1,5 @@
 import { money } from './cost.js';
+import { ACCOUNT_LABEL, PROFILE_ACCOUNT, type Account } from './protocol.js';
 
 export const FAILED_JOB_MS = 24 * 3600_000;
 
@@ -16,6 +17,20 @@ export function runMeta(r: Pick<RunLike, 'status' | 'started_at' | 'finished_at'
   const quiet = r.status === 'ok' && /^NOTHING NEW/i.test(r.output ?? '');
   return [quiet ? 'Nothing new' : '', dur, r.cost ? money(r.cost) : ''].filter(Boolean).join(' · ');
 }
+
+type JobAccount = { profile: string; account?: string | null };
+
+// The account picked on the job's page, or null for Auto.
+export const pickedAccount = (j: JobAccount) => (j.account && Object.hasOwn(ACCOUNT_LABEL, j.account) ? (j.account as Account) : null);
+
+// The account a job runs on: the picked one, else its profile's.
+export const jobAccount = (j: JobAccount): Account => pickedAccount(j) ?? PROFILE_ACCOUNT[j.profile as keyof typeof PROFILE_ACCOUNT];
+
+// The pause a job waits under while its account is at its usage limit: `jobs:<profile>`, or `jobs:<profile>:<account>` with a picked account.
+export const jobScan = (j: JobAccount) => {
+  const a = pickedAccount(j);
+  return a ? `jobs:${j.profile}:${a}` : `jobs:${j.profile}`;
+};
 
 // A job whose next run is due and that has no run going.
 export const queued = (j: JobLike, runs: RunLike[], now: number) => j.next_run_at != null && j.next_run_at <= now && !runsOf(runs, j).some((r) => r.status === 'running');

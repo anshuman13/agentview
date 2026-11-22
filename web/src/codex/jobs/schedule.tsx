@@ -6,7 +6,7 @@ import { clock } from '../tasks/time';
 import { dayLabel, dayStart } from '../data/dates';
 import { showSnack, useView } from '../view';
 import { type BadgeSpec } from '../../ui/Badge';
-import { queued, runMeta, runsOf } from '../../../../shared/jobRuns';
+import { jobScan, queued, runMeta, runsOf } from '../../../../shared/jobRuns';
 
 export const DAYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
 export const DAY_NAMES = ['Sundays', 'Mondays', 'Tuesdays', 'Wednesdays', 'Thursdays', 'Fridays', 'Saturdays'];
@@ -58,8 +58,8 @@ export function jobEdits(j: Pick<Job, 'name' | 'prompt'>, name: string, prompt: 
   return patch;
 }
 
-// Until when the hub holds the job's runs for its profile's usage limit (the `jobs:<profile>` pause), or null.
-export const heldUntil = (j: Job, paused: Paused[], now: number) => paused.find((p) => p.scan === `jobs:${j.profile}` && p.until > now)?.until ?? null;
+// Until when the hub holds the job's runs for its account's usage limit (the `jobScan` pause), or null.
+export const heldUntil = (j: Job, paused: Paused[], now: number) => paused.find((p) => p.scan === jobScan(j) && p.until > now)?.until ?? null;
 
 const heldText = (j: Job, paused: Paused[], now: number) => {
   const held = heldUntil(j, paused, now);

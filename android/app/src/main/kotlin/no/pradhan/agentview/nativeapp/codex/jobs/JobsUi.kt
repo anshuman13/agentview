@@ -39,6 +39,7 @@ import no.pradhan.agentview.nativeapp.codex.meetings.stepMatch
 import no.pradhan.agentview.nativeapp.sessions.queryWords
 import no.pradhan.agentview.nativeapp.ui.IconBtn
 import no.pradhan.agentview.nativeapp.ui.SearchField
+import no.pradhan.agentview.nativeapp.chat.ACCOUNT_LABEL
 import no.pradhan.agentview.nativeapp.chat.toolId
 import no.pradhan.agentview.nativeapp.codex.CodexState
 import no.pradhan.agentview.nativeapp.codex.Row
@@ -189,6 +190,19 @@ private fun JobRepoSheet(hub: Hub, j: Row, onDismiss: () -> Unit) {
     }
 }
 
+// JobAccount of web/src/codex/jobs/JobParts.tsx: Auto, then each account by its label; a tap sets the job's account.
+@Composable
+private fun JobAccountSheet(hub: Hub, j: Row, onDismiss: () -> Unit) {
+    val picked = pickedAccount(j)
+    val set = { account: String? -> hub.codex.update(j, mapOf("account" to account)); onDismiss() }
+    Sheet(onDismiss, "Account") {
+        Group {
+            ChoiceRow("Auto", ACCOUNT_LABEL[profileAccount(j.profile)], checked = picked == null, onClick = { set(null) })
+            ACCOUNT_LABEL.forEach { (a, label) -> Hairline(); ChoiceRow(label, checked = a == picked, onClick = { set(a) }) }
+        }
+    }
+}
+
 @Composable
 private fun Footnote(text: String) = Text(text, Modifier.padding(horizontal = Tokens.listPad, vertical = Tokens.sp4), style = Type.footnote, color = av.fgMuted)
 
@@ -254,6 +268,7 @@ fun JobPageView(hub: Hub, st: CodexState, job: Row, now: Long, actions: TaskActi
     var scheduling by remember(job.key) { mutableStateOf(false) }
     var pickingTools by remember(job.key) { mutableStateOf(false) }
     var pickingRepo by remember(job.key) { mutableStateOf(false) }
+    var pickingAccount by remember(job.key) { mutableStateOf(false) }
     val tools = job.str("tools")?.takeIf { it.isNotBlank() }
     var probe by remember(job.key) { mutableStateOf<List<McpServer>?>(null) }
     var probeFailed by remember(job.key) { mutableStateOf(false) }
@@ -273,6 +288,7 @@ fun JobPageView(hub: Hub, st: CodexState, job: Row, now: Long, actions: TaskActi
             Group(Modifier.padding(top = Tokens.sp4)) {
                 ListRow("When", jobMeta(job, runs, st.paused, now), onClick = if (hub.readOnly) null else ({ scheduling = true }), trailing = if (hub.readOnly) null else ({ Chevron() })); Hairline()
                 ListRow("Repo", repoLabel(job.str("repo")) ?: "None", onClick = if (hub.readOnly) null else ({ pickingRepo = true }), trailing = if (hub.readOnly) null else ({ Chevron() })); Hairline()
+                ListRow("Account", pickedAccount(job)?.let { ACCOUNT_LABEL[it] } ?: "Auto, ${ACCOUNT_LABEL[jobAccount(job)]}", onClick = if (hub.readOnly) null else ({ pickingAccount = true }), trailing = if (hub.readOnly) null else ({ Chevron() })); Hairline()
                 if (job.str("repo") == null) { ListRow("Only push when it found something", "A reply starting with NOTHING NEW is kept in the runs but not pushed", toggle = Toggle(job.long("quiet") == 1L) { hub.codex.update(job, mapOf("quiet" to if (it) 1 else 0)) }); Hairline() }
                 if (job.str("repo") == null) {
                     ListRow("Allowed tools", tools?.let { toolLabels(it, probe.orEmpty().map { s -> s.name }).joinToString(", ") } ?: "None", onClick = if (hub.readOnly) null else ({ pickingTools = true }), trailing = if (hub.readOnly) null else ({ Chevron() }))
@@ -302,6 +318,7 @@ fun JobPageView(hub: Hub, st: CodexState, job: Row, now: Long, actions: TaskActi
     if (scheduling) JobScheduleSheet(actions, job) { scheduling = false }
     if (pickingTools) JobToolsSheet(hub, job, probe, probeFailed) { pickingTools = false }
     if (pickingRepo) JobRepoSheet(hub, job) { pickingRepo = false }
+    if (pickingAccount) JobAccountSheet(hub, job) { pickingAccount = false }
     val ask: ((Row, String) -> Unit)? = if (hub.readOnly) null else ({ r, output ->
         runsOpen = false
         hub.askCodex(runAsk(job.str("name")?.ifEmpty { null } ?: "Untitled job", r.long("started_at") ?: 0L, output), job.profile)

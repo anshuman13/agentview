@@ -21,6 +21,20 @@
     "expected": null
   },
   {
+    "name": "a job with a picked account waits on that account's pause only",
+    "job": { "profile": "work", "account": "alt2" },
+    "paused": [{ "scan": "jobs:work", "until": 5000 }, { "scan": "jobs:work:alt2", "until": 7000 }],
+    "now": 1000,
+    "expected": 7000
+  },
+  {
+    "name": "an Auto job ignores a picked account's pause",
+    "job": { "profile": "work", "account": null },
+    "paused": [{ "scan": "jobs:work:alt2", "until": 7000 }],
+    "now": 1000,
+    "expected": null
+  },
+  {
     "name": "no pauses",
     "job": { "profile": "personal" },
     "paused": [],

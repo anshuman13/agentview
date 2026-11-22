@@ -932,7 +932,8 @@ class SharedCasesTest {
     @Test fun jobHeld() {
         for (c in cases("job-held")) {
             val paused = c.getValue("paused").jsonArray.map { it.jsonObject }.map { SyncPaused(it.str("scan"), it.getValue("until").jsonPrimitive.long) }
-            val job = Row("jobs", "j", c.getValue("job").jsonObject.str("profile"))
+            val o = c.getValue("job").jsonObject
+            val job = Row("jobs", "j", o.str("profile"), f = mapOf("account" to (o["account"] ?: JsonNull)))
             assertEquals(c.str("name"), c.prim("expected")?.long, heldUntil(job, paused, c.getValue("now").jsonPrimitive.long))
         }
     }
