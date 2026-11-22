@@ -179,6 +179,8 @@ fun EditorSheet(hub: Hub, row: Row, items: List<Row>, meetings: List<Row>, now: 
                 if (estimateMinutes(title) == null) {
                     FieldLabel("Estimate")
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
+                        val suggested = remember(title, items, row.profile) { suggestEstimate(title, items.filter { !it.deleted && it.profile == row.profile }) }
+                        if (suggested != null) Chip("~${minutesText(suggested)} suggested", { title = "${title.trim()} ~${minutesText(suggested)}" }, on = true)
                         listOf(15L, 30L, 60L, 120L).forEach { n -> Chip(minutesText(n), if (title.isBlank()) null else ({ title = "${title.trim()} ~${minutesText(n)}" })) }
                     }
                 }

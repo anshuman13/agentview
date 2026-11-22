@@ -83,7 +83,8 @@ import { claimActions, replaceTarget } from '../../shared/claimActions';
 import { actionGroups, actionMenu, meetingGroupTitle, todayTaskMenu } from '../../shared/actionMenu';
 import { isLate } from '../../shared/waiting';
 import { goalAtRisk, goalToLink } from './codex/data/tasks/goals';
-import { afterNextMeeting, nextFreeSlot, weekFreeMinutes, type Span } from './codex/data/tasks/plan';
+import { afterNextMeeting, nextFreeSlot, suggestEstimate, weekFreeMinutes, type Span } from './codex/data/tasks/plan';
+import { SUMMARY_TEMPLATES, templateFor, type SummaryTemplate } from './codex/data/meetings/summaryTemplates';
 import { heldOrder } from '../../shared/util';
 import { loadErrorText } from '../../shared/loadError';
 import { syncedAt } from '../../shared/syncText';
@@ -388,6 +389,10 @@ describe('cases shared with the Android app', () => {
       expect(afterNextMeeting(busy, at(c.now))).toBe(c.afterNext && at(c.afterNext));
       expect(nextFreeSlot(busy, at(c.now))).toBe(c.freeSlot && at(c.freeSlot));
     });
+  }
+
+  for (const c of cases<{ name: string; title: string; tasks: { title: string; status: string; spent: number | null }[]; expected: number | null }>('suggest-estimate')) {
+    it(`suggestEstimate: ${c.name}`, () => expect(suggestEstimate(c.title, c.tasks)).toBe(c.expected));
   }
 
   type JobTaskSpec ={ id: string; status: string; madeAt: number; profile?: Profile; deleted?: boolean; source?: string; people?: string };
@@ -922,6 +927,16 @@ describe('cases shared with the Android app', () => {
   };
   for (const c of notes.templates) it(`notesTemplate: ${c.name}`, () => { expect(notesTemplateText(c.key)).toBe(c.text); expect(notesTemplateCaret(c.key)).toBe(c.caret); });
   for (const c of notes.chips) it(`notesTemplateChips: ${c.name}`, () => expect(notesTemplateChips({ profile: c.profile, title: c.title, id: c.id } as unknown as Meeting, c.picks)).toEqual(c.expected));
+
+  const summary = JSON.parse(readFileSync(new URL('../../shared/fixtures/summary-template.json', import.meta.url), 'utf8')) as {
+    templates: { key: SummaryTemplate; label: string; instructions: string }[];
+    cases: { name: string; title: string | null; people: string | null; series?: string; picks: Record<string, SummaryTemplate>; expected: SummaryTemplate }[];
+  };
+  it('SUMMARY_TEMPLATES', () => expect(summary.templates).toEqual(Object.entries(SUMMARY_TEMPLATES).map(([key, t]) => ({ key, ...t })) as typeof summary.templates));
+  const summaryMeeting = (title: string | null, people: string | null) => ({ profile: 'work', id: 'cal:1', title, people }) as unknown as Meeting;
+  for (const c of summary.cases) {
+    it(`templateFor: ${c.name}`, () => expect(templateFor(summaryMeeting(c.title, c.people), c.series ? [summaryMeeting(c.title, c.series)] : [], c.picks)).toBe(c.expected));
+  }
 
   const marks = JSON.parse(readFileSync(new URL('../../shared/fixtures/mark-segments.json', import.meta.url), 'utf8')) as {
     segments: { name: string; text: string; words: string[]; expected: [string, boolean][] }[];

@@ -21,6 +21,10 @@ import kotlinx.coroutines.withContext
 import no.pradhan.agentview.nativeapp.chat.MemoryFile
 import no.pradhan.agentview.nativeapp.chat.Transcript
 import no.pradhan.agentview.nativeapp.codex.Row
+import no.pradhan.agentview.nativeapp.codex.meetings.SUMMARY_TEMPLATES
+import no.pradhan.agentview.nativeapp.codex.meetings.encodeNotesPicks
+import no.pradhan.agentview.nativeapp.codex.meetings.notesPickKey
+import no.pradhan.agentview.nativeapp.codex.meetings.parseNotesPicks
 
 internal suspend fun Hub.attachUri(uri: String): String? {
     val r = app.contentResolver
@@ -76,12 +80,12 @@ fun <T> Hub.write(path: String, body: String, failure: String, parse: (String) -
     writes.run(failure, { out = parse(api.post(path, body, pageChat)) }) { done(if (it) out else null) }
 }
 
-private fun Hub.transcriptSync(done: (Boolean) -> Unit, block: suspend () -> Unit) {
-    writes.run("Transcript sync failed", {
+private fun Hub.transcriptSync(done: (Boolean) -> Unit, failure: String = "Transcript sync failed", block: suspend () -> Unit) {
+    writes.run(failure, {
         try {
             block()
         } catch (e: Exception) {
-            throw ApiError("Transcript sync failed: ${e.message}")
+            throw ApiError("$failure: ${e.message}")
         }
     }, done)
 }
@@ -99,6 +103,19 @@ fun Hub.readNow(m: Row, done: (Boolean) -> Unit) = transcriptSync(done) {
     val saved = api.readTranscript(m.profile, m.id)
     codex.sync()
     notice.value = if (saved > 0) "Read the transcript" else "No transcript found yet"
+}
+
+private const val SUMMARY_PICKS_KEY = "codex.summaryPicks"
+
+fun Hub.summaryPicks() = parseNotesPicks(prefs.getString(SUMMARY_PICKS_KEY, null))
+
+// Reads the transcript again with the template's instructions and remembers the pick for the meeting's series.
+fun Hub.rewriteSummary(m: Row, key: String, done: (Boolean) -> Unit) = transcriptSync(done, "Summary failed") {
+    val t = SUMMARY_TEMPLATES.getValue(key)
+    api.readTranscript(m.profile, m.id, t.instructions)
+    codex.sync()
+    prefs.edit().putString(SUMMARY_PICKS_KEY, encodeNotesPicks(summaryPicks() + (notesPickKey(m) to key))).apply()
+    notice.value = "Summary rewritten as ${t.label}"
 }
 
 internal fun Hub.write(failure: String, block: suspend () -> Unit) {

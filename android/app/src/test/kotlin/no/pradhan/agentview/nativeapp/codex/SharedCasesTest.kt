@@ -1273,6 +1273,13 @@ class SharedCasesTest {
         }
     }
 
+    @Test fun suggestedEstimate() {
+        for (c in cases("suggest-estimate")) {
+            val rows = c.getValue("tasks").jsonArray.mapIndexed { i, t -> Row("items", "t$i", "work", f = listOf("title", "status", "spent").associateWith { t.jsonObject.getValue(it) }) }
+            assertEquals(c.str("name"), c.nullable("expected")?.jsonPrimitive?.long, suggestEstimate(c.str("title"), rows))
+        }
+    }
+
     @Test fun eventRule() {
         for (c in cases("event-rule")) {
             val f = SYNCED_FIELDS.getValue("meetings").associateWith { JsonNull as JsonElement }.toMutableMap()

@@ -76,8 +76,12 @@ import no.pradhan.agentview.nativeapp.ui.Loading
 import no.pradhan.agentview.nativeapp.ui.Group
 import no.pradhan.agentview.nativeapp.ui.Hairline
 import no.pradhan.agentview.nativeapp.ui.IconBtn
+import no.pradhan.agentview.nativeapp.ui.Menu
 import no.pradhan.agentview.nativeapp.ui.MenuItem
 import no.pradhan.agentview.nativeapp.ui.MenuSeparator
+import androidx.compose.foundation.layout.Box
+import no.pradhan.agentview.nativeapp.app.rewriteSummary
+import no.pradhan.agentview.nativeapp.app.summaryPicks
 import no.pradhan.agentview.nativeapp.ui.MoreButton
 import no.pradhan.agentview.nativeapp.app.readNow
 import no.pradhan.agentview.nativeapp.ui.ListRow
@@ -267,11 +271,32 @@ private fun LazyListScope.meetingActions(c: MeetingCtx, all: List<Row>, state: M
 private fun LazyListScope.meetingSummary(c: MeetingCtx, state: MState, folds: MeetingFolds) {
     val m = c.m
     val pins = pinsOf(c.st.items, listOf(m))
-    item { SectionHeader("Summary", action = if (!m.str("summary").isNullOrEmpty()) { { Button("Pin", { folds.pinning.value = true }, variant = ButtonVariant.Plain, size = ButtonSize.Sm) } } else null) }
+    item {
+        SectionHeader("Summary", action = if (!m.str("summary").isNullOrEmpty()) { {
+            if (readable(m, c.now) && !c.hub.readOnly) SummaryFormatButton(c)
+            Button("Pin", { folds.pinning.value = true }, variant = ButtonVariant.Plain, size = ButtonSize.Sm)
+        } } else null)
+    }
     m.str("summary")?.takeIf { it.isNotEmpty() }?.let { item { Markdown(it, Modifier.padding(horizontal = Tokens.listPad)) } } ?: meetingEmpty(state, "summary").let { (title, hint) -> item { EmptyState(title, hint) } }
     if (pins.isNotEmpty()) {
         item { SectionHeader("Pinned", pins.size.toString()) }
         item { PinList(pins, c.ops) }
+    }
+}
+
+// web SummaryFormat: reads the transcript again with a template's instructions, the series' last pick or a guess suggested.
+@Composable
+private fun SummaryFormatButton(c: MeetingCtx) {
+    var open by remember { mutableStateOf(false) }
+    var busy by remember { mutableStateOf(false) }
+    Box {
+        Button(if (busy) "Rewriting" else "Format", { open = true }, variant = ButtonVariant.Plain, size = ButtonSize.Sm, icon = "chevron-down", enabled = !busy)
+        Menu(open, { open = false }) {
+            val suggested = templateFor(c.m, seriesOf(c.st.meetings, c.m), c.hub.summaryPicks())
+            SUMMARY_TEMPLATES.forEach { (key, t) ->
+                MenuItem(t.label + if (key == suggested) " (suggested)" else "", "list-unordered", { open = false; busy = true; c.hub.rewriteSummary(c.m, key) { busy = false } })
+            }
+        }
     }
 }
 

@@ -6,7 +6,7 @@ import no.pradhan.agentview.nativeapp.codex.meetings.safeHref
 // shared/plan.ts atRisk and web/src/codex/summary/needsYou.ts: the two sources of the Needs you list the tasks and asks do not cover.
 typealias Span = Pair<Long, Long>
 
-private val EST_RE = Regex("~\\s*(?:(\\d+)\\s*h(?:\\s*(\\d+)\\s*m?)?|(\\d+)\\s*m(?:ins?)?)\\b", RegexOption.IGNORE_CASE)
+internal val EST_RE = Regex("~\\s*(?:(\\d+)\\s*h(?:\\s*(\\d+)\\s*m?)?|(\\d+)\\s*m(?:ins?)?)\\b", RegexOption.IGNORE_CASE)
 private const val MIN_GAP_MS = 15 * 60_000L
 private const val DEFAULT_MIN = 30L
 

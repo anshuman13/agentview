@@ -38,3 +38,22 @@ fun planToday(tasks: List<PlanTask>, busy: List<Span>, now: Long): List<PlanSlot
     val held = set.map { it.due!! to it.due + taskMinutes(it.title) * 60_000 }
     return packDay(tasks.filter { it !in set && estimateMinutes(it.title) != null }, workGaps(busy + held, now, 8, 17))
 }
+
+private val WORD_RE = Regex("\\p{L}{3,}|\\d+")
+
+private fun titleWords(title: String?) = WORD_RE.findAll((title ?: "").replaceFirst(EST_RE, "").lowercase()).map { it.value }.toSet()
+
+// shared/plan.ts suggestEstimate: the average actual minutes of done tasks whose titles share at least half their words with
+// title, rounded to 5 minutes; null when fewer than 2 such tasks have actual minutes.
+fun suggestEstimate(title: String?, rows: List<Row>): Long? {
+    val mine = titleWords(title)
+    if (mine.isEmpty()) return null
+    val mins = rows.mapNotNull { r ->
+        val spent = r.str("spent")?.toDoubleOrNull()?.takeIf { it > 0 }
+        if (r.status != "done" || spent == null) return@mapNotNull null
+        val theirs = titleWords(r.title)
+        spent.takeIf { mine.count { it in theirs } * 2 >= maxOf(mine.size, theirs.size) }
+    }
+    if (mins.size < 2) return null
+    return maxOf(5L, Math.round(mins.average() / 5) * 5)
+}

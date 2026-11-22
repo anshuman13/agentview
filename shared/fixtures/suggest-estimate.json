@@ -1,0 +1,56 @@
+[
+  {
+    "name": "two similar done tasks give their average",
+    "title": "Write weekly report",
+    "tasks": [
+      { "title": "Write weekly report", "status": "done", "spent": 40 },
+      { "title": "Write the weekly report ~30m", "status": "done", "spent": 20 }
+    ],
+    "expected": 30
+  },
+  {
+    "name": "a done task with no spent time does not count",
+    "title": "Write weekly report",
+    "tasks": [
+      { "title": "Write weekly report", "status": "done", "spent": 40 },
+      { "title": "Weekly report", "status": "done", "spent": null }
+    ],
+    "expected": null
+  },
+  {
+    "name": "an open task is ignored",
+    "title": "Write weekly report",
+    "tasks": [
+      { "title": "Write weekly report", "status": "done", "spent": 40 },
+      { "title": "Write weekly report", "status": "open", "spent": 60 }
+    ],
+    "expected": null
+  },
+  {
+    "name": "no similar task",
+    "title": "Plan trip",
+    "tasks": [
+      { "title": "Write weekly report", "status": "done", "spent": 40 },
+      { "title": "Fix login bug", "status": "done", "spent": 90 }
+    ],
+    "expected": null
+  },
+  {
+    "name": "the estimate in the title is ignored and the mean rounds to 5 minutes",
+    "title": "Fix login bug ~1h",
+    "tasks": [
+      { "title": "Fix login bug", "status": "done", "spent": 3 },
+      { "title": "Fix the login bug", "status": "done", "spent": 4 }
+    ],
+    "expected": 5
+  },
+  {
+    "name": "a title with only short words",
+    "title": "Do it",
+    "tasks": [
+      { "title": "Do it", "status": "done", "spent": 40 },
+      { "title": "Do it", "status": "done", "spent": 20 }
+    ],
+    "expected": null
+  }
+]

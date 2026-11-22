@@ -118,8 +118,8 @@ class Api(private val origin: () -> String, private val http: OkHttpClient = sha
         if (e.code == 404) null else throw e
     }
 
-    suspend fun readTranscript(profile: String, id: String): Int {
-        val body = buildJsonObject { put("profile", profile); put("id", id) }.toString().toRequestBody(json)
+    suspend fun readTranscript(profile: String, id: String, instructions: String? = null): Int {
+        val body = buildJsonObject { put("profile", profile); put("id", id); if (instructions != null) put("instructions", instructions) }.toString().toRequestBody(json)
         val saved = protocolJson.parseToJsonElement(call(url("/api/assistant/transcripts").post(body), long).decodeToString()).jsonObject["saved"]
         return saved?.jsonPrimitive?.intOrNull ?: 0
     }

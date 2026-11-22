@@ -1,0 +1,22 @@
+{
+  "templates": [
+    { "key": "default", "label": "Default", "instructions": "" },
+    { "key": "one_on_one", "label": "1:1", "instructions": "This was a 1:1. Summarize what we discussed about work, feedback, career and wellbeing, then the commitments each of us made and anything to raise next time." },
+    { "key": "standup", "label": "Standup", "instructions": "This was a standup. Summarize per person what was done, what is planned and what blocks them, and name the blockers that need follow-up." },
+    { "key": "interview", "label": "Interview", "instructions": "This was a job interview. Summarize the candidate background, strengths, concerns and notable answers, then the signals for and against hiring and the agreed next step." },
+    { "key": "planning", "label": "Planning", "instructions": "This was a planning meeting. Summarize the goals, the scope and priorities chosen, owners and dates, open risks and what was deferred." }
+  ],
+  "cases": [
+    { "name": "the series pick wins", "title": "Daily standup", "people": "ada@example.com, bo@example.com, cy@example.com", "picks": { "work:daily standup": "one_on_one" }, "expected": "one_on_one" },
+    { "name": "an unknown pick is ignored", "title": "Daily standup", "people": null, "picks": { "work:daily standup": "retro" }, "expected": "standup" },
+    { "name": "1:1 in the title", "title": "1:1 Ada", "people": "ada@example.com, bo@example.com, cy@example.com", "picks": {}, "expected": "one_on_one" },
+    { "name": "an A / B title with two people", "title": "Ada / Bo", "people": "ada@example.com, bo@example.com", "picks": {}, "expected": "one_on_one" },
+    { "name": "an A / B title with three people", "title": "Ada / Bo", "people": "ada@example.com, bo@example.com, cy@example.com", "picks": {}, "expected": "default" },
+    { "name": "daily in the title", "title": "Daily sync", "people": "ada@example.com, bo@example.com, cy@example.com", "picks": {}, "expected": "standup" },
+    { "name": "interview in the title", "title": "Interview: Kim", "people": "ada@example.com, kim@example.com", "picks": {}, "expected": "interview" },
+    { "name": "planning in the title", "title": "Q1 planning", "people": "ada@example.com, bo@example.com, cy@example.com", "picks": {}, "expected": "planning" },
+    { "name": "two people untitled", "title": null, "people": "ada@example.com, bo@example.com", "picks": {}, "expected": "one_on_one" },
+    { "name": "two people from the last meeting of the series", "title": "Catch up", "people": null, "series": "ada@example.com, bo@example.com", "picks": {}, "expected": "one_on_one" },
+    { "name": "a big group", "title": "All hands", "people": "ada@example.com, bo@example.com, cy@example.com, di@example.com, ed@example.com", "picks": {}, "expected": "default" }
+  ]
+}
