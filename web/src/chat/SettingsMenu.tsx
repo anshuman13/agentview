@@ -1,5 +1,6 @@
 import { notice, send, setUi, useStore } from '../app/store';
-import { chatImages, lastReply, remindChoices } from './composer/composerLogic';
+import { chatImages, lastReply, remindChoices, sentPrompts } from './composer/composerLogic';
+import { time } from '../sessions/brief/time';
 import { runLine } from '../sessions/runLogic';
 import { useChatRun } from '../sessions/useChatRun';
 import { openGoal, startGoal } from '../sessions/goalLogic';
@@ -28,6 +29,7 @@ export function SettingsMenu({ pick, setPick, close }: Props) {
   const accounts = useStore((s) => s.session.accounts) ?? [];
   const chat = useStore((s) => s.session.id);
   const buildFlow = useStore((s) => Boolean(s.session.buildFlow));
+  const prompts = sentPrompts(useStore((s) => s.events)).length;
   const run = useChatRun(chat);
   const ended = useStore((s) => (chat ? endedRun(s.runs, chat) : null));
   const act = (fn: () => void) => { fn(); close(); };
@@ -39,7 +41,7 @@ export function SettingsMenu({ pick, setPick, close }: Props) {
     setPick({ kind: v as Pick['kind'], at: pick.at });
   };
   const narrow = useNarrow();
-  const picker = (value: string, label: string, detail: string) => ({ value, label, detail, picker: true });
+  const picker = (value: string, label: string, detail: string, disabled = false) => ({ value, label, detail, picker: true, disabled });
   const action = (value: string, label: string, detail: string) => ({ value, label, detail, picker: false });
   const groups = [
     ['Run', [
@@ -55,6 +57,7 @@ export function SettingsMenu({ pick, setPick, close }: Props) {
     ]],
     ['Chat', [
       action('find', 'Find in chat', 'Search the prompts and replies'),
+      picker('prompts', 'Prompts', prompts ? plural(prompts, 'prompt') : 'No prompts', !prompts),
       ...(sessionId ? [picker('fork', 'Fork', 'Side chat or a new chat from a summary'), picker('remind', 'Remind me', 'Add a task to check this chat later')] : []),
       picker('remember', 'Remember…', 'Save a preference to Memory'),
       picker('copy', 'Copy', resumeCommand ? 'As Markdown or the terminal command' : 'As Markdown'),
@@ -78,7 +81,7 @@ export function SettingsMenu({ pick, setPick, close }: Props) {
     <QuickPick
       anchor={pick.at}
       title="Chat settings"
-      items={groups.flatMap(([, rows]) => rows.map(({ value, label, detail }) => ({ value, label, detail })))}
+      items={groups.flatMap(([, rows]) => rows)}
       onPick={onPick}
       onClose={close}
     />
@@ -107,6 +110,20 @@ export function ToolsPick({ pick, setPick, close, savedCount }: Props & { savedC
 }
 
 type SubProps = { pick: Pick; close: () => void; back: () => void };
+
+export function PromptsPick({ pick, close, back }: SubProps) {
+  const prompts = sentPrompts(useStore((s) => s.events));
+  return (
+    <ChoicePick
+      back={back}
+      anchor={pick.at}
+      title="Prompts"
+      items={prompts.map((e) => ({ value: e.id, label: firstLine(e.text).slice(0, 200), detail: `Sent ${time(e.at)}` }))}
+      onPick={(id) => { close(); window.dispatchEvent(new CustomEvent('agentview:show-prompt', { detail: { id } })); }}
+      onClose={close}
+    />
+  );
+}
 
 export function ForkPick({ pick, close, back }: SubProps) {
   return (

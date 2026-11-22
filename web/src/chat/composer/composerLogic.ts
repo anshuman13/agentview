@@ -215,6 +215,11 @@ export function lastReply(events: ChatEvent[]) {
   return null;
 }
 
+// The loaded prompts that were sent, newest first, like the phone chat menu's Prompts.
+export function sentPrompts(events: ChatEvent[]) {
+  return events.flatMap((e) => (e.kind === 'user' && !e.queued ? [e] : [])).reverse();
+}
+
 // A reply saved to Notes: the chat title on the first line, in the profile of the chat's folder.
 export function replyNote(text: string, title: string, cwd: string) {
   return { text: `${title || 'Saved reply'}\n${text.trim()}`, profile: profileOfPath(cwd) };

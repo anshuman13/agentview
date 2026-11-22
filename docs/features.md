@@ -366,11 +366,13 @@ cost so far. The status bar usage tooltip adds a Spend block with today's and th
   chat, on the sidebar search text when pressed from there
 - The phone chat menu's Prompts, after Find in chat, lists the loaded prompts that are not queued, newest first, with "Sent <time>"
   (`sentPrompts`); a tap closes it and scrolls the transcript to that prompt, and while earlier events are not loaded the list ends with
-  Load earlier
+  Load earlier. Web has the same Prompts in the chat settings menu's Chat group, after Find in chat ("No prompts" and disabled at 0): each
+  prompt's first line with "Sent <time>", and a pick scrolls to it, widening the row window when it sits above Show earlier
 - The phone's + sheet has "Choose file" for any document type (kept under its display name, refused over 50 MB, the server's limit); an
   upload is marked `[Image: path]` or `[File: path]` by its type (`attachMark`, used by the web and the phone composer)
 - The phone's Tools sheet starts with Saved prompts, the last 50 prompts sent from the phone in any chat (newest first, kept once, not saved
-  in a read-only check); a tap puts the prompt in the composer
+  in a read-only check); a tap puts the prompt in the composer. The sheet shows the count and a "Filter prompts" field that keeps the
+  prompts holding every word typed; with none saved it says "No saved prompts yet"
 - "Share chat" in the phone chat menu sends the same Markdown to the Android share sheet
 - "Side chat" in the Fork pick of the same menu, or ⌘; (Ctrl+; off Mac), forks the chat into the side column and keeps the original in the
   main column, so a side question does not land in the running chat (like Claude desktop's side chat)
