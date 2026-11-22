@@ -215,7 +215,7 @@ circle (40px at sm) in `--on-surface-muted`, title role, hint in body `--on-surf
 then at most one action (a setup state names what is missing and its action is "Set up with <provider>", which asks the chat on screen). md for a whole view, sm inside a panel or report. The icon stays grey;
 the accent is for the action.
 Copy (Status language): the title is a sentence-case noun phrase with no trailing period ("No past meetings yet"), the hint is one short line with no period, and the one action is a Button sm directly under `.ui-empty`.
-Status: built; used in `app/App.tsx`, `app/Unreachable.tsx`, `codex/Codex.tsx`, `codex/GoalsPage.tsx`, `codex/Overview.tsx`, `codex/PlanPreview.tsx`, `codex/Search.tsx`, `codex/TagPage.tsx`, `codex/jobs/JobPage.tsx`, `codex/jobs/Jobs.tsx`, `codex/meetings/Decisions.tsx`, `codex/meetings/Load.tsx`, `codex/meetings/MeetingList.tsx`, `codex/meetings/Person.tsx`, `codex/meetings/Review.tsx`, `codex/meetings/SeriesPage.tsx`, `codex/meetings/Week.tsx`, `codex/summary/Summary.tsx`, `codex/wiki/Feed.tsx`, `codex/wiki/ReviewMode.tsx`, `codex/wiki/WikiIndex.tsx`, `codex/wiki/WikiPage.tsx`, `ops/Deploy.tsx`, `ops/Findings.tsx`, `ops/GitHub.tsx`, `ops/McpDetail.tsx`, `ops/McpStatus.tsx`, `ops/Observe.tsx`, `sessions/AgentsPane.tsx`, `sessions/Sessions.tsx`, `workspace/BrowserPane.tsx`, `workspace/Explorer.tsx`.
+Status: built; used in `app/App.tsx`, `app/Unreachable.tsx`, `codex/Codex.tsx`, `codex/GoalsPage.tsx`, `codex/Overview.tsx`, `codex/PlanPreview.tsx`, `codex/Search.tsx`, `codex/TagPage.tsx`, `codex/jobs/JobPage.tsx`, `codex/jobs/Jobs.tsx`, `codex/meetings/Decisions.tsx`, `codex/meetings/Load.tsx`, `codex/meetings/MeetingList.tsx`, `codex/meetings/Person.tsx`, `codex/meetings/Review.tsx`, `codex/meetings/SeriesPage.tsx`, `codex/meetings/Week.tsx`, `codex/summary/Summary.tsx`, `codex/wiki/Feed.tsx`, `codex/wiki/ReviewList.tsx`, `codex/wiki/WikiIndex.tsx`, `codex/wiki/WikiPage.tsx`, `ops/Deploy.tsx`, `ops/Findings.tsx`, `ops/GitHub.tsx`, `ops/McpDetail.tsx`, `ops/McpStatus.tsx`, `ops/Observe.tsx`, `sessions/AgentsPane.tsx`, `sessions/Sessions.tsx`, `workspace/BrowserPane.tsx`, `workspace/Explorer.tsx`.
 
 ### Loading
 `<Loading text="Loading…">` (`ui/Skeleton.tsx`); `.ui-loading`. A centred spinner above one line in body `--fg-muted`, `role="status"`; the web twin of Android `Loading`. Lists keep `Skeleton`. Inline loading text in a row meta ends in an ellipsis.
@@ -438,7 +438,7 @@ Rules:
 - Hide on scroll and the FAB follow the navigation spec.
 
 ### Worked example: Wiki page
-The Wiki page keeps 16dp side margins and 16dp above the title. In the hero, title, meta line and summary are 8dp apart. Claim rows clamp to 3 lines and a tap expands the row in place. The index shows a "To review" SectionHeader with the claim count and a plain "One at a time" button over one Group: a row per page and per chat with proposals, then the first 3 loose claims (Show all N), each with Reject and Approve IconBtns (Reject all and Approve all on a group; hidden in read-only mode). Older becomes a collapsible SectionHeader "Not used by Claude" (chevron, 48dp, no Show/Hide button and no hint sentence).
+The Wiki page keeps 16dp side margins and 16dp above the title. In the hero, title, meta line and summary are 8dp apart. Claim rows clamp to 3 lines and a tap expands the row in place. The index shows one ListRow "N claims to review" with a Chevron that opens Review claims. Older becomes a collapsible SectionHeader "Not used by Claude" (chevron, 48dp, no Show/Hide button and no hint sentence).
 
 ## Migration
 
@@ -498,7 +498,7 @@ Custom list-row and header classes still in web/src. Todo means no use has been 
 | wk-contest-head | none | Section header | Done |
 | wk-feed-head | none | Section header | Done |
 | wk-feed-list | none | Grouped list | Done |
-| wk-head, wk-head-act | codex/GoalsPage.tsx, codex/Search.tsx, codex/TaskEditor.tsx, codex/jobs/JobPage.tsx, codex/jobs/Jobs.tsx, codex/meetings/MeetingList.tsx, codex/meetings/MeetingPage.tsx, codex/meetings/Person.tsx, codex/meetings/SeriesPage.tsx, codex/summary/Summary.tsx, codex/wiki/ReviewMode.tsx, codex/wiki/WikiIndex.tsx, codex/wiki/WikiPage.tsx | keep: layout (page title bar with actions, not a list header) | Keep |
+| wk-head, wk-head-act | codex/GoalsPage.tsx, codex/Search.tsx, codex/TaskEditor.tsx, codex/jobs/JobPage.tsx, codex/jobs/Jobs.tsx, codex/meetings/MeetingList.tsx, codex/meetings/MeetingPage.tsx, codex/meetings/Person.tsx, codex/meetings/SeriesPage.tsx, codex/summary/Summary.tsx, codex/wiki/ReviewList.tsx, codex/wiki/WikiIndex.tsx, codex/wiki/WikiPage.tsx | keep: layout (page title bar with actions, not a list header) | Keep |
 | wk-label-row | none | Row | Done |
 | wk-older-head | none | Section header | Done |
 

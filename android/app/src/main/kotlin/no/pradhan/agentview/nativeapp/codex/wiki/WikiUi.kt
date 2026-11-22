@@ -96,10 +96,8 @@ private fun PageTile(p: Row) {
     }
 }
 
-private class ReviewRow(val key: String, val title: String, val meta: String, val claims: List<Row>, val group: Boolean, val open: () -> Unit)
-
 @Composable
-fun WikiIndexPage(st: CodexState, profile: String?, now: Long, actions: TaskActions, review: ReviewOps, readOnly: Boolean, onOpen: (Row) -> Unit, onClaim: (Row) -> Unit, onReview: () -> Unit, onMemory: () -> Unit, onAsk: ((String) -> Unit)?) {
+fun WikiIndexPage(st: CodexState, profile: String?, now: Long, actions: TaskActions, readOnly: Boolean, onOpen: (Row) -> Unit, onClaim: (Row) -> Unit, onReview: () -> Unit, onMemory: () -> Unit, onAsk: ((String) -> Unit)?) {
     var query by rememberSaveable { mutableStateOf("") }
     val pages = remember(st.pages, profile) { st.pages.filter { matchesProfile(profile, it) } }
     val facts = remember(st.facts, profile) { st.facts.filter { matchesProfile(profile, it) } }
@@ -115,7 +113,6 @@ fun WikiIndexPage(st: CodexState, profile: String?, now: Long, actions: TaskActi
     var allStale by rememberSaveable { mutableStateOf(false) }
     var allDrift by rememberSaveable { mutableStateOf(false) }
     var asking by remember { mutableStateOf(false) }
-    var allLoose by rememberSaveable { mutableStateOf(false) }
     var creating by remember { mutableStateOf(false) }
     var feedOpen by remember { mutableStateOf(false) }
     val archived = remember(pages) { archivedPages(pages) }
@@ -127,15 +124,6 @@ fun WikiIndexPage(st: CodexState, profile: String?, now: Long, actions: TaskActi
     val notes = remember(st.items, profile) { split(st.items, profile, now).notes }
     val noteHits = remember(notes, query) { queryWords(query).let { w -> notes.filter { matchesWords(w, it.title, it.text) } } }
     val waiting = remember(facts) { proposals(facts).size }
-    val grouped = remember(pages, facts) { reviewGroups(pages, facts) }
-    val reviewRows = grouped.byPage.map { g ->
-        ReviewRow("page:${g.page.key}", g.page.title ?: UNTITLED, (if (g.page.str("state") == "proposed") "New page in ${g.page.str("section")}" else "Additions") + " · ${plural(g.claims.size, "claim")}", g.claims, true) { onOpen(g.page) }
-    } + grouped.chats.map { list ->
-        val label = sourcesOf(list[0]).firstOrNull { it.kind == "chat" }?.label?.ifEmpty { null } ?: UNTITLED
-        ReviewRow("chat:${list[0].profile}:${chatOf(list[0])}", "From chat $label", "Memory · ${plural(list.size, "claim")}", list, true, onReview)
-    } + (if (allLoose) grouped.loose else grouped.loose.take(3)).map { f ->
-        ReviewRow("claim:${f.key}", f.str("text") ?: "", f.str("page_id")?.let { titles[it] } ?: "Memory", listOf(f), false) { onClaim(f) }
-    }
     LazyColumn(Modifier.fillMaxWidth()) {
         item {
             LayoutRow(Modifier.padding(top = Tokens.sp4, end = Tokens.sp4), verticalAlignment = Alignment.CenterVertically) {
@@ -172,16 +160,7 @@ fun WikiIndexPage(st: CodexState, profile: String?, now: Long, actions: TaskActi
                 Button("New page", { creating = true }, variant = ButtonVariant.Plain, icon = "add")
             }
         }
-        if (waiting > 0) {
-            item { SectionHeader("To review", waiting.toString(), action = { Button("One at a time", onReview, variant = ButtonVariant.Plain, size = ButtonSize.Sm) }) }
-            lazyGroup(reviewRows, key = { it.key }) { r ->
-                ListRow(r.title, r.meta, onClick = r.open, trailing = if (readOnly) null else ({
-                    IconBtn("close", if (r.group) "Reject all" else "Reject", { review.reject(r.claims) })
-                    IconBtn("check", if (r.group) "Approve all" else "Approve", { review.approve(r.claims) })
-                }))
-            }
-            if (!allLoose && grouped.loose.size > 3) item { Button("Show all ${grouped.loose.size}", { allLoose = true }, Modifier.padding(start = Tokens.listPad), variant = ButtonVariant.Plain, size = ButtonSize.Sm) }
-        }
+        if (waiting > 0) item { Group(Modifier.padding(top = Tokens.sp4)) { ListRow("${plural(waiting, "claim")} to review", onClick = onReview, trailing = { Chevron() }) } }
         item { Group(Modifier.padding(top = Tokens.sp4)) { ListRow("Memory", plural(stats[null]?.claims ?: 0, "claim"), onClick = onMemory, trailing = { Chevron() }) } }
         if (stale.isNotEmpty() || drift.isNotEmpty()) item { SectionHeader("Needs a look", (stale.size + drift.size).toString(), lookOpen, { lookOpen = !lookOpen }) }
         if (lookOpen && stale.isNotEmpty()) {

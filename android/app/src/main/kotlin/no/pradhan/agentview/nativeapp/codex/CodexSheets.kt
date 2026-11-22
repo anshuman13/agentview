@@ -450,7 +450,7 @@ private fun NeedRow(n: Need, now: Long, actions: TaskActions, hub: Hub, onOpen: 
         is Need.FailedJobRow -> ListRow("${n.job.str("name")?.ifEmpty { null } ?: "Job"} failed", listOfNotNull(firstLine(n.run.str("output")).ifEmpty { null }, n.run.long("finished_at")?.let { agoText(it, now) }).joinToString(" · "), onClick = { onJob(n.job) },
             trailing = { Button("Run again", { runJobNow(hub, actions, n.job) }, variant = ButtonVariant.Tinted, size = ButtonSize.Sm, enabled = canRunNow(n.job, listOf(n.run), now)) })
         is Need.StaleAsks -> ListRow("${plural(n.count, "ask")} older than $STALE_DAYS days", "oldest ${agoShort(n.oldest, now)}", onClick = onStale)
-        is Need.Wiki -> ListRow("${n.count} wiki ${if (n.count == 1) "claim waits" else "claims wait"} for you", "Review one at a time", onClick = onReview,
+        is Need.Wiki -> ListRow("${n.count} wiki ${if (n.count == 1) "claim waits" else "claims wait"} for you", "Review all", onClick = onReview,
             trailing = { Button("Review", onReview, variant = ButtonVariant.Tinted, size = ButtonSize.Sm) })
         is Need.Overdue -> ListRow(n.row.title ?: "", n.row.at?.let { "Overdue · due ${whenText(it, now)}" }, leading = { CheckCircle(false, "Done") { actions.done(n.row) } },
             trailing = { SnoozeMore(n.row, actions) }, onClick = { onOpen(n.row) })

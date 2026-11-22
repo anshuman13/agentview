@@ -53,7 +53,6 @@ import { needsYou } from './codex/summary/needsYou';
 import { ignoredToday } from './codex/data/tasks/review';
 import { HubError, hubRetry } from './codex/data/hubFetch';
 import type { Brief } from './codex/data/wiki/wiki';
-import { reviewQueue } from './codex/wiki/reviewQueue';
 import { addCheck, toggleCheck } from './codex/tasks/editor/taskChecklist';
 import { revertBlock } from './workspace/revertBlock';
 import { splitDiff } from './ui/DiffFiles';
@@ -65,7 +64,7 @@ import { prepText } from './codex/AskBar';
 import { syncLine } from './codex/nav';
 import { linkDomain, linkPath, linksIn } from './codex/data/ask/links';
 import type { Profile } from './codex/data/sync';
-import { memoryClaim, pageClaims, restatedClaim, staleFacts, type Fact, type Job, type Meeting, type Page, type Run } from './codex/data/wiki/wiki';
+import { approveAllChanges, memoryClaim, pageClaims, rejectChanges, restatedClaim, reviewList, staleFacts, type Fact, type Job, type Meeting, type Page, type Run } from './codex/data/wiki/wiki';
 import { hasLiveClaims, wikiMarkdown } from './codex/data/wiki/wikiMarkdown';
 import { heldUntil, jobEdits, newJob, tasksOf } from './codex/jobs/schedule';
 import { WEEKLY_DIGEST } from './codex/data/tasks/presets';
@@ -853,8 +852,26 @@ describe('cases shared with the Android app', () => {
     it(`ignoredToday: ${c.name}`, () => expect(ignoredToday(c.briefs as Brief[], c.profile, c.now).map(({ url, from, gist }) => ({ url, from, gist }))).toEqual(c.expected));
   }
 
-  for (const c of cases<{ name: string; order: string[]; skipped: string[]; open: string[]; expected: string[] }>('review-queue')) {
-    it(`reviewQueue: ${c.name}`, () => expect(reviewQueue(c.order, c.skipped, new Set(c.open))).toEqual(c.expected));
+  type BatchCase = {
+    name: string; pages: Partial<Page>[]; facts: Partial<Fact>[]; filter?: string;
+    expected?: { filters: unknown[]; filter: string; sections: { title: string; claims: string[] }[] };
+    decide?: { action: 'approve' | 'reject'; ids: string[]; reason: string | null; now: number }; changes?: unknown[];
+  };
+  for (const c of cases<BatchCase>('review-batch')) {
+    it(`reviewList and decisions: ${c.name}`, () => {
+      const pages = c.pages.map((p) => ({ profile: 'work', ...p })) as Page[];
+      const facts = c.facts.map((f) => ({ profile: 'work', state: 'proposed', at: 0, ...f })) as Fact[];
+      if (c.expected) {
+        const v = reviewList(pages, facts, c.filter!);
+        expect({ filters: v.filters, filter: v.filter, sections: v.sections.map((s) => ({ title: s.title, claims: s.claims.map((f) => f.id) })) }).toEqual(c.expected);
+      }
+      if (c.decide) {
+        const { action, ids, reason, now } = c.decide;
+        const list = ids.map((id) => facts.find((f) => f.id === id)!);
+        const changes = action === 'approve' ? approveAllChanges(list, pages, facts, now) : rejectChanges(list, pages, facts, reason, now);
+        expect(changes.map((x) => ({ table: x.table, id: x.row.id, patch: x.patch, undo: x.undo }))).toEqual(c.changes!);
+      }
+    });
   }
 
   type Caps = { name: string; capabilities: Capabilities | null; can: Record<keyof Capabilities, boolean> };

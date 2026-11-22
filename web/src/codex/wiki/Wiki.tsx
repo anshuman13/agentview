@@ -11,9 +11,9 @@ export { SOURCE_ICON, shortDate } from './shared';
 
 const WikiIndex = lazy(() => import('./WikiIndex').then((m) => ({ default: m.WikiIndex })));
 const WikiPage = lazy(() => import('./WikiPage').then((m) => ({ default: m.WikiPage })));
-const ReviewMode = lazy(() => import('./ReviewMode').then((m) => ({ default: m.ReviewMode })));
+const ReviewList = lazy(() => import('./ReviewList').then((m) => ({ default: m.ReviewList })));
 
 export function Wiki({ onMenu }: { onMenu: () => void }) {
   const { open } = useView();
-  return <Guard key={open ?? ''} retry><Suspense fallback={null}>{open === REVIEW ? <ReviewMode /> : open ? <WikiPage id={open} /> : <WikiIndex onMenu={onMenu} />}</Suspense></Guard>;
+  return <Guard key={open ?? ''} retry><Suspense fallback={null}>{open === REVIEW ? <ReviewList /> : open ? <WikiPage id={open} /> : <WikiIndex onMenu={onMenu} />}</Suspense></Guard>;
 }

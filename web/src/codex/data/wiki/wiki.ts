@@ -2,6 +2,8 @@ import { isOld, RETIRE_AFTER } from '../../../../../shared/claimAge';
 import { replaceTarget } from '../../../../../shared/claimActions';
 import { givenPreferences } from '../../../../../shared/preferences';
 import { decisionKey, keyWords, mayChange, similarClaim, titleWords } from '../../../../../shared/claimMatch';
+import { proposalSource } from '../../../../../shared/proposalSource';
+import { UNTITLED } from '../../../../../shared/util';
 import { newId, rowKey, type Profile } from '../sync';
 import type { AssistantStore } from '../store';
 
@@ -301,38 +303,48 @@ export function staleFacts(facts: Fact[], pages: Page[], meetings: Meeting[], no
 
 export const proposals = (facts: Fact[]) => facts.filter((f) => !f.deleted && f.state === 'proposed').sort((a, b) => (b.at ?? 0) - (a.at ?? 0));
 
-// What the review list shows: one card per page with proposals, one per chat with two or more loose claims, and one per other claim that has no page or replaces a claim on a live page.
-export function reviewGroups(pages: Page[], facts: Fact[]) {
+export const REJECT_REASONS = ['Too narrow', 'Wrong', 'Already known', 'Not useful'];
+
+type ReviewFilter = { key: string; label: string; count: number };
+type ReviewSection ={ key: string; title: string; claims: Fact[] };
+
+// The Review claims list, checked by shared/fixtures/review-batch.json: the chips (All, one per source label, Memory, New pages; none at 0),
+// the filter in use (All when the asked one has no rows), and the shown claims by page, newest first, Memory last.
+export function reviewList(pages: Page[], facts: Fact[], filter: string) {
   const list = proposals(facts);
-  const alive = new Map(pages.filter((p) => !p.deleted).map((p) => [`${p.profile}:${p.id}`, p]));
-  const byPage = new Map<string, { page: Page; list: Fact[] }>();
-  const loose: Fact[] = [];
+  const alive = new Map(pages.filter((p) => !p.deleted).map((p) => [rowKey(p), p]));
+  const pageOf = (f: Fact) => (f.page_id ? alive.get(`${f.profile}:${f.page_id}`) : undefined);
+  const sourceKey = (f: Fact) => {
+    const s = proposalSource(f);
+    return s && `source:${s.label}`;
+  };
+  const filters: ReviewFilter[] = [{ key: 'all', label: 'All', count: list.length }];
   for (const f of list) {
-    const page = f.page_id ? alive.get(`${f.profile}:${f.page_id}`) : undefined;
-    if (!page || (f.replaces && page.state !== 'proposed')) {
-      loose.push(f);
-      continue;
-    }
-    const k = `${f.profile}:${page.id}`;
-    const g = byPage.get(k);
-    if (g) g.list.push(f);
-    else byPage.set(k, { page, list: [f] });
+    const s = proposalSource(f);
+    if (!s) continue;
+    const c = filters.find((x) => x.label === s.label);
+    if (c) c.count++;
+    else filters.push({ key: `source:${s.label}`, label: s.label, count: 1 });
   }
-  const byChat = new Map<string, Fact[]>();
-  for (const f of loose) {
-    const chat = f.replaces ? null : chatOf(f);
-    if (chat) byChat.set(`${f.profile}:${chat}`, [...(byChat.get(`${f.profile}:${chat}`) ?? []), f]);
+  filters.push({ key: 'memory', label: 'Memory', count: list.filter((f) => !pageOf(f)).length }, { key: 'new', label: 'New pages', count: list.filter((f) => pageOf(f)?.state === 'proposed').length });
+  const chips = filters.filter((c) => c.key === 'all' || c.count > 0);
+  const shown = chips.some((c) => c.key === filter) ? filter : 'all';
+  const match = (f: Fact) => shown === 'all' || (shown === 'memory' ? !pageOf(f) : shown === 'new' ? pageOf(f)?.state === 'proposed' : sourceKey(f) === shown);
+  const sections = new Map<string, ReviewSection>();
+  for (const f of list.filter(match)) {
+    const page = pageOf(f);
+    const key = page ? rowKey(page) : 'memory';
+    const s = sections.get(key);
+    if (s) s.claims.push(f);
+    else sections.set(key, { key, title: page ? `${page.title || UNTITLED}${page.state === 'proposed' ? ' (new page)' : ''}` : 'Memory', claims: [f] });
   }
-  const chats = [...byChat.values()].filter((g) => g.length > 1);
-  const grouped = new Set(chats.flat());
-  return { byPage: [...byPage.values()], chats, loose: loose.filter((f) => !grouped.has(f)) };
+  return { filters: chips, filter: shown, sections: [...sections.values()].sort((a, b) => Number(a.key === 'memory') - Number(b.key === 'memory')) };
 }
 
 // How many claims wait for a decision, so the badge says 75 for 75 claims and not 3 for 3 pages.
 export const reviewCount = (_pages: Page[], facts: Fact[]) => proposals(facts).length;
 
 export const chatOf = (f: Fact) => /^(?:claude|openrouter|codex):(.+)$/.exec(f.added_by ?? '')?.[1] ?? null;
-export const meetingOf = (f: Fact) => (f.added_by?.startsWith('meeting:') ? f.added_by.slice(8) : null);
 
 // The live claim a proposal replaces: the named claim, or the claim that has since superseded it.
 export function replacedClaim(fact: Fact, facts: Fact[]) {
@@ -340,12 +352,16 @@ export function replacedClaim(fact: Fact, facts: Fact[]) {
   return id ? facts.find((f) => f.id === id && f.profile === fact.profile) : undefined;
 }
 
+// A decided claim records when and, for a rejection, why; Undo clears both.
+const UNDECIDED = { state: 'proposed', decided_at: null, reject_reason: null };
+const decided = (state: string, at: number, reason: string | null = null) => ({ state, decided_at: at, reject_reason: reason });
+
 // Approving sets the claim live, its proposed page live, and supersedes the claim it replaces.
-export function approveChanges(fact: Fact, pages: Page[], facts: Fact[]) {
+export function approveChanges(fact: Fact, pages: Page[], facts: Fact[], at = Date.now()) {
   const page = pages.find((p) => p.id === fact.page_id && p.profile === fact.profile && p.state === 'proposed');
   const old = replacedClaim(fact, facts);
   return [
-    { table: 'facts' as const, row: fact, patch: { state: 'live' }, undo: { state: 'proposed' } },
+    { table: 'facts' as const, row: fact, patch: decided('live', at), undo: UNDECIDED },
     ...(page ? [{ table: 'pages' as const, row: page, patch: { state: 'live' }, undo: { state: 'proposed' } }] : []),
     ...(old ? [{ table: 'facts' as const, row: old, patch: { superseded_by: fact.id }, undo: { superseded_by: null } }] : []),
   ];
@@ -364,12 +380,12 @@ export function similarLive(list: Fact[], facts: Fact[]) {
 }
 
 // Approving several claims at once sets their proposed pages live once. Each approval sees the claims the ones before it changed.
-export function approveAllChanges(list: Fact[], pages: Page[], facts: Fact[]) {
+export function approveAllChanges(list: Fact[], pages: Page[], facts: Fact[], at = Date.now()) {
   const seen = new Set<string>();
   const out: ReturnType<typeof approveChanges> = [];
   let now = facts;
   for (const f of list) {
-    const changes = approveChanges(f, pages, now);
+    const changes = approveChanges(f, pages, now, at);
     for (const c of changes) {
       const k = `${c.row.profile}:${c.row.id}`;
       if (c.table === 'pages') {
@@ -384,6 +400,18 @@ export function approveAllChanges(list: Fact[], pages: Page[], facts: Fact[]) {
     });
   }
   return out;
+}
+
+// Rejecting sets the claims rejected with the reason, and every proposed page whose proposals are all in the list.
+export function rejectChanges(list: Fact[], pages: Page[], facts: Fact[], reason: string | null = null, at = Date.now()) {
+  const keys = new Set(list.map(rowKey));
+  const left = new Set(proposals(facts).filter((f) => !keys.has(rowKey(f))).map((f) => `${f.profile}:${f.page_id}`));
+  const hit = new Set(list.map((f) => `${f.profile}:${f.page_id}`));
+  const gone = pages.filter((p) => !p.deleted && p.state === 'proposed' && hit.has(rowKey(p)) && !left.has(rowKey(p)));
+  return [
+    ...list.map((f) => ({ table: 'facts' as const, row: f, patch: decided('rejected', at, reason), undo: UNDECIDED })),
+    ...gone.map((p) => ({ table: 'pages' as const, row: p, patch: { state: 'rejected' }, undo: { state: 'proposed' } })),
+  ];
 }
 
 export type Decision = { meeting: Meeting; text: string; at: number };

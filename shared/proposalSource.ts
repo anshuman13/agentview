@@ -1,6 +1,6 @@
 export type ProposalSource = { key: string; label: string };
 
-const NAMED: Record<string, string> = { corrections: 'Draft edits', voice: 'Your voice', people: 'People' };
+const NAMED: Record<string, string> = { corrections: 'Draft edits', voice: 'Your voice', people: 'People', you: 'You' };
 
 export const proposalSource = (f: { id: string; added_by: string | null }): ProposalSource | null => {
   if (f.id.startsWith('learn:')) return { key: 'chat', label: 'Chat learning' };

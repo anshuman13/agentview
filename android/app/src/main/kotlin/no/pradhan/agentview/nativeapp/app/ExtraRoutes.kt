@@ -8,7 +8,7 @@ import no.pradhan.agentview.nativeapp.codex.CodexState
 import no.pradhan.agentview.nativeapp.codex.PERSONAL
 import no.pradhan.agentview.nativeapp.codex.matchesProfile
 import no.pradhan.agentview.nativeapp.codex.wiki.MEMORY
-import no.pradhan.agentview.nativeapp.codex.wiki.ReviewModePage
+import no.pradhan.agentview.nativeapp.codex.wiki.ReviewListPage
 import no.pradhan.agentview.nativeapp.codex.Row
 import no.pradhan.agentview.nativeapp.codex.meetings.SeriesPage
 import no.pradhan.agentview.nativeapp.codex.meetings.SeriesValuePage
@@ -77,10 +77,10 @@ fun ExtraContent(
         }
         route.startsWith("series:") -> SeriesPage(hub, st, key, now, actions, openMeeting)
         route == "series-value" -> SeriesValuePage(st, profile, now, openMeeting)
-        route == "review" -> ReviewModePage(st, ops.review, pop) { push("wiki:${it.key}") }
+        route == "review" -> ReviewListPage(st, profile, ops.review, hub.readOnly, pop, { f -> push(claimRoute(f)) }, openChat)
         route == "autopilot" -> AutopilotPage(hub, st, now, onReplies, onTask)
         route.startsWith("person:") -> PersonPage(hub, st, key, now, actions, ops, openMeeting, { f -> push(claimRoute(f)) }, onTask) { push("meeting:${it.key}#notes") }
-        route == "wiki" -> WikiIndexPage(st, profile, now, actions, ops.review, hub.readOnly, { push("wiki:${it.key}") }, { f -> push(claimRoute(f)) }, { push("review") }, { push("wiki:$MEMORY") },
+        route == "wiki" -> WikiIndexPage(st, profile, now, actions, hub.readOnly, { push("wiki:${it.key}") }, { f -> push(claimRoute(f)) }, { push("review") }, { push("wiki:$MEMORY") },
             if (hub.readOnly) null else ({ text -> hub.askCodex(text, proposalProfile(null, profile)) }))
         wikiRoute == "wiki:$MEMORY" -> WikiPageView(st, memoryPage(st.facts.filter { matchesProfile(profile, it) }), profile, now, actions, ops.review, { push("review") }, pop, openChat, anchor,
             if (hub.readOnly) null else ({ text -> hub.rememberInMemory(text, proposalProfile(null, profile)) }))

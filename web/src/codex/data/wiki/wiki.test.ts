@@ -4,7 +4,7 @@ import type { ItemRow } from '../sync';
 import { dayLabel, dayStart } from '../dates';
 import { givenPreferences } from '../../../../../shared/preferences';
 import { clock } from '../../../../../shared/util';
-import { archivedPages, ungivenPreferences, decisionLog, approveAllChanges, approveChanges, similarLive, claimsMentioning, driftFacts, olderClaims, staleClaims, RETIRE_AFTER, pageClaims, pageStats, needsReview, newFact, proposedPageIds, rememberedFact, reviewCount, reviewGroups, searchWiki, staleFacts, type Fact, type Meeting, type Page } from './wiki';
+import { archivedPages, ungivenPreferences, decisionLog, approveAllChanges, approveChanges, similarLive, claimsMentioning, driftFacts, olderClaims, staleClaims, RETIRE_AFTER, pageClaims, pageStats, needsReview, newFact, proposedPageIds, rememberedFact, reviewCount, searchWiki, staleFacts, type Fact, type Meeting, type Page } from './wiki';
 import { briefFor, decisionsWith, commitmentsOf, priorWith, seriesOf, seriesMeetings, seriesRepeats, seriesTitle, joinMinutes, meetingBadge, meetingMeta, openQuestions, searchMeetings, topicTimeline, trackedTopics } from '../meetings/meetings';
 
 const common = (id: string) => ({ id, profile: 'work' as const, version: 0, updated_at: 0, deleted: 0, field_times: '{}', dirty: 0 });
@@ -36,29 +36,6 @@ describe('wiki', () => {
     expect(needsReview(pages[0], proposed)).toBe(true);
     expect(needsReview(pages[1], proposed)).toBe(false);
     expect(needsReview({ ...pages[1], state: 'proposed' }, proposed)).toBe(true);
-  });
-
-  it('groups loose proposals by chat and leaves singles and replacements alone', () => {
-    const loose = (id: string, by: string, extra: Partial<Fact> = {}) => fact(id, null as never, '', id, { state: 'proposed', added_by: by, ...extra });
-    const g = reviewGroups(pages, [
-      loose('m1', 'claude:c1'), loose('m2', 'claude:c1'), loose('m3', 'codex:c1'), loose('s1', 'claude:c2'),
-      loose('r1', 'claude:c1', { replaces: 'a', page_id: 'p1' }), loose('w1', 'claude:c3', { profile: 'personal' }), loose('w2', 'claude:c3'),
-    ]);
-    expect(g.chats.map((l) => l.map((f) => f.id))).toEqual([['m1', 'm2', 'm3']]);
-    expect(g.loose.map((f) => f.id)).toEqual(['s1', 'r1', 'w1', 'w2']);
-  });
-
-  it('groups the shared review cases', () => {
-    type C = { name: string; pages: { id: string; state?: string; deleted?: boolean }[]; facts: { id: string; profile?: 'work' | 'personal'; page_id?: string; replaces?: string; added_by?: string; at?: number; state?: string; deleted?: boolean }[]; expected: { byPage: { page: string; claims: string[] }[]; chats: string[][]; loose: string[] } };
-    const cases = JSON.parse(readFileSync(new URL('../../../../../shared/fixtures/review-groups.json', import.meta.url), 'utf8')) as C[];
-    for (const c of cases) {
-      const g = reviewGroups(
-        c.pages.map((p) => ({ ...page(p.id, p.id), state: p.state ?? null, deleted: p.deleted ? 1 : 0 })),
-        c.facts.map((f) => fact(f.id, f.page_id ?? (null as never), '', f.id, { profile: f.profile ?? 'work', state: f.state ?? 'proposed', replaces: f.replaces ?? null, added_by: f.added_by ?? null, at: f.at ?? 0, deleted: f.deleted ? 1 : 0 })),
-      );
-      const ids = (l: Fact[]) => l.map((f) => f.id);
-      expect({ byPage: g.byPage.map((p) => ({ page: p.page.id, claims: ids(p.list) })), chats: g.chats.map(ids), loose: ids(g.loose) }, c.name).toEqual(c.expected);
-    }
   });
 
   it('proposes a claim on the page in the given profile, or on Memory with no page', () => {

@@ -1,0 +1,105 @@
+[
+  {
+    "name": "chips per source label, sections by page with memory last",
+    "pages": [{ "id": "p1", "title": "Billing" }, { "id": "p2", "title": "Search", "state": "proposed" }, { "id": "p3", "title": "Gone", "deleted": true }],
+    "facts": [
+      { "id": "learn:a", "page_id": "p1", "added_by": "claude:c1", "at": 6 },
+      { "id": "f1", "page_id": "p2", "added_by": "faq:general", "at": 5 },
+      { "id": "f2", "added_by": "faq:help", "at": 4 },
+      { "id": "g1", "page_id": "p3", "added_by": "claude:c2", "at": 3 },
+      { "id": "h1", "page_id": "p1", "added_by": "", "at": 2 },
+      { "id": "y1", "added_by": "you", "at": 1 },
+      { "id": "old", "page_id": "p1", "added_by": "claude:c3", "state": "live", "at": 9 }
+    ],
+    "filter": "all",
+    "expected": {
+      "filters": [
+        { "key": "all", "label": "All", "count": 6 },
+        { "key": "source:Chat learning", "label": "Chat learning", "count": 1 },
+        { "key": "source:Slack FAQ", "label": "Slack FAQ", "count": 2 },
+        { "key": "source:Agent proposal", "label": "Agent proposal", "count": 1 },
+        { "key": "source:You", "label": "You", "count": 1 },
+        { "key": "memory", "label": "Memory", "count": 3 },
+        { "key": "new", "label": "New pages", "count": 1 }
+      ],
+      "filter": "all",
+      "sections": [
+        { "title": "Billing", "claims": ["learn:a", "h1"] },
+        { "title": "Search (new page)", "claims": ["f1"] },
+        { "title": "Memory", "claims": ["f2", "g1", "y1"] }
+      ]
+    }
+  },
+  {
+    "name": "a source chip keeps every channel of that label",
+    "pages": [{ "id": "p2", "title": "Search", "state": "proposed" }],
+    "facts": [
+      { "id": "f1", "page_id": "p2", "added_by": "faq:general", "at": 3 },
+      { "id": "f2", "added_by": "faq:help", "at": 2 },
+      { "id": "g1", "added_by": "claude:c2", "at": 1 }
+    ],
+    "filter": "source:Slack FAQ",
+    "expected": {
+      "filters": [
+        { "key": "all", "label": "All", "count": 3 },
+        { "key": "source:Slack FAQ", "label": "Slack FAQ", "count": 2 },
+        { "key": "source:Agent proposal", "label": "Agent proposal", "count": 1 },
+        { "key": "memory", "label": "Memory", "count": 2 },
+        { "key": "new", "label": "New pages", "count": 1 }
+      ],
+      "filter": "source:Slack FAQ",
+      "sections": [
+        { "title": "Search (new page)", "claims": ["f1"] },
+        { "title": "Memory", "claims": ["f2"] }
+      ]
+    }
+  },
+  {
+    "name": "a filter with no rows left falls back to All",
+    "pages": [{ "id": "p1", "title": "Billing" }],
+    "facts": [{ "id": "g1", "page_id": "p1", "added_by": "claude:c2", "at": 1 }],
+    "filter": "new",
+    "expected": {
+      "filters": [
+        { "key": "all", "label": "All", "count": 1 },
+        { "key": "source:Agent proposal", "label": "Agent proposal", "count": 1 }
+      ],
+      "filter": "all",
+      "sections": [{ "title": "Billing", "claims": ["g1"] }]
+    }
+  },
+  {
+    "name": "rejecting every claim of a proposed page rejects the page, with the reason",
+    "pages": [{ "id": "p1" }, { "id": "p2", "state": "proposed" }],
+    "facts": [{ "id": "a", "page_id": "p2" }, { "id": "b", "page_id": "p2" }, { "id": "c", "page_id": "p1" }],
+    "decide": { "action": "reject", "ids": ["a", "b", "c"], "reason": "Too narrow", "now": 100 },
+    "changes": [
+      { "table": "facts", "id": "a", "patch": { "state": "rejected", "decided_at": 100, "reject_reason": "Too narrow" }, "undo": { "state": "proposed", "decided_at": null, "reject_reason": null } },
+      { "table": "facts", "id": "b", "patch": { "state": "rejected", "decided_at": 100, "reject_reason": "Too narrow" }, "undo": { "state": "proposed", "decided_at": null, "reject_reason": null } },
+      { "table": "facts", "id": "c", "patch": { "state": "rejected", "decided_at": 100, "reject_reason": "Too narrow" }, "undo": { "state": "proposed", "decided_at": null, "reject_reason": null } },
+      { "table": "pages", "id": "p2", "patch": { "state": "rejected" }, "undo": { "state": "proposed" } }
+    ]
+  },
+  {
+    "name": "a proposed page with a claim left stays proposed, a fully rejected one goes",
+    "pages": [{ "id": "p2", "state": "proposed" }, { "id": "p3", "state": "proposed" }],
+    "facts": [{ "id": "a", "page_id": "p2" }, { "id": "b", "page_id": "p2" }, { "id": "c", "page_id": "p3" }],
+    "decide": { "action": "reject", "ids": ["a", "c"], "reason": null, "now": 100 },
+    "changes": [
+      { "table": "facts", "id": "a", "patch": { "state": "rejected", "decided_at": 100, "reject_reason": null }, "undo": { "state": "proposed", "decided_at": null, "reject_reason": null } },
+      { "table": "facts", "id": "c", "patch": { "state": "rejected", "decided_at": 100, "reject_reason": null }, "undo": { "state": "proposed", "decided_at": null, "reject_reason": null } },
+      { "table": "pages", "id": "p3", "patch": { "state": "rejected" }, "undo": { "state": "proposed" } }
+    ]
+  },
+  {
+    "name": "approving sets the proposed page live once",
+    "pages": [{ "id": "p2", "state": "proposed" }],
+    "facts": [{ "id": "a", "page_id": "p2" }, { "id": "b", "page_id": "p2" }],
+    "decide": { "action": "approve", "ids": ["a", "b"], "reason": null, "now": 100 },
+    "changes": [
+      { "table": "facts", "id": "a", "patch": { "state": "live", "decided_at": 100, "reject_reason": null }, "undo": { "state": "proposed", "decided_at": null, "reject_reason": null } },
+      { "table": "pages", "id": "p2", "patch": { "state": "live" }, "undo": { "state": "proposed" } },
+      { "table": "facts", "id": "b", "patch": { "state": "live", "decided_at": 100, "reject_reason": null }, "undo": { "state": "proposed", "decided_at": null, "reject_reason": null } }
+    ]
+  }
+]

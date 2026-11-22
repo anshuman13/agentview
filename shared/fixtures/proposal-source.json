@@ -7,6 +7,7 @@
   {"name": "people", "id": "f4", "added_by": "people", "expected": {"key": "people", "label": "People"}},
   {"name": "slack", "id": "f5", "added_by": "slack:123", "expected": {"key": "slack", "label": "Slack"}},
   {"name": "pull request", "id": "f6", "added_by": "pr:owner/repo#12", "expected": {"key": "pr", "label": "Pull request"}},
+  {"name": "added by hand", "id": "f10", "added_by": "you", "expected": {"key": "you", "label": "You"}},
   {"name": "agent", "id": "f7", "added_by": "claude:chat2", "expected": {"key": "agent", "label": "Agent proposal"}},
   {"name": "empty is not a proposal", "id": "f8", "added_by": "", "expected": null},
   {"name": "null is not a proposal", "id": "f9", "added_by": null, "expected": null}

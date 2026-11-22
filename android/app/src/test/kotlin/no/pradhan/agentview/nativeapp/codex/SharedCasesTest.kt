@@ -20,6 +20,7 @@ import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.boolean
 import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.decodeFromJsonElement
@@ -189,7 +190,12 @@ import no.pradhan.agentview.nativeapp.codex.wiki.staleFacts
 import no.pradhan.agentview.nativeapp.codex.wiki.wikiAskText
 import no.pradhan.agentview.nativeapp.codex.wiki.wikiMarkdown
 import kotlinx.serialization.json.buildJsonArray
-import no.pradhan.agentview.nativeapp.codex.wiki.reviewGroups
+import no.pradhan.agentview.nativeapp.codex.wiki.ProposalSource
+import no.pradhan.agentview.nativeapp.codex.wiki.ReviewFilter
+import no.pradhan.agentview.nativeapp.codex.wiki.approveAllChanges
+import no.pradhan.agentview.nativeapp.codex.wiki.proposalSource
+import no.pradhan.agentview.nativeapp.codex.wiki.rejectChanges
+import no.pradhan.agentview.nativeapp.codex.wiki.reviewList
 import no.pradhan.agentview.nativeapp.codex.wiki.reviewQueue
 import no.pradhan.agentview.nativeapp.codex.wiki.replaceTarget
 import no.pradhan.agentview.nativeapp.codex.wiki.restatedClaim
@@ -1111,21 +1117,37 @@ class SharedCasesTest {
         }
     }
 
-    @Test fun reviewGroups() {
+    @Test fun proposalSource() {
+        for (c in cases("proposal-source")) {
+            val want = c.nullable("expected")?.jsonObject?.let { ProposalSource(it.str("key"), it.str("label")) }
+            assertEquals(c.str("name"), want, proposalSource(c.str("id"), c.nullable("added_by")?.jsonPrimitive?.content))
+        }
+    }
+
+    @Test fun reviewBatch() {
         fun row(table: String, o: JsonObject, fields: List<String>, defaults: Map<String, Any?>): Row {
             val f = SYNCED_FIELDS.getValue(table).associateWith { JsonNull as JsonElement }.toMutableMap()
             for (k in fields) (o[k] ?: defaults[k]?.let { toJson(it) })?.let { f[k] = it }
             return Row(table, o.str("id"), o["profile"]?.jsonPrimitive?.content ?: "work", deleted = o["deleted"]?.jsonPrimitive?.booleanOrNull == true, f = f)
         }
-        fun strings(e: JsonElement) = e.jsonArray.map { it.jsonPrimitive.content }
-        for (c in cases("review-groups")) {
-            val pages = c.getValue("pages").jsonArray.map { row("pages", it.jsonObject, listOf("state"), emptyMap()) }
+        fun json(m: Map<String, Any?>) = JsonObject(m.mapValues { toJson(it.value) })
+        for (c in cases("review-batch")) {
+            val name = c.str("name")
+            val pages = c.getValue("pages").jsonArray.map { row("pages", it.jsonObject, listOf("title", "state"), emptyMap()) }
             val facts = c.getValue("facts").jsonArray.map { row("facts", it.jsonObject, listOf("page_id", "replaces", "added_by", "at", "state"), mapOf("state" to "proposed", "at" to 0)) }
-            val g = reviewGroups(pages, facts)
-            val want = c.getValue("expected").jsonObject
-            assertEquals(c.str("name"), want.getValue("byPage").jsonArray.map { it.jsonObject.str("page") to strings(it.jsonObject.getValue("claims")) }, g.byPage.map { it.page.id to it.claims.map { f -> f.id } })
-            assertEquals(c.str("name"), want.getValue("chats").jsonArray.map { strings(it) }, g.chats.map { l -> l.map { it.id } })
-            assertEquals(c.str("name"), strings(want.getValue("loose")), g.loose.map { it.id })
+            c["expected"]?.jsonObject?.let { want ->
+                val v = reviewList(pages, facts, c.str("filter"))
+                assertEquals(name, want.getValue("filters").jsonArray.map { it.jsonObject.let { f -> ReviewFilter(f.str("key"), f.str("label"), f.getValue("count").jsonPrimitive.int) } }, v.filters)
+                assertEquals(name, want.str("filter"), v.filter)
+                assertEquals(name, want.getValue("sections").jsonArray.map { it.jsonObject.str("title") to it.jsonObject.getValue("claims").jsonArray.map { id -> id.jsonPrimitive.content } }, v.sections.map { s -> s.title to s.claims.map { it.id } })
+            }
+            c["decide"]?.jsonObject?.let { d ->
+                val list = d.getValue("ids").jsonArray.map { id -> facts.first { it.id == id.jsonPrimitive.content } }
+                val at = d.getValue("now").jsonPrimitive.long
+                val changes = if (d.str("action") == "approve") approveAllChanges(list, pages, facts, at) else rejectChanges(list, pages, facts, d.nullable("reason")?.jsonPrimitive?.content, at)
+                val want = c.getValue("changes").jsonArray.map { it.jsonObject.let { x -> listOf(x["table"], x["id"], x["patch"], x["undo"]) } }
+                assertEquals(name, want, changes.map { listOf(JsonPrimitive(it.row.table), JsonPrimitive(it.row.id), json(it.patch), json(it.undo)) })
+            }
         }
     }
 

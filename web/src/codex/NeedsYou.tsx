@@ -177,7 +177,7 @@ export function NeedsYou({ n, now, onShowOld }: { n: ReturnType<typeof useNeedsY
           action={{ icon: 'play', label: 'Run again', disabled: !x.canRun, run: () => { haptic('tap'); n.runAgain(job); } }} />;
       }
       case 'staleAsks': return <CardRow key="stale-asks" title={`${plural(x.count, 'ask')} older than ${STALE_DAYS} days`} meta={`oldest ${ago(x.oldest)}`} onOpen={onShowOld} />;
-      case 'wiki': return <CardRow key="wiki-claims" title={`${x.count} wiki ${x.count === 1 ? 'claim waits' : 'claims wait'} for you`} meta="Review one at a time" onOpen={openReview} action={{ icon: 'check', label: 'Review', run: openReview }} />;
+      case 'wiki': return <CardRow key="wiki-claims" title={`${x.count} wiki ${x.count === 1 ? 'claim waits' : 'claims wait'} for you`} meta="Review all" onOpen={openReview} action={{ icon: 'check', label: 'Review', run: openReview }} />;
       case 'dm': {
         const c = x.chat;
         return (
