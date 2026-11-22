@@ -1,6 +1,6 @@
 import path from 'node:path';
 import { stat } from 'node:fs/promises';
-import type { Provider, ServerMessage } from '../../../shared/protocol.js';
+import type { Account, Provider, ServerMessage } from '../../../shared/protocol.js';
 import type { AdvisorId } from '../../../shared/advisors.js';
 import { getSessionInfo, listSessions } from '../agent/claude/sessions.js';
 import { rememberAccount } from '../agent/claude/accounts.js';
@@ -63,11 +63,11 @@ async function defaultChoice(): Promise<Provider> {
 // A chat is unattended while it has a job run that is not done, also after a restart.
 const unattendedSession = (sessionId?: string) => Boolean(runs.jobOfSession(sessionId));
 
-export async function createChat(cwd: string, resume?: string, title = '', fork = false, choice?: Provider, unattended = unattendedSession(resume)) {
+export async function createChat(cwd: string, resume?: string, title = '', fork = false, choice?: Provider, unattended = unattendedSession(resume), account?: Account) {
   // The account a chat starts on depends on the limit marks, so a wrong one is cleared first.
   const p = provider(isProvider(choice) ? choice : resume ? providerOf(resume) : await defaultChoice());
   await p.verifyLimits();
-  const chat = new AgentSession(cwd, p.driver(cwd, resume, fork, unattended), resume ?? null);
+  const chat = new AgentSession(cwd, p.driver(cwd, resume, fork, unattended, account), resume ?? null);
   chat.runs = runs;
   chat.transcriptPath = transcriptPath;
   chat.resumeLine = (id, dir, sessionId, account) => provider(id).resume(dir, sessionId, account);
@@ -170,8 +170,7 @@ export async function prompt(cwd: string, text: string, from?: string, fresh = f
 
 // A scheduled coding job: a claude chat in a worktree the server made, on the job's account when it picked one, with a run that holds the job's branch and worktree.
 export async function jobChat(job: Extract<HostRequest, { op: 'job' }>) {
-  const chat = await createChat(job.cwd, undefined, job.title, false, 'claude', true);
-  if (job.account) chat.setAccount(job.account);
+  const chat = await createChat(job.cwd, undefined, job.title, false, 'claude', true, job.account);
   const runId = runs.start({ kind: 'job', sessionId: '', chatId: chat.id, title: job.title, what: job.prompt, provider: 'claude', jobId: job.jobId, branch: job.branch, repo: job.repo, worktree: job.cwd, paseo: job.paseo });
   chat.prompt(`${job.prompt}\n\n${UNATTENDED_INSTRUCTION}`).catch((err) => runs.end(runId, errText(err).split('\n')[0]));
   return chat.id;

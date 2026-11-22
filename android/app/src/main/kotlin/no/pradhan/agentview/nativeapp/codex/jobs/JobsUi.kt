@@ -288,7 +288,7 @@ fun JobPageView(hub: Hub, st: CodexState, job: Row, now: Long, actions: TaskActi
             Group(Modifier.padding(top = Tokens.sp4)) {
                 ListRow("When", jobMeta(job, runs, st.paused, now), onClick = if (hub.readOnly) null else ({ scheduling = true }), trailing = if (hub.readOnly) null else ({ Chevron() })); Hairline()
                 ListRow("Repo", repoLabel(job.str("repo")) ?: "None", onClick = if (hub.readOnly) null else ({ pickingRepo = true }), trailing = if (hub.readOnly) null else ({ Chevron() })); Hairline()
-                ListRow("Account", pickedAccount(job)?.let { ACCOUNT_LABEL[it] } ?: "Auto, ${ACCOUNT_LABEL[jobAccount(job)]}", onClick = if (hub.readOnly) null else ({ pickingAccount = true }), trailing = if (hub.readOnly) null else ({ Chevron() })); Hairline()
+                ListRow("Account", pickedAccount(job)?.let { ACCOUNT_LABEL[it] } ?: if (job.str("repo") != null) "Auto" else "Auto, ${ACCOUNT_LABEL[jobAccount(job)]}", onClick = if (hub.readOnly) null else ({ pickingAccount = true }), trailing = if (hub.readOnly) null else ({ Chevron() })); Hairline()
                 if (job.str("repo") == null) { ListRow("Only push when it found something", "A reply starting with NOTHING NEW is kept in the runs but not pushed", toggle = Toggle(job.long("quiet") == 1L) { hub.codex.update(job, mapOf("quiet" to if (it) 1 else 0)) }); Hairline() }
                 if (job.str("repo") == null) {
                     ListRow("Allowed tools", tools?.let { toolLabels(it, probe.orEmpty().map { s -> s.name }).joinToString(", ") } ?: "None", onClick = if (hub.readOnly) null else ({ pickingTools = true }), trailing = if (hub.readOnly) null else ({ Chevron() }))

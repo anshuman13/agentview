@@ -19,7 +19,8 @@ import type { McpServerDef } from '../integrations/mcpClient.js';
 import type { DriverFactory } from './types.js';
 
 type Entry = {
-  driver(cwd: string, resume?: string, fork?: boolean, unattended?: boolean): DriverFactory;
+  // A picked account is pinned: the chat stays on it at its usage limit.
+  driver(cwd: string, resume?: string, fork?: boolean, unattended?: boolean, account?: Account): DriverFactory;
   // Clears a limit mark the provider no longer deserves, so a chat does not start on a wrong one.
   verifyLimits(): Promise<unknown>;
   // The file that holds a chat's transcript, or null when this provider has no such chat.
@@ -41,7 +42,7 @@ type Entry = {
 
 const PROVIDERS: Record<Provider, Entry> = {
   claude: {
-    driver: (cwd, resume, fork, unattended) => claudeDriver(cwd, { resume, fork, unattended }),
+    driver: (cwd, resume, fork, unattended, account) => claudeDriver(cwd, { resume, fork, unattended, account, pinned: account != null }),
     verifyLimits: () => Promise.all(loggedInAccounts().map((a) => verifyLimit(a))),
     transcriptPath: claudeTranscript,
     memory: (cwd) => chatMemory(cwd),

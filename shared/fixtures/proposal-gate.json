@@ -5,6 +5,35 @@
     "text": "Never use em dashes in replies anywhere", "source": "chat", "onPage": false, "expected": "Like a rejected claim"
   },
   {
+    "name": "an approved claim as close as a rejected one passes",
+    "history": [
+      {"id": "learn:a", "text": "Replies should never use em dashes anywhere", "added_by": "claude:c1", "state": "rejected"},
+      {"id": "learn:b", "text": "Never use em dashes anywhere in replies", "added_by": "claude:c1", "state": "live"}
+    ],
+    "text": "Never use em dashes in replies anywhere", "source": "chat", "onPage": false, "expected": null
+  },
+  {
+    "name": "chat learning is never mostly rejected",
+    "history": [
+      {"id": "learn:1", "text": "Alpha topic one", "added_by": "claude:c1", "state": "rejected"},
+      {"id": "learn:2", "text": "Bravo topic two", "added_by": "claude:c1", "state": "rejected"},
+      {"id": "learn:3", "text": "Charlie topic three", "added_by": "claude:c1", "state": "rejected"},
+      {"id": "learn:4", "text": "Delta topic four", "added_by": "claude:c1", "state": "rejected"},
+      {"id": "learn:5", "text": "Echo topic five", "added_by": "claude:c1", "state": "rejected"},
+      {"id": "learn:6", "text": "Foxtrot topic six", "added_by": "claude:c1", "state": "rejected"}
+    ],
+    "text": "Prefer short answers that lead with the result", "source": "chat", "onPage": false, "expected": null
+  },
+  {
+    "name": "dated claims do not match on the date",
+    "history": [
+      {"id": "learn:d1", "text": "As of 3 Oct 2026, Bob owns CI.", "added_by": "claude:c1", "state": "rejected"},
+      {"id": "learn:d2", "text": "As of 4 Oct 2026, Ann runs QA.", "added_by": "claude:c1", "state": "rejected"},
+      {"id": "learn:d3", "text": "As of 5 Oct 2026, Tom leads ops.", "added_by": "claude:c1", "state": "rejected"}
+    ],
+    "text": "As of 1 Nov 2026, deploys wait for a green check.", "source": "chat", "onPage": true, "expected": null
+  },
+  {
     "name": "source mostly rejected",
     "history": [
       {"id": "f1", "text": "Alpha topic one", "added_by": "faq:help", "state": "rejected"},
@@ -43,8 +72,18 @@
   {
     "name": "too narrow: a path",
     "history": [],
-    "text": "Put the helpers in src/app/util for now", "source": "chat", "onPage": false, "expected": "Too narrow"
+    "text": "Put the helpers in ./src/app/util for now", "source": "chat", "onPage": false, "expected": "Too narrow"
   },
+  {
+    "name": "too narrow: a home path",
+    "history": [],
+    "text": "Keep the drafts in ~/notes for now", "source": "agent", "onPage": false, "expected": "Too narrow"
+  },
+  {"name": "broad: a known file name", "history": [], "text": "Never edit package.json by hand", "source": "chat", "onPage": false, "expected": null},
+  {"name": "broad: CLAUDE.md files", "history": [], "text": "Keep CLAUDE.md files short", "source": "chat", "onPage": false, "expected": null},
+  {"name": "broad: Vue.js", "history": [], "text": "Use Tailwind with Vue.js components", "source": "chat", "onPage": false, "expected": null},
+  {"name": "broad: slashed alternatives", "history": [], "text": "Use bun test, not jest/vitest/mocha", "source": "chat", "onPage": false, "expected": null},
+  {"name": "broad: slashed languages", "history": [], "text": "Reply in Norwegian/English/German", "source": "agent", "onPage": false, "expected": null},
   {
     "name": "too narrow: this deck",
     "history": [],

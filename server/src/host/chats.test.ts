@@ -18,6 +18,7 @@ vi.mock('../agent/registry.js', () => {
 
 const { ClaudeDriver } = await import('../agent/claude/driver.js');
 const { removeChat } = await import('../agent/claude/pins.js');
+const { markLimited } = await import('../agent/claude/accounts.js');
 const { UNATTENDED_INSTRUCTION } = await import('../session/prompts.js');
 const { jobRepo } = await import('../workspace/testRepo.js');
 const { createChat, endRun, jobChat, reviewJob } = await import('./chats.js');
@@ -42,19 +43,21 @@ describe('jobChat', () => {
     await waitFor(() => expect(chat.state.events.find((e) => e.kind === 'user')).toMatchObject({ text: `Fix it\n\n${UNATTENDED_INSTRUCTION}` }));
   });
 
-  it('switches to the job\'s account before the first prompt', async () => {
-    const order: string[] = [];
-    const account = vi.spyOn(AgentSession.prototype, 'setAccount').mockImplementation((a: string) => void order.push(`account ${a}`));
-    const send = vi.spyOn(AgentSession.prototype, 'prompt').mockImplementation(async () => void order.push('prompt'));
+  it('starts the CLI on the job\'s account and stays on it at the usage limit', async () => {
+    const started: string[] = [];
+    vi.spyOn(ClaudeDriver.prototype, 'start').mockImplementation(function (this: InstanceType<typeof ClaudeDriver>) { started.push(this.account); });
+    const switched = vi.spyOn(ClaudeDriver.prototype, 'setAccount');
     try {
-      await jobChat({ op: 'job', cwd: '/tmp', title: 'Fix', prompt: 'Fix it', jobId: 'j2', branch: 'jobs/fix-2', repo: '/r', paseo: false, account: 'alt' });
-      expect(order).toEqual(['account alt', 'prompt']);
-      order.length = 0;
-      await jobChat({ op: 'job', cwd: '/tmp', title: 'Fix', prompt: 'Fix it', jobId: 'j3', branch: 'jobs/fix-3', repo: '/r', paseo: false });
-      expect(order).toEqual(['prompt']);
+      const picked = live.get(await jobChat({ op: 'job', cwd: '/tmp', title: 'Fix', prompt: 'Fix it', jobId: 'j2', branch: 'jobs/fix-2', repo: '/r', paseo: false, account: 'alt' }))!.chat.driver as InstanceType<typeof ClaudeDriver>;
+      expect(started[0]).toBe('alt');
+      expect(picked.limitHit(Date.now() + 60_000)).toBeNull();
+      expect(picked.account).toBe('alt');
+      expect(switched).not.toHaveBeenCalled();
+      const auto = live.get(await jobChat({ op: 'job', cwd: '/tmp', title: 'Fix', prompt: 'Fix it', jobId: 'j3', branch: 'jobs/fix-3', repo: '/r', paseo: false }))!.chat.driver as InstanceType<typeof ClaudeDriver>;
+      expect((auto as unknown as { pinned: boolean }).pinned).toBe(false);
     } finally {
-      account.mockRestore();
-      send.mockRestore();
+      switched.mockRestore();
+      markLimited('alt', 0);
     }
   });
 

@@ -1,6 +1,7 @@
 import { readFile } from 'node:fs/promises';
 import { openInChrome } from '../chrome/chrome.js';
 import { listSessions, renameRoute, savedSession } from '../agent/claude/sessions.js';
+import { loggedInAccounts } from '../agent/claude/accounts.js';
 import { codexSessions } from '../agent/codex/threads.js';
 import { isProvider, providerOptions } from '../agent/registry.js';
 import { cancelFocus, scheduleFocus } from '../integrations/focus.js';
@@ -119,6 +120,7 @@ export function workspaceRoutes(d: RouteDeps): Record<string, Entry<Ctx>> {
       if (!jobId || !prompt.trim()) return failed(400, 'jobId and prompt are required');
       const account = body.account == null ? undefined : String(body.account);
       if (account !== undefined && !Object.hasOwn(ACCOUNT_LABEL, account)) return failed(400, 'Unknown account');
+      if (account !== undefined && !loggedInAccounts().includes(account as Account)) return failed(400, 'Account not logged in');
       if (!isWorkspaceRepo(repo)) return failed(400, 'Not a workspace repo');
       if (d.runs().some((r) => r.kind === 'job' && r.jobId === jobId && r.state !== 'done')) return failed(409, 'The last run is still open');
       const branch = `jobs/${branchSlug(title)}`;

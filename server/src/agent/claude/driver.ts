@@ -27,7 +27,7 @@ import { OPENROUTER_PREFIX } from '../../../../shared/openrouter.js';
 
 const USAGE_EVERY = 10 * 60_000;
 
-export type ClaudeOptions = { resume?: string; fork?: boolean; openrouter?: boolean; account?: Account; unattended?: boolean };
+export type ClaudeOptions = { resume?: string; fork?: boolean; openrouter?: boolean; account?: Account; pinned?: boolean; unattended?: boolean };
 
 export const claudeDriver = (cwd: string, o: ClaudeOptions = {}): DriverFactory => (host) => new ClaudeDriver(host, { ...o, account: o.account ?? reopenAccount(o.resume, cwd) });
 
@@ -59,6 +59,7 @@ export class ClaudeDriver implements AgentDriver {
   private resume?: string;
   private fork: boolean;
   account: Account;
+  private pinned: boolean;
   private openrouter: boolean;
   private unattended: boolean;
 
@@ -66,6 +67,7 @@ export class ClaudeDriver implements AgentDriver {
     this.resume = o.resume;
     this.fork = o.fork ?? false;
     this.account = o.account ?? 'main';
+    this.pinned = o.pinned ?? false;
     this.openrouter = o.openrouter ?? false;
     this.unattended = o.unattended ?? false;
     this.live = new StreamText(host);
@@ -128,6 +130,7 @@ export class ClaudeDriver implements AgentDriver {
   limitHit(until: number) {
     if (this.openrouter) return null;
     markLimited(this.account, until);
+    if (this.pinned) return null;
     const next = otherAccount(this.account);
     if (next) this.setAccount(next);
     return next;

@@ -27,6 +27,7 @@ vi.mock('../workspace/terminal.js', () => ({ listTerminals: mocks.listTerminals,
 import type { RouteDeps } from './routes.js';
 const { createRoutes } = await import('./routes.js');
 const { ROOTS } = await import('../workspace/files.js');
+const accounts = await import('../agent/claude/accounts.js');
 
 const chat = { id: 'c1', cwd: '/tmp/x' } as LiveChat;
 
@@ -118,6 +119,16 @@ describe('routes', () => {
         expect([r.code, r.json]).toEqual([400, { error: 'Unknown account' }]);
       });
 
+      it('answers 400 for a picked account that is not logged in', async () => {
+        mocks.isWorkspaceRepo.mockReturnValue(true);
+        const logged = vi.spyOn(accounts, 'loggedInAccounts').mockReturnValue(['main']);
+        const req = vi.fn(async () => 'chat9');
+        const r = await call('POST', '/api/jobs/start', JSON.stringify({ jobId: 'j1', title: 't', repo: '/tmp/none', prompt: 'do it', account: 'alt' }), { host: { req }, runs: () => [] } as unknown as Partial<RouteDeps>);
+        logged.mockRestore();
+        expect([r.code, r.json]).toEqual([400, { error: 'Account not logged in' }]);
+        expect(req).not.toHaveBeenCalled();
+      });
+
       it('answers 400 for a repo that is not a workspace repo', async () => {
         mocks.isWorkspaceRepo.mockReturnValue(false);
         const r = await start();
@@ -144,6 +155,7 @@ describe('routes', () => {
         expect(existsSync(dir)).toBe(true);
         expect(execFileSync('git', ['-C', dir, 'branch', '--show-current']).toString().trim()).toBe(r.json.branch);
         expect(req).toHaveBeenCalledWith({ op: 'job', cwd: dir, title: 'Fix the flaky test', prompt: 'do it', jobId: 'j1', branch: r.json.branch, repo, paseo: false });
+        vi.spyOn(accounts, 'loggedInAccounts').mockReturnValueOnce(['main', 'alt']);
         const picked = await call('POST', '/api/jobs/start', JSON.stringify({ jobId: 'j2', title: 'Other job', repo, prompt: 'do it', account: 'alt' }), { host: { req }, runs: () => [] } as unknown as Partial<RouteDeps>);
         expect(req).toHaveBeenLastCalledWith(expect.objectContaining({ jobId: 'j2', account: 'alt' }));
         expect(picked.json.chatId).toBe('chat9');
