@@ -48,9 +48,7 @@ import no.pradhan.agentview.nativeapp.net.READ_ONLY_SENT
 import no.pradhan.agentview.nativeapp.net.Writes
 import no.pradhan.agentview.nativeapp.codex.wiki.ReviewOps
 import no.pradhan.agentview.nativeapp.codex.wiki.approveAllChanges
-import no.pradhan.agentview.nativeapp.codex.wiki.extendOrder
 import no.pradhan.agentview.nativeapp.codex.wiki.rejectChanges
-import no.pradhan.agentview.nativeapp.codex.wiki.reviewQueue
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -310,13 +308,6 @@ class CodexGapsTest {
         ops.reject(listOf(f1, f2))
         assertEquals("rejected", st.current(page).str("state"))
         assertEquals("Rejected 2 claims", snacks.last().first)
-    }
-
-    @Test fun reviewKeepsItsOrderAndSkippedClaimsGoToTheBack() {
-        val order = extendOrder(extendOrder(emptyList(), listOf("a", "b", "c")), listOf("c", "d"))
-        assertEquals(listOf("a", "b", "c", "d"), order)
-        assertEquals(listOf("a", "c", "b"), reviewQueue(order, listOf("b"), setOf("a", "b", "c")))
-        assertEquals(listOf("c", "b"), reviewQueue(order, listOf("b"), setOf("b", "c")))
     }
 
     @Test fun recipesMatchOnlyAfterASlash() {

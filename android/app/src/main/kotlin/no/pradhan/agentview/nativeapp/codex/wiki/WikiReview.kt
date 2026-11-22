@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row as LRow
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
@@ -164,7 +165,7 @@ fun ReviewListPage(st: CodexState, profile: String?, ops: ReviewOps, readOnly: B
                     ReviewClaimRow(st, f, ops, readOnly, f.key in picked, { picked = if (f.key in picked) picked - f.key else picked + f.key }, onClaim, onOpenChat)
                 }
             }
-            if (chosen.isNotEmpty()) item { androidx.compose.foundation.layout.Spacer(Modifier.padding(bottom = Tokens.fab)) }
+            if (chosen.isNotEmpty()) item { Spacer(Modifier.padding(bottom = Tokens.fab)) }
         }
         if (!readOnly && chosen.isNotEmpty()) ReviewSelectionBar(
             chosen.size, { picked = picked + view.sections.flatMap { s -> s.claims.map { it.key } } }, { decide(ops::approve) }, { reason -> decide { ops.reject(it, reason) } }, { picked = emptySet() },

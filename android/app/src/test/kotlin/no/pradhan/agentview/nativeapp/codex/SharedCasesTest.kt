@@ -196,7 +196,6 @@ import no.pradhan.agentview.nativeapp.codex.wiki.approveAllChanges
 import no.pradhan.agentview.nativeapp.codex.wiki.proposalSource
 import no.pradhan.agentview.nativeapp.codex.wiki.rejectChanges
 import no.pradhan.agentview.nativeapp.codex.wiki.reviewList
-import no.pradhan.agentview.nativeapp.codex.wiki.reviewQueue
 import no.pradhan.agentview.nativeapp.codex.wiki.replaceTarget
 import no.pradhan.agentview.nativeapp.codex.wiki.restatedClaim
 import no.pradhan.agentview.nativeapp.codex.wiki.similarClaim
@@ -1521,11 +1520,6 @@ class SharedCasesTest {
             val items = c.getValue("items").jsonArray.map { it.jsonObject }.map { o -> item(o.str("id"), o.str("status"), Instant.parse(o.str("at")).toEpochMilli()).copy(deleted = o["deleted"] != null) }
             assertEquals(c.str("name"), c.nullable("expected")?.jsonPrimitive?.content, goalToLink(items, c.nullable("id")?.jsonPrimitive?.content, Instant.parse(c.str("now")).toEpochMilli())?.id)
         }
-    }
-
-    @Test fun reviewQueue() {
-        fun strings(c: JsonObject, k: String) = c.getValue(k).jsonArray.map { it.jsonPrimitive.content }
-        for (c in cases("review-queue")) assertEquals(c.str("name"), strings(c, "expected"), reviewQueue(strings(c, "order"), strings(c, "skipped"), strings(c, "open").toSet()))
     }
 
     @Test fun ignoredToday() {

@@ -1,7 +1,7 @@
 import { useMemo, useRef, useState } from 'react';
 import { useCodex } from '../data';
 import { rowKey } from '../data/sync';
-import { chatOf, proposals, REJECT_REASONS, reviewList, similarLive, type Fact } from '../data/wiki/wiki';
+import { chatOf, proposals, REJECT_REASONS, replacedClaim, reviewList, similarLive, type Fact } from '../data/wiki/wiki';
 import { proposalSource } from '../../../../shared/proposalSource';
 import { Icon } from '../../ui/Icon';
 import { Button, Chip, IconButton } from '../../ui/Button';
@@ -96,7 +96,7 @@ export function ReviewList() {
                   <Section label={s.title} count={sectionCount(s.claims.length)} action={<Button size="sm" variant="plain" onClick={() => pick(s.claims)}>Select</Button>} />
                   <ul className="ui-group wk-list">
                     {s.claims.map((f) => (
-                      <ReviewRow key={rowKey(f)} fact={f} old={f.replaces ? facts.find((o) => o.id === f.replaces && o.profile === f.profile) : undefined} similar={similar.get(rowKey(f))} picked={picked.has(rowKey(f))} toggle={() => toggle(f)} />
+                      <ReviewRow key={rowKey(f)} fact={f} old={f.replaces ? replacedClaim(f, facts) ?? facts.find((o) => o.id === f.replaces && o.profile === f.profile) : undefined} similar={similar.get(rowKey(f))} picked={picked.has(rowKey(f))} toggle={() => toggle(f)} />
                     ))}
                   </ul>
                 </section>

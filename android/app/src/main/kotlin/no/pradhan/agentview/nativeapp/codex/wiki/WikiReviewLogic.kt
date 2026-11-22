@@ -97,29 +97,23 @@ fun reviewList(pages: List<Row>, facts: List<Row>, filter: String): ReviewList {
     val alive = pages.filter { !it.deleted }.associateBy { it.key }
     fun pageOf(f: Row) = f.str("page_id")?.ifEmpty { null }?.let { alive["${f.profile}:$it"] }
     fun sourceKey(f: Row) = proposalSource(f.id, f.str("added_by"))?.let { "source:${it.label}" }
+    fun isMemory(f: Row) = pageOf(f) == null
+    fun isNew(f: Row) = pageOf(f)?.str("state") == "proposed"
     val bySource = LinkedHashMap<String, Int>()
-    for (f in list) proposalSource(f.id, f.str("added_by"))?.let { bySource[it.label] = (bySource[it.label] ?: 0) + 1 }
-    val chips = (listOf(ReviewFilter("all", "All", list.size)) + bySource.map { (label, n) -> ReviewFilter("source:$label", label, n) } +
-        ReviewFilter("memory", "Memory", list.count { pageOf(it) == null }) + ReviewFilter("new", "New pages", list.count { pageOf(it)?.str("state") == "proposed" }))
+    for (f in list) sourceKey(f)?.let { bySource[it] = (bySource[it] ?: 0) + 1 }
+    val chips = (listOf(ReviewFilter("all", "All", list.size)) + bySource.map { (key, n) -> ReviewFilter(key, key.removePrefix("source:"), n) } +
+        ReviewFilter("memory", "Memory", list.count(::isMemory)) + ReviewFilter("new", "New pages", list.count(::isNew)))
         .filter { it.key == "all" || it.count > 0 }
     val shown = if (chips.any { it.key == filter }) filter else "all"
     val sections = LinkedHashMap<String, Pair<Row?, MutableList<Row>>>()
     for (f in list) {
         val page = pageOf(f)
-        val keep = when (shown) { "all" -> true; "memory" -> page == null; "new" -> page?.str("state") == "proposed"; else -> sourceKey(f) == shown }
+        val keep = when (shown) { "all" -> true; "memory" -> isMemory(f); "new" -> isNew(f); else -> sourceKey(f) == shown }
         if (keep) sections.getOrPut(page?.key ?: "memory") { page to ArrayList() }.second.add(f)
     }
     return ReviewList(chips, shown, sections.map { (key, v) ->
         ReviewSection(key, v.first?.let { p -> (p.title?.ifEmpty { null } ?: UNTITLED) + if (p.str("state") == "proposed") " (new page)" else "" } ?: "Memory", v.second)
     }.sortedBy { it.key == "memory" })
-}
-
-// The order is fixed when the screen opens; a skipped claim goes to the back, a decided one stays counted.
-fun extendOrder(order: List<String>, open: Collection<String>) = order + open.filter { it !in order }
-
-fun reviewQueue(order: List<String>, skipped: List<String>, open: Set<String>): List<String> {
-    val left = order.filter { it in open }
-    return left.filter { it !in skipped } + skipped.filter { it in open }
 }
 
 class ReviewOps(private val store: CodexStore, private val snack: (String, (() -> Unit)?) -> Unit) {

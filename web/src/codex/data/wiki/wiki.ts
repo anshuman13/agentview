@@ -306,7 +306,7 @@ export const proposals = (facts: Fact[]) => facts.filter((f) => !f.deleted && f.
 export const REJECT_REASONS = ['Too narrow', 'Wrong', 'Already known', 'Not useful'];
 
 type ReviewFilter = { key: string; label: string; count: number };
-type ReviewSection ={ key: string; title: string; claims: Fact[] };
+type ReviewSection = { key: string; title: string; claims: Fact[] };
 
 // The Review claims list, checked by shared/fixtures/review-batch.json: the chips (All, one per source label, Memory, New pages; none at 0),
 // the filter in use (All when the asked one has no rows), and the shown claims by page, newest first, Memory last.
@@ -318,18 +318,20 @@ export function reviewList(pages: Page[], facts: Fact[], filter: string) {
     const s = proposalSource(f);
     return s && `source:${s.label}`;
   };
+  const isMemory = (f: Fact) => !pageOf(f);
+  const isNew = (f: Fact) => pageOf(f)?.state === 'proposed';
   const filters: ReviewFilter[] = [{ key: 'all', label: 'All', count: list.length }];
   for (const f of list) {
-    const s = proposalSource(f);
-    if (!s) continue;
-    const c = filters.find((x) => x.label === s.label);
+    const key = sourceKey(f);
+    if (!key) continue;
+    const c = filters.find((x) => x.key === key);
     if (c) c.count++;
-    else filters.push({ key: `source:${s.label}`, label: s.label, count: 1 });
+    else filters.push({ key, label: proposalSource(f)!.label, count: 1 });
   }
-  filters.push({ key: 'memory', label: 'Memory', count: list.filter((f) => !pageOf(f)).length }, { key: 'new', label: 'New pages', count: list.filter((f) => pageOf(f)?.state === 'proposed').length });
+  filters.push({ key: 'memory', label: 'Memory', count: list.filter(isMemory).length }, { key: 'new', label: 'New pages', count: list.filter(isNew).length });
   const chips = filters.filter((c) => c.key === 'all' || c.count > 0);
   const shown = chips.some((c) => c.key === filter) ? filter : 'all';
-  const match = (f: Fact) => shown === 'all' || (shown === 'memory' ? !pageOf(f) : shown === 'new' ? pageOf(f)?.state === 'proposed' : sourceKey(f) === shown);
+  const match = (f: Fact) => shown === 'all' || (shown === 'memory' ? isMemory(f) : shown === 'new' ? isNew(f) : sourceKey(f) === shown);
   const sections = new Map<string, ReviewSection>();
   for (const f of list.filter(match)) {
     const page = pageOf(f);
