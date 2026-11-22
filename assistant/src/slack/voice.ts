@@ -6,6 +6,8 @@ import { getMeta, setMeta } from '../core/db.js';
 import { run, slackConfig } from './slack.js';
 import { PROFILE } from './slackSave.js';
 import { applyChanges, type Change } from '../core/sync.js';
+import { proposalHistory } from '../wiki/learn.js';
+import { examplesFor, proposalRun } from '../../../shared/proposalGate.js';
 
 const VOICE_PAGE = 'How I write';
 const META = 'draft:voice';
@@ -34,18 +36,20 @@ export function voicePage(db: Database, now: number) {
   return id;
 }
 
-// Stores the note for the draft step and proposes each trait as a claim on the "How I write" page, once per trait text.
+// Stores the note for the draft step and proposes each trait as a claim on the "How I write" page, once per trait text, unless the proposal gate skips it.
 export function saveVoice(db: Database, v: Voice, now = Date.now()) {
   setMeta(db, META, JSON.stringify({ note: v.note.trim(), traits: v.traits, examples: v.examples.slice(0, 3) }));
   const page = voicePage(db, now);
+  const gate = proposalRun(proposalHistory(db, PROFILE), 'voice');
   const changes: Change[] = [];
   for (const t of v.traits.slice(0, MAX_TRAITS)) {
     const text = t.trim();
     if (!text) continue;
     const id = `voice:${createHash('sha1').update(text.toLowerCase()).digest('hex').slice(0, 16)}`;
-    if (db.prepare('SELECT 1 FROM facts WHERE profile = ? AND id = ?').get(PROFILE, id)) continue;
-    changes.push({ table: 'facts', id, profile: PROFILE, updated_at: now, fields: { text, page_id: page, heading: 'Style', sources: JSON.stringify([{ kind: 'slack', label: 'my own messages' }]), at: now, state: 'proposed', replaces: null, added_by: 'voice' } });
+    if (db.prepare('SELECT 1 FROM facts WHERE profile = ? AND id = ?').get(PROFILE, id) || gate.skip(text, true)) continue;
+    changes.push({ table: 'facts', id, profile: PROFILE, updated_at: now, fields: { text, page_id: page, heading: 'Style', sources: JSON.stringify([{ kind: 'slack', label: 'my own messages' }]), at: now, state: 'proposed', replaces: null, added_by: 'voice', why: 'Read from your own recent Slack messages.' } });
   }
+  gate.log();
   return applyChanges(db, changes).applied;
 }
 
@@ -65,6 +69,8 @@ export async function learnVoice(db: Database, now = Date.now()) {
   const prompt = [
     `Read about 150 of my most recent Slack messages: slack_search_public_and_private with filters "from:<@${c.me}>", sort "timestamp", include_context false, following the next cursor until you have about 150 or there are none. I am Slack user ${c.me}. Read nothing else. Do not send or change anything in Slack.`,
     'Work out how I write: typical length, whether I greet or sign off, tone, how I say no or push back, how I ask for things, emoji and formatting, which language I use with whom, phrases I reuse. Then call save_voice once. Do not use the em dash character. End with one line: how many messages you read.',
+    '',
+    ...examplesFor(proposalHistory(db, PROFILE), 'voice'),
   ].join('\n');
   const result = await run(prompt, 'sonnet', [save], 30, () => voice != null);
   if (!voice) throw new Error('No voice was saved');

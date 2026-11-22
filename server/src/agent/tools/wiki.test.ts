@@ -63,7 +63,7 @@ test('wiki_propose names a similar live or proposed claim of the same profile an
   expect(pushed).toHaveLength(3);
 });
 
-test('wiki_propose saves nothing for a recently rejected or an already proposed or live claim', async () => {
+test('wiki_propose saves nothing for a rejected, narrow, already proposed or live claim', async () => {
   const day = 86_400_000;
   const fact = (id: string, profile: string, state: string, text: string, updated_at = 1) => ({ table: 'facts', id, profile, deleted: false, updated_at, fields: { text, state } });
   const changes = [
@@ -78,13 +78,14 @@ test('wiki_propose saves nothing for a recently rejected or an already proposed 
     if (init?.method === 'POST') pushed.push(JSON.parse(String(init.body)));
     return json(200, { version: 1, hasMore: false, changes: init?.method === 'POST' ? [] : changes });
   }));
-  expect(await propose('Gateway limits every user to 60 requests per minute')).toBe('The user rejected a similar claim [rej10]: The gateway limits each user to 60 requests a minute. Do not propose it again.');
-  expect(await propose('The importer retries failed uploads five times daily')).toMatch(/^Proposed /);
+  expect(await propose('Gateway limits every user to 60 requests per minute')).toBe('Not proposed: Like a rejected claim. Do not propose it again.');
+  expect(await propose('The importer retries failed uploads five times daily')).toBe('Not proposed: Like a rejected claim. Do not propose it again.');
+  expect(await propose('Keep the intro short in this deck')).toBe('Not proposed: Too narrow. Do not propose it again.');
   expect(await propose('Deploys happen every Friday afternoon')).toMatch(/^Proposed /);
   expect(await propose('  billing RUNS on  the first of the month ')).toBe('Already proposed as [prop].');
   expect(await propose('Search results are cached for ten minutes')).toBe('Already live as [live].');
   expect(await propose('Search results are cached for ten minutes, per user')).toContain('Similar to [live]');
-  expect(pushed).toHaveLength(3);
+  expect(pushed).toHaveLength(2);
 });
 
 test('wiki_propose files under a near-title live page and never onto a rejected one', async () => {

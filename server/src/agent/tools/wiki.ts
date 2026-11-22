@@ -1,7 +1,8 @@
 import { z } from 'zod';
 import { profileOf } from '../claude/accounts.js';
 import { isOld as isOldClaim } from '../../../../shared/claimAge.js';
-import { norm, recentlyRejected, samePage, similarClaim } from '../../../../shared/claimMatch.js';
+import { norm, samePage, similarClaim } from '../../../../shared/claimMatch.js';
+import { decisionHistory, gateProposal, type FactRow } from '../../../../shared/proposalGate.js';
 import { givenPreferences, preferenceLine, type Preference } from '../../../../shared/preferences.js';
 import { errText } from '../../../../shared/util.js';
 import { hubGet, hubPush, hubRows, hubUsed, mirrored, type HubChange, type HubRow } from '../../integrations/assistant.js';
@@ -99,6 +100,7 @@ export const wikiProposeTool = defineTool({
     section: z.string().optional().describe('Section for a new page'),
     heading: z.string().optional(),
     replaces: z.string().optional().describe('Id of the live claim this one supersedes'),
+    why: z.string().max(200).optional().describe('Why you propose it, one short sentence'),
     profile: PROFILE,
   },
   async handler(a, { cwd, chatId, provider }) {
@@ -106,8 +108,8 @@ export const wikiProposeTool = defineTool({
     const now = Date.now();
     const { pages, facts } = await own(cwd, profile);
     const withText = facts.filter((r) => typeof r.text === 'string') as (HubRow & { text: string })[];
-    const rejected = similarClaim(a.text, recentlyRejected(withText.map((r) => ({ ...r, state: state(r) })), now));
-    if (rejected) return `The user rejected a similar claim [${rejected.id}]: ${rejected.text}. Do not propose it again.`;
+    const skip = gateProposal(a.text, 'agent', !!a.page, decisionHistory(withText as unknown as FactRow[]));
+    if (skip) return `Not proposed: ${skip}. Do not propose it again.`;
     const current = withText.filter((r) => !r.superseded_by && ['live', 'proposed'].includes(state(r)));
     const same = current.find((r) => norm(r.text) === norm(a.text));
     if (same) return `Already ${state(same) === 'live' ? 'live' : 'proposed'} as [${same.id}].`;
@@ -127,7 +129,7 @@ export const wikiProposeTool = defineTool({
     const id = crypto.randomUUID();
     changes.push({
       table: 'facts', id, profile, updated_at: now,
-      fields: { text: a.text, page_id: pageId ?? null, heading: a.heading ?? null, sources: JSON.stringify(a.sources), at: now, state: 'proposed', replaces: replaces || null, added_by: chatId ? `${provider}:${chatId}` : provider },
+      fields: { text: a.text, page_id: pageId ?? null, heading: a.heading ?? null, sources: JSON.stringify(a.sources), at: now, state: 'proposed', replaces: replaces || null, added_by: chatId ? `${provider}:${chatId}` : provider, why: a.why?.trim().slice(0, 200) || null },
     });
     await hubPush(changes);
     const filed = found && found.id !== a.page && found.title !== a.page ? ` Filed under existing page ${found.title}.` : '';

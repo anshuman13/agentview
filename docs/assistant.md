@@ -87,7 +87,9 @@ already done or give an opinion. Once a day the Gmail scan also looks at mail I 
 last 14 days and keeps the threads where I asked something and nobody replied for 3 workdays, in one `briefs` row of
 kind `waiting`. An entry drops when a reply arrives or after 14 days. The weekly review lists them under Waiting on.
 The Slack scan also notes decisions settled in the watched channels, kept on the hub for 14 days; the wiki update
-pass proposes the claims they change for Review (see [codex-wiki.md](codex-wiki.md)).
+pass proposes the claims they change for Review (see [codex-wiki.md](codex-wiki.md)). Every proposer, the Slack FAQ, corrections,
+voice and people runs included, passes each claim through the proposal gate and logs one line per run with what it skipped
+(see codex-wiki.md, Proposal gate).
 
 Each scan is off until its config file exists in `~/.agentview/assistant`:
 

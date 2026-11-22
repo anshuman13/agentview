@@ -1,0 +1,101 @@
+[
+  {
+    "name": "like a rejected claim",
+    "history": [{"id": "learn:a", "text": "Replies should never use em dashes anywhere", "added_by": "claude:c1", "state": "rejected"}],
+    "text": "Never use em dashes in replies anywhere", "source": "chat", "onPage": false, "expected": "Like a rejected claim"
+  },
+  {
+    "name": "source mostly rejected",
+    "history": [
+      {"id": "f1", "text": "Alpha topic one", "added_by": "faq:help", "state": "rejected"},
+      {"id": "f2", "text": "Bravo topic two", "added_by": "faq:help", "state": "rejected"},
+      {"id": "f3", "text": "Charlie topic three", "added_by": "faq:help", "state": "rejected"},
+      {"id": "f4", "text": "Delta topic four", "added_by": "faq:help", "state": "rejected"},
+      {"id": "f5", "text": "Echo topic five", "added_by": "faq:help", "state": "rejected"}
+    ],
+    "text": "How do I reset a password? Use the portal.", "source": "faq:help", "onPage": true, "expected": "Source mostly rejected"
+  },
+  {
+    "name": "a source under 5 decisions passes",
+    "history": [
+      {"id": "f1", "text": "Alpha topic one", "added_by": "people", "state": "rejected"},
+      {"id": "f2", "text": "Bravo topic two", "added_by": "people", "state": "rejected"},
+      {"id": "f3", "text": "Charlie topic three", "added_by": "people", "state": "rejected"},
+      {"id": "f4", "text": "Delta topic four", "added_by": "people", "state": "rejected"}
+    ],
+    "text": "As of 1 Nov 2026, a person owns the export.", "source": "people", "onPage": true, "expected": null
+  },
+  {
+    "name": "too narrow: a file name",
+    "history": [],
+    "text": "Keep the intro short in notes.md", "source": "chat", "onPage": false, "expected": "Too narrow"
+  },
+  {
+    "name": "too narrow: a ticket id",
+    "history": [],
+    "text": "Ship the login fix first for ABC-123", "source": "agent", "onPage": false, "expected": "Too narrow"
+  },
+  {
+    "name": "too narrow: a URL",
+    "history": [],
+    "text": "Read the guide at https://example.com before starting", "source": "chat", "onPage": false, "expected": "Too narrow"
+  },
+  {
+    "name": "too narrow: a path",
+    "history": [],
+    "text": "Put the helpers in src/app/util for now", "source": "chat", "onPage": false, "expected": "Too narrow"
+  },
+  {
+    "name": "too narrow: this deck",
+    "history": [],
+    "text": "Use a dark background in this deck", "source": "chat", "onPage": false, "expected": "Too narrow"
+  },
+  {
+    "name": "too narrow: as they asked for",
+    "history": [],
+    "text": "Write the summary in bullets as they asked for", "source": "agent", "onPage": false, "expected": "Too narrow"
+  },
+  {
+    "name": "a page decision with a ticket id passes",
+    "history": [],
+    "text": "As of 20 Nov 2026, deploys wait for a green check (OPS-2).", "source": "chat", "onPage": true, "expected": null
+  },
+  {
+    "name": "a narrow marker from another source passes",
+    "history": [],
+    "text": "Answer in the thread, see https://example.com", "source": "corrections", "onPage": true, "expected": null
+  },
+  {
+    "name": "a broad preference passes",
+    "history": [],
+    "text": "Prefer short answers that lead with the result", "source": "chat", "onPage": false, "expected": null
+  },
+  {
+    "name": "like rejected claims",
+    "history": [
+      {"id": "learn:r1", "text": "Slides always need dark backgrounds", "added_by": "claude:c1", "state": "rejected"},
+      {"id": "learn:r2", "text": "Slides should carry dark themes", "added_by": "claude:c1", "state": "rejected"},
+      {"id": "learn:r3", "text": "Slides keep dark colours often", "added_by": "claude:c1", "state": "rejected"}
+    ],
+    "text": "Slides want dark styling with charts and diagrams", "source": "chat", "onPage": false, "expected": "Like rejected claims"
+  },
+  {
+    "name": "approvals outvote rejections",
+    "history": [
+      {"id": "learn:r1", "text": "Slides always need dark backgrounds", "added_by": "claude:c1", "state": "rejected"},
+      {"id": "learn:r2", "text": "Slides should carry dark themes", "added_by": "claude:c1", "state": "rejected"},
+      {"id": "learn:a1", "text": "Slides keep dark colours often", "added_by": "claude:c1", "state": "live"},
+      {"id": "learn:a2", "text": "Slides need dark palettes", "added_by": "claude:c1", "state": "live"}
+    ],
+    "text": "Slides want dark styling with charts and diagrams", "source": "chat", "onPage": false, "expected": null
+  },
+  {
+    "name": "a live claim that was never proposed does not count",
+    "history": [
+      {"id": "m1", "text": "Slides always need dark backgrounds", "added_by": "claude:c1", "state": "rejected"},
+      {"id": "m2", "text": "Slides should carry dark themes", "added_by": "claude:c1", "state": "rejected"},
+      {"id": "m3", "text": "Slides keep dark colours often", "added_by": null, "state": "live"}
+    ],
+    "text": "Slides want dark styling with charts and diagrams", "source": "chat", "onPage": false, "expected": null
+  }
+]

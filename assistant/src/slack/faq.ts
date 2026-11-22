@@ -6,6 +6,8 @@ import { channelIds, run, slackConfig } from './slack.js';
 import { PROFILE, webUrl } from './slackSave.js';
 import { applyChanges, type Change } from '../core/sync.js';
 import { DAY } from '../core/time.js';
+import { proposalHistory } from '../wiki/learn.js';
+import { examplesFor, proposalRun } from '../../../shared/proposalGate.js';
 
 export const FAQ_PAGE = 'Support FAQ';
 const MAX = 40;
@@ -23,9 +25,10 @@ function faqPage(db: Database, now: number) {
   return id;
 }
 
-// Saves each answered question as a proposed claim on the FAQ page, keyed by its permalink so a rerun adds nothing twice.
+// Saves each answered question as a proposed claim on the FAQ page, keyed by its permalink so a rerun adds nothing twice, unless the proposal gate skips it.
 export function saveFaqs(db: Database, channel: string, faqs: Faq[], now = Date.now()) {
   const page = faqPage(db, now);
+  const gate = proposalRun(proposalHistory(db, PROFILE), `faq:${channel}`);
   const changes: Change[] = [];
   for (const f of faqs.slice(0, MAX)) {
     const url = webUrl(f.url);
@@ -33,11 +36,13 @@ export function saveFaqs(db: Database, channel: string, faqs: Faq[], now = Date.
     const id = `faq:${createHash('sha1').update(url).digest('hex').slice(0, 16)}`;
     if (db.prepare('SELECT 1 FROM facts WHERE profile = ? AND id = ?').get(PROFILE, id)) continue;
     const text = `${f.question.trim().replace(/\?*$/, '?')} ${f.answer.trim()}`.slice(0, 400);
+    if (gate.skip(text, true)) continue;
     changes.push({
       table: 'facts', id, profile: PROFILE, updated_at: now,
-      fields: { text, page_id: page, heading: f.heading.trim() || 'General', sources: JSON.stringify([{ kind: 'slack', label: `#${channel}, ${f.by}, ${f.at}`, url }]), at: now, state: 'proposed', replaces: null, added_by: `faq:${channel}` },
+      fields: { text, page_id: page, heading: f.heading.trim() || 'General', sources: JSON.stringify([{ kind: 'slack', label: `#${channel}, ${f.by}, ${f.at}`, url }]), at: now, state: 'proposed', replaces: null, added_by: `faq:${channel}`, why: `A question answered in #${channel}.` },
     });
   }
+  gate.log();
   return applyChanges(db, changes).applied;
 }
 
@@ -65,6 +70,8 @@ export async function mineFaq(db: Database, channel: string, days = 90, now = Da
     'Find every question that got a real answer in its thread: open each thread that looks like a question with slack_read_thread. An answer counts when it settles the question with a fact, a step, a link, a limit or a decision; "I will look" does not.',
     `Call save_faq once per answered question, up to ${MAX}, newest first. When the same question was answered more than once, save the newest answer only. Say in the answer who or what is the source when it is not the thread itself.`,
     "Skip questions about one person's own data, anything with credentials or tokens, and anything still unresolved. Do not send or change anything in Slack. Do not use the em dash character. End with one line: how many threads you read and how many you saved.",
+    '',
+    ...examplesFor(proposalHistory(db, PROFILE), `faq:${channel}`),
   ].join('\n');
   const result = await run(prompt, 'sonnet', [save], 80);
   return { result, found: faqs.length, saved: saveFaqs(db, channel, faqs, now) };

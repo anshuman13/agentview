@@ -1,6 +1,7 @@
-import { expect, test } from 'bun:test';
+import { expect, test, vi } from 'bun:test';
 import { peopleInput, saveOwners } from './people.js';
 import { openDb } from '../core/db.js';
+import { applyChanges } from '../core/sync.js';
 import { FAQ_PAGE, saveFaqs } from './faq.js';
 import { saveVoice, voiceLines } from './voice.js';
 
@@ -14,6 +15,18 @@ test('answered questions become proposed claims on one FAQ page, once per permal
   expect(page).toEqual([{ id: expect.any(String), title: FAQ_PAGE, section: 'Support', state: 'proposed' }]);
   const claim = db.prepare('SELECT text, heading, state, page_id, added_by FROM facts WHERE profile = ?').get('work');
   expect(claim).toEqual({ text: 'How do I get a seat? Ask in the channel with your team name; Kim adds you within a day.', heading: 'Access', state: 'proposed', page_id: (page[0] as { id: string }).id, added_by: 'faq:ai-help' });
+});
+
+test('a FAQ channel whose proposals were all rejected proposes nothing and logs the skip', () => {
+  const db = openDb(':memory:');
+  applyChanges(db, Array.from({ length: 6 }, (_, i) => ({ table: 'facts', id: `faq:${i}`, profile: 'work' as const, updated_at: 1, fields: { text: `Question ${i}? Answer topic${i}.`, state: 'rejected', added_by: 'faq:ai-help' } })));
+  const log = vi.spyOn(console, 'log').mockImplementation(() => undefined);
+  const f = { question: 'How do I get a seat', answer: 'Ask in the channel.', url: 'https://x.slack.com/archives/C1/p1', by: 'Kim', heading: 'Access', at: '28 Oct 2026' };
+  expect(saveFaqs(db, 'ai-help', [f], 1)).toBe(0);
+  expect(log).toHaveBeenCalledWith('faq:ai-help: skipped 1 proposals (Source mostly rejected: 1)');
+  log.mockRestore();
+  expect(saveFaqs(db, 'other', [f], 1)).toBe(1);
+  expect(db.prepare("SELECT why FROM facts WHERE state = 'proposed'").get()).toEqual({ why: 'A question answered in #other.' });
 });
 
 test('a learned voice feeds the draft step and proposes its traits once', () => {

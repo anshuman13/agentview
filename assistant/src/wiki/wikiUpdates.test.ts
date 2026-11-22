@@ -29,14 +29,17 @@ describe('wiki updates', () => {
     const db = setup();
     const asked: Candidate[][] = [];
     const text = 'As of 29 Oct 2026, the Basic plan costs 12 euros monthly.';
-    const ask = async (_p: string, _m: unknown, found: Candidate[]) => {
+    let examples: string[] = [];
+    const ask = async (_p: string, _m: unknown, found: Candidate[], x: string[]) => {
       asked.push(found);
+      examples = x;
       return [{ claim: 'price', text }, { claim: 'price', text: ` ${text} ` }, { claim: 'nope', text: 'x' }];
     };
     expect(await proposeWikiUpdates(db, now, ask)).toBe(1);
     expect(asked.map((f) => f.map((c) => [c.claim.id, c.decisions]))).toEqual([[['price', ['Basic plan now costs 12 euros monthly']]]]);
-    expect(db.prepare("SELECT text, page_id, state, replaces, added_by, sources FROM facts WHERE state = 'proposed'").all()).toEqual([
-      { text, page_id: 'p1', state: 'proposed', replaces: 'price', added_by: 'meeting:cal:m', sources: '[{"kind":"meeting","label":"Pricing review"}]' },
+    expect(examples).toContain('Rejected before, do not propose claims like these:');
+    expect(db.prepare("SELECT text, page_id, state, replaces, added_by, why, sources FROM facts WHERE state = 'proposed'").all()).toEqual([
+      { text, page_id: 'p1', state: 'proposed', replaces: 'price', added_by: 'meeting:cal:m', why: 'A later decision: Basic plan now costs 12 euros monthly', sources: '[{"kind":"meeting","label":"Pricing review"}]' },
     ]);
     expect(await proposeWikiUpdates(db, now + DAY, ask)).toBe(0);
     expect(asked).toHaveLength(1);

@@ -4,6 +4,7 @@ import os from 'node:os';
 import { createSdkMcpServer, tool } from '@anthropic-ai/claude-agent-sdk';
 import { z } from 'zod';
 import { decisionKey, keyWords, mayChange, norm, titleWords } from '../../../shared/claimMatch.js';
+import { examplesFor, proposalRun, type ProposalRun } from '../../../shared/proposalGate.js';
 import { errText } from '../../../shared/util.js';
 import { isLimited } from '../../../server/src/agent/claude/accounts.js';
 import { ACCOUNT_OF } from '../calendar/calendar.js';
@@ -11,6 +12,7 @@ import { ask } from '../core/claude.js';
 import { deleteMeta, getMeta, pruneMeta, setMeta, textList, type Profile } from '../core/db.js';
 import { applyChanges, type Change } from '../core/sync.js';
 import { DAY } from '../core/time.js';
+import { proposalHistory } from './learn.js';
 
 const WITHIN = 14 * DAY;
 const MAX_CLAIMS = 20;
@@ -98,31 +100,33 @@ function candidates(db: Database, profile: Profile, o: Origin): Candidate[] {
   return out.sort((a, b) => (b.claim.at ?? 0) - (a.claim.at ?? 0)).slice(0, MAX_CLAIMS);
 }
 
-// Saves each update as a proposed claim that replaces the old one, unless the same text already replaces it.
-function saveUpdates(db: Database, profile: Profile, o: Origin, found: Candidate[], updates: Update[], now = Date.now()) {
-  const byId = new Map(found.map((c) => [c.claim.id, c.claim]));
+// Saves each update as a proposed claim that replaces the old one, unless the same text already replaces it or the proposal gate skips it.
+function saveUpdates(db: Database, profile: Profile, o: Origin, found: Candidate[], updates: Update[], gate: ProposalRun, now = Date.now()) {
+  const byId = new Map(found.map((c) => [c.claim.id, c]));
   const same = db.prepare('SELECT text FROM facts WHERE profile = ? AND replaces = ? AND deleted = 0');
   const changes: Change[] = [];
   const seen = new Set<string>();
   for (const u of updates) {
-    const old = byId.get(u.claim);
+    const c = byId.get(u.claim);
     const text = u.text.trim();
-    if (!old || !text || norm(text) === norm(old.text)) continue;
+    if (!c || !text || norm(text) === norm(c.claim.text)) continue;
+    const old = c.claim;
     const key = `${old.id}\n${norm(text)}`;
     if (seen.has(key) || (same.all(profile, old.id) as { text: string | null }[]).some((r) => norm(r.text ?? '') === norm(text))) continue;
     seen.add(key);
+    if (gate.skip(text, true)) continue;
     changes.push({
       table: 'facts', id: `upd:${createHash('sha1').update(`${o.id}\n${key}`).digest('hex').slice(0, 16)}`, profile, updated_at: now,
       fields: {
         text, page_id: old.page_id, heading: old.heading, at: now, state: 'proposed', replaces: old.id, added_by: o.by,
-        sources: JSON.stringify([o.source]),
+        why: `A later decision: ${c.decisions.join(' ')}`.slice(0, 200), sources: JSON.stringify([o.source]),
       },
     });
   }
   return applyChanges(db, changes).applied;
 }
 
-async function decide(profile: Profile, o: Origin, found: Candidate[]) {
+async function decide(profile: Profile, o: Origin, found: Candidate[], examples: string[]) {
   const account = ACCOUNT_OF[profile];
   const updates: Update[] = [];
   const save = tool('save_update', 'Save the replacement for one claim that a decision changes.', {
@@ -137,6 +141,8 @@ async function decide(profile: Profile, o: Origin, found: Candidate[]) {
     'For each claim, decide whether those decisions change it: update a number, owner, date, status or plan in it, contradict it, or end it.',
     `When they do, call save_update with the claim id and the replacement claim: one or two specific sentences starting "As of ${dateOf(o.at)}," that keep the still true detail from the old claim and lead with the subject.`,
     'When they do not, or you are unsure, save nothing for that claim. Do not use the em dash character. Do not do anything else.',
+    '',
+    ...examples,
     '',
     ...found.flatMap((c) => [`[${c.claim.id}] (page ${c.claim.title}) ${c.claim.text}`, ...c.decisions.map((d) => `  - decision: ${d}`)]),
   ].join('\n');
@@ -163,10 +169,13 @@ export async function proposeWikiUpdates(db: Database, now = Date.now(), ask = d
   for (const profile of Object.keys(ACCOUNT_OF) as Profile[]) {
     // An origin is marked done after it happened, so a mark older than the window is never looked up again.
     pruneMeta(db, `wikiupdate:${profile}:`, now - WITHIN);
+    const history = proposalHistory(db, profile);
+    const examples = examplesFor(history, 'update');
+    const gate = proposalRun(history, 'update');
     for (const o of pendingOrigins(db, profile, now).slice(0, 5)) {
       const found = candidates(db, profile, o);
       try {
-        if (found.length) saved += saveUpdates(db, profile, o, found, await ask(profile, o, found), now);
+        if (found.length) saved += saveUpdates(db, profile, o, found, await ask(profile, o, found, examples), gate, now);
       } catch (err) {
         console.error(`wiki updates ${profile}:`, errText(err));
         if (isLimited(ACCOUNT_OF[profile])) break;
@@ -174,6 +183,7 @@ export async function proposeWikiUpdates(db: Database, now = Date.now(), ask = d
       }
       markDone(db, profile, o, now);
     }
+    gate.log();
   }
   return saved;
 }

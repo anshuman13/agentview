@@ -7,6 +7,8 @@ import { run } from './slack.js';
 import { PROFILE, webUrl } from './slackSave.js';
 import { applyChanges, type Change } from '../core/sync.js';
 import { DAY, localDate } from '../core/time.js';
+import { proposalHistory } from '../wiki/learn.js';
+import { examplesFor, proposalRun } from '../../../shared/proposalGate.js';
 
 const PEOPLE_PAGE = 'Who does what';
 const MAX = 30;
@@ -22,9 +24,10 @@ function peoplePage(db: Database, now: number) {
   return id;
 }
 
-// Proposes one "<person> owns <thing>" claim per owner found, keyed by person and thing so a rerun adds nothing twice.
+// Proposes one "<person> owns <thing>" claim per owner found, keyed by person and thing so a rerun adds nothing twice, unless the proposal gate skips it.
 export function saveOwners(db: Database, owners: Owner[], now = Date.now()) {
   const page = peoplePage(db, now);
+  const gate = proposalRun(proposalHistory(db, PROFILE), 'people');
   const changes: Change[] = [];
   for (const o of owners.slice(0, MAX)) {
     const person = o.person.trim(), thing = o.thing.trim();
@@ -33,11 +36,13 @@ export function saveOwners(db: Database, owners: Owner[], now = Date.now()) {
     if (db.prepare('SELECT 1 FROM facts WHERE profile = ? AND id = ?').get(PROFILE, id)) continue;
     const url = webUrl(o.url);
     const text = `As of ${o.at.trim()}, ${person} owns ${thing}.`.slice(0, 400);
+    if (gate.skip(text, true)) continue;
     changes.push({
       table: 'facts', id, profile: PROFILE, updated_at: now,
-      fields: { text, page_id: page, heading: o.heading.trim() || 'Owners', sources: JSON.stringify([{ kind: 'slack', label: o.at.trim(), ...(url ? { url } : {}) }]), at: now, state: 'proposed', replaces: null, added_by: 'people' },
+      fields: { text, page_id: page, heading: o.heading.trim() || 'Owners', sources: JSON.stringify([{ kind: 'slack', label: o.at.trim(), ...(url ? { url } : {}) }]), at: now, state: 'proposed', replaces: null, added_by: 'people', why: 'Found in your chat summaries and meeting and channel decisions.' },
     });
   }
+  gate.log();
   return applyChanges(db, changes).applied;
 }
 
@@ -75,6 +80,8 @@ export async function learnPeople(db: Database, now = Date.now()) {
   const prompt = [
     `Below are my notes from the last 30 days: Slack chat summaries, decisions in channels and decisions in meetings. Today is ${localDate(now)}.`,
     `Find every case where they show that a named person owns, runs, decides on or is the contact for something. Call save_owner once per person and thing, up to ${MAX}, with the link and date of the note that shows it. Only what the notes state or clearly imply; skip guesses, one-off tasks and anything about me. Do not use the em dash character. End with one line: how many owners you saved.`,
+    '',
+    ...examplesFor(proposalHistory(db, PROFILE), 'people'),
     '',
     peopleInput(db, now),
   ].join('\n');

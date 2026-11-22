@@ -7,6 +7,7 @@ const chat = (events: Chat['events'], title = 'Setup'): Chat => ({ chat: 'c1', t
 const user = (id: string, at: number, text = 'use bun, not npm') => ({ id, kind: 'user', text, at });
 const tool = (id: string, at: number) => ({ id, kind: 'tool_use', text: 'ls', at });
 const reply = { id: 'a1', kind: 'assistant', text: 'ok', at: 12 };
+const taught = (...texts: string[]) => texts.map((text) => ({ text, why: 'I said so' }));
 
 describe('learn from chats', () => {
   it('saves proposed memory claims with the chat as source and moves the cursor', async () => {
@@ -14,12 +15,12 @@ describe('learn from chats', () => {
     const seen: string[][] = [];
     const run = async (_c: Chat, events: Chat['events']) => {
       seen.push(events.map((e) => e.id));
-      return { claims: ['Use bun, not npm.', 'b', 'c', 'd'], decisions: [] };
+      return { claims: taught('Use bun, not npm.', 'b', 'c', 'd'), decisions: [] };
     };
     expect(await learnFromChat(db, chat([user('u1', 10), tool('t1', 11), reply]), 100, run)).toEqual({ proposed: 3 });
     expect(seen).toEqual([['u1', 'a1']]);
-    expect(db.prepare("SELECT text, page_id, heading, state, replaces, added_by, sources FROM facts WHERE id LIKE 'learn:%' ORDER BY text").all()[2]).toEqual({
-      text: 'c', page_id: null, heading: null, state: 'proposed', replaces: null, added_by: 'claude:c1', sources: '[{"kind":"chat","label":"Setup"}]',
+    expect(db.prepare("SELECT text, page_id, heading, state, replaces, added_by, why, sources FROM facts WHERE id LIKE 'learn:%' ORDER BY text").all()[2]).toEqual({
+      text: 'c', page_id: null, heading: null, state: 'proposed', replaces: null, added_by: 'claude:c1', why: 'I said so', sources: '[{"kind":"chat","label":"Setup"}]',
     });
     expect(await learnFromChat(db, chat([user('u1', 10), reply]), 100, run)).toEqual({ proposed: 0 });
     expect(seen).toHaveLength(1);
@@ -29,7 +30,7 @@ describe('learn from chats', () => {
 
   it('records the chat folder in the source', async () => {
     const db = openDb(':memory:');
-    await learnFromChat(db, { ...chat([user('u1', 10)]), folder: '/repo' }, 100, async () => ({ claims: ['Use bun.'], decisions: [] }));
+    await learnFromChat(db, { ...chat([user('u1', 10)]), folder: '/repo' }, 100, async () => ({ claims: taught('Use bun.'), decisions: [] }));
     expect(db.prepare("SELECT sources FROM facts WHERE id LIKE 'learn:%'").get()).toEqual({ sources: '[{"kind":"chat","label":"Setup","folder":"/repo"}]' });
   });
 
@@ -95,28 +96,29 @@ describe('learn from chats', () => {
     const db = openDb(':memory:');
     const row = (id: string, state: string, text: string, page_id: string | null = null) => ({ table: 'facts', id, profile: 'work' as const, updated_at: 1, fields: { text, state, page_id } });
     applyChanges(db, [row('a', 'live', 'Use bun, not npm.'), row('b', 'rejected', 'No em dashes.'), row('c', 'proposed', 'Prefer  short   answers', 'p1')]);
-    const claims = ['  use BUN, not npm. ', 'no em dashes.', 'prefer short answers', 'The password is hunter2', 'Token abcdefghijklmnopqrstuvwxyz1234', 'Run tests before commits.'];
+    const claims = taught('  use BUN, not npm. ', 'no em dashes.', 'prefer short answers', 'The password is hunter2', 'Token abcdefghijklmnopqrstuvwxyz1234', 'Run tests before commits.');
     expect(await learnFromChat(db, chat([user('u1', 10)]), 100, async () => ({ claims, decisions: [] }))).toEqual({ proposed: 1 });
     expect(db.prepare("SELECT text FROM facts WHERE id LIKE 'learn:%'").all()).toEqual([{ text: 'Run tests before commits.' }]);
   });
 
-  it('skips a reworded rejected claim and lists recent rejections for the run', async () => {
+  it('skips reworded rejected and narrow claims and gives the run past decisions as examples', async () => {
     const db = openDb(':memory:');
     const now = 200 * 86_400_000;
-    const row = (id: string, text: string, updated_at: number) => ({ table: 'facts', id, profile: 'work' as const, updated_at, fields: { text, state: 'rejected' } });
+    const row = (id: string, text: string, state: string, updated_at: number, reject_reason: string | null = null) => ({ table: 'facts', id, profile: 'work' as const, updated_at, fields: { text, state, added_by: 'claude:c0', reject_reason } });
     applyChanges(db, [
-      row('a', 'Never use em dashes in replies.', now - 1000),
-      row('b', 'Always deploy on Fridays afternoon.', now - 100 * 86_400_000),
-      ...Array.from({ length: 25 }, (_, i) => row(`n${i}`, `Rejected topic${i} wording`, now - 2000 - i)),
+      row('learn:a', 'Never use em dashes in replies.', 'rejected', now - 1000),
+      row('learn:b', 'Always deploy on Fridays afternoon.', 'rejected', now - 100 * 86_400_000, 'Wrong'),
+      row('learn:c', 'Prefer bun over npm for scripts.', 'live', now - 500),
     ]);
-    let rejected: { text: string }[] = [];
-    const claims = ['Replies should never use em dashes.', 'Deploy always on Fridays afternoon.', 'Run tests before commits.'];
-    const run = async (_c: Chat, _e: Chat['events'], _m: string[], _p: unknown, _n: number, r: { text: string }[] = []) => ((rejected = r), { claims, decisions: [] });
-    expect(await learnFromChat(db, chat([user('u1', 10)]), now, run)).toEqual({ proposed: 2 });
-    expect(rejected).toHaveLength(20);
-    expect(rejected[0].text).toBe('Never use em dashes in replies.');
-    expect(rejected.map((r) => r.text)).not.toContain('Always deploy on Fridays afternoon.');
-    expect(db.prepare("SELECT text FROM facts WHERE id LIKE 'learn:%' ORDER BY text").all()).toEqual([{ text: 'Deploy always on Fridays afternoon.' }, { text: 'Run tests before commits.' }]);
+    let examples: string[] = [];
+    const claims = taught('Replies should never use em dashes.', 'Deploy always on Fridays afternoon.', 'Keep the intro short in this deck.', 'Run tests before commits.');
+    const run = async (_c: Chat, _e: Chat['events'], _m: string[], _p: unknown, _n: number, x: string[] = []) => ((examples = x), { claims, decisions: [] });
+    expect(await learnFromChat(db, chat([user('u1', 10)]), now, run)).toEqual({ proposed: 1 });
+    expect(examples).toEqual([
+      'Approved before, propose claims like these:', '- Prefer bun over npm for scripts.', '',
+      'Rejected before, do not propose claims like these:', '- Never use em dashes in replies.', '- Always deploy on Fridays afternoon. [Wrong]',
+    ]);
+    expect(db.prepare("SELECT text, why FROM facts WHERE id LIKE 'learn:%' AND state = 'proposed'").all()).toEqual([{ text: 'Run tests before commits.', why: 'I said so' }]);
   });
 
   it('files a decision under a near-title page and creates a page for a rejected title', async () => {
