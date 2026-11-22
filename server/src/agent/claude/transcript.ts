@@ -260,6 +260,8 @@ function subagentEvents(msgs: SessionMessage[], parent: string, subagents: Recor
     for (const [i, b] of blocksOf(m).entries()) {
       if (m.type === 'assistant' && b.type === 'text' && b.text.trim()) events.push({ id: `${base}:${i}`, kind: 'assistant', text: b.text, streaming: false, at, parent });
       else if (m.type === 'assistant' && b.type === 'tool_use') {
+        // A forked sub-agent's transcript repeats the Agent call that started it.
+        if (b.id === parent) continue;
         if (AGENT_TOOLS.has(b.name)) agentUses.add(b.id);
         events.push(toolUseEvent(b.id, b.name, b.input, at, parent));
       } else if (m.type === 'user' && b.type === 'tool_result') {

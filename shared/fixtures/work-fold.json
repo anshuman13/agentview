@@ -319,5 +319,18 @@
       [{"id": "c1", "text": "Uses bun"}, {"id": "c2", "text": "Ships on Fridays"}],
       []
     ]
+  },
+  {
+    "name": "a forked sub-agent that repeats its own Agent call",
+    "events": [
+      {"id": "u1", "kind": "user", "text": "look around", "at": 1000},
+      {"id": "t1", "kind": "tool_use", "name": "Agent", "input": {"description": "fork", "prompt": "look"}, "summary": "fork", "at": 2000},
+      {"id": "t1", "kind": "tool_use", "name": "Agent", "input": {"description": "fork", "prompt": "look"}, "summary": "fork", "at": 2000, "parent": "t1"},
+      {"id": "r1", "kind": "tool_use", "name": "Read", "input": {"file_path": "/a.ts"}, "summary": "", "at": 3000, "parent": "t1"},
+      {"id": "a1", "kind": "assistant", "text": "Done.", "streaming": false, "at": 4000}
+    ],
+    "rows": ["u1", "work:u1", "a1"],
+    "titles": [{"text": "1 tool", "failed": "", "detail": "1 agent"}],
+    "billing": "plan"
   }
 ]
