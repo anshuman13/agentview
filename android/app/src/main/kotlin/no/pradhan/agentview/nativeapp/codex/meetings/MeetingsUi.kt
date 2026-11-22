@@ -61,7 +61,7 @@ import no.pradhan.agentview.nativeapp.ui.SectionHeader
 import no.pradhan.agentview.nativeapp.ui.Tokens
 import no.pradhan.agentview.nativeapp.ui.av
 
-private const val PAGE_SIZE = 30
+private const val PAGE_SIZE = 50
 
 @Composable
 internal fun MeetingListRow(m: Row, now: Long, showProfile: Boolean, noDay: Boolean = false, onNotes: (Row) -> Unit, onClick: () -> Unit) {
@@ -135,7 +135,7 @@ fun MeetingsListPage(hub: Hub, st: CodexState, profile: String?, now: Long, chip
                         ListRow(d.text, "${d.meeting.title ?: "Meeting"} · ${whenText(d.at, now)}", onClick = { onOpen(d.meeting) })
                     }
                 }
-                if (rows.size > shown) Button("Show more", { shown += PAGE_SIZE }, Modifier.padding(start = Tokens.listPad), variant = ButtonVariant.Plain, size = ButtonSize.Sm)
+                if (rows.size > shown) Button("Show more (${rows.size - shown})", { shown += PAGE_SIZE }, Modifier.padding(start = Tokens.listPad), variant = ButtonVariant.Plain, size = ButtonSize.Sm)
             }
             return@LazyColumn
         }
@@ -177,7 +177,8 @@ fun MeetingsListPage(hub: Hub, st: CodexState, profile: String?, now: Long, chip
             item { SectionHeader(g.label) }
             item { Group { rows.forEachIndexed { i, m -> if (i > 0) Hairline(); MeetingListRow(m, now, showProfile, noDay = true, onNotes = onNotes) { onOpen(m) } } } }
         }
-        if (listed.sumOf { it.rows.size } > shown) item { Button("Show more", { shown += PAGE_SIZE }, Modifier.padding(start = Tokens.listPad), variant = ButtonVariant.Plain, size = ButtonSize.Sm) }
+        val total = listed.sumOf { it.rows.size }
+        if (total > shown) item { Button("Show more (${total - shown})", { shown += PAGE_SIZE }, Modifier.padding(start = Tokens.listPad), variant = ButtonVariant.Plain, size = ButtonSize.Sm) }
         if (groups.isEmpty()) item {
             if (chips.isNotEmpty()) EmptyState("No meetings match", "Try fewer filters", icon = "calendar", small = false, action = { Button("Clear filters", { chips.forEach(onChip) }, size = ButtonSize.Sm) })
             else EmptyState(if (query.isNotEmpty()) "No meetings match" else "No past meetings yet", if (query.isNotEmpty()) "Search covers titles, people, notes, summaries and decisions" else "Coming meetings are listed by day", icon = "calendar", small = false)

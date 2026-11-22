@@ -92,7 +92,7 @@ fun ReviewModePage(st: CodexState, ops: ReviewOps, onBack: () -> Unit, onPage: (
     SideEffect { if (fact == null && skipped.isNotEmpty()) skipped = emptyList() }
     val uri = LocalUriHandler.current
     if (fact == null) {
-        EmptyState(if (total > 0) "All claims reviewed" else "Nothing waits for review", icon = "check", action = { Button("Back to the wiki", onBack, size = ButtonSize.Sm) })
+        EmptyState(if (total > 0) "All claims reviewed" else "Nothing waits for review", icon = "check", small = false, action = { Button("Back to the wiki", onBack, size = ButtonSize.Sm) })
         return
     }
     val page = fact.str("page_id")?.let { id -> st.pages.firstOrNull { it.id == id && it.profile == fact.profile } }

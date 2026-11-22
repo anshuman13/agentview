@@ -170,7 +170,7 @@ also asks the hub, which keeps each transcript's text, and shows the words aroun
 summarized meeting's page has a talk time strip in the Context fold (each speaker's share of words in the transcript, top five, with the
 action and decision counts) and a collapsed Transcript section with a search field (any word of the query is highlighted, with a count, Enter and Shift+Enter or the arrows step through the matches; the query stays when the section closes and its count shows in the header). The app-wide Search is not in the sidebar; the palette's See all row opens it with the query in its focused field, Back and Esc return to the list open before, and it also lists Transcripts hits from
 the hub with the meeting's title, date and the words around the hit; offline the group is left out. Search shows 5 hits per group with a Show all N button, and a Tasks and notes hit opens that task on Tasks. The phone's Search everything shows Tasks and notes, Meetings, Wiki and Jobs the same way, without Transcripts; a wiki or job hit opens its page and Back returns to the results. Long lists show
-50 rows at a time.
+50 rows at a time with Show more (N), on both clients, including the phone past meetings and both decision logs. A meeting, wiki page or job that is gone shows a page-level empty state with Back.
 
 ### Wiki
 

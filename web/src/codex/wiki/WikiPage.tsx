@@ -73,7 +73,7 @@ export function WikiPage({ id }: { id: string }) {
       </header>
       <div className="wk-scroll">
         {!page ? (
-          <EmptyState size="sm" icon="book" title="This page is gone" action={<Button size="sm" onClick={back}>Back</Button>} />
+          <EmptyState size="md" icon="book" title="This page is gone" action={<Button size="sm" onClick={back}>Back</Button>} />
         ) : (
           <div className="wk-doc">
             <article className="wk-article">

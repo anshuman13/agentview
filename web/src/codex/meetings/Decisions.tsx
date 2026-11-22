@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { IconButton } from '../../ui/Button';
 import { Row } from '../../ui/Row';
 import { EmptyState } from '../../ui/Panel';
+import { ShowMore, useWindow } from '../../ui/useWindow';
 import { decisionsMarkdown } from '../data/meetings/meetingMarkdown';
 import { decisionLog, type Meeting } from '../data/wiki/wiki';
 import { decisionsWith, peopleOf } from '../data/meetings/meetings';
@@ -14,6 +15,7 @@ export function Decisions({ meetings }: { meetings: Meeting[] }) {
   const people = useMemo(() => [...new Map(log.flatMap((d) => peopleOf(d.meeting)).reverse().map((p) => [p.toLowerCase(), p])).values()].sort((a, b) => a.localeCompare(b)), [log]);
   const who = people.includes(person) ? person : '';
   const rows = decisionsWith(log, who);
+  const [shown, more] = useWindow(who);
   const copy = () => copyText(decisionsMarkdown(rows), 'Decisions copied');
   return (
     <div className="mt-log">
@@ -28,10 +30,11 @@ export function Decisions({ meetings }: { meetings: Meeting[] }) {
       )}
       {rows.length > 0 && (
         <div className="as-group">
-          {rows.map((d, i) => <Row key={`${d.meeting.profile}:${d.meeting.id}:${i}`} lines={2} title={d.text} meta={`${d.meeting.title || 'Meeting'} · ${when(d.at)}`} onClick={() => openMeeting(d.meeting)} />)}
+          {rows.slice(0, shown).map((d, i) => <Row key={`${d.meeting.profile}:${d.meeting.id}:${i}`} lines={2} title={d.text} meta={`${d.meeting.title || 'Meeting'} · ${when(d.at)}`} onClick={() => openMeeting(d.meeting)} />)}
         </div>
       )}
-      {!rows.length && <EmptyState size="sm" icon="check" title={who ? 'No decisions with this person' : 'No decisions yet'} hint="Decisions come from the meeting summaries" />}
+      <ShowMore shown={shown} total={rows.length} onMore={more} />
+      {!rows.length &&<EmptyState size="sm" icon="check" title={who ? 'No decisions with this person' : 'No decisions yet'} hint="Decisions come from the meeting summaries" />}
     </div>
   );
 }

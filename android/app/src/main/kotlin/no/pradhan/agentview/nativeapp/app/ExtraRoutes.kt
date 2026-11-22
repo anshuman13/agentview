@@ -26,6 +26,8 @@ import no.pradhan.agentview.nativeapp.codex.wiki.WikiPageView
 import no.pradhan.agentview.nativeapp.codex.wiki.memoryPage
 import no.pradhan.agentview.nativeapp.codex.wiki.proposalProfile
 
+import no.pradhan.agentview.nativeapp.ui.Button
+import no.pradhan.agentview.nativeapp.ui.ButtonSize
 import no.pradhan.agentview.nativeapp.ui.EmptyState
 import no.pradhan.agentview.nativeapp.ui.MenuItem
 
@@ -71,7 +73,7 @@ fun ExtraContent(
         route == "meetings" -> MeetingsListPage(hub, st, profile, now, chips, decisions, onChip, { push("meeting:${it.key}#notes") }, openMeeting)
         route.startsWith("meeting:") -> {
             val m = st.meetings.firstOrNull { it.key == keyOf(wikiRoute) && !it.deleted }
-            if (m == null) EmptyState("This meeting is gone", icon = "calendar") else MeetingPage(hub, st, m, now, actions, ops, openMeeting, { push("person:$it") }, { push("series:$it") }, onTask, if (anchor == "notes") ({ pop(); push(wikiRoute) }) else null)
+            if (m == null) EmptyState("This meeting is gone", icon = "calendar", small = false, action = { Button("Back", pop, size = ButtonSize.Sm) }) else MeetingPage(hub, st, m, now, actions, ops, openMeeting, { push("person:$it") }, { push("series:$it") }, onTask, if (anchor == "notes") ({ pop(); push(wikiRoute) }) else null)
         }
         route.startsWith("series:") -> SeriesPage(hub, st, key, now, actions, openMeeting)
         route == "series-value" -> SeriesValuePage(st, profile, now, openMeeting)
@@ -84,13 +86,13 @@ fun ExtraContent(
             if (hub.readOnly) null else ({ text -> hub.rememberInMemory(text, proposalProfile(null, profile)) }))
         route.startsWith("wiki:") -> {
             val p = st.pages.firstOrNull { it.key == keyOf(wikiRoute) && !it.deleted }
-            if (p == null) EmptyState("This page is gone", icon = "book") else WikiPageView(st, p, profile, now, actions, ops.review, { push("review") }, pop, openChat, anchor,
+            if (p == null) EmptyState("This page is gone", icon = "book", small = false, action = { Button("Back", pop, size = ButtonSize.Sm) }) else WikiPageView(st, p, profile, now, actions, ops.review, { push("review") }, pop, openChat, anchor,
                 onAsk = if (hub.readOnly) null else ({ text -> hub.askCodex(text, p.profile) }), readOnly = hub.readOnly, onTask = onTask, onMeeting = openMeeting)
         }
         route == "jobs" -> JobsListPage(hub, st, profile, now, actions, { push("autopilot") }, { push("jobnew:${it.key}") }) { push("job:${it.key}") }
         else -> {
             val j = st.jobs.firstOrNull { it.key == key && !it.deleted }
-            if (j == null) EmptyState("This job is gone", icon = "history") else JobPageView(hub, st, j, now, actions, route.startsWith("jobnew:"), onTask)
+            if (j == null) EmptyState("This job is gone", icon = "history", small = false, action = { Button("Back", pop, size = ButtonSize.Sm) }) else JobPageView(hub, st, j, now, actions, route.startsWith("jobnew:"), onTask)
         }
     }
 }
