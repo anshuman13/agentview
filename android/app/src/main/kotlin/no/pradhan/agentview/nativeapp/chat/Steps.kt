@@ -157,7 +157,7 @@ fun buildTranscript(events: List<ChatEvent>): List<Item> {
         if (e.kind == "tool_result") results[e.toolUseId] = e
         if (e.kind == "tool_use" && e.agent != null) resumed[e.agent] = e.at
         val parent = if (e.kind == "tool_use" || e.kind == "tool_result" || e.kind == "assistant") e.parent else null
-        if (parent != null) children.getOrPut(parent) { mutableListOf() }.add(e)
+        if (parent != null && parent != e.id) children.getOrPut(parent) { mutableListOf() }.add(e)
     }
     val top = events.filter { it.parent == null }.toMutableList()
     val ids = events.mapTo(HashSet()) { it.id }
@@ -177,7 +177,8 @@ private const val HANDBACK = "SubagentHandback"
 private fun orphanAgent(id: String, at: Long) =
     ChatEvent(id = id, kind = "tool_use", at = at, name = "Agent", input = JsonObject(mapOf("description" to JsonPrimitive("Sub-agent started earlier"))))
 
-private fun itemsFrom(events: List<ChatEvent>, results: Map<String, ChatEvent>, children: Map<String, List<ChatEvent>>, resumed: Map<String, Long>, progress: Map<String, String>): List<Item> {
+// open holds the agent calls being expanded, so a step that names an ancestor as its parent cannot loop.
+private fun itemsFrom(events: List<ChatEvent>, results: Map<String, ChatEvent>, children: Map<String, List<ChatEvent>>, resumed: Map<String, Long>, progress: Map<String, String>, open: Set<String> = emptySet()): List<Item> {
     val items = mutableListOf<Item>()
     for (e in events) {
         when {
@@ -194,7 +195,7 @@ private fun itemsFrom(events: List<ChatEvent>, results: Map<String, ChatEvent>, 
                 val path = e.input.s("file_path")
                 if (e.name in AGENT_TOOLS) {
                     val running = result == null || (resumed[e.id] ?: 0) > result.at
-                    items += Item.Agent(e.id, e, result, running, progress[e.id]?.ifEmpty { null }, itemsFrom(children[e.id] ?: emptyList(), results, children, resumed, progress))
+                    items += Item.Agent(e.id, e, result, running, progress[e.id]?.ifEmpty { null }, if (e.id in open) emptyList() else itemsFrom(children[e.id] ?: emptyList(), results, children, resumed, progress, open + e.id))
                 } else if (count == null || path.isEmpty()) {
                     items += Item.Step(e.id, e, result)
                 } else {

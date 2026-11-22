@@ -97,7 +97,7 @@ export function buildTranscript(events: ChatEvent[]): Item[] {
     if (e.kind === 'tool_result') results.set(e.toolUseId, e);
     if (e.kind === 'tool_use' && e.agent) resumed.set(e.agent, e.at);
     const parent = (e.kind === 'tool_use' || e.kind === 'tool_result' || e.kind === 'assistant') && e.parent;
-    if (parent) {
+    if (parent && parent !== e.id) {
       const list = children.get(parent);
       if (list) list.push(e);
       else children.set(parent, [e]);
@@ -121,7 +121,8 @@ function orphanAgent(id: string, at: number): ToolUse {
   return { kind: 'tool_use', id, at, name: 'Agent', input: { description: 'Sub-agent started earlier' }, summary: '' };
 }
 
-function itemsFrom(events: ChatEvent[], results: Map<string, ToolResult>, children: Map<string, ChatEvent[]>, resumed: Map<string, number>, progress: Map<string, string>): Item[] {
+// open holds the agent calls being expanded, so a step that names an ancestor as its parent cannot loop.
+function itemsFrom(events: ChatEvent[], results: Map<string, ToolResult>, children: Map<string, ChatEvent[]>, resumed: Map<string, number>, progress: Map<string, string>, open: ReadonlySet<string> = new Set()): Item[] {
   const items: Item[] = [];
   for (const e of events) {
     if (e.kind === 'user' && e.auto) items.push({ kind: 'auto', id: e.id, label: e.auto === 'goal' ? `Goal round ${e.round}` : `Loop round ${e.round} · ${firstLine(e.text)}`, text: e.text });
@@ -135,7 +136,7 @@ function itemsFrom(events: ChatEvent[], results: Map<string, ToolResult>, childr
       const result = results.get(e.id);
       const count = editCount(e.name, e.input);
       const path = typeof e.input.file_path === 'string' ? e.input.file_path : '';
-      if (AGENT_TOOLS.has(e.name)) items.push({ kind: 'agent', id: e.id, use: e, result, running: !result || (resumed.get(e.id) ?? 0) > result.at, progress: progress.get(e.id) || null, steps: itemsFrom(children.get(e.id) ?? [], results, children, resumed, progress) });
+      if (AGENT_TOOLS.has(e.name)) items.push({ kind: 'agent', id: e.id, use: e, result, running: !result || (resumed.get(e.id) ?? 0) > result.at, progress: progress.get(e.id) || null, steps: open.has(e.id) ? [] : itemsFrom(children.get(e.id) ?? [], results, children, resumed, progress, new Set([...open, e.id])) });
       else if (!count || !path) items.push({ kind: 'step', id: e.id, use: e, result });
       else {
         const error = result?.isError ? (denied(result) ? 'Denied' : firstLine(result.text)) : undefined;
