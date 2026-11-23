@@ -44,6 +44,8 @@ import no.pradhan.agentview.nativeapp.ui.Tokens
 
 internal fun idJson(id: String) = buildJsonObject { put("id", id) }.toString()
 
+internal fun checkJson(trip: String, id: String, done: Boolean) = buildJsonObject { put("trip", trip); put("id", id); put("done", done) }.toString()
+
 // Sends the fields a save changes: notes only from the Notes save, the whole plan only from the item sheet.
 internal fun tripJson(t: Trip, notes: String? = null, plan: List<PlanItem>? = null) = buildJsonObject {
     if (t.id.isNotEmpty()) put("id", t.id)
@@ -89,6 +91,26 @@ fun TripSheet(hub: Hub, trip: Trip?, onDismiss: () -> Unit, onSaved: (String) ->
         DateRow("From", from) { from = it; if (to.isEmpty() || to < it) to = it }
         DateRow("To", to) { to = it }
         Button("Save", { save() }, Modifier.fillMaxWidth().padding(top = Tokens.sp4), variant = ButtonVariant.Filled, enabled = !busy && name.isNotBlank(), fill = true)
+    }
+}
+
+// The start address Claude plans the way to the airport from; empty clears it.
+@Composable
+fun HomeSheet(hub: Hub, home: String, onDismiss: () -> Unit, onSaved: () -> Unit) {
+    var value by remember { mutableStateOf(home) }
+    var busy by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+    val save = {
+        busy = true
+        scope.launch {
+            val ok = hub.travelWrite { api.post("/api/travel/home", buildJsonObject { put("home", value) }.toString()) }
+            busy = false
+            if (ok) { hub.notice.value = "Home address saved"; onSaved(); onDismiss() }
+        }
+    }
+    Sheet(onDismiss, "Home address", full = false) {
+        TextField(value, { value = it }, Modifier.fillMaxWidth(), placeholder = "Street, city", singleLine = true)
+        Button("Save", { save() }, Modifier.fillMaxWidth().padding(top = Tokens.sp4), variant = ButtonVariant.Filled, enabled = !busy, fill = true)
     }
 }
 

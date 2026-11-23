@@ -4,6 +4,10 @@ import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import no.pradhan.agentview.nativeapp.net.protocolJson
 
 // shared/travel.ts: work trips and their receipts, kept by the Mac in ~/.agentview/travel.
@@ -26,6 +30,9 @@ data class PlanItem(
 )
 
 @Serializable
+data class CheckItem(val id: String, val text: String, val done: Boolean = false)
+
+@Serializable
 data class Trip(
     val id: String,
     val name: String,
@@ -33,6 +40,7 @@ data class Trip(
     val to: String = "",
     val notes: String = "",
     val plan: List<PlanItem> = emptyList(),
+    val checklist: List<CheckItem> = emptyList(),
     val createdAt: Long = 0,
     val calendar: Boolean = false,
     val edited: Boolean = false,
@@ -56,7 +64,7 @@ data class Receipt(
 )
 
 @Serializable
-data class TravelData(val trips: List<Trip> = emptyList(), val receipts: List<Receipt> = emptyList())
+data class TravelData(val trips: List<Trip> = emptyList(), val receipts: List<Receipt> = emptyList(), val home: String = "")
 
 fun parseTravel(body: String): TravelData = protocolJson.decodeFromString(TravelData.serializer(), body)
 
@@ -174,3 +182,74 @@ fun scanText(added: Int, updated: Int): String {
         if (updated > 0) "${if (added > 0) "updated" else "Updated"} ${count(updated)}" else "",
     ).filter { it.isNotEmpty() }.joinToString(", ")
 }
+
+// The checklist items with text, ids repaired, text on one line, the first 100.
+fun cleanChecklist(raw: JsonElement?, newId: () -> String): List<CheckItem> {
+    if (raw !is JsonArray) return emptyList()
+    val seen = mutableSetOf<String>()
+    return raw.mapNotNull { r ->
+        val o = r as? JsonObject
+        val text = (o?.get("text") as? JsonPrimitive)?.takeIf { it.isString }?.content?.replace(Regex("\\s*[\\r\\n]+\\s*"), " ")?.trim()?.take(200)
+        if (text.isNullOrEmpty()) return@mapNotNull null
+        val given = (o?.get("id") as? JsonPrimitive)?.takeIf { it.isString }?.content
+        val id = if (!given.isNullOrEmpty() && given !in seen) given else newId()
+        seen += id
+        val done = (o?.get("done") as? JsonPrimitive)?.let { !it.isString && it.content == "true" } == true
+        CheckItem(id, text, done)
+    }.take(100)
+}
+
+val WORK_WORDS = listOf("conference", "meeting", "offsite", "workshop", "training", "summit", "talk", "keynote", "customer", "client")
+
+// "work" when the trip name or an event title holds a whole work word, else "leisure".
+fun tripKind(t: Trip): String {
+    val titles = listOf(t.name) + t.plan.filter { it.kind == "event" }.map { it.title }
+    return if (titles.any { title -> title.lowercase().split(Regex("[^\\p{L}]+")).any { it in WORK_WORDS } }) "work" else "leisure"
+}
+
+private fun tripRange(t: Trip) = when {
+    t.from.isEmpty() -> "no dates"
+    t.to.isEmpty() || t.to == t.from -> t.from
+    else -> "${t.from} to ${t.to}"
+}
+
+// The trip as plain lines for Claude: itinerary, checklist, receipts and notes, each left out when empty. Ids are in brackets.
+fun tripText(t: Trip, receipts: List<Receipt>): String {
+    val lines = mutableListOf("Trip ${t.id}: ${t.name}, ${tripRange(t)}")
+    if (t.plan.isNotEmpty()) {
+        lines += "Itinerary:"
+        groupPlan(t.plan).forEach { g ->
+            lines += g.day
+            g.items.forEach { i ->
+                val time = if (i.start.isEmpty()) "" else "${i.start}${if (i.end.isEmpty()) "" else "-${i.end}"} "
+                lines += "- $time${i.kind}: ${listOf(i.title, i.place, i.ref).filter { it.isNotEmpty() }.joinToString(" · ")} [${i.id}]"
+            }
+        }
+    }
+    if (t.checklist.isNotEmpty()) {
+        lines += "Checklist:"
+        t.checklist.forEach { lines += "- [${if (it.done) "x" else " "}] ${it.text} [${it.id}]" }
+    }
+    if (receipts.isNotEmpty()) {
+        lines += "Receipts (${totalsText(receipts).ifEmpty { "no amounts" }}):"
+        receipts.sortedBy { it.date.ifEmpty { "9" } }.forEach { r ->
+            lines += "- ${r.date.ifEmpty { "no date" }} ${r.merchant.ifEmpty { r.name }} ${r.amount?.let { "${formatAmount(it)} ${r.currency}" } ?: "no amount"}"
+        }
+    }
+    if (t.notes.isNotEmpty()) lines += listOf("Notes:", t.notes)
+    return lines.joinToString("\n")
+}
+
+// The prompt that asks Claude for a pre-trip brief. home is the user's start address, or empty when it is not set.
+fun tripAsk(t: Trip, receipts: List<Receipt>, home: String): String = listOf(
+    "Give me a short, practical brief for this trip. Check with your calendar, files and web tools rather than guess, and keep it tight.",
+    "1. Getting there: for each outbound flight or train, when to leave home to reach the airport or station, with public transport and taxi options, travel times and buffer for check-in and security; then from the arrival airport or station to the hotel; then the trip back home.",
+    "2. Readiness: for work events and talks, ask whether the deck or material is ready and offer to find it in my files, Drive or the calendar event and help finish it. Check-in reminders, passport and boarding passes, a hotel booked for every night, gaps in the plan.",
+    "3. A short packing and weather note for the destination and dates.",
+    "4. A checklist of open items at the end.",
+    "When I tell you something worth keeping (a time to leave, a booking code, a taxi booked, the deck is done), note it on the trip at once with mcp__agentview__travel, and add or tick checklist items as things get done. The trip page shows them.",
+    "This looks like a ${tripKind(t)} trip.",
+    if (home.isNotEmpty()) "Home: $home" else "My start address is unknown: ask me for it and save it with mcp__agentview__travel (action home).",
+    "",
+    tripText(t, receipts),
+).joinToString("\n")

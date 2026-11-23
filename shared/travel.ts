@@ -10,8 +10,10 @@ export const KIND_ICONS: Record<PlanKind, string> = { flight: 'send', train: 'ar
 // day is YYYY-MM-DD; start and end are HH:MM wall-clock times, or '' (an end needs a start).
 export type PlanItem = { id: string; day: string; start: string; end: string; kind: PlanKind; title: string; place: string; ref: string };
 
+export type CheckItem = { id: string; text: string; done: boolean };
+
 // calendar: found in the calendar, and kept up to date from it until the user edits it (edited). A missing plan reads as [].
-export type Trip = { id: string; name: string; from: string; to: string; notes: string; plan?: PlanItem[]; createdAt: number; calendar?: boolean; edited?: boolean };
+export type Trip = { id: string; name: string; from: string; to: string; notes: string; plan?: PlanItem[]; checklist?: CheckItem[]; createdAt: number; calendar?: boolean; edited?: boolean };
 
 // read: pending while Claude reads the file, done or failed after, skipped for a file it cannot read (not an image or PDF).
 export type Receipt = {
@@ -31,8 +33,8 @@ export type Receipt = {
 };
 
 export type ReceiptFields = Partial<Pick<Receipt, 'merchant' | 'amount' | 'currency' | 'date' | 'category'>>;
-// dismissed: dates of calendar trips the user deleted, so they are not found again.
-export type TravelData = { trips: Trip[]; receipts: Receipt[]; dismissed?: { from: string; to: string }[] };
+// dismissed: dates of calendar trips the user deleted, so they are not found again. home: the user's start address for trip briefs.
+export type TravelData = { trips: Trip[]; receipts: Receipt[]; dismissed?: { from: string; to: string }[]; home?: string };
 
 export const RECEIPT_PROMPT = [
   'This is a receipt or invoice from a work trip. Answer with one JSON object and nothing else:',
@@ -230,13 +232,29 @@ export function mergeTrips(d: TravelData, found: FoundTrip[], newId: () => strin
   return { ...d, trips, added, updated };
 }
 
-export type TripFields = { name: string; from: string; to: string; notes?: string; plan?: unknown };
+// The checklist items with text, ids repaired, text on one line, the first 100.
+export function cleanChecklist(raw: unknown, newId: () => string): CheckItem[] {
+  if (!Array.isArray(raw)) return [];
+  const seen = new Set<string>();
+  return raw.flatMap((r): CheckItem[] => {
+    const text = clip(typeof r?.text === 'string' ? r.text.replace(/\s*[\r\n]+\s*/g, ' ') : '', 200);
+    if (!text) return [];
+    const id = typeof r.id === 'string' && r.id && !seen.has(r.id) ? r.id : newId();
+    seen.add(id);
+    return [{ id, text, done: r.done === true }];
+  }).slice(0, 100);
+}
 
-// A saved trip: notes and plan change only when sent, and a calendar trip counts as edited only when something differs.
+const sameChecklist = (a: CheckItem[], b: CheckItem[]) => a.length === b.length && a.every((x, i) => x.text === b[i].text && x.done === b[i].done);
+
+export type TripFields = { name: string; from: string; to: string; notes?: string; plan?: unknown; checklist?: unknown };
+
+// A saved trip: notes, plan and checklist change only when sent, and a calendar trip counts as edited only when something differs.
 export function applyTripSave(old: Trip, fields: TripFields, newId: () => string): Trip {
   const plan = fields.plan === undefined ? old.plan : cleanPlan(fields.plan, newId);
-  const next = { ...old, name: fields.name, from: fields.from, to: fields.to, notes: fields.notes ?? old.notes, ...(plan && { plan }) };
-  const differs = next.name !== old.name || next.from !== old.from || next.to !== old.to || next.notes !== old.notes || !samePlan(next.plan ?? [], old.plan ?? []);
+  const checklist = fields.checklist === undefined ? old.checklist : cleanChecklist(fields.checklist, newId);
+  const next = { ...old, name: fields.name, from: fields.from, to: fields.to, notes: fields.notes ?? old.notes, ...(plan && { plan }), ...(checklist && { checklist }) };
+  const differs = next.name !== old.name || next.from !== old.from || next.to !== old.to || next.notes !== old.notes || !samePlan(next.plan ?? [], old.plan ?? []) || !sameChecklist(next.checklist ?? [], old.checklist ?? []);
   return old.calendar && differs ? { ...next, edited: true } : next;
 }
 
@@ -246,4 +264,51 @@ const count = (n: number) => `${n} trip${n === 1 ? '' : 's'}`;
 export function scanText(added: number, updated: number) {
   if (!added && !updated) return 'No new trips in the calendar';
   return [added ? `Added ${count(added)}` : '', updated ? `${added ? 'updated' : 'Updated'} ${count(updated)}` : ''].filter(Boolean).join(', ');
+}
+
+export const WORK_WORDS = ['conference', 'meeting', 'offsite', 'workshop', 'training', 'summit', 'talk', 'keynote', 'customer', 'client'];
+
+// work when the trip name or an event title holds a whole work word, else leisure.
+export function tripKind(trip: Trip): 'work' | 'leisure' {
+  const titles = [trip.name, ...(trip.plan ?? []).filter((i) => i.kind === 'event').map((i) => i.title)];
+  return titles.some((t) => t.toLowerCase().split(/[^\p{L}]+/u).some((w) => WORK_WORDS.includes(w))) ? 'work' : 'leisure';
+}
+
+export const tripRange = (t: Pick<Trip, 'from' | 'to'>) => (!t.from ? 'no dates' : !t.to || t.to === t.from ? t.from : `${t.from} to ${t.to}`);
+
+// The trip as plain lines for Claude: itinerary, checklist, receipts and notes, each left out when empty. Ids are in brackets.
+export function tripText(trip: Trip, receipts: Receipt[]) {
+  const lines = [`Trip ${trip.id}: ${trip.name}, ${tripRange(trip)}`];
+  const plan = trip.plan ?? [];
+  if (plan.length) {
+    lines.push('Itinerary:');
+    for (const g of groupPlan(plan)) {
+      lines.push(g.day);
+      for (const i of g.items) lines.push(`- ${i.start ? `${i.start}${i.end ? `-${i.end}` : ''} ` : ''}${i.kind}: ${[i.title, i.place, i.ref].filter(Boolean).join(' · ')} [${i.id}]`);
+    }
+  }
+  const checklist = trip.checklist ?? [];
+  if (checklist.length) lines.push('Checklist:', ...checklist.map((c) => `- [${c.done ? 'x' : ' '}] ${c.text} [${c.id}]`));
+  if (receipts.length) {
+    const sorted = [...receipts].sort((a, b) => (a.date || '9').localeCompare(b.date || '9'));
+    lines.push(`Receipts (${totalsText(receipts) || 'no amounts'}):`, ...sorted.map((r) => `- ${r.date || 'no date'} ${r.merchant || r.name} ${r.amount == null ? 'no amount' : `${formatAmount(r.amount)} ${r.currency}`}`));
+  }
+  if (trip.notes) lines.push('Notes:', trip.notes);
+  return lines.join('\n');
+}
+
+// The prompt that asks Claude for a pre-trip brief. home is the user's start address, or '' when it is not set.
+export function tripAsk(trip: Trip, receipts: Receipt[], home: string) {
+  return [
+    'Give me a short, practical brief for this trip. Check with your calendar, files and web tools rather than guess, and keep it tight.',
+    '1. Getting there: for each outbound flight or train, when to leave home to reach the airport or station, with public transport and taxi options, travel times and buffer for check-in and security; then from the arrival airport or station to the hotel; then the trip back home.',
+    '2. Readiness: for work events and talks, ask whether the deck or material is ready and offer to find it in my files, Drive or the calendar event and help finish it. Check-in reminders, passport and boarding passes, a hotel booked for every night, gaps in the plan.',
+    '3. A short packing and weather note for the destination and dates.',
+    '4. A checklist of open items at the end.',
+    'When I tell you something worth keeping (a time to leave, a booking code, a taxi booked, the deck is done), note it on the trip at once with mcp__agentview__travel, and add or tick checklist items as things get done. The trip page shows them.',
+    `This looks like a ${tripKind(trip)} trip.`,
+    home ? `Home: ${home}` : 'My start address is unknown: ask me for it and save it with mcp__agentview__travel (action home).',
+    '',
+    tripText(trip, receipts),
+  ].join('\n');
 }

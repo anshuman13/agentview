@@ -5,6 +5,8 @@ const post = <T>(path: string, body: unknown) => fetchJson<T>(apiUrl(path), { me
 
 export const fetchTravel = () => fetchJson<TravelData>(apiUrl('/api/travel'));
 export const saveTrip = (t: { id?: string; name: string; from: string; to: string; notes?: string; plan?: (Partial<PlanItem> & Pick<PlanItem, 'title' | 'day'>)[] }) => post<Trip>('/api/travel/trip', t);
+export const setCheck = (trip: string, id: string, done: boolean) => post('/api/travel/check', { trip, id, done });
+export const saveHome = (home: string) => post<{ home: string }>('/api/travel/home', { home });
 export const scanCalendar = () => post<{ added: number; updated: number }>('/api/travel/scan', {});
 export const deleteTrip = (id: string) => post('/api/travel/trip/delete', { id });
 export const updateReceipt = (r: Partial<Receipt> & { id: string }) => post<Receipt>('/api/travel/receipt/update', r);

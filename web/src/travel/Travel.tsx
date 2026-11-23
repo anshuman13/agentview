@@ -10,11 +10,12 @@ import { EmptyState } from '../ui/Panel';
 import { Row } from '../ui/Row';
 import { Section, sectionCount } from '../ui/Section';
 import { Skeleton } from '../ui/Skeleton';
+import { ask } from '../codex/data/ask/ask';
 import { copyText, cx, plural } from '../ui/util';
-import { groupPlan, KIND_ICONS, nextItem, scanText, splitTrips, totalsText, tripState, tripStateText, type PlanItem, type Receipt, type Trip } from '../../../shared/travel';
-import { deleteTrip, exportUrl, receiptUrl, saveTrip, scanCalendar, uploadReceipt } from './travelApi';
+import { groupPlan, KIND_ICONS, nextItem, scanText, splitTrips, totalsText, tripAsk, tripKind, tripState, tripStateText, type CheckItem, type PlanItem, type Receipt, type Trip } from '../../../shared/travel';
+import { deleteTrip, exportUrl, receiptUrl, saveTrip, scanCalendar, setCheck, uploadReceipt } from './travelApi';
 import { dayLabel, isImage, itemMeta, localNow, receiptMeta, shrink, tripDates, tripMeta } from './travelLogic';
-import { PlanItemSheet, ReceiptSheet, TripSheet } from './TravelSheets';
+import { HomeSheet, PlanItemSheet, ReceiptSheet, TripSheet } from './TravelSheets';
 import { useTravel } from './useTravel';
 import '../styles/features/wiki.css';
 import '../styles/features/meetings.css';
@@ -132,10 +133,34 @@ function Itinerary({ trip, onAdd, onOpen }: { trip: Trip; onAdd: () => void; onO
   );
 }
 
-function TripView({ trip, receipts, onBack, reload }: { trip: Trip; receipts: Receipt[]; onBack: () => void; reload: () => Promise<void> }) {
+// The count is the open items; a tap flips the row at once and back when the save fails.
+function Checklist({ trip }: { trip: Trip }) {
+  const [flipped, setFlipped] = useState<Record<string, boolean>>({});
+  useEffect(() => setFlipped({}), [trip.checklist]);
+  const items = (trip.checklist ?? []).map((c): CheckItem => ({ ...c, done: flipped[c.id] ?? c.done }));
+  if (!items.length) return null;
+  const flip = (c: CheckItem) => {
+    setFlipped((f) => ({ ...f, [c.id]: !c.done }));
+    setCheck(trip.id, c.id, !c.done).catch(() => {
+      setFlipped((f) => ({ ...f, [c.id]: c.done }));
+      notice('Could not save the checklist');
+    });
+  };
+  return (
+    <section>
+      <Section label="Checklist" count={sectionCount(items.filter((c) => !c.done).length)} />
+      <div className="ui-group">
+        {items.map((c) => <Row key={c.id} className={cx('tv-check', c.done && 'done')} leading={<Icon name={c.done ? 'check' : 'circle-outline'} />} title={c.text} onClick={() => flip(c)} />)}
+      </div>
+    </section>
+  );
+}
+
+function TripView({ trip, receipts, home, onBack, reload }: { trip: Trip; receipts: Receipt[]; home: string; onBack: () => void; reload: () => Promise<void> }) {
   const narrow = useNarrow();
   const [menu, setMenu] = useState(false);
   const [editing, setEditing] = useState(false);
+  const [homing, setHoming] = useState(false);
   const [open, setOpen] = useState<string | null>(null);
   const [confirm, setConfirm] = useState<ConfirmRequest | null>(null);
   const [uploading, setUploading] = useState(0);
@@ -180,6 +205,8 @@ function TripView({ trip, receipts, onBack, reload }: { trip: Trip; receipts: Re
           <IconButton ref={more} size="sm" icon="kebab-vertical" label="More" aria-haspopup="menu" aria-expanded={menu} onClick={() => setMenu(!menu)} />
           {menu && (
             <Menu trigger={more} onClose={() => setMenu(false)}>
+              <MenuItem icon="sparkle" onClick={() => { setMenu(false); ask(tripAsk(trip, receipts, home), tripKind(trip) === 'work' ? 'work' : 'personal'); }}>Ask Claude</MenuItem>
+              <MenuItem icon="home" onClick={() => { setMenu(false); setHoming(true); }}>Home address</MenuItem>
               <MenuItem icon="edit" onClick={() => { setMenu(false); setEditing(true); }}>Edit trip</MenuItem>
               <MenuItem icon="cloud-download" href={exportUrl(trip.id)} onClick={() => setMenu(false)}>Export receipts (CSV)</MenuItem>
               <MenuItem icon="copy" onClick={() => { setMenu(false); copyText(summary()).then(() => notice('Summary copied'), () => notice('Copy failed')); }}>Copy summary</MenuItem>
@@ -196,6 +223,8 @@ function TripView({ trip, receipts, onBack, reload }: { trip: Trip; receipts: Re
       {cap.inputs}
 
       <Itinerary trip={trip} onAdd={() => setItem('new')} onOpen={setItem} />
+
+      <Checklist trip={trip} />
 
       <section>
         <Section label="Receipts" count={sectionCount(receipts.length)} />
@@ -216,6 +245,7 @@ function TripView({ trip, receipts, onBack, reload }: { trip: Trip; receipts: Re
       {item && <PlanItemSheet key={item === 'new' ? 'new' : item.id} trip={trip} item={item === 'new' ? undefined : item} today={today()} onClose={() => setItem(null)} onSaved={() => void reload()} />}
       {receipt && <ReceiptSheet key={`${receipt.id}-${receipt.read}`} receipt={receipt} onClose={() => setOpen(null)} onSaved={reload} />}
       {editing && <TripSheet trip={trip} onClose={() => setEditing(false)} onSaved={() => { setEditing(false); void reload(); }} />}
+      {homing && <HomeSheet home={home} onClose={() => setHoming(false)} onSaved={() => { setHoming(false); void reload(); }} />}
       {confirm && <Confirm {...confirm} onClose={() => setConfirm(null)} />}
     </div>
   );
@@ -255,7 +285,7 @@ export function Travel({ shown }: { shown: boolean }) {
   const find = <Button size="sm" icon="calendar" disabled={finding} onClick={findTrips}>{finding ? 'Reading calendar…' : 'Find in calendar'}</Button>;
   const trip = data?.trips.find((t) => t.id === open);
   const body = trip ? (
-    <TripView trip={trip} receipts={data!.receipts.filter((r) => r.tripId === trip.id)} onBack={() => setOpen(null)} reload={reload} />
+    <TripView trip={trip} receipts={data!.receipts.filter((r) => r.tripId === trip.id)} home={data!.home ?? ''} onBack={() => setOpen(null)} reload={reload} />
   ) : data?.trips.length ? (
     <TripList trips={data.trips} receipts={data.receipts} filing={filing} cap={cap} narrow={narrow} archivedOpen={archivedOpen} onArchived={() => setArchivedOpen(!archivedOpen)} onOpen={setOpen} onNew={() => setAdding(true)} find={find} />
   ) : data ? (

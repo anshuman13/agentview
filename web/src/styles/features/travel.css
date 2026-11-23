@@ -29,3 +29,4 @@
 .tv-date input { flex: 1; max-width: 14em; }
 .tv-chips { display: flex; flex-wrap: wrap; gap: var(--sp-2); }
 .tv-actions { display: flex; justify-content: space-between; gap: var(--sp-4); padding: var(--sp-4) var(--sp-8) var(--sp-8); }
+.tv-check.done .ui-row-title { text-decoration: line-through; color: var(--meta-fg); }

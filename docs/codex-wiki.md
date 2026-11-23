@@ -149,7 +149,7 @@ The data lives only in the hub database, never in this repo.
 ### Tools
 
 The `agentview` MCP server has the wiki tools from `server/src/agent/tools/wiki.ts` next to `set_status`, and
-`data_find` and `data_write` (`data.ts`) for tasks, meetings, actions and jobs, `chat_search`, `report_findings` and `start_goal`.
+`data_find` and `data_write` (`data.ts`) for tasks, meetings, actions and jobs, `chat_search`, `report_findings`, `start_goal` and `travel` (`travel.ts`, a trip's notes, plan and checklist and the home address).
 One registry (`tools/index.ts`) serves Claude as an in-process server (`claude/options.ts`) and Codex as a stdio server
 (`tools/stdio.ts`) whose calls run in the agent host. They read and write the hub through its `/sync` API (`HUB` in `server/src/integrations/assistant.ts`).
 

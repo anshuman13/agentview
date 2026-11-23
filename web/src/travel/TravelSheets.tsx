@@ -3,7 +3,7 @@ import { notice } from '../app/store';
 import { Button, Chip } from '../ui/Button';
 import { Sheet } from '../ui/Sheet';
 import { CATEGORIES, PLAN_KINDS, tripState, type PlanItem, type Receipt, type Trip } from '../../../shared/travel';
-import { deleteReceipt, receiptUrl, saveTrip, updateReceipt } from './travelApi';
+import { deleteReceipt, receiptUrl, saveHome, saveTrip, updateReceipt } from './travelApi';
 import { isImage } from './travelLogic';
 
 const errText = (e: unknown) => (e instanceof Error ? e.message : String(e));
@@ -29,6 +29,28 @@ export function TripSheet({ trip, onClose, onSaved }: { trip?: Trip; onClose: ()
       <div className="tv-actions">
         <Button size="sm" onClick={onClose}>Cancel</Button>
         <Button size="sm" variant="filled" disabled={busy || !name.trim()} onClick={save}>Save</Button>
+      </div>
+    </Sheet>
+  );
+}
+
+// The start address Claude plans the way to the airport from; empty clears it.
+export function HomeSheet({ home, onClose, onSaved }: { home: string; onClose: () => void; onSaved: () => void }) {
+  const [value, setValue] = useState(home);
+  const [busy, setBusy] = useState(false);
+  const save = () => {
+    setBusy(true);
+    saveHome(value).then(() => { notice('Home address saved'); onSaved(); }, (e) => { notice(errText(e)); setBusy(false); });
+  };
+  return (
+    <Sheet label="Home address" onClose={onClose}>
+      <h2 className="tv-sheet-title">Home address</h2>
+      <div className="ui-fields">
+        <input autoFocus aria-label="Home address" placeholder="Street, city" value={value} enterKeyHint="done" onChange={(e) => setValue(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && save()} />
+      </div>
+      <div className="tv-actions">
+        <Button size="sm" onClick={onClose}>Cancel</Button>
+        <Button size="sm" variant="filled" disabled={busy} onClick={save}>Save</Button>
       </div>
     </Sheet>
   );

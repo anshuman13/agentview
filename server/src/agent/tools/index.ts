@@ -7,10 +7,11 @@ import { GOAL_RULES, goalTool } from './goal.js';
 import { runCodeTool } from './runCode.js';
 import { STATUS_RULES, statusTool } from './status.js';
 import type { Tool, ToolCtx } from './tool.js';
+import { TRAVEL_RULES, travelTool } from './travel.js';
 import { WIKI_RULES, wikiPageTool, wikiProposeTool, wikiSearchTool } from './wiki.js';
 
 // The tools every provider's chats get, as mcp__agentview__<name>.
-export const TOOLS: Tool[] = [statusTool, wikiSearchTool, wikiPageTool, wikiProposeTool, chatSearchTool, dataFindTool, dataWriteTool, findingsTool, goalTool, buildTool, runCodeTool];
+export const TOOLS: Tool[] = [statusTool, wikiSearchTool, wikiPageTool, wikiProposeTool, chatSearchTool, dataFindTool, dataWriteTool, findingsTool, goalTool, buildTool, runCodeTool, travelTool];
 
 // Tools that go through the chat's permission mode like Bash, since they run code.
 export const ASK_TOOLS = ['run_code'];
@@ -21,7 +22,7 @@ const HOST_RULES = [
   'An MCP server or connector that connects after this chat started is not loaded here; it loads when AgentView restarts the server (Developer: Restart Server When Agents Are Idle). Say that in one line and carry on with the rest of the work.',
 ].join(' ');
 
-export const TOOL_INSTRUCTIONS = [HOST_RULES, STATUS_RULES, WIKI_RULES, DATA_RULES, GOAL_RULES].join(' ');
+export const TOOL_INSTRUCTIONS = [HOST_RULES, STATUS_RULES, WIKI_RULES, DATA_RULES, GOAL_RULES, TRAVEL_RULES].join(' ');
 
 export async function callTool(name: string, args: unknown, ctx: ToolCtx, tools = TOOLS): Promise<string> {
   const tool = tools.find((t) => t.name === name);

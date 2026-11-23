@@ -66,3 +66,30 @@ describe('addReceipt', () => {
     await expect(upload('nope')).rejects.toMatchObject({ status: 404 });
   });
 });
+
+describe('setCheck', () => {
+  it('flips one item, keeps items added after the page loaded and leaves edited unset', async () => {
+    const trip = (await travel.saveTrip({ name: 'Lyon', from: '2026-03-09', to: '2026-03-12' }))!;
+    await travel.updateTrip(trip.id, () => ({ checklist: [{ id: 'a', text: 'Deck', done: false }, { id: 'b', text: 'Check in', done: false }] }));
+    await travel.updateTrip(trip.id, (t) => ({ checklist: [...(t.checklist ?? []), { id: 'c', text: 'Taxi', done: false }] }));
+    await travel.setCheck({ trip: trip.id, id: 'a', done: true });
+    const saved = (await travel.travelData()).trips.find((t) => t.id === trip.id)!;
+    expect(saved.checklist!.map((c) => [c.id, c.done])).toEqual([['a', true], ['b', false], ['c', false]]);
+    expect(saved.edited).toBeUndefined();
+  });
+
+  it('answers 404 for an unknown trip or item', async () => {
+    const trip = (await travel.saveTrip({ name: 'Lyon', from: '', to: '' }))!;
+    await expect(travel.setCheck({ trip: 'nope', id: 'a', done: true })).rejects.toMatchObject({ status: 404 });
+    await expect(travel.setCheck({ trip: trip.id, id: 'a', done: true })).rejects.toMatchObject({ status: 404 });
+  });
+});
+
+describe('setHome', () => {
+  it('collapses whitespace, cuts to 200 and clears with a non-string', async () => {
+    expect(await travel.setHome('  Example street 1,\n  City ')).toEqual({ home: 'Example street 1, City' });
+    expect((await travel.setHome('x'.repeat(300))).home).toHaveLength(200);
+    expect((await travel.travelData()).home).toHaveLength(200);
+    expect(await travel.setHome(5)).toEqual({ home: '' });
+  });
+});

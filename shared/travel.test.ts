@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'bun:test';
 import { readFileSync } from 'node:fs';
-import { applyTripSave, cleanPlan, fileTrip, groupPlan, KIND_ICONS, mergeTrips, nextItem, parseReceipt, parseTrips, receiptsCsv, sortTrips, splitTrips, totalsText, tripState, tripStateText, type PlanItem, type Receipt, type Trip } from './travel';
+import { applyTripSave, cleanChecklist, cleanPlan, fileTrip, groupPlan, KIND_ICONS, mergeTrips, nextItem, parseReceipt, parseTrips, receiptsCsv, sortTrips, splitTrips, totalsText, tripAsk, tripKind, tripState, tripStateText, type PlanItem, type Receipt, type Trip } from './travel';
 
 const fx = JSON.parse(readFileSync(new URL('./fixtures/travel.json', import.meta.url), 'utf8'));
 
@@ -21,6 +21,12 @@ describe('travel', () => {
     expect(tripStateText(c.trip, c.today)).toBe(c.text);
   });
   for (const c of fx.cleanPlan) it(`cleanPlan: ${c.name}`, () => expect(cleanPlan(c.raw, ids())).toEqual(c.expected));
+  for (const c of fx.cleanChecklist) it(`cleanChecklist: ${c.name}`, () => expect(cleanChecklist(c.raw, ids())).toEqual(c.expected));
+  for (const c of fx.tripKind) it(`tripKind: ${c.name}`, () => expect(tripKind(c.trip as Trip)).toBe(c.expected));
+  for (const c of fx.tripAsk) it(`tripAsk: ${c.name}`, () => {
+    expect(tripAsk(c.trip as Trip, c.receipts as Receipt[], c.home)).toBe(c.expected);
+    expect(tripKind(c.trip as Trip) === 'work' ? 'work' : 'personal').toBe(c.profile);
+  });
   for (const c of fx.parseTrips) it(`parseTrips: ${c.name}`, () => expect(parseTrips(c.text, ids())).toEqual(c.expected));
   for (const c of fx.mergeTrips) it(`mergeTrips: ${c.name}`, () => {
     const out = mergeTrips({ receipts: [], ...c.data }, c.found, ids(), 5, c.today);

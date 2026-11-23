@@ -8,6 +8,7 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
+import no.pradhan.agentview.nativeapp.net.protocolJson
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -86,5 +87,37 @@ class TravelLogicTest {
         val d = parseTravel("""{"trips":[{"id":"a","name":"Oslo","from":"2026-11-24","to":"2026-11-26","notes":"","createdAt":1}],"receipts":[{"id":"r","tripId":"a","amount":null,"read":"pending","extra":1}]}""")
         assertEquals("Oslo", d.trips.single().name)
         assertEquals("Reading…", receiptMeta(d.receipts.single()))
+    }
+
+    private fun tripOf(e: JsonElement) = protocolJson.decodeFromJsonElement(Trip.serializer(), e)
+
+    @Test fun tripKindAndAskMatchTheSharedCases() {
+        fx["tripKind"]!!.jsonArray.forEach { c ->
+            val o = c.jsonObject
+            assertEquals(str(o["name"]), str(o["expected"]), tripKind(tripOf(o["trip"]!!)))
+        }
+        fx["tripAsk"]!!.jsonArray.forEach { c ->
+            val o = c.jsonObject
+            val receipts = o["receipts"]!!.jsonArray.map { protocolJson.decodeFromJsonElement(Receipt.serializer(), it) }
+            val trip = tripOf(o["trip"]!!)
+            assertEquals(str(o["name"]), str(o["expected"]), tripAsk(trip, receipts, str(o["home"])))
+            assertEquals(str(o["name"]), str(o["profile"]), if (tripKind(trip) == "work") "work" else "personal")
+        }
+    }
+
+    @Test fun checklistsAreCleanedLikeWeb() {
+        fx["cleanChecklist"]!!.jsonArray.forEach { c ->
+            val o = c.jsonObject
+            var n = 0
+            val want = o["expected"]!!.jsonArray.map { CheckItem(str(it.jsonObject["id"]), str(it.jsonObject["text"]), it.jsonObject["done"]!!.jsonPrimitive.content == "true") }
+            assertEquals(str(o["name"]), want, cleanChecklist(o["raw"], { "n${++n}" }))
+        }
+    }
+
+    @Test fun parsesDataWithoutChecklistOrHome() {
+        val d = parseTravel("""{"trips":[{"id":"a","name":"Oslo"}],"receipts":[]}""")
+        assertEquals(emptyList<CheckItem>(), d.trips.single().checklist)
+        assertEquals("", d.home)
+        assertEquals("Example street 1, City", parseTravel("""{"trips":[],"receipts":[],"home":"Example street 1, City"}""").home)
     }
 }

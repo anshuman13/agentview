@@ -55,6 +55,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import no.pradhan.agentview.nativeapp.app.Hub
+import no.pradhan.agentview.nativeapp.app.askCodex
 import no.pradhan.agentview.nativeapp.chat.Attach
 import no.pradhan.agentview.nativeapp.chat.rememberAttach
 import no.pradhan.agentview.nativeapp.net.READ_ONLY_SENT
@@ -128,7 +129,7 @@ fun TravelScreen(hub: Hub, onBack: () -> Unit) {
     }
     val trip = data?.trips?.firstOrNull { it.id == open }
     if (trip != null) {
-        TripView(hub, trip, data.receipts.filter { it.tripId == trip.id }, onBack = { open = null }, reload = reload)
+        TripView(hub, trip, data.receipts.filter { it.tripId == trip.id }, data.home, onBack = { open = null }, reload = reload)
         return
     }
     var all by rememberSaveable { mutableStateOf(false) }
@@ -187,13 +188,14 @@ fun TravelScreen(hub: Hub, onBack: () -> Unit) {
 }
 
 @Composable
-private fun TripView(hub: Hub, trip: Trip, receipts: List<Receipt>, onBack: () -> Unit, reload: () -> Unit) {
+private fun TripView(hub: Hub, trip: Trip, receipts: List<Receipt>, home: String, onBack: () -> Unit, reload: () -> Unit) {
     BackHandler(onBack = onBack)
     val ctx = LocalContext.current
     val clip = LocalClipboardManager.current
     val scope = rememberCoroutineScope()
     var uploading by remember { mutableIntStateOf(0) }
     var editing by remember { mutableStateOf(false) }
+    var homing by remember { mutableStateOf(false) }
     var deleting by remember { mutableStateOf(false) }
     var openId by remember { mutableStateOf<String?>(null) }
     var itemSheet by remember { mutableStateOf<PlanItem?>(null) }
@@ -210,6 +212,8 @@ private fun TripView(hub: Hub, trip: Trip, receipts: List<Receipt>, onBack: () -
     Column(Modifier.fillMaxSize()) {
         PageHeader(trip.name, onBack, subtitle = tripDates(trip).takeIf { it.isNotEmpty() }?.let { dates -> { TripSubtitle(trip, dates) } }) {
             MoreButton { close ->
+                if (!hub.readOnly) MenuItem("Ask Claude", "sparkle", { close(); hub.askCodex(tripAsk(trip, receipts, home), if (tripKind(trip) == "work") "work" else "personal") })
+                if (!hub.readOnly) MenuItem("Home address", "home", { close(); homing = true })
                 MenuItem("Edit trip", "edit", { close(); editing = true })
                 MenuItem("Export receipts (CSV)", "cloud-download", { close(); view("/api/travel/export?trip=${enc(trip.id)}") })
                 MenuItem("Copy summary", "copy", { close(); clip.setText(AnnotatedString(summary())); hub.notice.value = "Summary copied" })
@@ -219,6 +223,7 @@ private fun TripView(hub: Hub, trip: Trip, receipts: List<Receipt>, onBack: () -
         Column(Modifier.fillMaxSize().background(av.groupPage).verticalScroll(rememberScrollState())) {
             CaptureRow(attach)
             Itinerary(trip, onAdd = { addingItem = true }, onOpen = { itemSheet = it })
+            Checklist(hub, trip)
             SectionHeader("Receipts", receipts.size.takeIf { it > 0 }?.toString())
             if (receipts.isEmpty() && uploading == 0) EmptyState("No receipts yet", "Take a photo or add a PDF; Claude fills in the amount", icon = "file-media")
             else Group {
@@ -239,6 +244,7 @@ private fun TripView(hub: Hub, trip: Trip, receipts: List<Receipt>, onBack: () -
     }
     if (addingItem) PlanItemSheet(hub, trip, null, today(), onDismiss = { addingItem = false }, onSaved = reload)
     itemSheet?.let { i -> PlanItemSheet(hub, trip, i, today(), onDismiss = { itemSheet = null }, onSaved = reload) }
+    if (homing) HomeSheet(hub, home, onDismiss = { homing = false }, onSaved = reload)
     if (editing) TripSheet(hub, trip, onDismiss = { editing = false }) { editing = false; reload() }
     if (deleting) ConfirmDialog("Delete ${trip.name}?", "Its receipts and their files are deleted too.", "Delete", {
         deleting = false
@@ -284,6 +290,25 @@ private fun Itinerary(trip: Trip, onAdd: () -> Unit, onOpen: (PlanItem) -> Unit)
                     }
                 }, modifier = if (item === next) Modifier.background(av.hover) else Modifier, onClick = { onOpen(item) })
             }
+        }
+    }
+}
+
+// The count is the open items; a tap flips the row at once and back when the save fails.
+@Composable
+private fun Checklist(hub: Hub, trip: Trip) {
+    var flipped by remember(trip.checklist) { mutableStateOf(emptyMap<String, Boolean>()) }
+    val items = trip.checklist.map { it.copy(done = flipped[it.id] ?: it.done) }
+    val scope = rememberCoroutineScope()
+    if (items.isEmpty()) return
+    SectionHeader("Checklist", items.count { !it.done }.takeIf { it > 0 }?.toString())
+    Group {
+        items.forEachIndexed { i, c ->
+            if (i > 0) Hairline(lead = true)
+            ListRow(c.text, leading = { AvIcon(if (c.done) "check" else "circle-outline") }, strike = c.done, onClick = if (hub.readOnly) null else ({
+                flipped = flipped + (c.id to !c.done)
+                scope.launch { if (!hub.travelWrite("Could not save the checklist") { api.post("/api/travel/check", checkJson(trip.id, c.id, !c.done)) }) flipped = flipped + (c.id to c.done) }
+            }))
         }
     }
 }

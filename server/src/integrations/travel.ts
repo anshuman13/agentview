@@ -5,7 +5,7 @@ import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { findTrips, readable, readReceipt } from '../agent/claude/receipts.js';
 import { hubRows } from './assistant.js';
 import { jsonFile, NotFound, BadRequest, readBytes, type Body } from '../json.js';
-import { applyTripSave, CATEGORIES, fileTrip, mergeTrips, mimeOf, type Receipt, type Trip, type TravelData } from '../../../shared/travel.js';
+import { applyTripSave, CATEGORIES, fileTrip, mergeTrips, mimeOf, type Receipt, type Trip, type TripFields, type TravelData } from '../../../shared/travel.js';
 
 const DIR = path.join(os.homedir(), '.agentview', 'travel');
 const FILES = path.join(DIR, 'files');
@@ -37,6 +37,38 @@ export async function saveTrip(body: Record<string, unknown>) {
     return { ...d, trips: old ? d.trips.map((t) => (t.id === id ? saved! : t)) : [...d.trips, saved] };
   });
   return saved;
+}
+
+// Changes a trip's notes, plan or checklist (what change returns) like a save from the trip page. Null for an unknown trip.
+export async function updateTrip(id: string, change: (t: Trip) => Pick<TripFields, 'notes' | 'plan' | 'checklist'>) {
+  let saved: Trip | null = null;
+  await store.update((d) => {
+    const old = d.trips.find((t) => t.id === id);
+    if (!old) return d;
+    saved = applyTripSave(old, { name: old.name, from: old.from, to: old.to, ...change(old) }, newId);
+    return { ...d, trips: d.trips.map((t) => (t.id === id ? saved! : t)) };
+  });
+  return saved as Trip | null;
+}
+
+// A tick from the trip page flips one item, so items added meanwhile stay. It does not count as an edit of a calendar trip.
+export async function setCheck(body: Record<string, unknown>) {
+  const id = String(body.id ?? '');
+  await store.update((d) => {
+    const trip = d.trips.find((t) => t.id === body.trip);
+    if (!trip) throw new NotFound('Trip not found');
+    if (!trip.checklist?.some((c) => c.id === id)) throw new NotFound('Item not found');
+    const checklist = trip.checklist.map((c) => (c.id === id ? { ...c, done: body.done === true } : c));
+    return { ...d, trips: d.trips.map((t) => (t === trip ? { ...trip, checklist } : t)) };
+  });
+  return { ok: true };
+}
+
+// The user's start address on one line; '' clears it.
+export async function setHome(value: unknown) {
+  const home = typeof value === 'string' ? value.replace(/\s+/g, ' ').trim().slice(0, 200) : '';
+  await store.update((d) => ({ ...d, home }));
+  return { home };
 }
 
 export async function deleteTrip(id: string) {
