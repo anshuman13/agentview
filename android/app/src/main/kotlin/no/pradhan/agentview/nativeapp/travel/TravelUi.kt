@@ -92,13 +92,15 @@ internal suspend fun Hub.travelWrite(failure: String? = null, block: suspend Hub
 
 private fun today() = LocalDate.now().toString()
 
-// The capture row of the Travel list and of a trip: Take photo, Photo and PDF / file at equal width.
+// The capture buttons of the Travel list and of a trip: Take photo across the width, Photo and PDF / file below it.
 @Composable
 private fun CaptureRow(attach: Attach) {
-    Row(Modifier.fillMaxWidth().padding(horizontal = Tokens.listPad, vertical = Tokens.sp4), horizontalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
-        Button("Take photo", attach.takePhoto, Modifier.weight(1f), variant = ButtonVariant.Filled, icon = "device-camera", fill = true)
-        Button("Photo", attach.choosePhoto, Modifier.weight(1f), icon = "file-media", fill = true)
-        Button("PDF / file", attach.chooseFile, Modifier.weight(1f), icon = "file", fill = true)
+    Column(Modifier.fillMaxWidth().padding(horizontal = Tokens.listPad, vertical = Tokens.sp4), verticalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
+        Button("Take photo", attach.takePhoto, Modifier.fillMaxWidth(), variant = ButtonVariant.Filled, icon = "device-camera", fill = true)
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
+            Button("Photo", attach.choosePhoto, Modifier.weight(1f), icon = "file-media", fill = true)
+            Button("PDF / file", attach.chooseFile, Modifier.weight(1f), icon = "file", fill = true)
+        }
     }
 }
 

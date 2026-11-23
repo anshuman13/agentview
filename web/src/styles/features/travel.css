@@ -6,8 +6,9 @@
 .tv-sub { color: var(--fg-muted); font-size: var(--type-footnote-size); }
 .tv-now { display: inline-flex; align-items: center; gap: var(--sp-2); color: var(--accent-fill); }
 .tv-now::before { content: ''; width: 6px; height: 6px; border-radius: var(--radius-round); background: currentColor; }
-.tv-add { display: flex; gap: var(--sp-4); }
-.tv-add .btn { flex: 1; justify-content: center; }
+.tv-add { display: flex; flex-wrap: wrap; gap: var(--sp-4); }
+.tv-add .btn { flex: 1; min-width: 0; justify-content: center; }
+.tv-add .btn:first-child { flex-basis: 100%; }
 .tv-thumb { width: 40px; height: 40px; border-radius: var(--shape-sm); object-fit: cover; background: var(--sunken); display: inline-flex; align-items: center; justify-content: center; color: var(--fg-muted); }
 .tv-total { padding: var(--sp-4) var(--sp-8); text-align: right; font-weight: 600; }
 .tv-item { --lead-w: calc(48px + var(--sp-4) + 24px); }
