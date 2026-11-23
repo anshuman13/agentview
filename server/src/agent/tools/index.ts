@@ -4,12 +4,16 @@ import { chatSearchTool } from './chats.js';
 import { DATA_RULES, dataFindTool, dataWriteTool } from './data.js';
 import { findingsTool } from './findings.js';
 import { GOAL_RULES, goalTool } from './goal.js';
+import { runCodeTool } from './runCode.js';
 import { STATUS_RULES, statusTool } from './status.js';
 import type { Tool, ToolCtx } from './tool.js';
 import { WIKI_RULES, wikiPageTool, wikiProposeTool, wikiSearchTool } from './wiki.js';
 
 // The tools every provider's chats get, as mcp__agentview__<name>.
-export const TOOLS: Tool[] = [statusTool, wikiSearchTool, wikiPageTool, wikiProposeTool, chatSearchTool, dataFindTool, dataWriteTool, findingsTool, goalTool, buildTool];
+export const TOOLS: Tool[] = [statusTool, wikiSearchTool, wikiPageTool, wikiProposeTool, chatSearchTool, dataFindTool, dataWriteTool, findingsTool, goalTool, buildTool, runCodeTool];
+
+// Tools that go through the chat's permission mode like Bash, since they run code.
+export const ASK_TOOLS = ['run_code'];
 
 // The chat runs in AgentView, so advice for the claude terminal does not apply.
 const HOST_RULES = [

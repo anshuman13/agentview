@@ -3,7 +3,8 @@ import { createSdkMcpServer, tool, type CanUseTool, type HookCallback, type McpS
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { BIG_BRO, type Effort } from '../../../../shared/protocol.js';
-import { TOOLS, TOOL_INSTRUCTIONS } from '../tools/index.js';
+import { ASK_TOOLS, TOOLS, TOOL_INSTRUCTIONS } from '../tools/index.js';
+import { RUN_CODE_RULES } from '../tools/runCode.js';
 import type { ToolCtx } from '../tools/tool.js';
 import { ownChromeMcp, ownProfile } from '../../chrome/launch.js';
 import { sandboxOf, type Unattended } from './unattended.js';
@@ -56,12 +57,12 @@ export function agentOptions(o: {
     forkSession: o.fork,
     effort: o.effort,
     env: { ...process.env, CLAUDE_CODE_EMIT_SESSION_STATE_EVENTS: '1', ...(o.configDir && { CLAUDE_CONFIG_DIR: o.configDir }), ...(o.openrouter && openRouterEnv(o.openrouter)) },
-    systemPrompt: { type: 'preset', preset: 'claude_code', append: [TOOL_INSTRUCTIONS, ...(o.preferences ? [o.preferences] : []), ...(o.unattended ? [] : [CHROME, ...(ownProfile() ? [OWN_CHROME] : [])])].join(' ') },
+    systemPrompt: { type: 'preset', preset: 'claude_code', append: [TOOL_INSTRUCTIONS, ...(o.preferences ? [o.preferences] : []), ...(o.unattended ? [] : [RUN_CODE_RULES, CHROME, ...(ownProfile() ? [OWN_CHROME] : [])])].join(' ') },
     settingSources: ['user', 'project', 'local'],
     includePartialMessages: true,
     includeHookEvents: true,
     enableFileCheckpointing: true,
-    allowedTools: TOOLS.map((t) => `mcp__agentview__${t.name}`),
+    allowedTools: TOOLS.filter((t) => !ASK_TOOLS.includes(t.name)).map((t) => `mcp__agentview__${t.name}`),
     disallowedTools: ['mcp__playwright', ...(o.unattended ? ['Bash(git push:*)', 'Bash(gh:*)', ...o.unattended.denyRead.map((d) => `Read(/${d}/**)`)] : []), ...(o.openrouter && Object.values(o.openrouter.models).some((m) => !m.startsWith('anthropic/')) ? ['WebSearch'] : [])],
     extraArgs: o.unattended ? {} : { chrome: null },
     ...(o.unattended && { sandbox: sandboxOf(o.unattended) }),

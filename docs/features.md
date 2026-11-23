@@ -457,7 +457,7 @@ Read only (only reads), with no Plan; Plan first and Spec on the phone's new cha
 (shown as edits with diffs) and MCP calls appear as steps. The usage bar shows the plan's 5-hour and weekly windows;
 there is no cost. No rewind, Build or stop task. Codex chats are listed with the sessions (marked Codex), reopen with their
 transcript, and are kept in `~/.agentview/codex-chats.json`. Codex chats get the same AgentView tools as Claude ones
-(status, wiki, data, chat search, report findings) from a stdio MCP server the host starts for the chat, and the same
+(status, wiki, data, chat search, report findings; not run code, which only Claude chats get) from a stdio MCP server the host starts for the chat, and the same
 instructions; the review buttons send a prompt that ends in report findings, and a plan change reaches the agent
 mid-turn. Continue in terminal copies `codex resume <id>` (an OpenRouter chat has no such row). The MCP page of a Codex
 chat probes the servers in `~/.codex/config.toml` (read through Codex's own `config/read`), has no Add, Disable or Log in
