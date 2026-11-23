@@ -12,7 +12,7 @@ export function tripDates(t: Trip) {
 
 export function tripMeta(t: Trip, receipts: Receipt[]) {
   const sum = totalsText(receipts);
-  return [tripDates(t), receipts.length ? plural(receipts.length, 'receipt') : '', sum].filter(Boolean).join(' · ');
+  return [tripDates(t), receipts.length ? plural(receipts.length, 'receipt') : '', sum, t.calendar ? 'From calendar' : ''].filter(Boolean).join(' · ');
 }
 
 export function receiptMeta(r: Receipt) {

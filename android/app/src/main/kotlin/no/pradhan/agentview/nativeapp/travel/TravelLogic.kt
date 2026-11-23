@@ -10,7 +10,16 @@ import no.pradhan.agentview.nativeapp.net.protocolJson
 val CATEGORIES = listOf("Flight", "Train", "Taxi", "Hotel", "Meal", "Other")
 
 @Serializable
-data class Trip(val id: String, val name: String, val from: String = "", val to: String = "", val notes: String = "", val createdAt: Long = 0)
+data class Trip(
+    val id: String,
+    val name: String,
+    val from: String = "",
+    val to: String = "",
+    val notes: String = "",
+    val createdAt: Long = 0,
+    val calendar: Boolean = false,
+    val edited: Boolean = false,
+)
 
 @Serializable
 data class Receipt(
@@ -69,6 +78,7 @@ fun tripMeta(t: Trip, receipts: List<Receipt>): String = listOf(
     tripDates(t),
     if (receipts.isEmpty()) "" else "${receipts.size} receipt${if (receipts.size == 1) "" else "s"}",
     totalsText(receipts),
+    if (t.calendar) "From calendar" else "",
 ).filter { it.isNotEmpty() }.joinToString(" · ")
 
 fun receiptMeta(r: Receipt): String {
@@ -78,3 +88,19 @@ fun receiptMeta(r: Receipt): String {
 }
 
 fun isImage(r: Receipt) = r.mime.startsWith("image/") && r.mime != "image/heic"
+
+@Serializable
+data class ScanResult(val added: Int = 0, val updated: Int = 0)
+
+fun parseScan(body: String): ScanResult = protocolJson.decodeFromString(ScanResult.serializer(), body)
+
+private fun count(n: Int) = "$n trip${if (n == 1) "" else "s"}"
+
+// shared/travel.ts scanText: what Find in calendar did.
+fun scanText(added: Int, updated: Int): String {
+    if (added == 0 && updated == 0) return "No new trips in the calendar"
+    return listOf(
+        if (added > 0) "Added ${count(added)}" else "",
+        if (updated > 0) "${if (added > 0) "updated" else "Updated"} ${count(updated)}" else "",
+    ).filter { it.isNotEmpty() }.joinToString(", ")
+}

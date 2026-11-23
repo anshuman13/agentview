@@ -87,6 +87,17 @@ fun TravelScreen(hub: Hub, onBack: () -> Unit) {
     LaunchedEffect(reading) { while (reading) { delay(POLL_MS); reload() } }
     var open by rememberSaveable { mutableStateOf<String?>(null) }
     var adding by remember { mutableStateOf(false) }
+    var finding by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+    val find = {
+        finding = true
+        scope.launch {
+            var found: ScanResult? = null
+            if (hub.travelWrite { found = parseScan(api.post("/api/travel/scan", "{}")) }) { found?.let { hub.notice.value = scanText(it.added, it.updated) }; reload() }
+            finding = false
+        }
+        Unit
+    }
     val trip = data?.trips?.firstOrNull { it.id == open }
     if (trip != null) {
         TripView(hub, trip, data.receipts.filter { it.tripId == trip.id }, onBack = { open = null }, reload = reload)
@@ -94,12 +105,15 @@ fun TravelScreen(hub: Hub, onBack: () -> Unit) {
     }
     var all by rememberSaveable { mutableStateOf(false) }
     Column(Modifier.fillMaxSize()) {
-        PageHeader("Travel", onBack) { IconBtn("add", "New trip", { adding = true }) }
+        PageHeader("Travel", onBack) {
+            IconBtn("calendar", if (finding) "Reading calendar" else "Find in calendar", find, enabled = !finding)
+            IconBtn("add", "New trip", { adding = true })
+        }
         Box(Modifier.fillMaxSize().background(av.groupPage)) {
             when {
                 data == null && load.error.isNotEmpty() -> EmptyState("Could not load trips", load.error, icon = "briefcase", action = { Button("Retry", reload, size = ButtonSize.Sm) })
                 data == null -> Loading("Loading trips…")
-                data.trips.isEmpty() -> EmptyState("No trips yet", "Add a trip, then its receipts, bookings and notes", icon = "briefcase", action = { Button("New trip", { adding = true }, size = ButtonSize.Sm) })
+                data.trips.isEmpty() -> EmptyState("No trips yet", "Find your trips in the calendar, or add one, then its receipts, bookings and notes", icon = "briefcase", action = { Button(if (finding) "Reading calendar…" else "Find in calendar", find, size = ButtonSize.Sm, enabled = !finding) })
                 else -> Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
                     val sorted = sortTrips(data.trips, LocalDate.now().toString())
                     SectionHeader("Trips", sorted.size.toString())

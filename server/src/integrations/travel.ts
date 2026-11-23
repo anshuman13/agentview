@@ -2,9 +2,10 @@ import os from 'node:os';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
-import { readable, readReceipt } from '../agent/claude/receipts.js';
+import { findTrips, readable, readReceipt } from '../agent/claude/receipts.js';
+import { hubRows } from './assistant.js';
 import { jsonFile, NotFound, BadRequest, readBytes, type Body } from '../json.js';
-import { CATEGORIES, mimeOf, type Receipt, type Trip, type TravelData } from '../../../shared/travel.js';
+import { CATEGORIES, mergeTrips, mimeOf, type Receipt, type Trip, type TravelData } from '../../../shared/travel.js';
 
 const DIR = path.join(os.homedir(), '.agentview', 'travel');
 const FILES = path.join(DIR, 'files');
@@ -31,7 +32,7 @@ export async function saveTrip(body: Record<string, unknown>) {
     const id = String(body.id ?? '');
     const old = d.trips.find((t) => t.id === id);
     if (id && !old) throw new NotFound('Trip not found');
-    saved = old ? { ...old, ...fields } : { id: randomUUID().slice(0, 8), createdAt: Date.now(), ...fields };
+    saved = old ? { ...old, ...fields, ...(old.calendar && { edited: true }) } : { id: randomUUID().slice(0, 8), createdAt: Date.now(), ...fields };
     return { ...d, trips: old ? d.trips.map((t) => (t.id === id ? saved! : t)) : [...d.trips, saved] };
   });
   return saved;
@@ -41,7 +42,9 @@ export async function deleteTrip(id: string) {
   let gone: Receipt[] = [];
   await store.update((d) => {
     gone = d.receipts.filter((r) => r.tripId === id);
-    return { trips: d.trips.filter((t) => t.id !== id), receipts: d.receipts.filter((r) => r.tripId !== id) };
+    const trip = d.trips.find((t) => t.id === id);
+    const dismissed = trip?.calendar ? [...(d.dismissed ?? []), { from: trip.from, to: trip.to }] : d.dismissed;
+    return { ...d, trips: d.trips.filter((t) => t.id !== id), receipts: d.receipts.filter((r) => r.tripId !== id), dismissed };
   });
   for (const r of gone) await rm(path.join(FILES, r.file), { force: true });
   return { ok: true };
@@ -120,4 +123,31 @@ export async function receiptFile(id: string) {
   const r = (await store.read()).receipts.find((x) => x.id === id);
   if (!r) throw new NotFound('Receipt not found');
   return { body: await readFile(path.join(FILES, r.file)), mime: r.mime, name: r.name };
+}
+
+const DAY = 86_400_000;
+const pad = (n: number) => String(n).padStart(2, '0');
+const local = (ms: number) => { const d = new Date(ms); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`; };
+
+// Calendar events from 30 days back to 120 ahead as lines, both profiles, without the copies of one event in two calendars.
+export function eventLines(rows: Record<string, unknown>[], now: number) {
+  const lines = rows
+    .filter((r) => r.calendar_url && Number(r.starts_at) > now - 30 * DAY && Number(r.starts_at) < now + 120 * DAY)
+    .sort((a, b) => Number(a.starts_at) - Number(b.starts_at))
+    .map((r) => [local(Number(r.starts_at)), local(Number(r.ends_at || r.starts_at)), String(r.title ?? '').trim(), String(r.room ?? '').trim()].join(' | '));
+  return [...new Set(lines)].join('\n');
+}
+
+// Has Claude find the trips in the calendar and adds them (Find in calendar on the Travel page).
+export async function scanCalendar(now = Date.now(), find = findTrips) {
+  const events = eventLines(await hubRows('meetings'), now);
+  if (!events) return { added: 0, updated: 0 };
+  const found = await find(events);
+  let result = { added: 0, updated: 0 };
+  await store.update((d) => {
+    const { added, updated, ...next } = mergeTrips(d, found, () => randomUUID().slice(0, 8), now);
+    result = { added, updated };
+    return next;
+  });
+  return result;
 }

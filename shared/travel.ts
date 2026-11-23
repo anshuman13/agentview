@@ -3,7 +3,8 @@
 export const CATEGORIES = ['Flight', 'Train', 'Taxi', 'Hotel', 'Meal', 'Other'] as const;
 export type Category = (typeof CATEGORIES)[number];
 
-export type Trip = { id: string; name: string; from: string; to: string; notes: string; createdAt: number };
+// calendar: found in the calendar, and kept up to date from it until the user edits it (edited).
+export type Trip = { id: string; name: string; from: string; to: string; notes: string; createdAt: number; calendar?: boolean; edited?: boolean };
 
 // read: pending while Claude reads the file, done or failed after, skipped for a file it cannot read (not an image or PDF).
 export type Receipt = {
@@ -23,7 +24,8 @@ export type Receipt = {
 };
 
 export type ReceiptFields = Partial<Pick<Receipt, 'merchant' | 'amount' | 'currency' | 'date' | 'category'>>;
-export type TravelData = { trips: Trip[]; receipts: Receipt[] };
+// dismissed: dates of calendar trips the user deleted, so they are not found again.
+export type TravelData = { trips: Trip[]; receipts: Receipt[]; dismissed?: { from: string; to: string }[] };
 
 export const RECEIPT_PROMPT = [
   'This is a receipt or invoice from a work trip. Answer with one JSON object and nothing else:',
@@ -83,4 +85,65 @@ export function receiptsCsv(receipts: Receipt[]) {
 export function sortTrips(trips: Trip[], today: string) {
   const rank = (t: Trip) => (t.from <= today && today <= (t.to || t.from) ? 0 : t.from > today ? 1 : 2);
   return [...trips].sort((a, b) => rank(a) - rank(b) || (rank(a) === 2 ? (b.to || b.from).localeCompare(a.to || a.from) : a.from.localeCompare(b.from)));
+}
+
+export type FoundTrip = Pick<Trip, 'name' | 'from' | 'to' | 'notes'>;
+
+export const TRIPS_PROMPT = [
+  'These are calendar events, one per line: start | end | title | location. Times are local.',
+  'Find the trips, for work or leisure: days the user spends away from their home city, shown by flights, trains, hotel stays or events in another city. Leave out events at home and plans to book travel.',
+  'Answer with a JSON array and nothing else, one object per trip:',
+  '{"name": "<destination and what the trip is for, such as Stockholm training or Paris holiday>", "from": "<YYYY-MM-DD of departure>", "to": "<YYYY-MM-DD of return>", "notes": "<the plan as short lines in time order: each flight or train with its number and times, the hotel, and the events on the trip with times and places>"}',
+  'Answer [] when there are no trips.',
+].join('\n');
+
+const isDay = (v: unknown): v is string => typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v);
+
+// The trips Claude's answer holds, dropping any without a name or valid dates.
+export function parseTrips(text: string): FoundTrip[] {
+  const m = text.match(/\[[\s\S]*\]/);
+  if (!m) return [];
+  let raw: unknown;
+  try {
+    raw = JSON.parse(m[0]);
+  } catch {
+    return [];
+  }
+  if (!Array.isArray(raw)) return [];
+  return raw.flatMap((t) => {
+    const name = typeof t?.name === 'string' ? t.name.trim().slice(0, 120) : '';
+    if (!name || !isDay(t.from)) return [];
+    const to = isDay(t.to) && t.to >= t.from ? t.to : t.from;
+    return [{ name, from: t.from, to, notes: typeof t.notes === 'string' ? t.notes.trim().slice(0, 20_000) : '' }];
+  });
+}
+
+const overlaps = (a: { from: string; to: string }, b: { from: string; to: string }) => !!a.from && a.from <= (b.to || b.from) && b.from <= (a.to || a.from);
+
+// Puts the found trips into the data: a calendar trip the user has not edited follows the calendar, a trip the user made
+// gets the found notes only while its own are empty, and a new trip is added unless the user deleted one on those dates.
+export function mergeTrips(d: TravelData, found: FoundTrip[], newId: () => string, now: number): TravelData & { added: number; updated: number } {
+  let trips = d.trips;
+  let added = 0;
+  let updated = 0;
+  for (const f of found) {
+    const match = trips.find((t) => overlaps(t, f));
+    if (match) {
+      const next = match.calendar ? (match.edited ? match : { ...match, ...f }) : match.notes.trim() ? match : { ...match, notes: f.notes };
+      if (next !== match && (next.name !== match.name || next.from !== match.from || next.to !== match.to || next.notes !== match.notes)) updated++;
+      trips = trips.map((t) => (t === match ? next : t));
+    } else if (!(d.dismissed ?? []).some((x) => overlaps(x, f))) {
+      trips = [...trips, { id: newId(), createdAt: now, calendar: true, ...f }];
+      added++;
+    }
+  }
+  return { ...d, trips, added, updated };
+}
+
+const count = (n: number) => `${n} trip${n === 1 ? '' : 's'}`;
+
+// What a calendar scan did, for the notice after Find in calendar.
+export function scanText(added: number, updated: number) {
+  if (!added && !updated) return 'No new trips in the calendar';
+  return [added ? `Added ${count(added)}` : '', updated ? `${added ? 'updated' : 'Updated'} ${count(updated)}` : ''].filter(Boolean).join(', ');
 }

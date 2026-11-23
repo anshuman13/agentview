@@ -1,4 +1,4 @@
-import { addReceipt, deleteReceipt, deleteTrip, receiptFile, saveTrip, travelData, updateReceipt } from '../integrations/travel.js';
+import { addReceipt, deleteReceipt, deleteTrip, receiptFile, saveTrip, scanCalendar, travelData, updateReceipt } from '../integrations/travel.js';
 import { receiptsCsv } from '../../../shared/travel.js';
 import { entry, type Ctx, type Entry } from './routeTypes.js';
 
@@ -7,6 +7,7 @@ export function travelRoutes(): Record<string, Entry<Ctx>> {
   return {
     'GET /api/travel': entry(() => travelData()),
     'POST /api/travel/trip': entry(({ body }) => saveTrip(body), true),
+    'POST /api/travel/scan': entry(() => scanCalendar(), true),
     'POST /api/travel/trip/delete': entry(({ body }) => deleteTrip(String(body.id ?? '')), true),
     'POST /api/travel/receipt': entry(({ req, url }) => addReceipt(req, url.searchParams.get('trip') ?? '', url.searchParams.get('name') ?? '')),
     'POST /api/travel/receipt/update': entry(({ body }) => updateReceipt(body), true),

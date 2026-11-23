@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { notice } from '../app/store';
 import { Back } from '../app/touch/back';
 import { useNarrow } from '../app/shell/useNarrow';
@@ -11,8 +11,8 @@ import { Row } from '../ui/Row';
 import { Section, sectionCount } from '../ui/Section';
 import { Skeleton } from '../ui/Skeleton';
 import { copyText } from '../ui/util';
-import { sortTrips, totalsText, type Receipt, type Trip } from '../../../shared/travel';
-import { deleteTrip, exportUrl, receiptUrl, saveTrip, uploadReceipt } from './travelApi';
+import { scanText, sortTrips, totalsText, type Receipt, type Trip } from '../../../shared/travel';
+import { deleteTrip, exportUrl, receiptUrl, saveTrip, scanCalendar, uploadReceipt } from './travelApi';
 import { isImage, receiptMeta, shrink, tripDates, tripMeta } from './travelLogic';
 import { ReceiptSheet, TripSheet } from './TravelSheets';
 import { useTravel } from './useTravel';
@@ -24,13 +24,13 @@ const FOLD = 5;
 const today = () => new Date().toLocaleDateString('sv-SE');
 const errText = (e: unknown) => (e instanceof Error ? e.message : String(e));
 
-function TripList({ trips, receipts, onOpen, onNew }: { trips: Trip[]; receipts: Receipt[]; onOpen: (id: string) => void; onNew: () => void }) {
+function TripList({ trips, receipts, onOpen, onNew, find }: { trips: Trip[]; receipts: Receipt[]; onOpen: (id: string) => void; onNew: () => void; find: ReactNode }) {
   const [all, setAll] = useState(false);
   const sorted = sortTrips(trips, today());
   const rows = all ? sorted : sorted.slice(0, FOLD);
   return (
     <section>
-      <Section label="Trips" count={sectionCount(trips.length)} action={<Button size="sm" icon="add" onClick={onNew}>New trip</Button>} />
+      <Section label="Trips" count={sectionCount(trips.length)} action={<>{find}<Button size="sm" icon="add" onClick={onNew}>New trip</Button></>} />
       <div className="ui-group">
         {rows.map((t) => <Row key={t.id} leading={<Icon name="briefcase" />} title={t.name} meta={tripMeta(t, receipts.filter((r) => r.tripId === t.id))} onClick={() => onOpen(t.id)} />)}
       </div>
@@ -152,13 +152,19 @@ export function Travel({ shown }: { shown: boolean }) {
   const { data, error, reload } = useTravel(shown);
   const [open, setOpen] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
+  const [finding, setFinding] = useState(false);
+  const findTrips = () => {
+    setFinding(true);
+    scanCalendar().then((r) => { notice(scanText(r.added, r.updated)); return reload(); }, (e) => notice(`Calendar not read: ${errText(e)}`)).finally(() => setFinding(false));
+  };
+  const find = <Button size="sm" icon="calendar" disabled={finding} onClick={findTrips}>{finding ? 'Reading calendar…' : 'Find in calendar'}</Button>;
   const trip = data?.trips.find((t) => t.id === open);
   const body = trip ? (
     <TripView trip={trip} receipts={data!.receipts.filter((r) => r.tripId === trip.id)} onBack={() => setOpen(null)} reload={reload} />
   ) : data?.trips.length ? (
-    <TripList trips={data.trips} receipts={data.receipts} onOpen={setOpen} onNew={() => setAdding(true)} />
+    <TripList trips={data.trips} receipts={data.receipts} onOpen={setOpen} onNew={() => setAdding(true)} find={find} />
   ) : data ? (
-    <EmptyState icon="briefcase" title="No trips yet" hint="Add a trip, then its receipts, bookings and notes" action={<Button size="sm" onClick={() => setAdding(true)}>New trip</Button>} />
+    <EmptyState icon="briefcase" title="No trips yet" hint="Find your trips in the calendar, or add one, then its receipts, bookings and notes" action={<>{find}<Button size="sm" onClick={() => setAdding(true)}>New trip</Button></>} />
   ) : error ? (
     <EmptyState size="sm" icon="briefcase" title="Could not load trips" hint={error} action={<Button size="sm" onClick={() => void reload()}>Retry</Button>} />
   ) : (

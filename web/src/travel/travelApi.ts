@@ -5,6 +5,7 @@ const post = <T>(path: string, body: unknown) => fetchJson<T>(apiUrl(path), { me
 
 export const fetchTravel = () => fetchJson<TravelData>(apiUrl('/api/travel'));
 export const saveTrip = (t: Partial<Trip>) => post<Trip>('/api/travel/trip', t);
+export const scanCalendar = () => post<{ added: number; updated: number }>('/api/travel/scan', {});
 export const deleteTrip = (id: string) => post('/api/travel/trip/delete', { id });
 export const updateReceipt = (r: Partial<Receipt> & { id: string }) => post<Receipt>('/api/travel/receipt/update', r);
 export const deleteReceipt = (id: string) => post('/api/travel/receipt/delete', { id });
