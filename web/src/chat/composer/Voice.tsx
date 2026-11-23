@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type Dispatch, type SetStateAction } from 'react';
 import { IconButton } from '../../ui/Button';
+import { voiceEnded } from './voiceLogic';
 
 type Result = { isFinal: boolean; 0: { transcript: string } };
 type Recognition = {
@@ -18,19 +19,10 @@ export function recognizer() {
   return w.SpeechRecognition ?? w.webkitSpeechRecognition;
 }
 
-const ERRORS: Record<string, string> = {
-  'not-allowed': 'Microphone blocked. Allow it in the site settings',
-  'service-not-allowed': /Macintosh/.test(navigator.userAgent) ? 'Turn on Dictation in System Settings > Keyboard' : 'Speech recognition is not allowed here',
-  'no-speech': 'No speech heard',
-  network: 'Speech service unreachable',
-  'audio-capture': 'No microphone found',
-  'language-not-supported': 'Speech recognition does not support this language',
-};
-
 const HOLD_MS = 400;
-const ERROR_MS = 4000;
+const ERROR_MS = 7000;
 
-// With onSubmit it is the round Talk button: when dictation ends with words heard, onSubmit sends them; with none it says so.
+// With onSubmit it is the round Talk button: when dictation ends with words heard, onSubmit sends them.
 export function Voice({ onText, onSubmit, onListen, autoStart }: { onText: (text: string, final: boolean) => void; onSubmit?: () => void; onListen?: (on: boolean) => void; autoStart?: number }) {
   const [listening, setListening] = useState(false);
   const [error, setError] = useState('');
@@ -38,9 +30,10 @@ export function Voice({ onText, onSubmit, onListen, autoStart }: { onText: (text
   const handlers = useRef({ onText, onSubmit, onListen });
   handlers.current = { onText, onSubmit, onListen };
   const pressed = useRef(0);
+  const stopped = useRef(false);
 
   const begin = useRef<() => void>(undefined);
-  useEffect(() => () => rec.current?.stop(), []);
+  useEffect(() => () => { stopped.current = true; rec.current?.stop(); }, []);
   useEffect(() => handlers.current.onListen?.(listening), [listening]);
   useEffect(() => { if (autoStart && !rec.current) begin.current?.(); }, [autoStart]);
   useEffect(() => {
@@ -53,6 +46,7 @@ export function Voice({ onText, onSubmit, onListen, autoStart }: { onText: (text
   if (!SR) return null;
 
   const start = () => {
+    stopped.current = false;
     const r = new SR();
     r.lang = navigator.language;
     r.continuous = true;
@@ -60,7 +54,8 @@ export function Voice({ onText, onSubmit, onListen, autoStart }: { onText: (text
     let done = 0;
     let pending = '';
     let heard = '';
-    let failed = false;
+    let code: string | null = null;
+    let began = 0;
     r.onresult = (e) => {
       const rest = Array.from(e.results).slice(done);
       pending = rest.map((x) => x[0].transcript).join('').trim();
@@ -69,18 +64,19 @@ export function Voice({ onText, onSubmit, onListen, autoStart }: { onText: (text
       handlers.current.onText(pending, final);
       if (final) { heard += pending; pending = ''; }
     };
-    r.onerror = (e) => { if (e.error === 'aborted') return; failed = true; setError(ERRORS[e.error] ?? 'Voice input failed'); };
+    r.onerror = (e) => { code = e.error; };
     r.onend = () => {
       if (pending) { handlers.current.onText(pending, true); heard += pending; }
-      if (handlers.current.onSubmit) {
-        if (heard.trim()) handlers.current.onSubmit();
-        else if (!failed) setError(ERRORS['no-speech']);
-      }
+      const spoke = !!heard.trim();
+      if (spoke) handlers.current.onSubmit?.();
+      const message = voiceEnded({ error: code, heard: spoke, ms: Date.now() - began, mac: /Macintosh/.test(navigator.userAgent), stopped: stopped.current });
+      if (message) setError(message);
       rec.current = null;
       setListening(false);
     };
     try {
       r.start();
+      began = Date.now();
     } catch {
       setError('Voice input failed to start');
       return;
@@ -90,7 +86,7 @@ export function Voice({ onText, onSubmit, onListen, autoStart }: { onText: (text
     setListening(true);
   };
   begin.current = start;
-  const stop = () => rec.current?.stop();
+  const stop = () => { stopped.current = true; rec.current?.stop(); };
 
   return (
     <>
