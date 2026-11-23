@@ -20,7 +20,7 @@ export function recognizer() {
 
 const ERRORS: Record<string, string> = {
   'not-allowed': 'Microphone blocked. Allow it in the site settings',
-  'service-not-allowed': 'Speech recognition is not allowed here',
+  'service-not-allowed': /Macintosh/.test(navigator.userAgent) ? 'Turn on Dictation in System Settings > Keyboard' : 'Speech recognition is not allowed here',
   'no-speech': 'No speech heard',
   network: 'Speech service unreachable',
   'audio-capture': 'No microphone found',
