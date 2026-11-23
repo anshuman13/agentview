@@ -23,9 +23,6 @@ import { MEMORY } from '../../codex/wiki/shared';
 import { replaceTarget } from '../../../../shared/claimActions';
 import { Badge } from '../../ui/Badge';
 import { agentSummary } from '../../sessions/agents';
-import { unreadOrder } from '../../sessions/chatNav';
-import { chatState } from '../../sessions/folders';
-import { UNTITLED } from '../../../../shared/util';
 import { ALARM_TOOL, createTranscriptBuilder, denied, exploreLabel, exploreRuns, dayDividers, duration, newMarker, newReplies, openAtNew, rewindReplies, turnAnswers, firstLine, itemSpecSlug, relPath, specBumps, specCards, docCards, isDocFile, stepLabel, stepTone, type Item, type Rewind, type StepItem, type ToolResult, type ToolUse } from './steps';
 import { clickOnKey, command, plural, pressable } from '../../ui/util';
 import { useCan } from '../useCan';
@@ -287,11 +284,6 @@ function TranscriptView({ sessionId, events, earlier, cwd, running, bill, failed
   const list = useMemo<FoldRow[]>(() => fold(items, events, cards).filter((r) => r.kind === 'item' || r.steps.length > 0 || r.work.tools > 0), [fold, items, events, cards]);
   const { shown, start, from, staging, loading, showEarlier, reveal } = useRowWindow(list.length, replyCount, earlier, box, scroll.stick);
   const [finding, setFinding] = useState(false);
-  const nextId = useStore((s) => {
-    if (running || s.live.find((c) => c.id === s.session.id)?.pending) return null;
-    return unreadOrder(s.live.map((c) => ({ id: c.id, state: chatState({ live: c }, s.seen), lastActive: c.lastActive })), s.session.id)[0] ?? null;
-  });
-  const nextTitle = useStore((s) => s.live.find((c) => c.id === nextId)?.title.trim() || UNTITLED);
   useEffect(() => {
     setAtLatest(stuck && !finding);
     return () => setAtLatest(false);
@@ -389,11 +381,6 @@ function TranscriptView({ sessionId, events, earlier, cwd, running, bill, failed
       <button className="tr-jump" aria-label={jumpLabel} title={jumpLabel} onClick={jump}>
         <Icon name="arrow-down" small /><span className="tr-jump-text">Jump to latest</span>
         {replies > 0 && <span className="badge quiet">{replies > 9 ? '9+' : replies}</span>}
-      </button>
-    )}
-    {stuck && !finding && nextId && (
-      <button className="tr-jump tr-next" aria-label={`Next: ${nextTitle}`} title={`Next: ${nextTitle}`} onClick={() => send({ type: 'view', id: nextId })}>
-        <Icon name="arrow-right" small /><span className="tr-next-title">Next: {nextTitle}</span>
       </button>
     )}
     </div>

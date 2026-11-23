@@ -77,9 +77,6 @@ import no.pradhan.agentview.nativeapp.app.retryTurn
 import no.pradhan.agentview.nativeapp.app.rewind
 import no.pradhan.agentview.nativeapp.app.sendNow
 import no.pradhan.agentview.nativeapp.ops.Agent
-import no.pradhan.agentview.nativeapp.sessions.UnreadChat
-import no.pradhan.agentview.nativeapp.sessions.chatState
-import no.pradhan.agentview.nativeapp.sessions.unreadOrder
 import no.pradhan.agentview.nativeapp.ui.AvIcon
 import no.pradhan.agentview.nativeapp.ui.IconBtn
 import no.pradhan.agentview.nativeapp.ui.Badge
@@ -96,7 +93,6 @@ import no.pradhan.agentview.nativeapp.ui.MenuItem
 import no.pradhan.agentview.nativeapp.ui.Markdown
 import no.pradhan.agentview.nativeapp.ui.Tokens
 import no.pradhan.agentview.nativeapp.ui.Type
-import no.pradhan.agentview.nativeapp.ui.UNTITLED
 import no.pradhan.agentview.nativeapp.ui.av
 import no.pradhan.agentview.nativeapp.ui.select
 import no.pradhan.agentview.nativeapp.workspace.isSketchPath
@@ -237,12 +233,6 @@ fun Transcript(hub: Hub, view: ChatView, earlier: Int, settled: Boolean, chatId:
     var leftId by remember(chatId) { mutableStateOf<String?>(null) }
     LaunchedEffect(atBottom) { leftId = if (atBottom) null else leftId ?: rows.firstOrNull()?.id }
     val replies = remember(items, leftId) { leftId?.let { newReplies(items, it) } ?: 0 }
-    val chats by hub.store.state.select { it.live }
-    val ws by hub.workspace.collectAsState()
-    val next = remember(chats, ws.seen, chatId, running) {
-        if (running || chats.any { it.id == chatId && it.pending > 0 }) null
-        else unreadOrder(chats.map { UnreadChat(it.id, chatState(it, null, ws.seen), it.lastActive) }, chatId).firstOrNull()?.let { id -> chats.first { it.id == id } }
-    }
     val blank = rows.isEmpty() && earlier > 0
     val earlierDue = rememberEarlierDue(hub, chatId, view.replyCount, loading, earlier, settled)
     val open = remember(items, newId, newKey) { if (openAtNew(items, newId) != null) newKey else null }
@@ -285,7 +275,6 @@ fun Transcript(hub: Hub, view: ChatView, earlier: Int, settled: Boolean, chatId:
             hub.shell.navHidden.value = false
             scope.launch { listState.animateScrollToItem(0) }
         }
-        if (atBottom && !finding && next != null) NextButton(next.title.ifBlank { UNTITLED }, Modifier.align(Alignment.BottomEnd).padding(end = Tokens.sp4, bottom = Tokens.sp4)) { hub.open(next.id) }
     }
 }
 
@@ -416,16 +405,6 @@ private fun JumpButton(replies: Int, modifier: Modifier, onClick: () -> Unit) {
             Box(contentAlignment = Alignment.Center) { AvIcon("arrow-down", null, Tokens.icon) }
         }
         if (replies > 0) Badge(if (replies > 9) "9+" else "$replies", BadgeTone.Quiet, Modifier.align(Alignment.TopEnd))
-    }
-}
-
-@Composable
-private fun NextButton(title: String, modifier: Modifier, onClick: () -> Unit) {
-    Surface(modifier.heightIn(min = Tokens.touch).clickable(onClick = onClick), shape = RoundedCornerShape(Tokens.radiusPill), color = av.raised, contentColor = av.fg, border = BorderStroke(Tokens.hairline, av.borderCard), shadowElevation = Tokens.elev2) {
-        Row(Modifier.padding(horizontal = Tokens.sp6), horizontalArrangement = Arrangement.spacedBy(Tokens.sp2), verticalAlignment = Alignment.CenterVertically) {
-            AvIcon("arrow-right", null, Tokens.icon)
-            Text("Next: $title", style = Type.callout, maxLines = 1, overflow = TextOverflow.Ellipsis)
-        }
     }
 }
 
