@@ -279,6 +279,8 @@ private fun ChatMenu(hub: Hub, live: LiveChat, session: SessionInfo?, hasReply: 
     val context = androidx.compose.ui.platform.LocalContext.current
     val clip = LocalClipboardManager.current
     val sessionId = live.sessionId ?: session?.sessionId
+    var quoting by remember { mutableStateOf<String?>(null) }
+    quoting?.let { QuoteSheet(hub, live.id, it) { quoting = null } }
     MoreButton { close ->
         MenuItem(reviewLabel(false, canReview), "source-control", { close(); onReview() }, enabled = canReview)
         MenuItem("Find in chat", "search", { close(); panels.find = true })
@@ -296,6 +298,7 @@ private fun ChatMenu(hub: Hub, live: LiveChat, session: SessionInfo?, hasReply: 
             close()
             lastReply(hub.store.state.value.events)?.let { clip.setText(AnnotatedString(it)); hub.notice.value = "Reply copied" }
         }, enabled = hasReply)
+        if (!hub.readOnly) MenuItem("Quote last reply", "quote", { close(); quoting = lastReply(hub.store.state.value.events) }, enabled = hasReply)
         MenuItem("Tools\u2026", "tools", { close(); panels.tools = true })
         MenuItem("Close chat", "close", { close(); if (running || live.pending > 0) panels.dialog = "close" else hub.closeChat(live.id) })
         MenuSeparator()

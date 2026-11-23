@@ -294,8 +294,6 @@ private fun LazyListScope.transcriptRows(hub: Hub, view: ChatView, list: List<Fo
     val specCards = view.specCards
     val specBumps = view.specBumps
     val rewinds = view.rewinds
-    val answers = view.answers
-    val openAnswer = view.openAnswer
     val firstId = view.items.firstOrNull()?.id
     itemsIndexed(list, key = { _, r -> r.key }, contentType = { _, r -> (r as? FoldRow.Row)?.it?.let { it::class } ?: r::class }) { i, r ->
         Column(Modifier.gap(gapAbove(list.getOrNull(i + 1), r))) {
@@ -313,7 +311,7 @@ private fun LazyListScope.transcriptRows(hub: Hub, view: ChatView, list: List<Fo
                     when {
                         run != null -> ExploredRow(hub, it.id, run, cwd, !running)
                         build != null && bump != null -> SpecCard(hub, chatId, build.slug, ".claude/specs/${build.slug}.md", bump)
-                        else -> ItemRow(hub, it, chatId, cwd, !running, onOpenAgent, if (!running && canRewind) rewinds[it.id] else null, bump = bump, answer = it.id in answers && !(running && it.id == openAnswer))
+                        else -> ItemRow(hub, it, chatId, cwd, !running, onOpenAgent, if (!running && canRewind) rewinds[it.id] else null, bump = bump)
                     }
                 }
             }
@@ -428,12 +426,12 @@ private fun NextButton(title: String, modifier: Modifier, onClick: () -> Unit) {
 }
 
 @Composable
-internal fun ItemRow(hub: Hub, it: Item, chat: String, cwd: String, settled: Boolean, onOpenAgent: (String) -> Unit, rewind: Item.User? = null, bump: Int? = null, answer: Boolean = false) {
+internal fun ItemRow(hub: Hub, it: Item, chat: String, cwd: String, settled: Boolean, onOpenAgent: (String) -> Unit, rewind: Item.User? = null, bump: Int? = null) {
     when (it) {
         is Item.User -> UserRow(hub, it, chat)
         is Item.Assistant -> {
             Markdown(it.text, Modifier.fillMaxWidth(), it.streaming)
-            if (!it.streaming && (answer || rewind != null)) ReplyActions(hub, it, chat, answer, rewind)
+            if (!it.streaming && rewind != null) ReplyActions(hub, rewind)
         }
         is Item.System -> Text(it.text, Modifier.padding(start = Tokens.sp12), style = Type.footnote, color = if (it.error) av.err else av.fgMuted)
         is Item.Step -> StepRow(it, cwd, settled)
@@ -480,23 +478,16 @@ private fun BubbleFooter(label: String, action: String, onClick: () -> Unit) {
     }
 }
 
-// Copy, Quote and Rewind files under the turn's last reply (web Transcript.tsx RowImpl and Rewind.tsx).
+// Rewind files under the turn's last reply (web Rewind.tsx); Copy and Quote are in the chat menu.
 @Composable
-private fun ReplyActions(hub: Hub, it: Item.Assistant, chat: String, answer: Boolean, rewind: Item.User?) {
+private fun ReplyActions(hub: Hub, rewind: Item.User) {
     var ask by remember { mutableStateOf(false) }
-    var quoting by remember { mutableStateOf(false) }
-    if (quoting) QuoteSheet(hub, chat, it.text) { quoting = false }
-    if (ask && rewind != null) ConfirmDialog(
+    if (ask) ConfirmDialog(
         "Rewind files?",
         "Puts every file ${providerLabel(hub.store.state.value.session?.provider)} changed back to how it was before \"${rewind.text.lineSequence().first().take(80)}\". Edits from later turns are undone too; the conversation stays.",
         "Rewind", { ask = false; hub.rewind(rewind.id) }, onDismiss = { ask = false },
     )
-    val clip = LocalClipboardManager.current
-    Row(horizontalArrangement = Arrangement.spacedBy(Tokens.sp5), verticalAlignment = Alignment.CenterVertically) {
-        if (answer) Button("Copy", { clip.setText(AnnotatedString(it.text.trim())); hub.notice.value = "Reply copied" }, variant = ButtonVariant.Plain, size = ButtonSize.Sm, icon = "copy")
-        if (answer && !hub.readOnly) Button("Quote", { quoting = true }, variant = ButtonVariant.Plain, size = ButtonSize.Sm, icon = "quote")
-        if (rewind != null) Button("Rewind files", { ask = true }, variant = ButtonVariant.Plain, size = ButtonSize.Sm, icon = "discard")
-    }
+    Button("Rewind files", { ask = true }, variant = ButtonVariant.Plain, size = ButtonSize.Sm, icon = "discard")
 }
 
 @Composable
