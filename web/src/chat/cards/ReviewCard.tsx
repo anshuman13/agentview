@@ -68,8 +68,8 @@ export function ReviewCard({ ev }: { ev: ReviewEvent }) {
       <div className="pd-head">
         <Icon name="diff" small />
         <span className="pd-title">Review {plural(count, 'change')}</span>
-        <Button size="sm" variant="filled" onClick={() => decide(ev.id, 'keep')}>Keep all</Button>
       </div>
+      <div className="pd-actions"><Button size="sm" variant="filled" onClick={() => decide(ev.id, 'keep')}>Keep all</Button></div>
       {ev.files.map((f) => <FileReview key={f.path} id={ev.id} f={f} />)}
     </Panel>
   );

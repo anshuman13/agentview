@@ -144,6 +144,13 @@ class StepsTest {
     }
 
     @Test
+    fun aSpokenPromptKeepsItsVoiceFlag() {
+        val users = buildTranscript(listOf(ChatEvent("u1", "user", text = "hi", voice = true), ChatEvent("u2", "user", text = "yo"))).filterIsInstance<Item.User>()
+        assertTrue(users[0].voice)
+        assertFalse(users[1].voice)
+    }
+
+    @Test
     fun gapsFollowAuthorsAndSteps() {
         val user = Item.User("u", "hi", 0, false, false)
         val text = Item.Assistant("a", "ok", false)

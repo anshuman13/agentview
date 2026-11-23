@@ -7,6 +7,8 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -67,6 +69,8 @@ import no.pradhan.agentview.nativeapp.ops.AgentList
 import no.pradhan.agentview.nativeapp.ops.UnseenAgentList
 import no.pradhan.agentview.nativeapp.ops.PullsScreen
 import no.pradhan.agentview.nativeapp.sessions.chatPlace
+import no.pradhan.agentview.nativeapp.sessions.groupByRepo
+import no.pradhan.agentview.nativeapp.sessions.newChatChoices
 import no.pradhan.agentview.nativeapp.sessions.renameTitle
 import no.pradhan.agentview.nativeapp.ui.AvIcon
 import no.pradhan.agentview.nativeapp.ui.Button
@@ -122,7 +126,7 @@ class ChatPanels {
 }
 
 @Composable
-fun ChatScreen(hub: Hub, onOpenAgent: (String) -> Unit, onOpenWork: (String) -> Unit) {
+fun ChatScreen(hub: Hub, onOpenAgent: (String) -> Unit, onOpenWork: (String) -> Unit, onChats: (() -> Unit)? = null) {
     val store = hub.store.state
     val shownId by store.select { it.shownId }
     val session by store.select { it.session }
@@ -165,7 +169,7 @@ fun ChatScreen(hub: Hub, onOpenAgent: (String) -> Unit, onOpenWork: (String) -> 
     prOpen?.let { PullsScreen(hub, onBack = { prOpen = null }, initial = it); return }
 
     Column(Modifier.fillMaxSize()) {
-        ChatHeader(hub, live, session, view.cost, view.items.any { it is Item.Assistant }, panels, left.isNotEmpty(), running, cwd) { review = 0 }
+        ChatHeader(hub, live, session, view.cost, view.items.any { it is Item.Assistant }, panels, left.isNotEmpty(), running, cwd, onChats) { review = 0 }
         ChatStatus(live, session, view.cost, remember(view.events) { lastReplyAt(view.events) }, if (view.agents.isNotEmpty() || live.agentList.isNotEmpty() || run != null) agentChipCount(view.agents.size, live.agentList.size) else null) { panels.agents = true }
         Hairline()
         if (panels.find) {
@@ -230,14 +234,28 @@ private fun rememberShownChat(hub: Hub, hasEvents: Boolean): LiveChat? {
 
 // Takes the fields it shows, not the ChatView, so a streamed token batch does not redraw the header.
 @Composable
-private fun ChatHeader(hub: Hub, live: LiveChat, session: SessionInfo?, cost: Double, hasReply: Boolean, panels: ChatPanels, canReview: Boolean, running: Boolean, cwd: String, onReview: () -> Unit) {
+private fun ChatHeader(hub: Hub, live: LiveChat, session: SessionInfo?, cost: Double, hasReply: Boolean, panels: ChatPanels, canReview: Boolean, running: Boolean, cwd: String, onChats: (() -> Unit)?, onReview: () -> Unit) {
     val ws by hub.workspace.collectAsState()
-    PageHeader(
-        live.title.ifBlank { UNTITLED },
-        subtitle = { Text(chatPlace(ws, cwd), style = Type.subheadline, color = av.fgMuted, maxLines = 1, overflow = TextOverflow.Ellipsis) },
-    ) {
+    var newChat by remember { mutableStateOf(false) }
+    Row(Modifier.fillMaxWidth().height(Tokens.tabbarH).padding(horizontal = Tokens.sp2), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Tokens.sp2)) {
+        if (onChats != null) IconBtn("menu", "Chats", onChats, tint = av.fg) else Spacer(Modifier.width(Tokens.sp6))
+        Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+            Text(live.title.ifBlank { UNTITLED }, style = Type.headline, color = av.fg, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(chatPlace(ws, cwd), style = Type.footnote, color = av.fgMuted, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }
+        IconBtn("edit", "New chat", { newChat = true }, tint = av.fg)
         ChatMenu(hub, live, session, hasReply, panels, canReview, running, cwd, onReview)
     }
+    if (newChat) NewChatFromHeader(hub, cwd) { newChat = false }
+}
+
+// The New chat sheet the Sessions button opens, with this chat's repo first.
+@Composable
+private fun NewChatFromHeader(hub: Hub, cwd: String, onDismiss: () -> Unit) {
+    val chats by hub.store.state.select { it.live }
+    val ws by hub.workspace.collectAsState()
+    val (here, choices) = newChatChoices(groupByRepo(chats, ws), ws, cwd)
+    NewChatSheet(hub, null, choices, onDismiss = onDismiss, initial = here)
 }
 
 // One line under the title: what the chat is doing, and on the right the agents and run controls it opens.

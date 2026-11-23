@@ -744,8 +744,8 @@ describe('cases shared with the Android app', () => {
     it(`ghostFor: ${c.name}`, () => expect(ghostFor(c.text, buildHistory(c.events, c.saved))).toBe(c.expected));
   }
 
-  for (const c of cases<{ name: string; label: string; state: PlaceholderState; device: PlaceholderDevice; expected: string }>('composer-placeholder')) {
-    it(`composerPlaceholder: ${c.name}`, () => expect(composerPlaceholder(c.label, c.state, c.device)).toBe(c.expected));
+  for (const c of cases<{ name: string; label: string; state: PlaceholderState; device: PlaceholderDevice; talk?: boolean; expected: string }>('composer-placeholder')) {
+    it(`composerPlaceholder: ${c.name}`, () => expect(composerPlaceholder(c.label, c.state, c.device, c.talk)).toBe(c.expected));
   }
 
   for (const c of cases<{ name: string; lang: string | null; code: string; expected: string | null }>('shell-line')) {

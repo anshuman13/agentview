@@ -21,4 +21,9 @@ describe('sent prompt actions', () => {
     expect(queued).not.toContain('Use again');
     expect(queued).not.toContain('Copy');
   });
+
+  it('show a mic glyph only for a spoken prompt', () => {
+    expect(html({ voice: true })).toContain('codicon-mic');
+    expect(html({})).not.toContain('codicon-mic');
+  });
 });

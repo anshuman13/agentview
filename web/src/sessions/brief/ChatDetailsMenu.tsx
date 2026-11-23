@@ -5,6 +5,7 @@ import { reviewLabel, usageMenuLabel } from '../../../../shared/chatMenu';
 import { command } from '../../ui/util';
 
 type Props = {
+  icon?: string;
   waitingElsewhere: number;
   usage: { account: string | null; week: number | null; fiveHour: number | null; onClick: () => void } | null | undefined;
   macName: string | null | undefined;
@@ -15,7 +16,7 @@ type Props = {
   rename?: () => void;
 };
 
-export function ChatDetailsMenu({ waitingElsewhere, usage, macName, extras, running, hasChanges, review, rename }: Props) {
+export function ChatDetailsMenu({ icon = 'kebab-horizontal', waitingElsewhere, usage, macName, extras, running, hasChanges, review, rename }: Props) {
   const [more, setMore] = useState(false);
   const moreBtn = useRef<HTMLButtonElement>(null);
   const reviewOff = running || !hasChanges;
@@ -23,7 +24,7 @@ export function ChatDetailsMenu({ waitingElsewhere, usage, macName, extras, runn
   const choose = (fn: () => void) => () => { setMore(false); fn(); };
   return (
     <span className="tl-more">
-      <IconButton ref={moreBtn} size="sm" icon="kebab-horizontal" label="Chat details" aria-haspopup="menu" aria-expanded={more} onClick={() => setMore(!more)} />
+      <IconButton ref={moreBtn} size="sm" icon={icon} label="Chat details" aria-haspopup="menu" aria-expanded={more} onClick={() => setMore(!more)} />
       {more && (
         <Menu trigger={moreBtn} onClose={() => setMore(false)}>
           <MenuItem icon="edit" disabled={!rename} onClick={rename && choose(rename)}>Rename</MenuItem>

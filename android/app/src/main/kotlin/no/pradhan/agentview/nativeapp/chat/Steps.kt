@@ -18,7 +18,7 @@ import no.pradhan.agentview.nativeapp.ui.plural
 sealed interface Item {
     val id: String
 
-    @Immutable data class User(override val id: String, val text: String, val at: Long, val stopping: Boolean, val queued: Boolean) : Item
+    @Immutable data class User(override val id: String, val text: String, val at: Long, val stopping: Boolean, val queued: Boolean, val voice: Boolean = false) : Item
     @Immutable data class Assistant(override val id: String, val text: String, val streaming: Boolean) : Item
     @Immutable data class System(override val id: String, val text: String, val error: Boolean = false) : Item
     @Immutable data class Step(override val id: String, val use: ChatEvent, val result: ChatEvent?) : Item
@@ -207,7 +207,7 @@ private fun itemsFrom(events: List<ChatEvent>, results: Map<String, ChatEvent>, 
     for (e in events) {
         when {
             e.kind == "user" && e.auto != null -> items += Item.System(e.id, if (e.auto == "goal") "Goal round ${e.round}" else "Loop round ${e.round} \u00B7 ${firstLine(e.text)}")
-            e.kind == "user" -> items += Item.User(e.id, e.text, e.at, e.stopping, e.queued)
+            e.kind == "user" -> items += Item.User(e.id, e.text, e.at, e.stopping, e.queued, e.voice)
             e.kind == "assistant" -> stripRound(e.text).let { if (it.isNotBlank()) items += Item.Assistant(e.id, it, e.streaming) }
             e.kind == "system" -> items += Item.System(e.id, e.text, e.error)
             e.kind == "blocked" -> items += Item.Blocked(e.id, e)

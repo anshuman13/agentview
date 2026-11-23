@@ -60,7 +60,7 @@ fun draftSnippet(text: String, max: Int = 40): String? {
 }
 
 @Serializable
-data class Queued(val id: String, val chat: String, val text: String, val steer: Boolean = false, val at: Long = 0)
+data class Queued(val id: String, val chat: String, val text: String, val steer: Boolean = false, val at: Long = 0, val voice: Boolean = false)
 
 // Prompts typed while the socket was down, kept on disk and sent in order once it is back.
 class Outbox(private val kv: KeyValue) {

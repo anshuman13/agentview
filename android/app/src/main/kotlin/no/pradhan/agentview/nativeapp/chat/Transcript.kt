@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
@@ -80,6 +81,7 @@ import no.pradhan.agentview.nativeapp.sessions.UnreadChat
 import no.pradhan.agentview.nativeapp.sessions.chatState
 import no.pradhan.agentview.nativeapp.sessions.unreadOrder
 import no.pradhan.agentview.nativeapp.ui.AvIcon
+import no.pradhan.agentview.nativeapp.ui.IconBtn
 import no.pradhan.agentview.nativeapp.ui.Badge
 import no.pradhan.agentview.nativeapp.ui.BadgeTone
 import no.pradhan.agentview.nativeapp.ui.Button
@@ -294,6 +296,8 @@ private fun LazyListScope.transcriptRows(hub: Hub, view: ChatView, list: List<Fo
     val specCards = view.specCards
     val specBumps = view.specBumps
     val rewinds = view.rewinds
+    val answers = view.answers
+    val openAnswer = view.openAnswer
     val firstId = view.items.firstOrNull()?.id
     itemsIndexed(list, key = { _, r -> r.key }, contentType = { _, r -> (r as? FoldRow.Row)?.it?.let { it::class } ?: r::class }) { i, r ->
         Column(Modifier.gap(gapAbove(list.getOrNull(i + 1), r))) {
@@ -311,7 +315,7 @@ private fun LazyListScope.transcriptRows(hub: Hub, view: ChatView, list: List<Fo
                     when {
                         run != null -> ExploredRow(hub, it.id, run, cwd, !running)
                         build != null && bump != null -> SpecCard(hub, chatId, build.slug, ".claude/specs/${build.slug}.md", bump)
-                        else -> ItemRow(hub, it, chatId, cwd, !running, onOpenAgent, if (!running && canRewind) rewinds[it.id] else null, bump = bump)
+                        else -> ItemRow(hub, it, chatId, cwd, !running, onOpenAgent, if (!running && canRewind) rewinds[it.id] else null, bump = bump, answer = it.id in answers && (!running || it.id != openAnswer))
                     }
                 }
             }
@@ -426,23 +430,23 @@ private fun NextButton(title: String, modifier: Modifier, onClick: () -> Unit) {
 }
 
 @Composable
-internal fun ItemRow(hub: Hub, it: Item, chat: String, cwd: String, settled: Boolean, onOpenAgent: (String) -> Unit, rewind: Item.User? = null, bump: Int? = null) {
+internal fun ItemRow(hub: Hub, it: Item, chat: String, cwd: String, settled: Boolean, onOpenAgent: (String) -> Unit, rewind: Item.User? = null, bump: Int? = null, answer: Boolean = false) {
     when (it) {
         is Item.User -> UserRow(hub, it, chat)
         is Item.Assistant -> {
-            Markdown(it.text, Modifier.fillMaxWidth(), it.streaming)
-            if (!it.streaming && rewind != null) ReplyActions(hub, rewind)
+            Markdown(it.text, Modifier.fillMaxWidth(), it.streaming, reading = true)
+            if (!it.streaming && (answer || rewind != null)) ReplyActions(hub, if (answer) it.text.trim() else null, rewind)
         }
         is Item.System -> Text(it.text, Modifier.padding(start = Tokens.sp12), style = Type.footnote, color = if (it.error) av.err else av.fgMuted)
         is Item.Step -> if (it.use.name == ALARM_TOOL) AlarmCard(it, !settled) else StepRow(it, cwd, settled)
-        is Item.File -> if (it.error != null) FileCard(it, cwd)
+        is Item.File -> if (it.error != null) FileCard(hub, it, cwd)
             else if (isRepoSpec(it.path, cwd)) {
                 val meta = if (it.uses.first().name == "Write") "Spec written" else "Spec edited \u00B7 +${it.add} -${it.del}"
                 if (bump != null) SpecCard(hub, chat, specSlug(it.path), it.path, bump) else SpecRow(specSlug(it.path), meta)
             }
             else if (bump != null && isDocFile(it.path)) DocCard(hub, it, cwd)
             else if (isSketchPath(it.path)) SketchCard(hub, chat, sketchName(it.path), if (it.uses.first().name == "Write") "Sketch written" else "Sketch edited \u00B7 +${it.add} -${it.del}")
-            else FileCard(it, cwd)
+            else FileCard(hub, it, cwd)
         is Item.Agent -> {
             AgentRow(hub, it, chat, cwd, onOpenAgent)
             val build = agentBuild(it.use)
@@ -461,7 +465,7 @@ fun Modifier.leftBar(color: androidx.compose.ui.graphics.Color, width: Dp = Toke
 private fun UserBubble(onLongClick: (() -> Unit)? = null, content: @Composable ColumnScope.() -> Unit) {
     BoxWithConstraints(Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterEnd) {
         Column(
-            Modifier.widthIn(max = maxWidth * 0.85f).background(av.surface, RoundedCornerShape(Tokens.shapeLg))
+            Modifier.widthIn(max = maxWidth * 0.85f).clip(RoundedCornerShape(Tokens.shapeLg)).background(av.raised).border(BorderStroke(Tokens.hairline, av.border), RoundedCornerShape(Tokens.shapeLg))
                 .then(if (onLongClick != null) Modifier.combinedClickable(onClick = {}, onLongClick = onLongClick) else Modifier)
                 .padding(horizontal = Tokens.sp8, vertical = Tokens.sp6),
             verticalArrangement = Arrangement.spacedBy(Tokens.sp3),
@@ -478,16 +482,20 @@ private fun BubbleFooter(label: String, action: String, onClick: () -> Unit) {
     }
 }
 
-// Rewind files under the turn's last reply (web Rewind.tsx); Copy and Quote are in the chat menu.
+// Copy (the Markdown source) and Rewind files under the turn's last reply (web Rewind.tsx); Quote is in the chat menu.
 @Composable
-private fun ReplyActions(hub: Hub, rewind: Item.User) {
+private fun ReplyActions(hub: Hub, copy: String?, rewind: Item.User?) {
+    val clip = LocalClipboardManager.current
     var ask by remember { mutableStateOf(false) }
-    if (ask) ConfirmDialog(
+    if (ask && rewind != null) ConfirmDialog(
         "Rewind files?",
         "Puts every file ${providerLabel(hub.store.state.value.session?.provider)} changed back to how it was before \"${rewind.text.lineSequence().first().take(80)}\". Edits from later turns are undone too; the conversation stays.",
         "Rewind", { ask = false; hub.rewind(rewind.id) }, onDismiss = { ask = false },
     )
-    Button("Rewind files", { ask = true }, variant = ButtonVariant.Plain, size = ButtonSize.Sm, icon = "discard")
+    Row(Modifier.offset(x = -Tokens.sp4)) {
+        if (copy != null) IconBtn("copy", "Copy", { clip.setText(AnnotatedString(copy)); hub.notice.value = "Reply copied" })
+        if (rewind != null) IconBtn("discard", "Rewind files", { ask = true })
+    }
 }
 
 @Composable
@@ -503,10 +511,15 @@ private fun UserRow(hub: Hub, it: Item.User, chat: String) {
             if (!hub.readOnly) MenuItem("Use again", "reply", { menu = false; hub.useAgain(chat, it.text) })
             MenuItem("Copy", "copy", { menu = false; clip.setText(AnnotatedString(it.text)); hub.notice.value = "Prompt copied" })
         }
-        userParts(it.text).forEachIndexed { i, p -> when (p) {
-            is Part.Text -> FoldText("${it.id}:$i", p.text)
-            is Part.Image -> ChatImage(hub, chat, p.path)
-        } }
+        Row(horizontalArrangement = Arrangement.spacedBy(Tokens.sp3)) {
+            if (it.voice) AvIcon("mic", "Spoken", Tokens.iconSm, Modifier.padding(top = Tokens.sp1), tint = av.fgMuted)
+            Column(Modifier.weight(1f, fill = false), verticalArrangement = Arrangement.spacedBy(Tokens.sp3)) {
+                userParts(it.text).forEachIndexed { i, p -> when (p) {
+                    is Part.Text -> FoldText("${it.id}:$i", p.text)
+                    is Part.Image -> ChatImage(hub, chat, p.path)
+                } }
+            }
+        }
         if (it.stopping) Text("Stopping $label to send this", style = Type.footnote, color = av.fgMuted)
         if (it.queued) BubbleFooter("Waiting for $label's next step", "Send now") { hub.sendNow(it.id) }
     }

@@ -1,9 +1,9 @@
-import { memo, useId, useRef, useState, type Dispatch, type SetStateAction } from 'react';
+import { memo, useEffect, useId, useRef, useState, type Dispatch, type SetStateAction } from 'react';
 import { useStore } from '../../app/store';
 import { Icon } from '../../ui/Icon';
 import { touch } from '../../app/touch/touch';
 import { useNarrow } from '../../app/shell/useNarrow';
-import { useDictation, Voice } from './Voice';
+import { recognizer, useDictation, Voice } from './Voice';
 import { AddMenu } from './AddMenu';
 import { PopItems } from './ComposerPop';
 import { Announcer } from '../Announcer';
@@ -29,7 +29,7 @@ import { composerPlaceholder } from '../../../../shared/composerText';
 
 function placeholderFor(label: string, running: boolean, waiting: boolean, compacting: boolean, hasUses: boolean, narrow: boolean) {
   const state = waiting ? 'waiting' : compacting ? 'compacting' : running ? 'running' : hasUses ? 'uses' : 'idle';
-  return composerPlaceholder(label, state, narrow ? 'narrow' : touch() ? 'touch' : 'desktop');
+  return composerPlaceholder(label, state, narrow ? 'narrow' : touch() ? 'touch' : 'desktop', recognizer() !== undefined);
 }
 
 export const Composer = memo(function Composer() {
@@ -83,6 +83,10 @@ export const Composer = memo(function Composer() {
     sentHistory: h.sentHistory, setSentHistory: h.setSentHistory, clearHistoryStep: () => h.setHist(null),
   });
 
+  const [talked, setTalked] = useState(0);
+  const [talking, setTalking] = useState(false);
+  useEffect(() => { if (talked) submit(false, true); }, [talked]);
+
   useComposerEvents({ ta, wantCaret, setText, setUses, sendBuild });
 
   const { choose, onKeyDown } = useComposerKeys({ text, full, mode, modes, ghost, ac, h, apply, applyFull, submit });
@@ -119,7 +123,13 @@ export const Composer = memo(function Composer() {
             onPaste={(e) => { if (e.clipboardData.files.length) { e.preventDefault(); void attach([...e.clipboardData.files]); } }}
           />
         </div>
-        {narrow && (typed || running ? <>{typed && <SendAt typed={typed} shell={ac.shell} sendLater={sendLater} />}<SendButton typed={typed} shell={ac.shell} submit={submit} /></> : <Voice onText={dictate} />)}
+        {narrow && (
+          <>
+            <Voice onText={dictate} />
+            {typed && <SendAt typed={typed} shell={ac.shell} sendLater={sendLater} />}
+            {!talking && (typed || running || !recognizer()) ? <SendButton typed={typed} shell={ac.shell} submit={submit} /> : <Voice onText={dictate} onSubmit={() => setTalked((n) => n + 1)} onListen={setTalking} />}
+          </>
+        )}
         </div>
         {ghost && touch() && (
           <button className="cp-suggest" title="Use this suggestion" onPointerDown={(e) => e.preventDefault()} onClick={() => apply(text + ghost)}>

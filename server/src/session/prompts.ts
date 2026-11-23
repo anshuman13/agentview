@@ -26,15 +26,15 @@ export class Prompts {
     else this.s.sendPrompt(text);
   }
 
-  async prompt(text: string, id: string = randomUUID()) {
+  async prompt(text: string, id: string = randomUUID(), voice = false) {
     const { state, waiting } = this.s;
     if (this.known(id)) return;
     if (this.loopCommand(text, id)) return;
-    if (state.session.running) return waiting.queue(text, id);
+    if (state.session.running) return waiting.queue(text, id, voice);
     await (this.gate = this.gate.then(() => this.s.mcp.pickUpConnectors()));
     if (this.known(id)) return;
-    if (this.s.state.session.running) return waiting.queue(text, id);
-    this.s.sendPrompt(text, id);
+    if (this.s.state.session.running) return waiting.queue(text, id, voice);
+    this.s.sendPrompt(text, id, undefined, voice);
   }
 
   async retryLast() {
@@ -44,11 +44,11 @@ export class Prompts {
   }
 
   // The composer's Enter while Claude works: Claude reads it at its next step and keeps going.
-  async queueNext(text: string, id: string = randomUUID()) {
+  async queueNext(text: string, id: string = randomUUID(), voice = false) {
     if (this.known(id)) return;
     const { running, compacting } = this.s.state.session;
-    if (!running || compacting || text.trim().startsWith('/') || !this.s.driver.attached) return this.prompt(text, id);
-    this.s.waiting.holdMidTurn(text, id);
+    if (!running || compacting || text.trim().startsWith('/') || !this.s.driver.attached) return this.prompt(text, id, voice);
+    this.s.waiting.holdMidTurn(text, id, voice);
     this.s.driver.send(expandChatMentions(text, this.s.transcriptPath), id, 'next');
   }
 
@@ -58,19 +58,19 @@ export class Prompts {
     const held = waiting.takeQueued(id);
     if (held) {
       log.remove((e) => e === held);
-      return this.steer(held.text);
+      return this.steer(held.text, undefined, held.voice);
     }
     if (!waiting.hasPending(id) || state.session.stopping) return;
     await stopper.stop();
   }
 
-  async steer(text: string, id: string = randomUUID()) {
+  async steer(text: string, id: string = randomUUID(), voice = false) {
     const { state, waiting, approvals, turn, driver } = this.s;
     if (this.known(id)) return;
     if (this.loopCommand(text, id)) return;
     if (state.session.compacting) return waiting.queue(text, id);
     const running = state.session.running;
-    const ev: UserEvent = { id, kind: 'user', text, at: Date.now(), stopping: running };
+    const ev: UserEvent = { id, kind: 'user', text, at: Date.now(), stopping: running, ...(voice && { voice }) };
     this.s.pushEvent(ev);
     if (running) {
       waiting.release();

@@ -4,6 +4,7 @@ import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Bundle
+import android.os.SystemClock
 import android.provider.Settings
 import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
@@ -17,11 +18,13 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -30,10 +33,16 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.onClick
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.ContextCompat
+import no.pradhan.agentview.nativeapp.ui.AvIcon
 import no.pradhan.agentview.nativeapp.ui.IconBtn
 import no.pradhan.agentview.nativeapp.ui.Tokens
 import no.pradhan.agentview.nativeapp.ui.av
@@ -101,24 +110,29 @@ internal fun listener(onPartial: (String) -> Unit, onResult: (String) -> Unit, o
 }
 
 // Tap to dictate and tap again to stop. The mic permission is asked on first use. While listening a ring behind the mic follows the voice level.
+// With onSubmit it is the round Talk button: a hold ends on release, and when the dictation ends with words heard onSubmit sends them, with none it says so.
 @Composable
-fun VoiceButton(onText: (String, Boolean) -> Unit, onNotice: (String) -> Unit) {
+fun VoiceButton(onText: (String, Boolean) -> Unit, onNotice: (String) -> Unit, onSubmit: (() -> Unit)? = null, onListening: (Boolean) -> Unit = {}) {
     val ctx = LocalContext.current
     var listening by remember { mutableStateOf(false) }
     var level by remember { mutableFloatStateOf(0f) }
     val text by rememberUpdatedState(onText)
     val notice by rememberUpdatedState(onNotice)
+    val submit by rememberUpdatedState(onSubmit)
+    val listeningNow by rememberUpdatedState(onListening)
     // One recognizer for the button's lifetime: destroying one while the next binds drops the new session with no callback.
     val rec = remember { arrayOfNulls<SpeechRecognizer>(1) }
     val session = remember { intArrayOf(0) }
     val pending = remember { arrayOf("") }
 
-    fun flush() {
+    fun flush(failed: Boolean = false) {
         session[0]++
-        if (pending[0].isNotEmpty()) text(pending[0], true)
+        val heard = pending[0]
+        if (heard.isNotEmpty()) text(heard, true)
         pending[0] = ""
         listening = false
         level = 0f
+        submit?.let { go -> if (heard.isNotEmpty()) go() else if (!failed) notice("No speech heard") }
     }
 
     fun start() {
@@ -128,7 +142,7 @@ fun VoiceButton(onText: (String, Boolean) -> Unit, onNotice: (String) -> Unit) {
         r.setRecognitionListener(listener(
             onPartial = { if (session[0] == id) { pending[0] = it; text(it, false) } },
             onResult = { if (session[0] == id) { if (it.isNotEmpty()) pending[0] = it; flush() } },
-            onError = { if (session[0] == id) { if (pending[0].isEmpty()) notice(speechError(it) ?: "Voice input stopped. Tap the mic to try again"); flush() } },
+            onError = { if (session[0] == id) { if (pending[0].isEmpty()) notice(speechError(it) ?: "Voice input stopped. Tap the mic to try again"); flush(failed = true) } },
             onLevel = { if (session[0] == id) level = it },
         ))
         pending[0] = ""
@@ -140,16 +154,36 @@ fun VoiceButton(onText: (String, Boolean) -> Unit, onNotice: (String) -> Unit) {
         if (ok) start() else notice("Microphone blocked. Allow it in the app settings")
     }
     DisposableEffect(Unit) { onDispose { rec[0]?.destroy(); rec[0] = null } }
+    LaunchedEffect(listening) { listeningNow(listening) }
+    val toggle = {
+        when {
+            listening -> rec[0]?.stopListening()
+            ContextCompat.checkSelfPermission(ctx, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED -> start()
+            else -> permission.launch(Manifest.permission.RECORD_AUDIO)
+        }
+    }
+    val toggleNow by rememberUpdatedState(toggle)
+    val listeningRef by rememberUpdatedState(listening)
 
     Box(contentAlignment = Alignment.Center) {
         if (listening) ListeningRing(level)
-        IconBtn(if (listening) "mic-filled" else "mic", if (listening) "Stop dictation" else "Dictate", {
-            when {
-                listening -> rec[0]?.stopListening()
-                ContextCompat.checkSelfPermission(ctx, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED -> start()
-                else -> permission.launch(Manifest.permission.RECORD_AUDIO)
+        if (onSubmit == null) IconBtn(if (listening) "mic-filled" else "mic", if (listening) "Stop dictation" else "Dictate", { toggle() }, on = listening)
+        else {
+            val label = if (listening) "Stop and send" else "Talk"
+            Box(
+                Modifier.size(Tokens.touch).semantics { contentDescription = label; onClick(label) { toggleNow(); true } }.pointerInput(Unit) {
+                    detectTapGestures(onPress = {
+                        val started = !listeningRef
+                        val at = SystemClock.uptimeMillis()
+                        toggleNow()
+                        if (tryAwaitRelease() && started && SystemClock.uptimeMillis() - at > HOLD_MS) rec[0]?.stopListening()
+                    })
+                },
+                contentAlignment = Alignment.Center,
+            ) {
+                RoundFace { AvIcon(if (listening) "debug-stop" else "unmute", null, Tokens.iconLg, tint = av.bg) }
             }
-        }, on = listening)
+        }
     }
 }
 

@@ -41,11 +41,11 @@
 .cp-mode > span { overflow: hidden; text-overflow: ellipsis; }
 .cp[data-mode='plan'] .cp-mode .codicon:first-child { color: var(--accent-text); }
 .cp-spacer { flex: 1; }
-.cp-send, .cp-stop {
+.cp-send, .cp-stop, .cp-row .icon-btn.cp-talk {
   width: var(--size-xl); height: var(--size-xl); padding: 0; flex: none; border: 1px solid transparent; border-radius: var(--radius-round);
-  display: inline-flex; align-items: center; justify-content: center; background: var(--fg); color: var(--sunken);
+  display: inline-flex; align-items: center; justify-content: center; background: var(--fg); color: var(--bg);
 }
-@media (hover: hover) { .cp-send:hover:not(:disabled), .cp-stop:hover:not(:disabled) { background: var(--fg-strong); } }
+@media (hover: hover) { :is(.cp-send, .cp-stop, .cp-row .icon-btn.cp-talk):hover:not(:disabled) { background: var(--fg-strong); color: var(--bg); } }
 .cp-send:disabled, .cp-stop:disabled { background: var(--hover); color: var(--fg-faint); cursor: default; }
 .cp-foot .icon-btn:is(.voice, .attach, .mcp, .later) { width: var(--size-xl); height: var(--size-xl); border-radius: var(--radius-round); }
 .cp-foot .icon-btn.mcp.on { color: var(--fg); }
@@ -90,7 +90,7 @@
 @media (max-width: 900px) {
   .cp-card textarea, .cp-mirror { font-size: var(--fs-2xl); line-height: var(--line-lg); }
   .cp-card.shell :is(textarea, .cp-mirror) { font-size: var(--fs-xl); }
-  .cp-send, .cp-stop, .cp-foot .icon-btn:is(.voice, .mcp, .later) { width: var(--touch); height: var(--touch); }
+  .cp-send, .cp-stop, .cp-row .icon-btn.cp-talk, .cp-foot .icon-btn:is(.voice, .mcp, .later) { width: var(--touch); height: var(--touch); }
   .cp-foot { gap: var(--sp-1); padding: var(--sp-1) var(--sp-3) var(--sp-3); }
   .cp-pop li { height: var(--touch); }
   .cp-pop { max-height: min(300px, 45vh); max-height: min(300px, 45dvh); }
@@ -111,7 +111,7 @@
 }
 
 @media (max-width: 900px) {
-  .cp-card.pill { border-color: transparent; border-radius: var(--radius-pill); box-shadow: var(--elev-1); }
+  .cp-card.pill { border-radius: var(--radius-pill); box-shadow: var(--elev-2); }
   .cp-card.pill:focus-within { border-color: var(--cp-ring); }
   .cp-card.pill.multi { border-radius: var(--shape-lg); }
   .cp-row { display: flex; align-items: flex-end; gap: var(--sp-1); padding: var(--sp-1) var(--sp-2); }
@@ -120,6 +120,6 @@
   .cp-card.pill textarea { min-height: var(--touch); }
   .cp-card.pill textarea::placeholder { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .cp-add { position: relative; flex: none; }
-  .cp-add > .icon-btn, .cp-row > :is(.voice, .later) { width: var(--touch); height: var(--touch); border-radius: var(--radius-round); }
+  .cp-add > .icon-btn, .cp-row > :is(.voice:not(.cp-talk), .later) { width: var(--touch); height: var(--touch); border-radius: var(--radius-round); }
   .cp-add > .ui-menu { top: auto; right: auto; bottom: 100%; left: 0; white-space: nowrap; }
 }

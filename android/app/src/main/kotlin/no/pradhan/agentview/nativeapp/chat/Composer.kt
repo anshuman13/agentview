@@ -22,6 +22,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import android.speech.SpeechRecognizer
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -192,13 +194,13 @@ private class ComposerState(val hub: Hub, val chatId: String) {
         hub.sendAt(time, sent) { restore(t, picked) }
     }
 
-    fun submit(steer: Boolean, uploading: Int) {
+    fun submit(steer: Boolean, uploading: Int, voice: Boolean = false) {
         val t = full
         if (t.isBlank() || uploading > 0) return
         shellCommand(t)?.let { if (hub.runInTerminal(it)) clear(); return }
         val (sent, picked) = takeUses(t)
         clear()
-        hub.submit(sent, steer, t) { restore(t, picked) }
+        hub.submit(sent, steer, t, voice) { restore(t, picked) }
     }
 }
 
@@ -238,7 +240,8 @@ fun Composer(hub: Hub, chatId: String, sessionId: String?, session: SessionInfo?
     LaunchedEffect(bar) { hub.shell.composing.value = barHidden(bar) }
     DisposableEffect(chatId) { onDispose { hub.shell.composing.value = false } }
     val c = av
-    val shape = RoundedCornerShape(if (multiline || s.marks.isNotEmpty()) Tokens.radius else Tokens.radiusPill)
+    val canTalk = SpeechRecognizer.isRecognitionAvailable(LocalContext.current)
+    val shape = RoundedCornerShape(if (multiline || s.marks.isNotEmpty()) Tokens.shapeLg else Tokens.radiusPill)
     Column(Modifier.fillMaxWidth().background(c.bg).padding(start = Tokens.listPad, end = Tokens.listPad, top = Tokens.sp4, bottom = Tokens.sp2), verticalArrangement = Arrangement.spacedBy(Tokens.sp2)) {
         if (suggestions.isNotEmpty()) SuggestionList(suggestions) { sg ->
             val r = acceptSuggestion(s.text.text, trigger!!.start, s.text.selection.end, sg.insert)
@@ -256,10 +259,10 @@ fun Composer(hub: Hub, chatId: String, sessionId: String?, session: SessionInfo?
                 if (uploading > 0) Box(Modifier.size(Tokens.touch).semantics { contentDescription = "Uploading" }, contentAlignment = Alignment.Center) { CircularProgressIndicator(Modifier.size(Tokens.iconMd), color = c.accent, strokeWidth = Tokens.sp1) }
                 else IconBtn("add", "Add", { sheet = Picker.Add })
                 ComposerInput(
-                    s, composerPlaceholder(providerLabel(session?.provider), placeholderState(waiting, session?.compacting == true, running, s.uses.isNotEmpty())),
+                    s, composerPlaceholder(providerLabel(session?.provider), placeholderState(waiting, session?.compacting == true, running, s.uses.isNotEmpty()), canTalk),
                     Modifier.weight(1f).focusRequester(focus).onFocusChanged { bar = barState(bar, if (it.isFocused) BarEvent.Focus else BarEvent.Blur) }, { multiline = it },
                 )
-                ComposerActions(hub, s, running, uploading, dictation)
+                ComposerActions(hub, s, running, uploading, dictation, canTalk) { sheet = Picker.SendAt }
             }
         }
     }
@@ -367,17 +370,22 @@ private fun ComposerInput(s: ComposerState, placeholder: String, modifier: Modif
 }
 
 @Composable
-private fun ComposerActions(hub: Hub, s: ComposerState, running: Boolean, uploading: Int, dictation: Dictation) {
+private fun ComposerActions(hub: Hub, s: ComposerState, running: Boolean, uploading: Int, dictation: Dictation, canTalk: Boolean, onSendAt: () -> Unit) {
     val c = av
     val text = s.text
     val typed = s.full.isNotBlank()
-    var dictating by remember { mutableStateOf(false) }
+    var talking by remember { mutableStateOf(false) }
     val haptic = LocalHapticFeedback.current
-    if (!typed || dictating) VoiceButton({ spoken, final -> dictating = !final; dictation.apply(text.text, text.selection.end, spoken, final)?.let { (t, caret) -> s.set(TextFieldValue(t, TextRange(caret))) } }, { hub.notice.value = it })
+    val fill = { spoken: String, final: Boolean -> dictation.apply(text.text, text.selection.end, spoken, final)?.let { (t, caret) -> s.set(TextFieldValue(t, TextRange(caret))) }; Unit }
+    VoiceButton(fill, { hub.notice.value = it })
+    if (typed && !talking) IconBtn("clock", "Send at", onSendAt)
     if (running && typed) Button("Stop and send", { s.submit(true, uploading) }, variant = ButtonVariant.Plain, size = ButtonSize.Sm)
     val canSend = typed && uploading == 0
-    if (running && !typed) SendCircle("Stop", !hub.readOnly, hub::interrupt) { Box(Modifier.size(Tokens.sp6).background(c.sunken, RoundedCornerShape(Tokens.radiusXs))) }
-    else if (typed && !dictating) SendCircle(if (running) "Queue" else "Send", canSend, { haptic.performHapticFeedback(HapticFeedbackType.Confirm); s.submit(false, uploading) }) { AvIcon("send", null, Tokens.iconLg, tint = if (canSend) c.sunken else c.fgFaint) }
+    when {
+        talking || (canTalk && !typed && !running) -> VoiceButton(fill, { hub.notice.value = it }, onSubmit = { s.submit(false, uploading, voice = true) }, onListening = { talking = it })
+        running && !typed -> SendCircle("Stop", !hub.readOnly, hub::interrupt) { Box(Modifier.size(Tokens.sp6).background(c.bg, RoundedCornerShape(Tokens.radiusXs))) }
+        else -> SendCircle(if (running) "Queue" else "Send", canSend, { haptic.performHapticFeedback(HapticFeedbackType.Confirm); s.submit(false, uploading) }) { AvIcon("send", null, Tokens.iconLg, tint = if (canSend) c.bg else c.fgFaint) }
+    }
 }
 
 @Composable
@@ -537,8 +545,13 @@ private fun ChatSettingsSheet(hub: Hub, session: SessionInfo?, run: ChatRun?, on
 @Composable
 private fun SendCircle(label: String, enabled: Boolean, onClick: () -> Unit, glyph: @Composable () -> Unit) {
     Box(Modifier.size(Tokens.touch).semantics { contentDescription = label }.clickable(enabled = enabled, onClickLabel = label, onClick = onClick), contentAlignment = Alignment.Center) {
-        Box(Modifier.size(Tokens.sp20).clip(CircleShape).background(if (enabled) av.fg else av.hover), contentAlignment = Alignment.Center) { glyph() }
+        RoundFace(enabled, glyph)
     }
+}
+
+@Composable
+internal fun RoundFace(enabled: Boolean = true, glyph: @Composable () -> Unit) {
+    Box(Modifier.size(Tokens.sp20).clip(CircleShape).background(if (enabled) av.fg else av.hover), contentAlignment = Alignment.Center) { glyph() }
 }
 
 @Composable

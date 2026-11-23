@@ -72,23 +72,24 @@ class TokenGenTest {
         val out = TokenGen.generate(css, "x")
         assertTrue(out.contains("package x"))
         assertTrue(out.contains("    val bg: Color,"))
-        assertTrue(out.contains("val DarkColors = AvColors(\n    bg = Color(0xFF19161D),"))
-        assertTrue(out.contains("    accentSoft = Color(0xFF3A2F4D),"))
-        assertTrue(out.contains("    accentSoft = Color(0xFFEDE4FF),"))
+        assertTrue(out.contains("val DarkColors = AvColors(\n    bg = Color(0xFF1C1B19),"))
+        assertTrue(out.contains("    accentSoft = Color(0xFF2F3340),"))
+        assertTrue(out.contains("    accentSoft = Color(0xFFE3E9F5),"))
         assertTrue(!out.contains("hover2"))
         assertTrue(out.contains("    val listPad = 8.dp"))
         assertTrue(out.contains("    val pageMax = 760.dp"))
         assertTrue(out.contains("    val body = TextStyle(fontFamily = AppFont, fontSize = 16.sp, lineHeight = 24.sp, fontWeight = FontWeight(400))"))
+        assertTrue(out.contains("    val reading = TextStyle(fontFamily = ReadingFont, fontSize = 18.sp, lineHeight = 28.sp, fontWeight = FontWeight(400))"))
     }
 
     @Test fun nativeColorsOverrideBaseTokensAndFollowVar() {
         val out = TokenGen.generate(":root { --bg: #000000; --accent-text: #409cff; --link: var(--accent-text); --border: #123456; }", "x")
         val dark = out.substringAfter("val DarkColors").substringBefore("val LightColors")
         val light = out.substringAfter("val LightColors")
-        assertTrue(dark.contains("    accentText = Color(0xFFC19AFF),"))
-        assertTrue(dark.contains("    link = Color(0xFFC19AFF),"))
-        assertTrue(light.contains("    link = Color(0xFF7A35E0),"))
-        assertTrue(dark.contains("    border = Color(0xFF4A464F),"))
+        assertTrue(dark.contains("    accentText = Color(0xFF7AA7F0),"))
+        assertTrue(dark.contains("    link = Color(0xFF7AA7F0),"))
+        assertTrue(light.contains("    link = Color(0xFF2B59A8),"))
+        assertTrue(dark.contains("    border = Color(0xFF3A3935),"))
     }
 
     @Test fun addsDiffTints() {

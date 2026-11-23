@@ -4,6 +4,9 @@ import no.pradhan.agentview.nativeapp.ui.UNTITLED
 import no.pradhan.agentview.nativeapp.net.ChatEvent
 import no.pradhan.agentview.nativeapp.net.LiveChat
 
+// A press on the Talk button longer than this is a hold: letting go ends the dictation (web Voice.tsx HOLD_MS).
+const val HOLD_MS = 400L
+
 enum class VoicePhase { Listening, Thinking, Speaking, Paused, Done, Failed }
 
 data class VoiceState(val phase: VoicePhase, val heard: String = "", val answer: String = "", val error: String = "")

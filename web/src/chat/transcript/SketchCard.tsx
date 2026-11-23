@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import { sendToChat, setUi } from '../../app/store';
 import { Icon } from '../../ui/Icon';
 import { MenuItem } from '../../ui/Menu';
-import { Row } from '../../ui/Row';
 import { command } from '../../ui/util';
 import { useBuild } from '../../sessions/useBuilds';
 import { useCan } from '../useCan';
@@ -10,6 +9,7 @@ import { canBuild } from '../../../../shared/builds';
 import { buildSpecPrompt } from '../../../../shared/specTasks';
 import { sketchName, sketchTitle } from '../../../../shared/sketches';
 import { BuildSheets, useBuildSheets } from './BuildSheets';
+import { LinkAction, TranscriptBox } from './Box';
 
 function OnOpen({ run }: { run: () => void }) {
   useEffect(run, []);
@@ -24,11 +24,11 @@ export function SketchCard({ path, meta }: { path: string; meta: string }) {
   const spec = data?.specFile ? data : null;
   const can = useCan('subagents');
   const sheets = useBuildSheets();
+  const open = () => { setUi({ sketch: name }); command('page:sketches'); };
   return (
     <>
-    <div className="ui-group tr-act">
-      <Row
-        leading={<Icon name="paintcan" />} title={sketchTitle(name)} meta={meta} onClick={() => { setUi({ sketch: name }); command('page:sketches'); }}
+      <TranscriptBox
+        id={`sketch:${name}`} icon={<Icon name="paintcan" />} title={sketchTitle(name)} meta={meta} onOpen={open} action={<LinkAction label="Open" onClick={open} />}
         menu={(
           <>
             <OnOpen run={() => setAsked(true)} />
@@ -37,7 +37,6 @@ export function SketchCard({ path, meta }: { path: string; meta: string }) {
           </>
         )}
       />
-    </div>
     {spec && <BuildSheets d={spec} sheets={sheets} reload={reload} />}
     </>
   );

@@ -13,7 +13,7 @@ type Recognition = {
   onend: (() => void) | null;
 };
 
-function recognizer() {
+export function recognizer() {
   const w = window as unknown as { SpeechRecognition?: new () => Recognition; webkitSpeechRecognition?: new () => Recognition };
   return w.SpeechRecognition ?? w.webkitSpeechRecognition;
 }
@@ -30,16 +30,18 @@ const ERRORS: Record<string, string> = {
 const HOLD_MS = 400;
 const ERROR_MS = 4000;
 
-export function Voice({ onText, onSubmit, autoStart }: { onText: (text: string, final: boolean) => void; onSubmit?: () => void; autoStart?: number }) {
+// With onSubmit it is the round Talk button: when dictation ends with words heard, onSubmit sends them; with none it says so.
+export function Voice({ onText, onSubmit, onListen, autoStart }: { onText: (text: string, final: boolean) => void; onSubmit?: () => void; onListen?: (on: boolean) => void; autoStart?: number }) {
   const [listening, setListening] = useState(false);
   const [error, setError] = useState('');
   const rec = useRef<Recognition | null>(null);
-  const handlers = useRef({ onText, onSubmit });
-  handlers.current = { onText, onSubmit };
+  const handlers = useRef({ onText, onSubmit, onListen });
+  handlers.current = { onText, onSubmit, onListen };
   const pressed = useRef(0);
 
   const begin = useRef<() => void>(undefined);
   useEffect(() => () => rec.current?.stop(), []);
+  useEffect(() => handlers.current.onListen?.(listening), [listening]);
   useEffect(() => { if (autoStart && !rec.current) begin.current?.(); }, [autoStart]);
   useEffect(() => {
     if (!error) return;
@@ -57,17 +59,23 @@ export function Voice({ onText, onSubmit, autoStart }: { onText: (text: string, 
     r.interimResults = true;
     let done = 0;
     let pending = '';
+    let heard = '';
+    let failed = false;
     r.onresult = (e) => {
       const rest = Array.from(e.results).slice(done);
       pending = rest.map((x) => x[0].transcript).join('').trim();
       const final = rest.every((x) => x.isFinal);
       if (final) done = e.results.length;
       handlers.current.onText(pending, final);
-      if (final) pending = '';
+      if (final) { heard += pending; pending = ''; }
     };
-    r.onerror = (e) => { if (e.error !== 'aborted') setError(ERRORS[e.error] ?? 'Voice input failed'); };
+    r.onerror = (e) => { if (e.error === 'aborted') return; failed = true; setError(ERRORS[e.error] ?? 'Voice input failed'); };
     r.onend = () => {
-      if (pending) handlers.current.onText(pending, true);
+      if (pending) { handlers.current.onText(pending, true); heard += pending; }
+      if (handlers.current.onSubmit) {
+        if (heard.trim()) handlers.current.onSubmit();
+        else if (!failed) setError(ERRORS['no-speech']);
+      }
       rec.current = null;
       setListening(false);
     };
@@ -87,11 +95,11 @@ export function Voice({ onText, onSubmit, autoStart }: { onText: (text: string, 
   return (
     <>
     <IconButton
-      className={`voice${error ? ' error' : ''}`}
-      icon={listening ? 'mic-filled' : 'mic'}
-      label="Dictate"
+      className={`voice${onSubmit ? ' cp-talk' : ''}${error ? ' error' : ''}`}
+      icon={onSubmit ? (listening ? 'debug-stop' : 'unmute') : listening ? 'mic-filled' : 'mic'}
+      label={onSubmit ? 'Talk' : 'Dictate'}
       on={listening}
-      title={error || (listening ? 'Stop dictation' : 'Dictate (click, or hold to talk)')}
+      title={error || (listening ? 'Stop and send' : onSubmit ? 'Talk (click, or hold to talk)' : 'Dictate (click, or hold to talk)')}
       aria-pressed={listening}
       onPointerDown={(e) => {
         if (e.button !== 0) return;

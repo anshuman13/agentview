@@ -16,7 +16,8 @@ import { agentsOf } from '../agents';
 import { agentChipCount } from '../runLogic';
 import { useChatRun } from '../useChatRun';
 import { useNarrow } from '../../app/shell/useNarrow';
-import { plural, useTick } from '../../ui/util';
+import { command, plural, useTick } from '../../ui/util';
+import { newChat } from '../../app/newChat';
 import { askChat } from '../../chat/chatActions';
 import { useMacName } from '../../app/shell/macName';
 import { useUsage } from '../../app/shell/StatusItems';
@@ -124,6 +125,7 @@ export function Brief() {
     <div className="brief">
       <div className="brief-status">
         <div className="timeline-head">
+          {phone && <IconButton icon="menu" label="Chats" onClick={() => command('view:chats')} />}
           <span className="tl-name" title={cwd ? `${title}\n${cwd}` : title}>
             {renaming ? (
               <RenameInput value={title} onSave={(t) => { setRenaming(false); void renameChat(savedId!, t); }} onCancel={() => setRenaming(false)} />
@@ -133,7 +135,8 @@ export function Brief() {
             {cwd && <small>{cwd.split('/').pop()}</small>}
           </span>
           <span className="spacer" />
-          <ChatDetailsMenu waitingElsewhere={waitingElsewhere} usage={usage} macName={macName} extras={extras} running={running} hasChanges={uncommitted || turns.some((t) => t.files.length > 0)} review={() => askChat(REVIEW_LOCAL)} rename={startRename} />
+          {phone && <IconButton icon="edit" label="New chat" onClick={() => newChat({ cwd })} />}
+          <ChatDetailsMenu icon={phone ? 'kebab-vertical' : undefined} waitingElsewhere={waitingElsewhere} usage={usage} macName={macName} extras={extras} running={running} hasChanges={uncommitted || turns.some((t) => t.files.length > 0)} review={() => askChat(REVIEW_LOCAL)} rename={startRename} />
         </div>
         <div className="tl-line">
           <HeadState state={state} status={status} repeat={repeat} chat={live} pending={pending.length} lastReply={lastReply} lastTool={lastTool} limit={limit} done={doneSteps} next={next} />

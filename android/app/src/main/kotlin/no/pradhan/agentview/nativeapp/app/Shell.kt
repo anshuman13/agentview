@@ -10,6 +10,8 @@ import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -216,11 +218,11 @@ private fun rememberDests(hub: Hub, nav: NavHostController, route: String?, more
 private fun PillTabBar(dests: List<Dest>) {
     val shape = RoundedCornerShape(Tokens.radiusPill)
     Box(Modifier.fillMaxWidth().windowInsetsPadding(WindowInsets.navigationBars).padding(start = Tokens.sp4, end = Tokens.sp4, top = Tokens.sp2, bottom = Tokens.sp2)) {
-        Row(Modifier.fillMaxWidth().shadow(Tokens.elev2, shape).clip(shape).background(av.raised).padding(Tokens.sp2), horizontalArrangement = Arrangement.SpaceEvenly) {
+        Row(Modifier.fillMaxWidth().shadow(Tokens.elev2, shape).clip(shape).background(av.surface).border(BorderStroke(Tokens.hairline, av.border), shape).padding(Tokens.sp2), horizontalArrangement = Arrangement.SpaceEvenly) {
             dests.forEach { d ->
                 val tint = if (d.selected) av.fg else av.fgMuted
                 Column(
-                    Modifier.weight(1f).heightIn(min = Tokens.touch).clip(shape).background(if (d.selected) av.accentSoft else Color.Transparent)
+                    Modifier.weight(1f).heightIn(min = Tokens.touch).clip(shape).background(if (d.selected) av.raised else Color.Transparent)
                         .semantics(mergeDescendants = true) { role = Role.Tab; selected = d.selected }
                         .clickable(onClick = d.onClick).padding(vertical = Tokens.sp2),
                     horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center,
@@ -236,7 +238,7 @@ private fun PillTabBar(dests: List<Dest>) {
 private fun SideRail(dests: List<Dest>) {
     NavigationRail(containerColor = av.surface) {
         val colors = NavigationRailItemDefaults.colors(
-            selectedIconColor = av.onSecondaryContainer, selectedTextColor = av.fg, indicatorColor = av.accentSoft,
+            selectedIconColor = av.onSecondaryContainer, selectedTextColor = av.fg, indicatorColor = av.raised,
             unselectedIconColor = av.fgMuted, unselectedTextColor = av.fgMuted,
         )
         dests.forEach { d -> NavigationRailItem(selected = d.selected, onClick = d.onClick, icon = { DestIcon(d) }, label = { DestLabel(d) }, colors = colors) }
@@ -249,7 +251,7 @@ private fun AppNavHost(hub: Hub, nav: NavHostController, twoPane: Boolean, modif
     val openWork = { id: String -> nav.navigate("work/${Uri.encode(id)}") }
     NavHost(nav, startDestination = Tab.Codex.route, modifier = modifier) {
         composable(Tab.Codex.route) { CodexScreen(hub) }
-        composable(Tab.Chat.route) { if (twoPane) TwoPane(hub, openAgent, openWork) else ChatScreen(hub, openAgent, openWork) }
+        composable(Tab.Chat.route) { if (twoPane) TwoPane(hub, openAgent, openWork) else ChatScreen(hub, openAgent, openWork) { nav.goTab(Tab.Sessions.route) } }
         composable(Tab.Sessions.route) { if (twoPane) TwoPane(hub, openAgent, openWork) else SessionsScreen(hub, onOpen = { nav.goTab(Tab.Chat.route) }) }
         composable("agent/{id}", arguments = listOf(navArgument("id") { type = NavType.StringType })) { e ->
             AgentScreen(hub, e.arguments?.getString("id") ?: "", onBack = { nav.popBackStack() }, onOpenAgent = openAgent)

@@ -144,8 +144,8 @@ export class AgentSession implements AgentHost {
     if (pr && use && createsPr(use)) this.setSession({ pr: Number(pr) });
   }
 
-  queueNext(text: string, id?: string) {
-    return this.prompts.queueNext(text, id);
+  queueNext(text: string, id?: string, voice?: boolean) {
+    return this.prompts.queueNext(text, id, voice);
   }
 
   sendNow(id: string) {
@@ -304,8 +304,8 @@ export class AgentSession implements AgentHost {
     void saveFindings(this.cwd, this.reviewTarget ?? 'local', parseFindings(input)).then((review) => this.emit({ type: 'findings', review }), () => {});
   }
 
-  sendPrompt(text: string, id: string = randomUUID(), mark?: { auto: 'loop' | 'goal'; round: number }) {
-    this.pushEvent({ id, kind: 'user', text, at: Date.now(), ...mark });
+  sendPrompt(text: string, id: string = randomUUID(), mark?: { auto: 'loop' | 'goal'; round: number }, voice = false) {
+    this.pushEvent({ id, kind: 'user', text, at: Date.now(), ...mark, ...(voice && { voice }) });
     if (mark) this.turn.roundTurn = true;
     this.enqueue(mark ? `${text}\n\n${ROUND_INSTRUCTION}` : text, id);
   }
@@ -373,8 +373,8 @@ export class AgentSession implements AgentHost {
     if (this.crons.length) this.wakeups.restore(this.crons, why);
   }
 
-  prompt(text: string, id?: string) {
-    return this.prompts.prompt(text, id);
+  prompt(text: string, id?: string, voice?: boolean) {
+    return this.prompts.prompt(text, id, voice);
   }
 
   retryLast() {

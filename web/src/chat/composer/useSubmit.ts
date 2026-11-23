@@ -31,16 +31,16 @@ export function useSubmit(i: Input) {
     return () => i.setText((cur) => (cur.trim() ? cur : t));
   };
 
-  const sendPrompt = (t: string, stop: boolean) => {
+  const sendPrompt = (t: string, stop: boolean, voice: boolean) => {
     const lost = record(t);
     const used = withUses(t, i.uses);
     if (running && (stop || waiting)) steer(used, lost);
-    else if (running) queueNext(used, lost);
-    else prompt(used, lost);
+    else if (running) queueNext(used, lost, voice);
+    else prompt(used, lost, voice);
     if (used !== t) i.setUses([]);
   };
 
-  const submit = (stop = false) => {
+  const submit = (stop = false, voice = false) => {
     const t = i.text.trim();
     if (!t) { sendAfter.current = null; return; }
     if (i.uploading > 0) { sendAfter.current = stop; return; }
@@ -49,7 +49,7 @@ export function useSubmit(i: Input) {
       const cmd = t.slice(1).trim();
       if (cmd) runInTerminal(cmd, true).catch(() => notice('Terminal unavailable'));
     } else {
-      sendPrompt(t, stop);
+      sendPrompt(t, stop, voice);
     }
     i.clearHistoryStep();
     i.clear();

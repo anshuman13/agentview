@@ -126,6 +126,16 @@ fun decodeSampled(bytes: ByteArray, maxWidth: Int): Bitmap? {
 @Composable
 private fun toneColor(t: Tone) = if (t == Tone.Agent) av.agent else av.fgMuted
 
+private fun stepIcon(t: Tone) = when (t) {
+    Tone.Read -> "eye"
+    Tone.Edit -> "edit"
+    Tone.Run -> "terminal"
+    Tone.Web -> "globe"
+    Tone.Mcp -> "plug"
+    Tone.Agent -> "sparkle"
+    Tone.Other -> "tools"
+}
+
 @Composable
 internal fun ExploredRow(hub: Hub, id: String, steps: List<Item.Step>, cwd: String, settled: Boolean) {
     TranscriptBox(hub, "explore:$id", "Explored ${exploreLabel(steps)}") {
@@ -145,25 +155,29 @@ internal fun StepRow(it: Item.Step, cwd: String, settled: Boolean) {
         else -> "ok"
     }
     val dur = result?.let { r -> duration(r.at - it.use.at) } ?: ""
+    val bad = state == "err" || state == "denied"
+    val tone = stepTone(it.use.name)
     Column(Modifier.fillMaxWidth().clickable { open = !open }.heightIn(min = Tokens.touch)) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.width(Tokens.leadWidth), contentAlignment = Alignment.CenterStart) {
                 if (state == "pending") CircularProgressIndicator(Modifier.size(Tokens.sp6), strokeWidth = Tokens.stroke, color = av.fgFaint)
-                else Box(Modifier.size(Tokens.dot).background(if (state == "err") av.err else toneColor(stepTone(it.use.name)), CircleShape))
+                else AvIcon(stepIcon(tone), null, Tokens.iconSm, tint = if (bad) av.err else toneColor(tone))
             }
+            val text = if (bad) av.err else av.fgMuted
             Text(
                 androidx.compose.ui.text.buildAnnotatedString {
-                    if (label.verb.isNotEmpty()) withStyleColor(toneColor(stepTone(it.use.name))) { append(label.verb + " ") }
-                    withStyleColor(av.fg, mono = label.mono) { append(label.obj) }
+                    if (label.verb.isNotEmpty()) withStyleColor(text) { append(label.verb + " ") }
+                    withStyleColor(text, mono = label.mono) { append(label.obj) }
                 },
                 Modifier.weight(1f), style = Type.subheadline, color = av.fgMuted, maxLines = 1, overflow = TextOverflow.Ellipsis,
             )
             if (dur.isNotEmpty()) Text(dur, style = Type.footnote, color = av.fgMuted, modifier = Modifier.padding(start = Tokens.sp3))
+            AvIcon(if (open) "chevron-down" else "chevron-right", null, Tokens.iconSm, Modifier.padding(start = Tokens.sp2), tint = av.fgFaint)
         }
         if (!open) {
             label.cmd?.let { Text(cmdPreview(it), Modifier.padding(start = Tokens.leadWidth), style = Mono, color = av.fgMuted, maxLines = 1, overflow = TextOverflow.Ellipsis) }
             if (state == "err") WordClamp(androidx.compose.ui.text.AnnotatedString(firstLine(result!!.text).ifEmpty { "Failed" }), Type.footnote, av.err, 2, modifier = Modifier.padding(start = Tokens.leadWidth))
-            if (state == "denied") Text("Denied", Modifier.padding(start = Tokens.leadWidth), style = Type.footnote, color = av.fgMuted)
+            if (state == "denied") Text("Denied", Modifier.padding(start = Tokens.leadWidth), style = Type.footnote, color = av.err)
         } else ToolDetail(it.use, result)
     }
 }
@@ -222,6 +236,7 @@ internal fun SpecCard(hub: Hub, chat: String, slug: String, path: String, bump: 
             else if (d != null && d.entries.isNotEmpty()) stateBadge(d.summary.state).let { Badge(it.first, it.second) }
         },
         action = { SpecMenu(hub, d, path, open, actions) },
+        icon = "beaker",
         defaultOpen = true,
         fitState = true,
     ) {
@@ -345,19 +360,21 @@ internal fun SketchCard(hub: Hub, chat: String, name: String, meta: String) {
     val spec = load.data?.takeIf { it.specFile != null }
     val subagents by hub.store.state.select { (it.session?.capabilities ?: Capabilities()).can("subagents") }
     val sheets = LocalBuildSheets.current
-    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(Tokens.shapeLg)).background(av.groupCard)) {
-        ListRow(
-            slug, meta, leading = { AvIcon("paintcan", null, Tokens.icon) }, onClick = { hub.link.value = DeepLink(page = "sketches", slug = name) },
-            menu = { dismiss ->
+    val open = { hub.link.value = DeepLink(page = "sketches", slug = name) }
+    TranscriptBox(
+        hub, "sketch:$name", slug, meta, icon = "paintcan", onOpen = open,
+        action = {
+            LinkAction("Open", open)
+            MoreButton { dismiss ->
                 LaunchedEffect(Unit) { asked = true }
                 if (spec == null) MenuItem(if (load.busy) "Loading" else "No spec for this sketch", "go-to-file", {}, enabled = false)
                 else {
                     if (subagents && !hub.readOnly && canBuild(spec)) MenuItem("Build", "play", { dismiss(); hub.askChat(buildSpecPrompt(spec.specFile!!)) })
                     MenuItem("Open spec", "go-to-file", { dismiss(); sheets.open(spec, BuildSheet.Spec(), runs = false) })
                 }
-            },
-        )
-    }
+            }
+        },
+    )
 }
 
 private fun docTitle(path: String) = path.substringAfterLast('/').replace(Regex("\\.(md|markdown|mdx)$", RegexOption.IGNORE_CASE), "").replace(Regex("[-_]+"), " ")
@@ -368,41 +385,40 @@ internal fun DocCard(hub: Hub, it: Item.File, cwd: String) {
     var open by rememberSaveable(it.id) { mutableStateOf(false) }
     val rel = relPath(it.path, cwd)
     val meta = if (it.pending) "Updating\u2026" else "${if (it.uses.size == 1 && it.uses.first().name == "Write") "Written" else "Edited \u00B7 +${it.add} -${it.del}"} \u00B7 $rel"
-    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(Tokens.shapeLg)).background(av.groupCard)) {
-        ListRow(docTitle(rel), meta, leading = { AvIcon("markdown", null, Tokens.icon) }, onClick = { open = true })
-    }
-    if (open) no.pradhan.agentview.nativeapp.ui.Sheet({ open = false }, docTitle(rel), padded = false) {
-        Box(Modifier.height(sheetHeight())) { no.pradhan.agentview.nativeapp.workspace.FileScreen(hub, rel, { open = false }, diffFirst = false) }
+    TranscriptBox(hub, "doc:${it.id}", docTitle(rel), meta, icon = "markdown", onOpen = { open = true }, action = { LinkAction("Open") { open = true } })
+    if (open) FileSheet(hub, rel, docTitle(rel)) { open = false }
+}
+
+@Composable
+private fun FileSheet(hub: Hub, rel: String, title: String, onDismiss: () -> Unit) {
+    no.pradhan.agentview.nativeapp.ui.Sheet(onDismiss, title, padded = false) {
+        Box(Modifier.height(sheetHeight())) { no.pradhan.agentview.nativeapp.workspace.FileScreen(hub, rel, onDismiss, diffFirst = false) }
     }
 }
 
 @Composable
-internal fun FileCard(it: Item.File, cwd: String) {
-    var open by rememberSaveable(it.id) { mutableStateOf(false) }
+internal fun FileCard(hub: Hub, it: Item.File, cwd: String) {
+    var sheet by rememberSaveable(it.id) { mutableStateOf(false) }
     val rel = relPath(it.path, cwd)
     val cut = rel.lastIndexOf('/')
-    val shape = RoundedCornerShape(Tokens.radius)
-    val bar = if (it.error != null && !it.denied) av.err else av.tEdit
-    Column(Modifier.fillMaxWidth().background(av.raised, shape).border(BorderStroke(Tokens.hairline, av.border), shape).clip(shape).leftBar(bar, Tokens.bar)) {
-        Row(Modifier.fillMaxWidth().clickable { open = !open }.heightIn(min = Tokens.touch).padding(start = Tokens.sp7, end = Tokens.sp6), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
-            Text(
-                androidx.compose.ui.text.buildAnnotatedString {
-                    withStyleColor(av.fgMuted) { append(if (cut >= 0) rel.substring(0, cut + 1) else "") }
-                    append(rel.substring(cut + 1))
-                },
-                Modifier.weight(1f), style = Type.subheadline, color = av.fg, maxLines = 1, overflow = TextOverflow.StartEllipsis,
-            )
+    TranscriptBox(
+        hub, "file:${it.id}", rel.substring(cut + 1), if (cut >= 0) rel.substring(0, cut + 1) else "", icon = "file",
+        state = {
             if (it.error != null) WordClamp(androidx.compose.ui.text.AnnotatedString(it.error), Type.footnote, if (it.denied) av.fgMuted else av.err, 1, modifier = Modifier.widthIn(max = Tokens.fileError))
             else Row(horizontalArrangement = Arrangement.spacedBy(Tokens.sp2)) {
                 Text("+${it.add}", style = Type.footnote, color = av.diffAdd)
                 Text("-${it.del}", style = Type.footnote, color = av.diffDel)
             }
-        }
-        if (open && it.error == null) Column(Modifier.padding(start = Tokens.sp7, end = Tokens.sp5, bottom = Tokens.sp5), verticalArrangement = Arrangement.spacedBy(Tokens.sp3)) {
+        },
+        action = { LinkAction("Open") { sheet = true } },
+        onOpen = if (it.error != null) ({ sheet = true }) else null,
+    ) {
+        Column(Modifier.padding(start = Tokens.sp7, end = Tokens.sp5, top = Tokens.sp4, bottom = Tokens.sp5), verticalArrangement = Arrangement.spacedBy(Tokens.sp3)) {
             val diffs = remember(it.uses) { it.uses.flatMap { u -> editPairs(u).map { (a, b) -> lineDiff(a, b) } } }
             for (d in diffs) DiffView(d)
         }
     }
+    if (sheet) FileSheet(hub, rel, rel.substring(cut + 1)) { sheet = false }
 }
 
 fun editPairs(use: ChatEvent) = editPairs(use.name, use.input) ?: emptyList()
@@ -426,7 +442,8 @@ internal fun AgentRow(hub: Hub, it: Item.Agent, chat: String, cwd: String, onOpe
                 else -> Badge("Done", BadgeTone.Done)
             }
         },
-        action = if (running && canStop) ({ IconBtn("debug-stop", "Stop agent", { hub.stopTask(it.use.id) }) }) else null,
+        action = if (running && canStop) ({ LinkAction("Stop") { hub.stopTask(it.use.id) } }) else null,
+        icon = "sparkle",
         summary = agentSummary(it), reserveSummary = running,
     ) {
         if (shown.isNotEmpty()) Column(Modifier.padding(start = Tokens.subIndent).leftBar(av.agent, Tokens.stroke).padding(start = Tokens.sp7)) {

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { send, useStore } from '../../app/store';
-import { Button } from '../../ui/Button';
+import { IconButton } from '../../ui/Button';
 import { Confirm, type ConfirmRequest } from '../../ui/Confirm';
 import { providerLabel } from '../../../../shared/providers';
 import type { Rewind } from './steps';
@@ -18,7 +18,7 @@ export function RewindLink({ rewind }: { rewind: Rewind }) {
   const [ask, setAsk] = useState<ConfirmRequest | null>(null);
   return (
     <>
-      <Button variant="plain" size="sm" icon="discard" title="Put the files back to how they were before this prompt" onClick={() => setAsk(request(rewind, label))}>Rewind files</Button>
+      <IconButton icon="discard" label="Rewind files" title="Put the files back to how they were before this prompt" onClick={() => setAsk(request(rewind, label))} />
       {ask && <Confirm {...ask} onClose={() => setAsk(null)} />}
     </>
   );

@@ -113,7 +113,7 @@ fun Hub.resume(chat: String) = post(steerCmd("continue", UUID.randomUUID().toStr
 fun Hub.retryTurn(chat: String) = post(retryCmd(), chat)
 
 // A message while Claude runs queues for its next step, or with `steer` stops it and sends now.
-fun Hub.submit(text: String, steer: Boolean, saved: String = text, onLost: () -> Unit) {
+fun Hub.submit(text: String, steer: Boolean, saved: String = text, voice: Boolean = false, onLost: () -> Unit) {
     val t = text.trim()
     if (t.isEmpty()) return
     if (!readOnly) savedPrompts.add(saved.trim())
@@ -121,7 +121,7 @@ fun Hub.submit(text: String, steer: Boolean, saved: String = text, onLost: () ->
     val running = store.state.value.let { s -> s.session?.running ?: s.live.firstOrNull { it.id == chat }?.running } == true
     val id = UUID.randomUUID().toString()
     if (!readOnly && (!_connected.value || outbox.items.value.isNotEmpty())) {
-        if (!outbox.add(Queued(id, chat, t, steer, System.currentTimeMillis()))) { notice.value = "Too many unsent messages"; onLost() }
+        if (!outbox.add(Queued(id, chat, t, steer, System.currentTimeMillis(), voice))) { notice.value = "Too many unsent messages"; onLost() }
         else if (_connected.value) flushOutbox()
         return
     }
@@ -130,7 +130,7 @@ fun Hub.submit(text: String, steer: Boolean, saved: String = text, onLost: () ->
             store.addLocal(chat, ChatEvent(id, "user", text = t, at = System.currentTimeMillis(), stopping = true))
             steerCmd(t, id)
         }
-        else -> promptCmd(t, running, id)
+        else -> promptCmd(t, running, id, voice)
     }
     post(body, chat) { ok ->
         if (!ok) {

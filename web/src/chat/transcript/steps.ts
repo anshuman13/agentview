@@ -12,7 +12,7 @@ export type ToolResult = Extract<ChatEvent, { kind: 'tool_result' }>;
 export const MEMORY_FILE = /\/projects\/[^/]+\/memory\/[^/]+\.md$/;
 
 export type Item =
-  | { kind: 'user'; id: string; text: string; at: number; stopping?: boolean; queued?: boolean }
+  | { kind: 'user'; id: string; text: string; at: number; stopping?: boolean; queued?: boolean; voice?: boolean }
   | { kind: 'auto'; id: string; label: string; text: string }
   | { kind: 'assistant'; id: string; text: string; streaming: boolean }
   | { kind: 'system'; id: string; text: string; error?: boolean }
@@ -143,7 +143,7 @@ function itemsFrom(events: ChatEvent[], results: Map<string, ToolResult>, childr
   const items: Item[] = [];
   for (const e of events) {
     if (e.kind === 'user' && e.auto) items.push({ kind: 'auto', id: e.id, label: e.auto === 'goal' ? `Goal round ${e.round}` : `Loop round ${e.round} · ${firstLine(e.text)}`, text: e.text });
-    else if (e.kind === 'user') items.push({ kind: 'user', id: e.id, text: e.text, at: e.at, stopping: e.stopping, queued: e.queued });
+    else if (e.kind === 'user') items.push({ kind: 'user', id: e.id, text: e.text, at: e.at, stopping: e.stopping, queued: e.queued, voice: e.voice });
     else if (e.kind === 'assistant') { const text = stripRound(e.text); if (text.trim()) items.push({ kind: 'assistant', id: e.id, text, streaming: e.streaming }); }
     else if (e.kind === 'system') items.push({ kind: 'system', id: e.id, text: e.text, ...(e.error && { error: true }) });
     else if (e.kind === 'blocked') items.push({ kind: 'blocked', id: e.id, ev: e });

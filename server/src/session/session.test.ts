@@ -78,6 +78,18 @@ describe('AgentSession turns', () => {
     expect(send).not.toHaveBeenCalled();
   });
 
+  it('carries voice from prompt and queueNext to the user event', async () => {
+    const { s, result } = fakeSession();
+    await s.prompt('spoken', 'v1', true);
+    await s.queueNext('typed later', 'v2');
+    await s.queueNext('spoken later', 'v3', true);
+    const user = (id: string) => s.state.events.find((e) => e.id === id);
+    expect(user('v1')).toMatchObject({ voice: true });
+    expect(user('v2')).not.toHaveProperty('voice');
+    expect(user('v3')).toMatchObject({ voice: true, queued: true });
+    result('r1');
+  });
+
   it('steer interrupts a running turn and stays running for the steered prompt', async () => {
     const { s, interrupt, result } = fakeSession();
     s.sendPrompt('long task');

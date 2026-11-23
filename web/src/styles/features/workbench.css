@@ -86,7 +86,7 @@ body.resizing .chrome-frame, body.resizing-v .chrome-frame { pointer-events: non
 
   .tabbar {
     position: fixed; z-index: var(--z-float); left: calc(var(--sp-4) + env(safe-area-inset-left)); right: calc(var(--sp-4) + env(safe-area-inset-right)); bottom: calc(var(--safe-bottom) + var(--sp-2));
-    display: flex; height: var(--tabbar-h); padding: var(--sp-1); background: var(--raised); box-shadow: var(--elev-2); border-radius: var(--radius-pill);
+    display: flex; height: var(--tabbar-h); padding: var(--sp-1); background: var(--surface); border: 1px solid var(--border); box-shadow: var(--elev-2); border-radius: var(--radius-pill);
     transition: transform var(--dur) var(--ease), opacity var(--dur) var(--ease), visibility var(--dur);
   }
   .workbench[data-tab='chat'][data-composing] .tabbar { transform: translateY(calc(100% + var(--safe-bottom) + var(--sp-2))); opacity: 0; visibility: hidden; pointer-events: none; }
@@ -94,7 +94,7 @@ body.resizing .chrome-frame, body.resizing-v .chrome-frame { pointer-events: non
     flex: 1; min-width: var(--touch); border: 0; border-radius: var(--radius-pill); background: transparent; color: var(--fg-muted); position: relative;
     display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--sp-1); font-size: var(--fs-2xs);
   }
-  .tabbar button.active { background: var(--accent-soft); color: var(--fg); }
+  .tabbar button.active { background: var(--raised); color: var(--fg); }
   .tabbar .codicon.icon { font-size: var(--icon-lg); }
   .tabbar .badge { position: absolute; top: var(--sp-2); right: 20%; }
   .tabbar .dot { position: absolute; top: var(--sp-2); right: 28%; }

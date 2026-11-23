@@ -29,6 +29,7 @@ val av: AvColors @Composable get() = LocalAv.current
 private fun variable(res: Int, vararg weights: Int) = FontFamily(weights.map { Font(res, FontWeight(it), variationSettings = FontVariation.Settings(FontVariation.weight(it))) })
 val AppFont = variable(R.font.space_grotesk, 300, 400, 500, 600, 700)
 val MonoFont = variable(R.font.jetbrains_mono, 400, 500, 700)
+val ReadingFont = FontFamily.Serif
 
 private val typography = Typography(
     displayLarge = Type.largeTitle, displayMedium = Type.display, displaySmall = Type.title,

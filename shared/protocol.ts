@@ -54,7 +54,7 @@ export type ReviewHunk = { line: number; del: string[]; add: string[]; state?: R
 export type ReviewFile = { path: string; hunks: ReviewHunk[]; created?: boolean; binary?: boolean; large?: boolean; state?: ReviewState };
 
 export type ChatEvent =
-  | { id: string; kind: 'user'; text: string; at: number; stopping?: boolean; queued?: boolean; auto?: 'loop' | 'goal'; round?: number }
+  | { id: string; kind: 'user'; text: string; at: number; stopping?: boolean; queued?: boolean; auto?: 'loop' | 'goal'; round?: number; voice?: boolean }
   | { id: string; kind: 'assistant'; text: string; streaming: boolean; at: number; parent?: string }
   | { id: string; kind: 'tool_use'; name: string; input: Record<string, unknown>; summary: string; at: number; parent?: string; agent?: string }
   | { id: string; kind: 'tool_result'; toolUseId: string; text: string; isError: boolean; at: number; parent?: string; stopped?: boolean }
@@ -374,8 +374,8 @@ export type Worktree = {
 };
 
 export type ClientMessage =
-  | { type: 'prompt'; text: string; id?: string }
-  | { type: 'queue'; text: string; id?: string }
+  | { type: 'prompt'; text: string; id?: string; voice?: boolean }
+  | { type: 'queue'; text: string; id?: string; voice?: boolean }
   | { type: 'send_now'; id: string }
   | { type: 'steer'; text: string; id?: string }
   | { type: 'plan'; next: string[] }

@@ -25,6 +25,12 @@ describe('automatic prompts', () => {
     const goal: ChatEvent = { id: 'g1', kind: 'user', text: 'Check whether this goal is met', at: 2, auto: 'goal', round: 2 };
     expect(buildTranscript([loop, goal, user('hi')]).map((i) => i.kind === 'auto' ? i.label : i.kind)).toEqual(['Loop round 3 · check the build', 'Goal round 2', 'user']);
   });
+
+  it('carry voice from a spoken prompt to its item', () => {
+    const [spoken, typed] = buildTranscript([{ ...user('hello'), voice: true }, user('hi')]);
+    expect(spoken).toMatchObject({ kind: 'user', voice: true });
+    expect(typed).not.toHaveProperty('voice', true);
+  });
 });
 
 describe('stepLabel', () => {

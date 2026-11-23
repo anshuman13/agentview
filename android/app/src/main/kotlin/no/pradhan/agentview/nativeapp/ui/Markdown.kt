@@ -81,7 +81,7 @@ private val parsed = LruCache<String, List<MdBlock>>(64)
 
 // Parses off the main thread. While `streaming` the text is re-parsed at most every MARKDOWN_STREAM_MS; a finished message is parsed once.
 @Composable
-fun Markdown(text: String, modifier: Modifier = Modifier, streaming: Boolean = false) {
+fun Markdown(text: String, modifier: Modifier = Modifier, streaming: Boolean = false, reading: Boolean = false) {
     val latest by rememberUpdatedState(text to streaming)
     val blocks by produceState(parsed.get(text)) {
         var last = 0L
@@ -92,36 +92,37 @@ fun Markdown(text: String, modifier: Modifier = Modifier, streaming: Boolean = f
             value = parsed.get(t) ?: withContext(Dispatchers.Default) { parseMarkdown(t) }.also { if (!still) parsed.put(t, it) }
         }
     }
-    blocks?.let { MdBlocks(it, modifier) }
+    blocks?.let { MdBlocks(it, modifier, reading) }
 }
 
 @Composable
-private fun MdBlocks(blocks: List<MdBlock>, modifier: Modifier = Modifier) {
+private fun MdBlocks(blocks: List<MdBlock>, modifier: Modifier = Modifier, reading: Boolean = false) {
     Column(modifier, verticalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
-        for (b in blocks) MdBlockView(b)
+        for (b in blocks) MdBlockView(b, reading)
     }
 }
 
 @Composable
-private fun MdBlockView(b: MdBlock) {
-    val body = Type.body.copy(color = av.fg)
+private fun MdBlockView(b: MdBlock, reading: Boolean) {
+    val body = (if (reading) Type.reading else Type.body).copy(color = av.fg)
     when (b) {
         is MdBlock.Para -> Text(inlineText(b.inlines), style = body)
         is MdBlock.Heading -> Text(
             inlineText(b.inlines),
-            style = (if (b.level <= 1) Type.headline.copy(fontSize = Tokens.fsXl) else Type.headline).copy(color = av.fg),
+            style = if (reading) body.copy(fontWeight = FontWeight.Bold, fontSize = if (b.level <= 1) body.fontSize * 1.25f else body.fontSize)
+                else (if (b.level <= 1) Type.headline.copy(fontSize = Tokens.fsXl) else Type.headline).copy(color = av.fg),
             modifier = Modifier.padding(top = Tokens.sp4),
         )
         is MdBlock.Code -> CodeBlock(b.text, b.lang)
         is MdBlock.Quote -> Row(Modifier.height(IntrinsicSize.Min)) {
             Box(Modifier.width(Tokens.bar).fillMaxHeight().background(av.borderStrong))
-            MdBlocks(b.blocks, Modifier.padding(start = Tokens.sp4))
+            MdBlocks(b.blocks, Modifier.padding(start = Tokens.sp4), reading)
         }
         is MdBlock.Items -> Column(verticalArrangement = Arrangement.spacedBy(Tokens.sp2)) {
             b.items.forEachIndexed { n, item ->
                 Row {
                     Text(if (b.ordered) "${b.start + n}." else "•", style = body, color = av.fgMuted, modifier = Modifier.width(Tokens.leadWidth).padding(start = Tokens.sp2))
-                    MdBlocks(item, Modifier.weight(1f))
+                    MdBlocks(item, Modifier.weight(1f), reading)
                 }
             }
         }

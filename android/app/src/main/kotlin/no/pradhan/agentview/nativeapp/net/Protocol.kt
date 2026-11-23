@@ -35,6 +35,7 @@ data class ChatEvent(
     val isError: Boolean = false,
     val error: Boolean = false,
     val queued: Boolean = false,
+    val voice: Boolean = false,
     val at: Long = 0,
     val input: JsonObject = JsonObject(emptyMap()),
     val toolUseId: String = "",
@@ -360,8 +361,8 @@ fun appendTo(ev: ChatEvent, offset: Int, text: String): ChatEvent? {
 fun viewCmd(id: String) = """{"type":"view","id":${quote(id)}}"""
 
 // web/src/chat/Composer.tsx: a message sent while Claude runs is queued for its next step, otherwise it is a prompt.
-fun promptCmd(text: String, running: Boolean, id: String) =
-    """{"type":"${if (running) "queue" else "prompt"}","text":${quote(text)},"id":${quote(id)}}"""
+fun promptCmd(text: String, running: Boolean, id: String, voice: Boolean = false) =
+    buildJsonObject { put("type", if (running) "queue" else "prompt"); put("text", text); put("id", id); if (voice) put("voice", true) }.toString()
 
 private fun quote(s: String) = kotlinx.serialization.json.JsonPrimitive(s).toString()
 

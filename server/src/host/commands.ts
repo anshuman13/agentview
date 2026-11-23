@@ -15,7 +15,7 @@ function promptCommand(chat: AgentSession, msg: Msg<'prompt'>) {
   const id = shortId(msg.id);
   if (triesCommand(chat, msg.text, id)) return;
   // The composer sends steer to stop Claude; a prompt during a run (Fix, Compact) waits its turn.
-  notSent(chat, chat.prompt(msg.text, id));
+  notSent(chat, chat.prompt(msg.text, id, msg.voice === true));
 }
 
 // /tries starts its own chats, however it is sent.
@@ -27,7 +27,7 @@ function triesCommand(chat: AgentSession, text: string, id: string | undefined) 
 
 function queueCommand(chat: AgentSession, msg: Msg<'queue'>) {
   if (typeof msg.text !== 'string' || triesCommand(chat, msg.text, shortId(msg.id))) return;
-  notSent(chat, chat.queueNext(msg.text, shortId(msg.id)));
+  notSent(chat, chat.queueNext(msg.text, shortId(msg.id), msg.voice === true));
 }
 
 function sendNowCommand(chat: AgentSession, msg: Msg<'send_now'>) {

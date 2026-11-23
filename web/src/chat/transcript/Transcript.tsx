@@ -11,7 +11,7 @@ import { AlarmCard } from './AlarmCard';
 import { SketchCard } from './SketchCard';
 import { DocCard } from './DocCard';
 import { SpecCard, SpecRow } from './SpecCard';
-import { TranscriptBox } from './Box';
+import { LinkAction, TranscriptBox } from './Box';
 import { FindBar, findPending, markHit, takeFind, type FindRequest } from './FindBar';
 import { showTurn, turnPending } from '../../sessions/goalLogic';
 import { readBox, saveBox } from './boxOpen';
@@ -562,11 +562,11 @@ function RowImpl({ it, cwd, settled, card, answer, rewind, bump = 0 }: { it: Ite
   const label = useStore((s) => providerLabel(s.session.provider));
   switch (it.kind) {
     case 'user':
-      return <div id={`turn-${it.id}`} className={`tr-user ${it.stopping ? 'stopping' : ''} ${it.queued ? 'queued' : ''}`}><UserText id={it.id} text={it.text} />{it.stopping && <span className="tr-stop"><Icon name="loading" small spin />{`Stopping ${label} to send this`}</span>}{it.queued && <span className="tr-stop"><Icon name="clock" small />{`Waiting for ${label}'s next step`}<Button variant="plain" size="sm" className="tl-send-now" title={`Stop ${label}'s current step and send this now`} onClick={() => send({ type: 'send_now', id: it.id })}>Send now</Button></span>}{!it.stopping && !it.queued && <span className="tr-acts"><SentAt at={it.at} /><Button variant="plain" size="sm" icon="reply" title="Put this prompt in the composer to edit and send again" onClick={() => window.dispatchEvent(new CustomEvent('agentview:insert', { detail: { text: it.text } }))}>Use again</Button><Button variant="plain" size="sm" icon="copy" onClick={() => copyPrompt(it.text)}>Copy</Button></span>}</div>;
+      return <div id={`turn-${it.id}`} className={`tr-user ${it.stopping ? 'stopping' : ''} ${it.queued ? 'queued' : ''}`}>{it.voice && <span className="tr-mic" title="Spoken"><Icon name="mic" small /></span>}<UserText id={it.id} text={it.text} />{it.stopping && <span className="tr-stop"><Icon name="loading" small spin />{`Stopping ${label} to send this`}</span>}{it.queued && <span className="tr-stop"><Icon name="clock" small />{`Waiting for ${label}'s next step`}<Button variant="plain" size="sm" className="tl-send-now" title={`Stop ${label}'s current step and send this now`} onClick={() => send({ type: 'send_now', id: it.id })}>Send now</Button></span>}{!it.stopping && !it.queued && <span className="tr-acts"><SentAt at={it.at} /><Button variant="plain" size="sm" icon="reply" title="Put this prompt in the composer to edit and send again" onClick={() => window.dispatchEvent(new CustomEvent('agentview:insert', { detail: { text: it.text } }))}>Use again</Button><Button variant="plain" size="sm" icon="copy" onClick={() => copyPrompt(it.text)}>Copy</Button></span>}</div>;
     case 'auto':
       return <AutoRow it={it} />;
     case 'assistant':
-      return <div id={`turn-${it.id}`} className={`tr-assistant ${it.streaming ? 'streaming' : ''}`}><Markdown text={it.text} id={it.streaming ? undefined : it.id} />{!it.streaming && (answer || rewind) && <div className="tr-acts">{answer && <Button variant="plain" size="sm" icon="copy" onClick={() => copyReply(it.text.trim())}>Copy</Button>}{rewind && <RewindLink rewind={rewind} />}</div>}</div>;
+      return <div id={`turn-${it.id}`} className={`tr-assistant ${it.streaming ? 'streaming' : ''}`}><Markdown text={it.text} id={it.streaming ? undefined : it.id} />{!it.streaming && (answer || rewind) && <div className="tr-acts">{answer && <IconButton icon="copy" label="Copy" onClick={() => copyReply(it.text.trim())} />}{rewind && <RewindLink rewind={rewind} />}</div>}</div>;
     case 'system':
       return <div className={`tr-system${it.error ? ' err' : ''}`}>{it.text}</div>;
     case 'step':
@@ -594,16 +594,20 @@ export function Explored({ id, run, cwd }: { id: string; run: StepItem[]; cwd: s
   );
 }
 
+const STEP_ICONS = { read: 'eye', edit: 'edit', run: 'terminal', web: 'globe', mcp: 'plug', agent: 'sparkle', other: 'tools' } as const;
+
 function Step({ use, result, cwd, settled }: { use: ToolUse; result?: ToolResult; cwd: string; settled?: boolean }) {
   const [open, setOpen] = useState(false);
   const { verb, object, mono, cmd } = stepLabel(use.name, use.input, cwd);
   const state = !result ? (settled ? 'idle' : 'pending') : denied(result) ? 'denied' : result.isError ? 'err' : 'ok';
   const dur = result ? duration(result.at - use.at) : '';
+  const tone = stepTone(use.name);
   return (
-    <div className={`tr-step tr-act t-${stepTone(use.name)} ${state} ${open ? 'open' : ''}`} onClick={() => setOpen((v) => !v)}>
-      <span className="tr-mark">{state === 'pending' ? <Icon name="loading" small spin /> : <i className="tr-hex" />}</span>
+    <div className={`tr-step tr-act t-${tone} ${state} ${open ? 'open' : ''}`} onClick={() => setOpen((v) => !v)}>
+      <span className="tr-mark">{state === 'pending' ? <Icon name="loading" small spin /> : <Icon name={STEP_ICONS[tone]} small />}</span>
       <span className="tr-text" title={object} role="button" tabIndex={0} aria-expanded={open} onKeyDown={clickOnKey}>{verb && <span className="tr-verb">{verb} </span>}<span className={`tr-obj ${mono ? 'mono' : ''}`}>{object}</span></span>
       <span className="tr-dur">{dur}</span>
+      <span className="tr-chev"><Icon name={open ? 'chevron-down' : 'chevron-right'} small /></span>
       {cmd && !open && <span className="tr-cmd" title={cmd}>$ {cmd.replace(/\s*\n\s*/g, ' ⏎ ')}</span>}
       {state === 'err' && !open && <span className="tr-err">{firstLine(result!.text) || 'Failed'}</span>}
       {state === 'denied' && !open && <span className="tr-err">Denied</span>}
@@ -628,16 +632,17 @@ function FileCard({ it, cwd }: { it: Extract<Item, { kind: 'file' }>; cwd: strin
   const rel = relPath(it.path, cwd);
   const cut = rel.lastIndexOf('/');
   const name = rel.slice(cut + 1);
+  const open = () => setUi({ openFile: rel, follow: false });
   return (
-    <div className={`tr-file tr-act ${it.denied ? 'denied' : it.error ? 'err' : ''}`} title={rel} {...pressable(() => setUi({ openFile: rel, follow: false }))}>
-      <FileIcon name={name} />
-      <span className="tr-path"><span className="tr-dir">{cut >= 0 ? rel.slice(0, cut + 1) : ''}</span>{name}</span>
-      {it.error ? (
-        <span className="tr-err">{it.error}</span>
-      ) : (
-        <span className="tr-count"><span className="add">+{it.count.add}</span> <span className="del">-{it.count.del}</span></span>
-      )}
-    </div>
+    <TranscriptBox
+      id={`file:${it.id}`}
+      className={it.denied ? 'denied' : it.error ? 'err' : undefined}
+      icon={<FileIcon name={name} />}
+      title={name}
+      meta={it.error ? <span className="tr-err">{it.error}</span> : <>{cut >= 0 && <span className="tr-dir">{rel.slice(0, cut + 1)} </span>}<span className="tr-count"><span className="add">+{it.count.add}</span> <span className="del">-{it.count.del}</span></span></>}
+      action={<LinkAction label="Open" onClick={open} />}
+      onOpen={open}
+    />
   );
 }
 
@@ -655,7 +660,8 @@ function AgentRow({ it, cwd }: { it: Extract<Item, { kind: 'agent' }>; cwd: stri
       title={desc}
       meta={[type, dur, steps.length > 0 && plural(steps.length, 'step')].filter(Boolean).join(' · ')}
       state={badge}
-      action={running && canStop ? <IconButton icon="debug-stop" label="Stop agent" size="sm" onClick={() => send({ type: 'stop_task', toolUseId: use.id })} /> : undefined}
+      icon={<Icon name="sparkle" />}
+      action={running && canStop ? <LinkAction label="Stop" title="Stop this agent" onClick={() => send({ type: 'stop_task', toolUseId: use.id })} /> : undefined}
       summary={agentSummary(it)}
     >
       {steps.length > 0 && <div className="tr-sub">{steps.map((s) => <Row key={s.id} it={s} cwd={cwd} settled={!running} />)}</div>}

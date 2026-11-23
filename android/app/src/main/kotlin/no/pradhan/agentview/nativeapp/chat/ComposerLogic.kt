@@ -212,12 +212,12 @@ fun ghostFor(text: String, history: List<String>): String {
 }
 
 // shared/composerText.ts composerPlaceholder for the phone; state is waiting, compacting, running, uses or idle.
-fun composerPlaceholder(label: String, state: String) = when (state) {
+fun composerPlaceholder(label: String, state: String, talk: Boolean = true) = when (state) {
     "waiting" -> "Answer above, or message $label to stop and send"
     "compacting" -> "Sends when compacting is done"
     "running" -> "$label reads this at its next step"
     "uses" -> "What should $label do with it?"
-    else -> "Ask anything · / commands · @ files · @chat: chats"
+    else -> if (talk) "Reply to $label or hold to talk" else "Ask anything · / commands · @ files · @chat: chats"
 }
 
 // A prompt starting with "!" is a shell command for the chat's terminal, as on the web; null when it is a prompt or empty.

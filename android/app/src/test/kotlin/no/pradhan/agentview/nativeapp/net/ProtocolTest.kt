@@ -68,6 +68,7 @@ class ProtocolTest {
     fun composerCommandsMatchTheWeb() {
         assertEquals("""{"type":"prompt","text":"a \"q\"","id":"i"}""", promptCmd("a \"q\"", false, "i"))
         assertEquals("""{"type":"queue","text":"b","id":"i"}""", promptCmd("b", true, "i"))
+        assertEquals("""{"type":"queue","text":"c","id":"i","voice":true}""", promptCmd("c", true, "i", voice = true))
         assertEquals("""{"type":"view","id":"c"}""", viewCmd("c"))
     }
 

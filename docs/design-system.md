@@ -10,11 +10,11 @@ layers, elevation levels, the shape scale, type roles and touch targets.
 
 ## Principles
 
-- Calm: violet-tinted near-black and greys (KiroCrew's kiro theme), Space Grotesk for text and JetBrains Mono for code, no borders where spacing does the job, hover only under
+- Calm: warm dark greys (Claude mobile app look), Space Grotesk for text, a serif for reading replies and JetBrains Mono for code, no borders where spacing does the job, hover only under
   `(hover: hover)`, short motion (`--dur`, 120ms; see Motion).
 - Content first: chrome is quiet grey; controls get louder only when they act or are selected.
-- One accent: violet `--accent` marks interaction (focus, selection, links, the one primary action).
-  Agents are teal (`--agent`), so they never read as a control. Running work is violet `--accent-fill` (see Badge).
+- One accent: blue `--accent` marks interaction (focus, selection, links, the one primary action).
+  Agents are teal (`--agent`), so they never read as a control. Running work is blue `--accent-fill` (see Badge).
 - Profile marks: Work blue (`--work`) and Personal magenta (`--personal`) are the only identity
   colours on tasks and lists. Status colours mark state, always next to text or an icon.
 - Dense on desktop, roomy on touch: 28 and 36px controls with a pointer, 44px on coarse pointers.
@@ -54,11 +54,13 @@ Each role names an Apple text style. Desktop keeps dense sizes; coarse pointers 
 | footnote | Footnote | 12px | 12px | 400 |
 | caption | Caption 2 | 11px | 12px | 400 |
 | label | Footnote, 500 | 12px | 12px | 500 |
+| reading | Reply text, serif (`--font-serif`) | 17/27px | 18/28px | 400 |
 
 Tokens: `--type-{role}-size`, `--type-{role}-weight`, `--type-{role}-line`; `--type-meta-*` is the
 subheadline. The Apple scale is `--fs-large-title` 34, `--fs-title1` 28, `--fs-title2` 22,
 `--fs-title3` 20, `--fs-headline` and `--fs-body` 17, `--fs-callout` 16, `--fs-subheadline` 15,
 `--fs-footnote` 13, `--fs-caption` 12, `--fs-caption2` 11; the older `--fs-*` steps alias it.
+`reading` sets the Markdown of an assistant reply (headings and lists included, bold 700) in the system serif stack (`ui-serif, Iowan Old Style, Charter, Georgia, Noto Serif`; no font files, so the face differs by platform). Code stays mono; titles, buttons, tabs, the composer and tool lines stay sans.
 Touch runs the text roles one step below Apple's sizes. Inputs stay at 16px so iOS does not zoom.
 
 ### Spacing (EUI density)
@@ -126,7 +128,9 @@ The ring shows on `:focus-visible` only, never on mouse focus. No primitive hard
 | work | `--work` | Work profile mark |
 | personal | `--personal` | Personal profile mark |
 
-Chrome behind content is `--surface` (one step darker than `--bg`). Soft tints are the role
+Dark is warm grey: `--bg` #1C1B19, `--surface` and `--group-card` #262522, `--raised` #2E2D2A, `--sunken` #171614, `--border` #3A3935, `--fg` #ECEAE4, `--link` and `--accent-text` #7AA7F0, `--accent-fill` #2F6BD8. Light is `--bg` #FAF9F5, `--surface` #F3F1EB, `--raised` #FFFFFF, `--border` #E3E0D8, `--fg` #1F1E1C, `--link` #2B59A8. Blue is the single accent; no colour role is violet (only the syntax keyword hue is).
+
+Chrome behind content is `--surface` (a step from `--bg`). Soft tints are the role
 colour at 14% (`--warn-soft`); selected is `--accent-soft`.
 
 ## Components
@@ -343,7 +347,9 @@ Page shell: Codex pages and the Observe, Deploy, MCP and GitHub lists are `.wk` 
 
 ## Phone (web)
 
-- **Bottom bar**: at max-width 900px the tab bar is a pill floating `--sp-4` from the sides and `--sp-2` above the safe area (`--raised`, `--elev-2`), with `--accent-soft` filling the selected tab. The composer is a pill (`--radius-pill`, `--elev-1`) just above it, with + and a mic or Send; above one line its radius becomes `--shape-lg`. The bar hides on the Chat tab while composing (`data-composing` on `.workbench`) and slides back in `--dur`; reduced motion shows and hides it instantly.
+- **Bottom bar**: at max-width 900px the tab bar is a pill floating `--sp-4` from the sides and `--sp-2` above the safe area (`--surface`, 1px `--border`, `--elev-2`), icon above label, with a neutral `--raised` pill filling the selected tab. The composer is one floating pill (`--raised`, 1px `--border`) just above it: a round + (Add menu), the field, always a mic (dictation, fills the field and never sends), and a round `--fg` button with a `--bg` glyph that is Send or Queue with text, Stop while running with an empty field, and Talk when empty and idle. Talk dictates, and when the dictation ends (second tap, release after a hold, or the recognizer ends) the field is sent with `voice: true`; nothing heard shows "No speech heard" and sends nothing; with no recognizer it is a disabled Send arrow. SendAt sits left of the round button when text is typed. Above one line the radius becomes `--shape-lg`. The bar hides on the Chat tab while composing (`data-composing` on `.workbench`) and slides back in `--dur`; reduced motion shows and hides it instantly.
+
+- **Chat layout** (Claude app look): an assistant reply is full width with no bubble, in the `reading` role, with a quiet row of icon-only buttons under the last reply of a finished turn (Copy the Markdown source, Rewind files). A user message is right-aligned, at most 85% wide, `--raised` with a 1px `--border` and `--shape-lg`, in sans, with a `mic` glyph before the text when it was spoken (`voice: true`; not kept across a server restart). A tool step is one `--fg-muted` line: a codicon by tool kind, verb and object, and a chevron that opens its detail; failed and denied steps keep `--err` text. Tool result cards (file, doc, sketch, spec, agent, review, pending) are Report cards through `TranscriptBox`: `--shape-lg`, `--surface`, 1px `--border`, a header row (icon, headline title, a `--link` action such as Open or Stop) over a hairline, then the body; Pending and Review show icon and title in the header and keep their buttons in the body. At 900px or less the chat header is a hamburger (chats list), a centred one-line title, New chat and More; the status line stays one centred muted line below, with the agents button at its end.
 
 ## Phone (native Android)
 
@@ -362,12 +368,14 @@ Rules for the native app in `android/`. TokenGen applies `NATIVE_OVERRIDES`, `NA
 | display | 28/36 | 700 |
 | title | 22/28 | 700 |
 | headline, body | 16/24 | 600, 400 |
+| reading (serif `ReadingFont`) | 18/28 | 400 |
 | callout | 14/20 | 500 |
 | subheadline, meta, footnote | 14/20 | 400 |
 | caption | 12/16 | 400 |
 | label | 12/16 | 500 |
 | Mono | 14/20 | 400 |
 
+- **Chat header** (`ChatHeader`) is 64dp: a hamburger that opens the Sessions tab, a centred one-line headline title over the muted repo, New chat (the Sessions New chat sheet for this chat's repo) and the chat menu. The Sessions tab bar (`PillTabBar` below 840dp) is a floating `surface` pill with a 1px `border`, icon above label and a neutral `raised` pill on the active tab; the rail from 840dp takes the same indicator. The composer is the same pill as the web phone: round Add, field, mic, SendAt when typed, and the round Send, Stop or Talk button (hold or tap; `HOLD_MS`).
 - **Header** is 64dp with a 22sp one-line title and an optional muted subheadline subtitle, and at most one action on a page (more go in a More menu). On the web phone the same header is `PhoneHeader` (`.wk-head`: Back, a one-line title, a muted subtitle and one trailing control) for Observe, Deploy, MCP, Settings, Files, Source Control and Pull Requests; a Section label that repeats that title is not rendered there. The scope chip shows only on tab roots, never on a page with a back button.
 - **Sheet** opens with a title row (56dp, 22sp, an optional count and one trailing icon action), and its rows sit in Groups.
 - **Menu icons** are 24dp, and a menu opened from a kebab keeps 12dp from the screen edge.
@@ -381,26 +389,26 @@ Colours are Material 3 roles. `NATIVE_COLORS` in TokenGen sets each value for bo
 
 | Role | Token | Dark | Light | Use |
 |---|---|---|---|---|
-| background | `bg`, `groupPage` | #19161D | #FFFFFF | page |
-| containerLowest | `containerLowest` | #141118 | #FFFFFF | code, diff and output wells |
-| containerLow | `containerLow` | #1C1922 | #FAFAFA | sheets |
-| container | `surface`, `groupCard` | #211D25 | #F5F5F5 | grouped cards, nav bar, rail, user bubble, terminal |
-| containerHigh | `raised` | #28242E | #F0F0F0 | composer, menus, dialogs, pickers |
-| containerHighest | `sunken`, `hover` | #2F2A36 | #E9E8EC | text fields, Gray button, Default and Quiet badges, empty-state icon disc |
-| onSurface | `fg`, `fgStrong` | #DCDADF / #F2F1F4 | #19161D | text |
-| onSurfaceVariant | `fgMuted`, `metaFg` | #B8B4BF | #4A464F | secondary text |
-| outline | `fgFaint`, `borderStrong` | #938F9B | #79747E | icons, disabled, check rings; never text |
-| outlineVariant | `border`, `borderCard` | #4A464F | #D4D4D8 / #E4E4E7 | hairlines |
-| primary | `accent`, `accentText`, `link` | #C19AFF | #7A35E0 | links, selection, focus |
-| primary fill | `accentFill` | #C19AFF | #8E48FF | primary button |
-| onPrimary | `onAccent` | #2A0063 | #FFFFFF | text on the fill |
-| primaryContainer | `primaryContainer` | #4B1C99 | #EBDCFF | FAB |
-| onPrimaryContainer | `onPrimaryContainer` | #EBDCFF | #2A0063 | FAB glyph |
-| secondaryContainer | `accentSoft` | #3A2F4D | #EDE4FF | nav indicator, selected chip, Tinted button, selected row |
-| onSecondaryContainer | `onSecondaryContainer` | #E8DEF8 | #21182B | content on those |
-| inverseSurface | `inverseSurface` | #E6E1E9 | #322F35 | snackbar |
-| inverseOnSurface | `inverseOnSurface` | #322F35 | #F5EFF7 | snackbar text |
-| inversePrimary | `inversePrimary` | #7A35E0 | #D3BBFF | snackbar action |
+| background | `bg`, `groupPage` | #1C1B19 | #FAF9F5 | page |
+| containerLowest | `containerLowest` | #171614 | #FFFFFF | code, diff and output wells |
+| containerLow | `containerLow` | #201F1D | #F6F5F0 | sheets |
+| container | `surface`, `groupCard` | #262522 | #F3F1EB | grouped cards, nav bar, rail, tool result cards, terminal |
+| containerHigh | `raised` | #2E2D2A | #FFFFFF | composer, user bubble, menus, dialogs, pickers, active tab |
+| containerHighest | `sunken`, `hover` | #33322E | #EDEAE2 | text fields, Gray button, Default and Quiet badges, empty-state icon disc |
+| onSurface | `fg`, `fgStrong` | #ECEAE4 / #F7F6F2 | #1F1E1C / #141311 | text |
+| onSurfaceVariant | `fgMuted`, `metaFg` | #A9A69E | #57544D | secondary text |
+| outline | `fgFaint`, `borderStrong` | #85827B | #7A766E | icons, disabled, check rings; never text |
+| outlineVariant | `border`, `borderCard` | #3A3935 | #E3E0D8 | hairlines |
+| primary | `accent`, `accentText`, `link` | #7AA7F0 | #2B59A8 | links, selection, focus |
+| primary fill | `accentFill` | #7AA7F0 | #2F6BD8 | primary button |
+| onPrimary | `onAccent` | #0B2350 | #FFFFFF | text on the fill |
+| primaryContainer | `primaryContainer` | #1D3B6E | #D8E4FF | FAB |
+| onPrimaryContainer | `onPrimaryContainer` | #D8E4FF | #0B2350 | FAB glyph |
+| secondaryContainer | `accentSoft` | #2F3340 | #E3E9F5 | selected chip, Tinted button, selected row |
+| onSecondaryContainer | `onSecondaryContainer` | #E4E2DC | #1F2433 | content on those |
+| inverseSurface | `inverseSurface` | #E6E3DC | #31302C | snackbar |
+| inverseOnSurface | `inverseOnSurface` | #31302C | #F3F1EB | snackbar text |
+| inversePrimary | `inversePrimary` | #2B59A8 | #A9C4F5 | snackbar action |
 
 Status pairs: the colour is for text and icons on the surfaces; the container holds a badge or banner with its on-container text.
 
@@ -426,7 +434,7 @@ Rules:
 - Accent is only for the primary action, links and selection, never for status.
 - A status colour always appears with an icon or a word. There is no decorative colour.
 - Profile hues are only 8dp dots beside the profile word.
-- Toggle on is primary violet, not green.
+- Toggle on is primary blue, not green.
 - Terminal ANSI 0 and 8 follow `fgFaint`, and terminal default text follows `fg`, so both shift with the theme.
 
 ### Interaction
@@ -445,7 +453,7 @@ The Wiki page keeps 16dp side margins and 16dp above the title. In the hero, tit
 Done: Summary uses Panel (filter card), every empty list or report uses EmptyState (the old
 `.as-empty` and `.empty-state` styles are gone), and the menus use Menu. Chips are done: as-chip, cp-chip, mcp-chip and ag-chip use Chip, which takes `tone` (`work`, `personal`, `accent`) and `quiet` (dashed, faint). `mt-add` stays a form, since it is an input row, and uses Chip tokens (height, radius, accent-soft on focus).
 
-As of 9 Nov 2026 the light and dark themes use KiroCrew's kiro palette: #19161D or white page, #211D25 or #FAFAFA for cards and chrome, violet #8E48FF accent, teal agents, blue work, and Space Grotesk with JetBrains Mono on web and phone. Meeting and knowledge icons are neutral.
+As of 23 Nov 2026 the light and dark themes use the Claude mobile app look: warm greys (#1C1B19 or #FAF9F5 page, #262522 or #F3F1EB for cards and chrome), blue as the single accent (#7AA7F0 or #2B59A8 for text, #2F6BD8 fills), teal agents, a serif for replies, and Space Grotesk with JetBrains Mono elsewhere. Work and info stay blue beside the blue accent; this clash is accepted, since Work is a dot next to a "Work" label in Codex lists and never in the chat. Meeting and knowledge icons are neutral.
 
 ### Migration status
 

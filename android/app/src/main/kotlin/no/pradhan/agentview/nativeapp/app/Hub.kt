@@ -432,7 +432,7 @@ class Hub(internal val app: Application, private val saved: SavedStateHandle) : 
             liveLoaded.first { it }
             val err = outbox.flush { q ->
                 val running = store.state.value.let { s -> (if (s.shownId == q.chat) s.session?.running else null) ?: s.live.firstOrNull { it.id == q.chat }?.running } == true
-                val body = if (running && q.steer) steerCmd(q.text, q.id) else promptCmd(q.text, running, q.id)
+                val body = if (running && q.steer) steerCmd(q.text, q.id) else promptCmd(q.text, running, q.id, q.voice)
                 send(body, q.chat)
             }
             if (err != null) { notice.value = err; flushFailedAt = System.currentTimeMillis() }

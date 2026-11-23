@@ -15,14 +15,15 @@
 .tr { flex: 1 1 auto; min-height: 0; overflow: auto; padding: var(--sp-6) var(--sp-8) var(--sp-8); font-size: var(--fs-md); line-height: var(--lh-relaxed); color: var(--fg); }
 :is(.tr, .tr-rows) > * + * { margin-top: var(--sp-6); }
 :is(.tr, .tr-rows) > .tr-act + .tr-act { margin-top: 0; }
-:is(.tr, .tr-rows) > .tr-act + .tr-file, :is(.tr, .tr-rows) > .tr-file + .tr-act { margin-top: var(--sp-2); }
+:is(.tr, .tr-rows) > .tr-act + .tr-box, :is(.tr, .tr-rows) > .tr-box + .tr-act { margin-top: var(--sp-2); }
 .tr-rows { position: relative; }
 .tr-rows > .tr-quote { position: absolute; z-index: 5; margin: 0; box-shadow: var(--elev-3); transform: translateY(-100%); }
 
 .tr-user {
-  position: relative; padding: var(--sp-5) var(--sp-6); border: 1px solid var(--border-card); border-left: 3px solid var(--prompt); border-radius: var(--radius);
+  position: relative; width: fit-content; max-width: 85%; margin-left: auto; padding: var(--sp-5) var(--sp-6); border: 1px solid var(--border); border-radius: var(--shape-lg);
   background: var(--raised); color: var(--fg); white-space: pre-wrap; overflow-wrap: anywhere;
 }
+.tr-mic { float: left; margin: 0.15em var(--sp-3) 0 0; color: var(--fg-muted); }
 .tr-user-text.folded { display: -webkit-box; -webkit-line-clamp: 6; -webkit-box-orient: vertical; overflow: hidden; }
 .tr-image { display: block; max-width: 100%; max-height: 280px; object-fit: contain; border-radius: var(--shape-sm); margin: var(--sp-2) 0; }
 .tr-image[hidden] { display: none; }
@@ -32,14 +33,16 @@
 .tr-user.unsent .tr-user-text { color: var(--fg-muted); }
 .tr-user:is(.stopping, .queued, .unsent) .tr-stop { position: static; justify-content: flex-end; margin-top: var(--sp-2); }
 .tr-user .tr-stop { position: absolute; right: var(--sp-5); top: var(--sp-5); display: flex; align-items: center; gap: var(--sp-3); color: var(--fg-faint); }
-.tr-assistant { padding: 0 var(--sp-1) 0 var(--sp-5); border-left: 2px solid color-mix(in srgb, var(--claude) 70%, transparent); }
-/* Copy and Rewind files show on hover, like Slack's message actions. */
-.tr-assistant .tr-acts { display: flex; gap: var(--sp-4); margin-top: var(--sp-2); font-size: var(--fs-xs); visibility: hidden; }
-.tr-assistant:hover .tr-acts, .tr-assistant .tr-acts:focus-within { visibility: visible; }
-@media (hover: none) { .tr-assistant .tr-acts { visibility: visible; } }
+.tr-assistant { padding: 0; }
+.tr-assistant .tr-acts { display: flex; gap: var(--sp-1); margin-top: var(--sp-2); margin-left: calc(-1 * var(--sp-3)); color: var(--fg-muted); }
 .tr-rows > .tr-acts { display: flex; margin-top: var(--sp-2); padding-left: var(--sp-5); font-size: var(--fs-xs); }
 @media (min-width: 901px) { .tr-rows { max-width: 90ch; margin-inline: auto; } }
-.tr-assistant .md { color: var(--fg); line-height: var(--lh-relaxed); }
+.tr-assistant .md { color: var(--fg); font-family: var(--font-serif); font-size: var(--type-reading-size); font-weight: var(--type-reading-weight); line-height: var(--type-reading-line); }
+.tr-assistant .md :is(h1, h2, h3, h4) { font-size: 1em; font-weight: 700; }
+.tr-assistant .md h1 { font-size: 1.25em; }
+.tr-assistant .md h2 { font-size: 1.12em; }
+.tr-assistant .md :is(strong, b, th) { font-weight: 700; }
+.tr-assistant .md code { font-size: 0.82em; }
 .tr-assistant .md :is(p, ul, ol, pre) { margin-bottom: var(--sp-5); }
 .tr-assistant .md > :last-child, .tr-assistant .md > .md-b:last-child > :last-child { margin-bottom: 0; }
 .tr-system { padding-left: var(--sp-12); font-size: var(--fs-sm); color: var(--fg-muted); }
@@ -50,13 +53,13 @@
 .tr-auto-text { margin-top: var(--sp-2); white-space: pre-wrap; color: var(--fg-muted); }
 
 .tr-step {
-  display: grid; grid-template-columns: 16px minmax(0, 1fr) auto; column-gap: var(--sp-4); align-items: center;
+  display: grid; grid-template-columns: 16px minmax(0, 1fr) auto auto; column-gap: var(--sp-4); align-items: center;
   min-height: var(--size-row); line-height: var(--size-row); font-size: var(--fs-sm); color: var(--fg-muted); border-radius: var(--radius-sm); cursor: pointer;
 }
 @media (hover: hover) { .tr-step:hover { color: var(--fg); } }
 .tr-mark { display: flex; align-items: center; justify-content: center; width: var(--icon); height: var(--size-row); color: var(--fg-faint); }
 .tr-mark .codicon.icon.small { font-size: var(--fs-sm); }
-.tr-hex { width: 8px; height: 9px; background: currentColor; clip-path: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%); }
+.tr-chev { display: flex; align-items: center; color: var(--fg-faint); }
 .tr-step { --tone: var(--fg-faint); }
 .tr-step.t-read { --tone: var(--t-read); }
 .tr-step.t-edit { --tone: var(--t-edit); }
@@ -66,16 +69,18 @@
 .tr-step.t-agent { --tone: var(--agent); }
 .tr-step .tr-mark, .tr-verb { color: var(--tone); }
 .tr-step.err .tr-mark { color: var(--err); }
-.tr-step.denied :is(.tr-mark, .tr-err), .tr-file.denied .tr-err { color: var(--fg-faint); }
+.tr-box.denied .tr-err { color: var(--fg-faint); }
 .tr-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.tr-obj { color: var(--fg); }
+.tr-obj { color: var(--fg-muted); }
+.tr-step.err .tr-text, .tr-step.denied .tr-text { color: var(--err); }
+.tr-step.denied .tr-mark { color: var(--err); }
 .tr-obj.mono { font-family: var(--mono); font-size: var(--fs-xs); }
 .tr-cmd {
   grid-column: 2 / -1; margin-top: -3px; padding-bottom: var(--sp-1); line-height: 17px;
   font-family: var(--mono); font-size: var(--fs-xs); color: var(--fg-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 .tr-dur { font-size: var(--fs-xs); color: var(--fg-muted); font-variant-numeric: tabular-nums; padding-right: var(--sp-1); }
-.tr-err {
+.tr-step > .tr-err {
   grid-column: 2 / -1; font-size: var(--fs-xs); line-height: var(--line-sm); color: var(--err);
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding-bottom: var(--sp-2);
 }
@@ -88,15 +93,8 @@
 .tr-detail pre.err { color: var(--err); }
 .tr-report { max-height: 50vh; max-height: 50dvh; font-size: var(--fs-sm); }
 
-.tr-file {
-  display: flex; align-items: center; gap: var(--sp-4); min-height: 30px; padding: 0 var(--sp-5) 0 9px; cursor: pointer;
-  border: 1px solid var(--border-card); border-left: 3px solid var(--t-edit); border-radius: var(--radius); background: var(--raised); font-size: var(--fs-sm); color: var(--fg);
-}
-@media (hover: hover) { .tr-file:hover { border-color: var(--fg-faint); } }
-.tr-file > .codicon { color: var(--fg-muted); }
-.tr-file .tr-err { flex: none; max-width: 50%; padding: 0; }
-.tr-file.err { border-color: color-mix(in srgb, var(--err) 40%, transparent); border-left-color: var(--err); }
-.tr-path { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tr-err { color: var(--err); }
+.tr-box.err { border-color: color-mix(in srgb, var(--err) 40%, transparent); }
 .tr-dir { color: var(--fg-muted); }
 .tr-count { flex: none; font-size: var(--fs-xs); font-variant-numeric: tabular-nums; }
 .tr-count .add { color: var(--diff-add); }
@@ -104,9 +102,11 @@
 
 .tr-ring { width: 8px; height: 8px; border-radius: var(--radius-round); border: 1.5px solid currentColor; }
 .tr-sub { margin: 0 0 var(--sp-2) 7px; padding-left: var(--sp-7); border-left: 1.5px solid color-mix(in srgb, var(--agent) 45%, transparent); }
-.tr-sub > .tr-file { margin: 3px 0; }
 .tr-sub > .tr-box { margin: var(--sp-1) 0; }
-.tr-box { border: 1px solid var(--border-card); border-radius: var(--radius); background: var(--raised); overflow: hidden; }
+.tr-box { border: 1px solid var(--border); border-radius: var(--shape-lg); background: var(--surface); overflow: hidden; }
+.tr-box.tr-open > .ui-row-wrap { border-bottom: 1px solid var(--border); }
+.tr-box > .ui-row-wrap .ui-row-title { font-size: var(--type-headline-size); font-weight: var(--type-headline-weight); line-height: var(--type-headline-line); }
+.tr-link { color: var(--link); }
 .tr-box > .ui-row-wrap::after { display: none; }
 .tr-box-summary {
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere;
@@ -142,9 +142,7 @@
   .tr { padding: var(--sp-5) var(--sp-8) var(--sp-7); font-size: var(--fs-lg); }
   .tr-step { min-height: var(--touch-sm); line-height: var(--touch-sm); font-size: var(--fs-md); }
   .tr-mark { height: var(--touch-sm); }
-  .tr-file { min-height: var(--touch); font-size: var(--fs-md); }
   .tr-user { padding: var(--sp-6) var(--sp-7); }
-  .tr-assistant .tr-acts { align-items: center; visibility: visible; }
   .tr-detail pre, .tr-report { font-size: var(--fs-sm); max-height: 40vh; max-height: 40dvh; }
 }
 .work-head { display: flex; align-items: baseline; gap: var(--sp-4); padding: var(--sp-4) var(--sp-8); border-bottom: 1px solid var(--border); }

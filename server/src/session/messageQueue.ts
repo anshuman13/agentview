@@ -39,16 +39,16 @@ export class MessageQueue {
     this.queued.unshift(...this.takePending());
   }
 
-  queue(text: string, id: string) {
-    this.hold(this.queued, text, id);
+  queue(text: string, id: string, voice = false) {
+    this.hold(this.queued, text, id, voice);
   }
 
-  holdMidTurn(text: string, id: string) {
-    this.hold(this.pending, text, id);
+  holdMidTurn(text: string, id: string, voice = false) {
+    this.hold(this.pending, text, id, voice);
   }
 
-  private hold(list: UserEvent[], text: string, id: string) {
-    const ev: UserEvent = { id, kind: 'user', text, at: Date.now(), queued: true };
+  private hold(list: UserEvent[], text: string, id: string, voice: boolean) {
+    const ev: UserEvent = { id, kind: 'user', text, at: Date.now(), queued: true, ...(voice && { voice }) };
     list.push(ev);
     this.s.pushEvent(ev);
   }

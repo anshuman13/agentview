@@ -2,12 +2,14 @@
 .pd {
   display: flex; flex-direction: column; gap: var(--sp-6); min-width: 0; color: var(--fg);
 }
+.ui-panel.pd { border: 1px solid var(--border); box-shadow: none; }
 .pd:focus { outline: none; }
 .pd:focus-within { box-shadow: 0 0 0 1px var(--border-strong); }
 
-.pd-head { display: flex; align-items: center; gap: var(--sp-4); min-width: 0; }
+.pd-head { display: flex; align-items: center; gap: var(--sp-4); min-width: 0; margin-inline: calc(-1 * var(--sp-8)); padding: 0 var(--sp-8) var(--sp-6); border-bottom: 1px solid var(--border); }
+.pd-head:last-child { padding-bottom: 0; border-bottom: 0; }
 .pd-head .icon { color: var(--fg-muted); }
-.pd-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 500; }
+.pd-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--type-headline-size); font-weight: var(--type-headline-weight); }
 .pd-label, .pd-count, .pd-hint { font-size: var(--fs-xs); color: var(--fg-muted); }
 .pd-count { margin-left: auto; flex: none; }
 .pd-ask { white-space: pre-wrap; word-break: break-word; }

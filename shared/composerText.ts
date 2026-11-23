@@ -2,7 +2,9 @@ export type PlaceholderState = 'waiting' | 'compacting' | 'running' | 'uses' | '
 export type PlaceholderDevice = 'desktop' | 'touch' | 'narrow' | 'phone';
 
 // The composer's empty-field hint on web and the phone; `narrow` is the web pill composer, whose texts fit one line at 390px. shared/fixtures/composer-placeholder.json holds the cases.
-export function composerPlaceholder(label: string, state: PlaceholderState, device: PlaceholderDevice) {
+// `talk` is whether the round button can dictate; the narrow and phone idle hint then offers it.
+export function composerPlaceholder(label: string, state: PlaceholderState, device: PlaceholderDevice, talk = true) {
+  if (state === 'idle' && talk && (device === 'narrow' || device === 'phone')) return `Reply to ${label} or hold to talk`;
   if (device === 'narrow') {
     switch (state) {
       case 'waiting': return 'Answer above or send to stop';

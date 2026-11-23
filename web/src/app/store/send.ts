@@ -78,12 +78,12 @@ export async function flushOutbox() {
 
 // Messages carry an id so a retry after a lost reply does not run twice; the server ignores repeats.
 // A lost message goes back in the box only if its chat is still shown, so it never lands in another chat's draft.
-function deliver(msg: { type: 'prompt' | 'steer' | 'queue'; text: string; id: string }, onLost: () => void) {
+function deliver(msg: { type: 'prompt' | 'steer' | 'queue'; text: string; id: string; voice?: boolean }, onLost: () => void) {
   const { session, ui, outbox } = getState();
   const chat = session.id;
   // While the stream is down, or older messages wait, the message joins the outbox so order holds.
   if (!ui.connected || outbox.length > 0) {
-    const next = addQueued(outbox, { id: msg.id, chat, text: msg.text, steer: msg.type === 'steer', at: Date.now() });
+    const next = addQueued(outbox, { id: msg.id, chat, text: msg.text, steer: msg.type === 'steer', at: Date.now(), voice: msg.voice });
     if (!next) {
       notice('Too many unsent messages');
       // After the caller has emptied the composer, so the text lands back in it.
@@ -115,11 +115,11 @@ export function steer(text: string, onLost: () => void) {
   deliver({ type: 'steer', text, id: uid() }, onLost);
 }
 
-export function prompt(text: string, onLost: () => void) {
-  deliver({ type: 'prompt', text, id: uid() }, onLost);
+export function prompt(text: string, onLost: () => void, voice?: boolean) {
+  deliver({ type: 'prompt', text, id: uid(), voice }, onLost);
 }
 
 // While Claude works, the message reaches it at its next step without stopping it.
-export function queueNext(text: string, onLost: () => void) {
-  deliver({ type: 'queue', text, id: uid() }, onLost);
+export function queueNext(text: string, onLost: () => void, voice?: boolean) {
+  deliver({ type: 'queue', text, id: uid(), voice }, onLost);
 }

@@ -40,7 +40,7 @@ export const SpecCard = memo(function SpecCard({ slug, path, bump }: { slug: str
   const state = d?.hold ? <Badge {...holdBadge} /> : d?.entries.length ? <Badge {...stateBadge(d.summary.state)} /> : undefined;
   return (
     <>
-    <TranscriptBox id={id} className="state-fit" defaultOpen onToggle={setOpen} title={d?.title ?? slug} meta={meta} state={state} action={<SpecMenu path={path ?? `.claude/specs/${slug}.md`} d={d} reload={reload} sheets={sheets} />}>
+    <TranscriptBox id={id} className="state-fit" defaultOpen onToggle={setOpen} icon={<Icon name="beaker" />} title={d?.title ?? slug} meta={meta} state={state} action={<SpecMenu path={path ?? `.claude/specs/${slug}.md`} d={d} reload={reload} sheets={sheets} />}>
       {!gone && (d
         ? <SpecBody d={d} sheets={sheets} />
         : failed ? <EmptyState size="sm" title="Could not load this build" hint="Try again" action={<Button size="sm" onClick={() => void reload()}>Retry</Button>} /> : <Skeleton />)}

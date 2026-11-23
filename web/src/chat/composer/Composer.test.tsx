@@ -18,15 +18,18 @@ stubGlobal('matchMedia', () => ({ matches: false, addEventListener() {}, removeE
 stubGlobal('window', { SpeechRecognition: class {} });
 
 describe('Composer at phone width', () => {
-  it('has Add and a mic with no foot row while empty, and Send in place of the mic once typed', () => {
+  it('has Add, a mic and Talk with no foot row while empty, and Send in place of Talk once typed', () => {
     draft.text = '';
     const empty = renderToStaticMarkup(<Composer />);
     expect(empty).toContain('aria-label="Add"');
     expect(empty).toContain('aria-label="Dictate"');
+    expect(empty).toContain('aria-label="Talk"');
+    expect(empty).toContain('Reply to Claude or hold to talk');
     expect(empty).not.toContain('cp-foot');
     draft.text = 'hello';
     const typed = renderToStaticMarkup(<Composer />);
     expect(typed).toContain('aria-label="Send"');
-    expect(typed).not.toContain('aria-label="Dictate"');
+    expect(typed).toContain('aria-label="Dictate"');
+    expect(typed).not.toContain('aria-label="Talk"');
   });
 });

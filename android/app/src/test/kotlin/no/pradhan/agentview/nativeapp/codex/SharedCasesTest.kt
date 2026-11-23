@@ -750,7 +750,7 @@ class SharedCasesTest {
 
     @Test fun composerPlaceholder() {
         for (c in cases("composer-placeholder").filter { it.str("device") == "phone" }) {
-            assertEquals(c.str("name"), c.str("expected"), composerPlaceholder(c.str("label"), c.str("state")))
+            assertEquals(c.str("name"), c.str("expected"), composerPlaceholder(c.str("label"), c.str("state"), c["talk"]?.jsonPrimitive?.booleanOrNull ?: true))
         }
     }
 

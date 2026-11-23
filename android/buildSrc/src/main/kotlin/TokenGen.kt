@@ -44,24 +44,24 @@ object TokenGen {
     // Material 3 colour roles for the native app, applied to each theme's vars before resolve (docs/design-system.md, Phone).
     private val NATIVE_COLORS = mapOf(
         "dark" to mapOf(
-            "bg" to "#19161D", "group-page" to "#19161D", "container-lowest" to "#141118", "container-low" to "#1C1922", "surface" to "#211D25",
-            "group-card" to "#211D25", "raised" to "#28242E", "sunken" to "#2F2A36", "hover" to "#2F2A36", "fg" to "#DCDADF", "fg-strong" to "#F2F1F4",
-            "fg-muted" to "#B8B4BF", "fg-faint" to "#938F9B", "border-strong" to "#938F9B", "border" to "#4A464F", "border-card" to "#4A464F",
-            "accent" to "#C19AFF", "accent-fill" to "#C19AFF", "accent-text" to "#C19AFF", "on-accent" to "#2A0063", "primary-container" to "#4B1C99",
-            "on-primary-container" to "#EBDCFF", "accent-soft" to "#3A2F4D", "on-secondary-container" to "#E8DEF8", "inverse-surface" to "#E6E1E9",
-            "inverse-on-surface" to "#322F35", "inverse-primary" to "#7A35E0", "ok" to "#5FD38D", "ok-container" to "#00522A",
+            "bg" to "#1C1B19", "group-page" to "#1C1B19", "container-lowest" to "#171614", "container-low" to "#201F1D", "surface" to "#262522",
+            "group-card" to "#262522", "raised" to "#2E2D2A", "sunken" to "#33322E", "hover" to "#33322E", "fg" to "#ECEAE4", "fg-strong" to "#F7F6F2",
+            "fg-muted" to "#A9A69E", "fg-faint" to "#85827B", "border-strong" to "#85827B", "border" to "#3A3935", "border-card" to "#3A3935",
+            "accent" to "#7AA7F0", "accent-fill" to "#7AA7F0", "accent-text" to "#7AA7F0", "on-accent" to "#0B2350", "primary-container" to "#1D3B6E",
+            "on-primary-container" to "#D8E4FF", "accent-soft" to "#2F3340", "on-secondary-container" to "#E4E2DC", "inverse-surface" to "#E6E3DC",
+            "inverse-on-surface" to "#31302C", "inverse-primary" to "#2B59A8", "ok" to "#5FD38D", "ok-container" to "#00522A",
             "on-ok-container" to "#9CF6B8", "warn" to "#E0B94D", "warn-container" to "#5A4300", "on-warn-container" to "#FFE08B", "warn-soft" to "#5A4300",
             "err" to "#FF8A96", "err-container" to "#8C1D2E", "on-err-container" to "#FFD9DC", "on-err" to "#5C0016", "agent" to "#43C9BD",
             "agent-container" to "#00504A", "on-agent-container" to "#9FF2E7", "on-agent" to "#003733", "info" to "#6F9AE0", "info-container" to "#1E3A66",
             "on-info-container" to "#D6E3FF", "work" to "#6F9AE0", "personal" to "#E8A3FF",
         ),
         "light" to mapOf(
-            "bg" to "#FFFFFF", "group-page" to "#FFFFFF", "container-lowest" to "#FFFFFF", "container-low" to "#FAFAFA", "surface" to "#F5F5F5",
-            "group-card" to "#F5F5F5", "raised" to "#F0F0F0", "sunken" to "#E9E8EC", "hover" to "#E9E8EC", "fg" to "#19161D", "fg-strong" to "#19161D",
-            "fg-muted" to "#4A464F", "fg-faint" to "#79747E", "border-strong" to "#79747E", "border" to "#D4D4D8", "border-card" to "#E4E4E7",
-            "accent" to "#7A35E0", "accent-fill" to "#8E48FF", "accent-text" to "#7A35E0", "on-accent" to "#FFFFFF", "primary-container" to "#EBDCFF",
-            "on-primary-container" to "#2A0063", "accent-soft" to "#EDE4FF", "on-secondary-container" to "#21182B", "inverse-surface" to "#322F35",
-            "inverse-on-surface" to "#F5EFF7", "inverse-primary" to "#D3BBFF", "ok" to "#00703A", "ok-container" to "#C4F2D3",
+            "bg" to "#FAF9F5", "group-page" to "#FAF9F5", "container-lowest" to "#FFFFFF", "container-low" to "#F6F5F0", "surface" to "#F3F1EB",
+            "group-card" to "#F3F1EB", "raised" to "#FFFFFF", "sunken" to "#EDEAE2", "hover" to "#EDEAE2", "fg" to "#1F1E1C", "fg-strong" to "#141311",
+            "fg-muted" to "#57544D", "fg-faint" to "#7A766E", "border-strong" to "#7A766E", "border" to "#E3E0D8", "border-card" to "#E3E0D8",
+            "accent" to "#2B59A8", "accent-fill" to "#2F6BD8", "accent-text" to "#2B59A8", "on-accent" to "#FFFFFF", "primary-container" to "#D8E4FF",
+            "on-primary-container" to "#0B2350", "accent-soft" to "#E3E9F5", "on-secondary-container" to "#1F2433", "inverse-surface" to "#31302C",
+            "inverse-on-surface" to "#F3F1EB", "inverse-primary" to "#A9C4F5", "ok" to "#00703A", "ok-container" to "#C4F2D3",
             "on-ok-container" to "#00210E", "warn" to "#7A6400", "warn-container" to "#FFE08B", "on-warn-container" to "#241A00", "warn-soft" to "#FFE08B",
             "err" to "#C01D3E", "err-container" to "#FFDADC", "on-err-container" to "#40000C", "on-err" to "#FFFFFF", "agent" to "#00696B",
             "agent-container" to "#9FF2E7", "on-agent-container" to "#00201F", "on-agent" to "#FFFFFF", "info" to "#285092", "info-container" to "#D6E3FF",
@@ -74,7 +74,7 @@ object TokenGen {
         "large-title" to Triple(32, 40, null), "display" to Triple(28, 36, null), "title" to Triple(22, 28, null),
         "headline" to Triple(16, 24, 600), "body" to Triple(16, 24, null), "callout" to Triple(14, 20, 500),
         "subheadline" to Triple(14, 20, null), "meta" to Triple(14, 20, null), "footnote" to Triple(14, 20, null),
-        "caption" to Triple(12, 16, null), "label" to Triple(12, 16, 500),
+        "caption" to Triple(12, 16, null), "label" to Triple(12, 16, 500), "reading" to Triple(18, 28, null),
     )
 
     class Block(val selectors: List<String>, val media: String?, val decls: LinkedHashMap<String, String>)
@@ -210,7 +210,7 @@ object TokenGen {
         return null
     }
 
-    private val roles = listOf("large-title", "title", "headline", "body", "callout", "subheadline", "footnote", "caption", "meta", "display", "label")
+    private val roles = listOf("large-title", "title", "headline", "body", "callout", "subheadline", "footnote", "caption", "meta", "display", "label", "reading")
 
     fun generate(css: String, pkg: String): String {
         val blocks = parse(css)
@@ -231,7 +231,8 @@ object TokenGen {
             val size = native?.first?.toDouble() ?: resolve("var(--type-$r-size)", dark)?.removeSuffix("px")?.toDoubleOrNull() ?: return@mapNotNull null
             val line = native?.second?.toDouble() ?: (Math.round(size * (resolve("var(--type-$r-line)", dark)?.toDoubleOrNull() ?: 1.0) * 10) / 10.0)
             val weight = native?.third ?: resolve("var(--type-$r-weight)", dark)?.toIntOrNull() ?: 400
-            "val ${camel(r)} = TextStyle(fontFamily = AppFont, fontSize = ${num(size)}.sp, lineHeight = ${num(line)}.sp, fontWeight = FontWeight($weight))"
+            val family = if (r == "reading") "ReadingFont" else "AppFont"
+            "val ${camel(r)} = TextStyle(fontFamily = $family, fontSize = ${num(size)}.sp, lineHeight = ${num(line)}.sp, fontWeight = FontWeight($weight))"
         }
         return buildString {
             appendLine("// Generated by ./gradlew generateTokens from agentview/web/src/styles/tokens.css. Do not edit.")
