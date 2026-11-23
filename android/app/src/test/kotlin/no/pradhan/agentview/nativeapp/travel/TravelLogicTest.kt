@@ -6,6 +6,8 @@ import kotlinx.serialization.json.doubleOrNull
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonNull
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -29,6 +31,44 @@ class TravelLogicTest {
             val o = c.jsonObject
             val trips = o["trips"]!!.jsonArray.map { t -> val to = t.jsonObject; Trip(str(to["id"]), "", str(to["from"]), str(to["to"])) }
             assertEquals(o["expected"]!!.jsonArray.map { str(it) }, sortTrips(trips, str(o["today"])).map { it.id })
+        }
+    }
+
+    private fun field(o: kotlinx.serialization.json.JsonObject, k: String) = o[k]?.jsonPrimitive?.content ?: ""
+    private fun trip(e: JsonElement) = e.jsonObject.let { Trip(field(it, "id"), "", field(it, "from"), field(it, "to")) }
+    private fun item(e: JsonElement) = e.jsonObject.let { PlanItem(field(it, "id"), field(it, "day"), field(it, "start"), field(it, "end"), title = "") }
+
+    @Test fun tripStateMatchesTheSharedCases() {
+        fx["tripState"]!!.jsonArray.forEach { c ->
+            val o = c.jsonObject
+            val t = trip(o["trip"]!!)
+            assertEquals(str(o["name"]), str(o["state"]), tripState(t, str(o["today"])))
+            assertEquals(str(o["name"]), str(o["text"]), tripStateText(t, str(o["today"])))
+        }
+    }
+
+    @Test fun planHelpersMatchTheSharedCases() {
+        fx["groupPlan"]!!.jsonArray.forEach { c ->
+            val o = c.jsonObject
+            val got = groupPlan(o["plan"]!!.jsonArray.map(::item)).map { g -> g.day + ":" + g.items.joinToString(",") { it.id } }
+            val want = o["expected"]!!.jsonArray.map { e -> str(e.jsonObject["day"]) + ":" + e.jsonObject["ids"]!!.jsonArray.joinToString(",") { str(it) } }
+            assertEquals(str(o["name"]), want, got)
+        }
+        fx["nextItem"]!!.jsonArray.forEach { c ->
+            val o = c.jsonObject
+            val want = o["expected"]!!.let { if (it is JsonNull) null else str(it) }
+            assertEquals(str(o["name"]), want, nextItem(o["plan"]!!.jsonArray.map(::item), str(o["now"]))?.id)
+        }
+        fx["kindIcons"]!!.jsonObject.forEach { (k, v) -> assertEquals(k, str(v), KIND_ICONS[k]) }
+        assertEquals(PLAN_KINDS.toSet(), KIND_ICONS.keys)
+    }
+
+    @Test fun receiptsFileLikeTheServer() {
+        fx["fileTrip"]!!.jsonArray.forEach { c ->
+            val o = c.jsonObject
+            val trips = o["trips"]!!.jsonArray.map(::trip)
+            val want = o["expected"]!!.let { if (it is JsonNull) null else str(it) }
+            assertEquals(str(o["name"]), want, fileTrip(trips, str(o["date"]), str(o["today"]))?.id)
         }
     }
 

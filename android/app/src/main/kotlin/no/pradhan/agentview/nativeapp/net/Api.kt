@@ -133,7 +133,7 @@ class Api(private val origin: () -> String, private val http: OkHttpClient = sha
     }
 
     suspend fun bytes(path: String): ByteArray = call(url(path))
-    suspend fun postBytes(path: String, mime: String, bytes: ByteArray): String = call(url(path).post(bytes.toRequestBody(mime.toMediaType()))).decodeToString()
+    suspend fun postBytes(path: String, mime: String, bytes: ByteArray, slow: Boolean = false): String = call(url(path).post(bytes.toRequestBody(mime.toMediaType())), if (slow) this.slow else http).decodeToString()
     fun link(path: String) = origin() + path
 
     suspend fun image(chat: String, path: String): ByteArray = call(url("/api/image?chat=${enc(chat)}&path=${enc(path)}"))

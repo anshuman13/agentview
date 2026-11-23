@@ -26,6 +26,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import java.time.LocalDate
 import kotlinx.coroutines.launch
+import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import no.pradhan.agentview.nativeapp.app.Hub
@@ -43,9 +44,12 @@ import no.pradhan.agentview.nativeapp.ui.Tokens
 
 internal fun idJson(id: String) = buildJsonObject { put("id", id) }.toString()
 
-internal fun tripJson(t: Trip) = buildJsonObject {
+// Sends the fields a save changes: notes only from the Notes save, the whole plan only from the item sheet.
+internal fun tripJson(t: Trip, notes: String? = null, plan: List<PlanItem>? = null) = buildJsonObject {
     if (t.id.isNotEmpty()) put("id", t.id)
-    put("name", t.name); put("from", t.from); put("to", t.to); put("notes", t.notes)
+    put("name", t.name); put("from", t.from); put("to", t.to)
+    notes?.let { put("notes", it) }
+    plan?.let { put("plan", protocolJson.encodeToJsonElement(ListSerializer(PlanItem.serializer()), it)) }
 }.toString()
 
 // A date row that opens the date picker; empty shows the placeholder.
@@ -85,6 +89,52 @@ fun TripSheet(hub: Hub, trip: Trip?, onDismiss: () -> Unit, onSaved: (String) ->
         DateRow("From", from) { from = it; if (to.isEmpty() || to < it) to = it }
         DateRow("To", to) { to = it }
         Button("Save", { save() }, Modifier.fillMaxWidth().padding(top = Tokens.sp4), variant = ButtonVariant.Filled, enabled = !busy && name.isNotBlank(), fill = true)
+    }
+}
+
+// Adds or edits one plan item, or deletes it; an item save sends the whole plan.
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+fun PlanItemSheet(hub: Hub, trip: Trip, item: PlanItem?, today: String, onDismiss: () -> Unit, onSaved: () -> Unit) {
+    var kind by remember { mutableStateOf(item?.kind ?: "event") }
+    var title by remember { mutableStateOf(item?.title ?: "") }
+    var day by remember { mutableStateOf(item?.day ?: if (tripState(trip, today) == "now") today else trip.from.ifEmpty { today }) }
+    var start by remember { mutableStateOf(item?.start ?: "") }
+    var end by remember { mutableStateOf(item?.end ?: "") }
+    var place by remember { mutableStateOf(item?.place ?: "") }
+    var ref by remember { mutableStateOf(item?.ref ?: "") }
+    var busy by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+    val write = { plan: List<PlanItem>, done: () -> Unit ->
+        busy = true
+        scope.launch {
+            val ok = hub.travelWrite("Could not save the item. Your text is still here.") { api.post("/api/travel/trip", tripJson(trip, plan = plan)) }
+            busy = false
+            if (ok) { done(); onSaved(); onDismiss() }
+        }
+        Unit
+    }
+    val save = {
+        val next = PlanItem(item?.id ?: "", day, start.trim(), end.trim(), kind, title.trim(), place.trim(), ref.trim())
+        write(if (item == null) trip.plan + next else trip.plan.map { if (it.id == item.id) next else it }) {}
+    }
+    Sheet(onDismiss, if (item == null) "Add item" else "Edit item", full = false) {
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(Tokens.sp2), verticalArrangement = Arrangement.spacedBy(Tokens.sp2)) {
+            PLAN_KINDS.forEach { k -> Chip(k.replaceFirstChar { it.uppercase() }, { kind = k }, on = kind == k) }
+        }
+        TextField(title, { title = it }, Modifier.fillMaxWidth(), placeholder = "Title, such as OSL to ARN", singleLine = true)
+        DateRow("Day", day) { day = it }
+        Row(horizontalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
+            TextField(start, { start = it.take(5) }, Modifier.weight(1f), placeholder = "Start HH:MM", singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
+            TextField(end, { end = it.take(5) }, Modifier.weight(1f), placeholder = "End HH:MM", singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
+        }
+        TextField(place, { place = it }, Modifier.fillMaxWidth(), placeholder = "Place", singleLine = true)
+        TextField(ref, { ref = it }, Modifier.fillMaxWidth(), placeholder = "Booking or flight number", singleLine = true)
+        Row(Modifier.fillMaxWidth().padding(top = Tokens.sp4), horizontalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
+            if (item != null) Button("Delete", { write(trip.plan.filter { it.id != item.id }) { hub.notice.value = "Item deleted" } }, Modifier.weight(1f), variant = ButtonVariant.Danger, icon = "trash", enabled = !busy, fill = true)
+            Button("Save", { save() }, Modifier.weight(1f), variant = ButtonVariant.Filled, enabled = !busy && title.isNotBlank() && day.isNotEmpty(), fill = true)
+        }
+        Spacer(Modifier.padding(bottom = Tokens.sp8))
     }
 }
 

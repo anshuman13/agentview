@@ -1,8 +1,8 @@
-import { formatAmount, totalsText, type Receipt, type Trip } from '../../../shared/travel';
+import { formatAmount, tripStateText, totalsText, type PlanItem, type Receipt, type Trip } from '../../../shared/travel';
 import { plural } from '../ui/util';
 
 const MAX_SIDE = 2000;
-const fmt = (d: string, year: boolean) => new Date(`${d}T12:00:00`).toLocaleDateString(undefined, { day: 'numeric', month: 'short', ...(year && { year: 'numeric' }) });
+const fmt = (d: string, year: boolean, weekday = false) => new Date(`${d}T12:00:00`).toLocaleDateString(undefined, { ...(weekday && { weekday: 'short' }), day: 'numeric', month: 'short', ...(year && { year: 'numeric' }) });
 
 export function tripDates(t: Trip) {
   if (!t.from) return '';
@@ -10,9 +10,16 @@ export function tripDates(t: Trip) {
   return `${fmt(t.from, false)} to ${fmt(t.to, false)}`;
 }
 
-export function tripMeta(t: Trip, receipts: Receipt[]) {
+export const dayLabel = (day: string, today: string) => `${fmt(day, false, true)}${day === today ? ' · Today' : ''}`;
+
+export const itemMeta = (i: PlanItem) => [i.ref, i.place].filter(Boolean).join(' · ');
+
+// The client's local time as "YYYY-MM-DD HH:MM", to compare with the plan's wall-clock times.
+export const localNow = () => new Date().toLocaleString('sv-SE').slice(0, 16);
+
+export function tripMeta(t: Trip, receipts: Receipt[], today: string) {
   const sum = totalsText(receipts);
-  return [tripDates(t), receipts.length ? plural(receipts.length, 'receipt') : '', sum, t.calendar ? 'From calendar' : ''].filter(Boolean).join(' · ');
+  return [tripDates(t), tripStateText(t, today), receipts.length ? plural(receipts.length, 'receipt') : '', sum, t.calendar ? 'From calendar' : ''].filter(Boolean).join(' · ');
 }
 
 export function receiptMeta(r: Receipt) {

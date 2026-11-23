@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ChangeEvent, type ReactNode } from 'react';
 import { notice } from '../app/store';
 import { Back } from '../app/touch/back';
 import { useNarrow } from '../app/shell/useNarrow';
@@ -10,11 +10,11 @@ import { EmptyState } from '../ui/Panel';
 import { Row } from '../ui/Row';
 import { Section, sectionCount } from '../ui/Section';
 import { Skeleton } from '../ui/Skeleton';
-import { copyText } from '../ui/util';
-import { scanText, sortTrips, totalsText, type Receipt, type Trip } from '../../../shared/travel';
+import { copyText, cx, plural } from '../ui/util';
+import { groupPlan, KIND_ICONS, nextItem, scanText, sortTrips, totalsText, tripState, tripStateText, type PlanItem, type Receipt, type Trip } from '../../../shared/travel';
 import { deleteTrip, exportUrl, receiptUrl, saveTrip, scanCalendar, uploadReceipt } from './travelApi';
-import { isImage, receiptMeta, shrink, tripDates, tripMeta } from './travelLogic';
-import { ReceiptSheet, TripSheet } from './TravelSheets';
+import { dayLabel, isImage, itemMeta, localNow, receiptMeta, shrink, tripDates, tripMeta } from './travelLogic';
+import { PlanItemSheet, ReceiptSheet, TripSheet } from './TravelSheets';
 import { useTravel } from './useTravel';
 import '../styles/features/wiki.css';
 import '../styles/features/meetings.css';
@@ -24,18 +24,56 @@ const FOLD = 5;
 const today = () => new Date().toLocaleDateString('sv-SE');
 const errText = (e: unknown) => (e instanceof Error ? e.message : String(e));
 
-function TripList({ trips, receipts, onOpen, onNew, find }: { trips: Trip[]; receipts: Receipt[]; onOpen: (id: string) => void; onNew: () => void; find: ReactNode }) {
+// The hidden file inputs for taking a photo, choosing photos and choosing files; the buttons click them.
+function useCapture(onPick: (list: FileList | null) => void) {
+  const camera = useRef<HTMLInputElement>(null);
+  const photos = useRef<HTMLInputElement>(null);
+  const files = useRef<HTMLInputElement>(null);
+  const change = (e: ChangeEvent<HTMLInputElement>) => { onPick(e.target.files); e.target.value = ''; };
+  const inputs = (
+    <>
+      <input ref={camera} hidden type="file" accept="image/*" capture="environment" onChange={change} />
+      <input ref={photos} hidden type="file" multiple accept="image/*" onChange={change} />
+      <input ref={files} hidden type="file" multiple accept="image/*,application/pdf,.pdf,.heic" onChange={change} />
+    </>
+  );
+  return { inputs, takePhoto: () => camera.current?.click(), addPhotos: () => photos.current?.click(), addFiles: () => files.current?.click() };
+}
+
+type Capture = ReturnType<typeof useCapture>;
+
+function CaptureRow({ cap, narrow }: { cap: Capture; narrow: boolean }) {
+  return (
+    <div className="tv-add">
+      <Button variant="filled" icon="device-camera" onClick={cap.takePhoto}>Take photo</Button>
+      {narrow ? (
+        <>
+          <Button icon="file-media" onClick={cap.addPhotos}>Photo</Button>
+          <Button icon="file" onClick={cap.addFiles}>PDF / file</Button>
+        </>
+      ) : <Button icon="add" onClick={cap.addFiles}>Add files</Button>}
+    </div>
+  );
+}
+
+function TripList({ trips, receipts, filing, cap, narrow, onOpen, onNew, find }: { trips: Trip[]; receipts: Receipt[]; filing: number; cap: Capture; narrow: boolean; onOpen: (id: string) => void; onNew: () => void; find: ReactNode }) {
   const [all, setAll] = useState(false);
   const sorted = sortTrips(trips, today());
   const rows = all ? sorted : sorted.slice(0, FOLD);
+  const capture = !narrow && <><Button size="sm" icon="device-camera" onClick={cap.takePhoto}>Take photo</Button><Button size="sm" icon="add" onClick={cap.addFiles}>Add files</Button></>;
   return (
-    <section>
-      <Section label="Trips" count={sectionCount(trips.length)} action={<>{find}<Button size="sm" icon="add" onClick={onNew}>New trip</Button></>} />
-      <div className="ui-group">
-        {rows.map((t) => <Row key={t.id} leading={<Icon name="briefcase" />} title={t.name} meta={tripMeta(t, receipts.filter((r) => r.tripId === t.id))} onClick={() => onOpen(t.id)} />)}
-      </div>
-      {rows.length < sorted.length && <ShowAll count={sorted.length} className="ov-more" onClick={() => setAll(true)} />}
-    </section>
+    <div className="tv-trip">
+      {narrow && <CaptureRow cap={cap} narrow />}
+      {cap.inputs}
+      {filing > 0 && <div className="ui-group"><Row plain leading={<span className="tv-thumb tv-file"><Icon name="loading" spin /></span>} title={`Adding ${plural(filing, 'receipt')}…`} /></div>}
+      <section>
+        <Section label="Trips" count={sectionCount(trips.length)} action={<>{find}{capture}<Button size="sm" icon="add" onClick={onNew}>New trip</Button></>} />
+        <div className="ui-group">
+          {rows.map((t) => <Row key={t.id} leading={<Icon name="briefcase" />} title={t.name} meta={tripMeta(t, receipts.filter((r) => r.tripId === t.id), today())} onClick={() => onOpen(t.id)} />)}
+        </div>
+        {rows.length < sorted.length && <ShowAll count={sorted.length} className="ov-more" onClick={() => setAll(true)} />}
+      </section>
+    </div>
   );
 }
 
@@ -48,14 +86,42 @@ function NotesField({ trip, onSaved }: { trip: Trip; onSaved: () => void }) {
   useEffect(() => setText(trip.notes), [trip.id, trip.notes]);
   const save = () => {
     if (text === trip.notes) return;
-    saveTrip({ ...trip, notes: text }).then(onSaved, (e) => notice(`Notes not saved: ${errText(e)}`));
+    saveTrip({ id: trip.id, name: trip.name, from: trip.from, to: trip.to, notes: text }).then(onSaved, (e) => notice(`Notes not saved: ${errText(e)}`));
   };
   return (
     <section>
       <Section label="Notes" />
       <div className="ui-group"><div className="ui-fields">
-        <textarea className="tv-notes" rows={5} aria-label="Trip notes" placeholder="Flights, hotel address, booking codes, who to meet" value={text} onChange={(e) => setText(e.target.value)} onBlur={save} />
+        <textarea className="tv-notes" rows={3} aria-label="Trip notes" placeholder="Booking codes, addresses" value={text} onChange={(e) => setText(e.target.value)} onBlur={save} />
       </div></div>
+    </section>
+  );
+}
+
+function Itinerary({ trip, onAdd, onOpen }: { trip: Trip; onAdd: () => void; onOpen: (item: PlanItem) => void }) {
+  const plan = trip.plan ?? [];
+  const day = today();
+  const next = tripState(trip, day) === 'now' ? nextItem(plan, localNow()) : undefined;
+  return (
+    <section>
+      <Section label="Itinerary" count={sectionCount(plan.length)} action={<Button size="sm" icon="add" onClick={onAdd}>Add item</Button>} />
+      {plan.length ? groupPlan(plan).map((g) => (
+        <div key={g.day}>
+          <Section label={dayLabel(g.day, day)} />
+          <div className="ui-group">
+            {g.items.map((i) => (
+              <Row
+                key={i.id}
+                className={cx('tv-item', i.id === next?.id && 'tv-next')}
+                leading={<><span className={cx('tv-when', !i.start && 'all')}><span>{i.start || 'All day'}</span>{i.end && <span>{i.end}</span>}</span><Icon name={KIND_ICONS[i.kind]} /></>}
+                title={i.title}
+                meta={itemMeta(i)}
+                onClick={() => onOpen(i)}
+              />
+            ))}
+          </div>
+        </div>
+      )) : <EmptyState size="sm" icon="calendar" title="No plan yet" hint="Find in calendar fills it in, or add an item" />}
     </section>
   );
 }
@@ -69,8 +135,7 @@ function TripView({ trip, receipts, onBack, reload }: { trip: Trip; receipts: Re
   const [uploading, setUploading] = useState(0);
   const [all, setAll] = useState(false);
   const more = useRef<HTMLButtonElement>(null);
-  const files = useRef<HTMLInputElement>(null);
-  const camera = useRef<HTMLInputElement>(null);
+  const [item, setItem] = useState<PlanItem | 'new' | null>(null);
   const sorted = [...receipts].sort((a, b) => b.addedAt - a.addedAt);
   const rows = all ? sorted : sorted.slice(0, FOLD);
   const receipt = receipts.find((r) => r.id === open);
@@ -91,6 +156,7 @@ function TripView({ trip, receipts, onBack, reload }: { trip: Trip; receipts: Re
     }
     void reload();
   };
+  const cap = useCapture((list) => void add(list));
   const summary = () => [`${trip.name} (${tripDates(trip)})`, ...sorted.map((r) => `- ${receiptMeta(r)} ${r.merchant}`.trim()), `Total: ${totalsText(receipts) || 'none'}`].join('\n');
 
   return (
@@ -100,7 +166,9 @@ function TripView({ trip, receipts, onBack, reload }: { trip: Trip; receipts: Re
         {!narrow && <IconButton icon="arrow-left" label="Back" onClick={onBack} />}
         <div className="tv-title">
           <h2>{trip.name}</h2>
-          {tripDates(trip) && <span className="tv-sub">{tripDates(trip)}</span>}
+          {tripDates(trip) && (
+            <span className="tv-sub">{tripDates(trip)} · <span className={tripState(trip, today()) === 'now' ? 'tv-now' : undefined}>{tripStateText(trip, today())}</span></span>
+          )}
         </div>
         <span className="ov-more">
           <IconButton ref={more} size="sm" icon="kebab-vertical" label="More" aria-haspopup="menu" aria-expanded={menu} onClick={() => setMenu(!menu)} />
@@ -118,12 +186,10 @@ function TripView({ trip, receipts, onBack, reload }: { trip: Trip; receipts: Re
         </span>
       </div>
 
-      <div className="tv-add">
-        <Button variant="filled" icon="device-camera" onClick={() => camera.current?.click()}>Take photo</Button>
-        <Button icon="add" onClick={() => files.current?.click()}>Add files</Button>
-        <input ref={camera} hidden type="file" accept="image/*" capture="environment" onChange={(e) => { void add(e.target.files); e.target.value = ''; }} />
-        <input ref={files} hidden type="file" multiple accept="image/*,application/pdf,.pdf,.heic" onChange={(e) => { void add(e.target.files); e.target.value = ''; }} />
-      </div>
+      <CaptureRow cap={cap} narrow={narrow} />
+      {cap.inputs}
+
+      <Itinerary trip={trip} onAdd={() => setItem('new')} onOpen={setItem} />
 
       <section>
         <Section label="Receipts" count={sectionCount(receipts.length)} />
@@ -141,6 +207,7 @@ function TripView({ trip, receipts, onBack, reload }: { trip: Trip; receipts: Re
 
       <NotesField trip={trip} onSaved={() => void reload()} />
 
+      {item && <PlanItemSheet key={item === 'new' ? 'new' : item.id} trip={trip} item={item === 'new' ? undefined : item} today={today()} onClose={() => setItem(null)} onSaved={() => void reload()} />}
       {receipt && <ReceiptSheet key={`${receipt.id}-${receipt.read}`} receipt={receipt} onClose={() => setOpen(null)} onSaved={reload} />}
       {editing && <TripSheet trip={trip} onClose={() => setEditing(false)} onSaved={() => { setEditing(false); void reload(); }} />}
       {confirm && <Confirm {...confirm} onClose={() => setConfirm(null)} />}
@@ -153,6 +220,27 @@ export function Travel({ shown }: { shown: boolean }) {
   const [open, setOpen] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
   const [finding, setFinding] = useState(false);
+  const [filing, setFiling] = useState(0);
+  const narrow = useNarrow();
+  const trips = useRef<Trip[]>([]);
+  trips.current = data?.trips ?? [];
+  const fileFromList = (list: FileList | null) => {
+    const picked = [...(list ?? [])];
+    if (!picked.length) return;
+    setFiling((n) => n + picked.length);
+    void Promise.all(picked.map(async (f) => {
+      try {
+        const { blob, name } = await shrink(f);
+        const r = await uploadReceipt('', blob, name);
+        notice(`Added to ${trips.current.find((t) => t.id === r.tripId)?.name ?? 'a trip'}${r.read === 'failed' ? ', could not read it' : ''}`);
+      } catch (e) {
+        notice(`Receipt not added: ${errText(e)}`);
+      } finally {
+        setFiling((n) => n - 1);
+      }
+    })).then(reload);
+  };
+  const cap = useCapture(fileFromList);
   const findTrips = () => {
     setFinding(true);
     scanCalendar().then((r) => { notice(scanText(r.added, r.updated)); return reload(); }, (e) => notice(`Calendar not read: ${errText(e)}`)).finally(() => setFinding(false));
@@ -162,7 +250,7 @@ export function Travel({ shown }: { shown: boolean }) {
   const body = trip ? (
     <TripView trip={trip} receipts={data!.receipts.filter((r) => r.tripId === trip.id)} onBack={() => setOpen(null)} reload={reload} />
   ) : data?.trips.length ? (
-    <TripList trips={data.trips} receipts={data.receipts} onOpen={setOpen} onNew={() => setAdding(true)} find={find} />
+    <TripList trips={data.trips} receipts={data.receipts} filing={filing} cap={cap} narrow={narrow} onOpen={setOpen} onNew={() => setAdding(true)} find={find} />
   ) : data ? (
     <EmptyState icon="briefcase" title="No trips yet" hint="Find your trips in the calendar, or add one, then its receipts, bookings and notes" action={<>{find}<Button size="sm" onClick={() => setAdding(true)}>New trip</Button></>} />
   ) : error ? (

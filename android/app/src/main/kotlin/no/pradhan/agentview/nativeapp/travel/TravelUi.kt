@@ -15,7 +15,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
@@ -38,16 +40,26 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import java.time.LocalDate
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import no.pradhan.agentview.nativeapp.app.Hub
+import no.pradhan.agentview.nativeapp.chat.Attach
 import no.pradhan.agentview.nativeapp.chat.rememberAttach
 import no.pradhan.agentview.nativeapp.net.READ_ONLY_SENT
 import no.pradhan.agentview.nativeapp.net.enc
+import no.pradhan.agentview.nativeapp.net.protocolJson
 import no.pradhan.agentview.nativeapp.ui.AvIcon
 import no.pradhan.agentview.nativeapp.ui.Button
 import no.pradhan.agentview.nativeapp.ui.ButtonSize
@@ -67,15 +79,28 @@ import no.pradhan.agentview.nativeapp.ui.TextField
 import no.pradhan.agentview.nativeapp.ui.Tokens
 import no.pradhan.agentview.nativeapp.ui.Type
 import no.pradhan.agentview.nativeapp.ui.av
+import no.pradhan.agentview.nativeapp.ui.plural
 import no.pradhan.agentview.nativeapp.ui.rememberLoad
 
 private const val FOLD = 5
 private const val POLL_MS = 2500L
 
 // A write to the Mac; false after a failure (shown as a notice) or in a read-only run.
-internal suspend fun Hub.travelWrite(block: suspend Hub.() -> Unit): Boolean =
+internal suspend fun Hub.travelWrite(failure: String? = null, block: suspend Hub.() -> Unit): Boolean =
     if (readOnly) { notice.value = READ_ONLY_SENT; false }
-    else runCatching { block() }.onFailure { notice.value = it.message ?: "Request failed" }.isSuccess
+    else runCatching { block() }.onFailure { notice.value = failure ?: it.message ?: "Request failed" }.isSuccess
+
+private fun today() = LocalDate.now().toString()
+
+// The capture row of the Travel list and of a trip: Take photo, Photo and PDF / file at equal width.
+@Composable
+private fun CaptureRow(attach: Attach) {
+    Row(Modifier.fillMaxWidth().padding(horizontal = Tokens.listPad, vertical = Tokens.sp4), horizontalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
+        Button("Take photo", attach.takePhoto, Modifier.weight(1f), variant = ButtonVariant.Filled, icon = "device-camera", fill = true)
+        Button("Photo", attach.choosePhoto, Modifier.weight(1f), icon = "file-media", fill = true)
+        Button("PDF / file", attach.chooseFile, Modifier.weight(1f), icon = "file", fill = true)
+    }
+}
 
 // Travel (web/src/travel/Travel.tsx): work trips, their receipts as photos or PDFs that Claude reads, notes and totals.
 @Composable
@@ -104,6 +129,16 @@ fun TravelScreen(hub: Hub, onBack: () -> Unit) {
         return
     }
     var all by rememberSaveable { mutableStateOf(false) }
+    var filing by remember { mutableIntStateOf(0) }
+    val attach = rememberAttach(hub, { filing += it }, send = { name, mime, bytes ->
+        if (hub.readOnly) { hub.notice.value = READ_ONLY_SENT; null }
+        else runCatching { hub.api.postBytes("/api/travel/receipt?name=${enc(name)}", mime, bytes, slow = true) }
+            .onFailure { hub.notice.value = "Receipt not added: ${it.message}" }.getOrNull()
+    }) { body ->
+        val r = protocolJson.decodeFromString(Receipt.serializer(), body)
+        hub.notice.value = "Added to ${data?.trips?.firstOrNull { it.id == r.tripId }?.name ?: "a trip"}${if (r.read == "failed") ", could not read it" else ""}"
+        reload()
+    }
     Column(Modifier.fillMaxSize()) {
         PageHeader("Travel", onBack) {
             IconBtn("calendar", if (finding) "Reading calendar" else "Find in calendar", find, enabled = !finding)
@@ -115,12 +150,14 @@ fun TravelScreen(hub: Hub, onBack: () -> Unit) {
                 data == null -> Loading("Loading trips…")
                 data.trips.isEmpty() -> EmptyState("No trips yet", "Find your trips in the calendar, or add one, then its receipts, bookings and notes", icon = "briefcase", action = { Button(if (finding) "Reading calendar…" else "Find in calendar", find, size = ButtonSize.Sm, enabled = !finding) })
                 else -> Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
-                    val sorted = sortTrips(data.trips, LocalDate.now().toString())
+                    val sorted = sortTrips(data.trips, today())
+                    CaptureRow(attach)
+                    if (filing > 0) Group { ListRow("Adding ${plural(filing, "receipt")}…", leading = { AvIcon("loading") }) }
                     SectionHeader("Trips", sorted.size.toString())
                     Group {
                         sorted.take(if (all) sorted.size else FOLD).forEachIndexed { i, t ->
                             if (i > 0) Hairline(lead = true)
-                            ListRow(t.name, tripMeta(t, data.receipts.filter { it.tripId == t.id }), leading = { AvIcon("briefcase") }, onClick = { open = t.id })
+                            ListRow(t.name, tripMeta(t, data.receipts.filter { it.tripId == t.id }, today()), leading = { AvIcon("briefcase") }, onClick = { open = t.id })
                         }
                     }
                     if (!all && sorted.size > FOLD) Button("Show all ${sorted.size}", { all = true }, Modifier.padding(horizontal = Tokens.listPad), variant = ButtonVariant.Plain, size = ButtonSize.Sm)
@@ -142,6 +179,8 @@ private fun TripView(hub: Hub, trip: Trip, receipts: List<Receipt>, onBack: () -
     var editing by remember { mutableStateOf(false) }
     var deleting by remember { mutableStateOf(false) }
     var openId by remember { mutableStateOf<String?>(null) }
+    var itemSheet by remember { mutableStateOf<PlanItem?>(null) }
+    var addingItem by remember { mutableStateOf(false) }
     var all by rememberSaveable(trip.id) { mutableStateOf(false) }
     val sorted = receipts.sortedByDescending { it.addedAt }
     val attach = rememberAttach(hub, { uploading += it }, send = { name, mime, bytes ->
@@ -152,7 +191,7 @@ private fun TripView(hub: Hub, trip: Trip, receipts: List<Receipt>, onBack: () -
     val view = { path: String -> runCatching { ctx.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(hub.api.link(path)))) }.onFailure { hub.notice.value = "No app to open it" } }
     val summary = { (listOf("${trip.name} (${tripDates(trip)})") + sorted.map { "- ${receiptMeta(it)} ${it.merchant}".trim() } + "Total: ${totalsText(receipts).ifEmpty { "none" }}").joinToString("\n") }
     Column(Modifier.fillMaxSize()) {
-        PageHeader(trip.name, onBack, subtitle = tripDates(trip).takeIf { it.isNotEmpty() }?.let { { Text(it) } }) {
+        PageHeader(trip.name, onBack, subtitle = tripDates(trip).takeIf { it.isNotEmpty() }?.let { dates -> { TripSubtitle(trip, dates) } }) {
             MoreButton { close ->
                 MenuItem("Edit trip", "edit", { close(); editing = true })
                 MenuItem("Export receipts (CSV)", "cloud-download", { close(); view("/api/travel/export?trip=${enc(trip.id)}") })
@@ -161,11 +200,8 @@ private fun TripView(hub: Hub, trip: Trip, receipts: List<Receipt>, onBack: () -
             }
         }
         Column(Modifier.fillMaxSize().background(av.groupPage).verticalScroll(rememberScrollState())) {
-            Row(Modifier.fillMaxWidth().padding(horizontal = Tokens.listPad, vertical = Tokens.sp4), horizontalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
-                Button("Take photo", attach.takePhoto, Modifier.weight(1f), variant = ButtonVariant.Filled, icon = "device-camera", fill = true)
-                Button("Photo", attach.choosePhoto, Modifier.weight(1f), icon = "file-media", fill = true)
-                Button("PDF / file", attach.chooseFile, Modifier.weight(1f), icon = "file", fill = true)
-            }
+            CaptureRow(attach)
+            Itinerary(trip, onAdd = { addingItem = true }, onOpen = { itemSheet = it })
             SectionHeader("Receipts", receipts.size.takeIf { it > 0 }?.toString())
             if (receipts.isEmpty() && uploading == 0) EmptyState("No receipts yet", "Take a photo or add a PDF; Claude fills in the amount", icon = "file-media")
             else Group {
@@ -184,6 +220,8 @@ private fun TripView(hub: Hub, trip: Trip, receipts: List<Receipt>, onBack: () -
     sorted.firstOrNull { it.id == openId }?.let { r ->
         ReceiptSheet(hub, r, onOpen = { view("/api/travel/file?id=${enc(r.id)}") }, onDismiss = { openId = null }, onSaved = reload)
     }
+    if (addingItem) PlanItemSheet(hub, trip, null, today(), onDismiss = { addingItem = false }, onSaved = reload)
+    itemSheet?.let { i -> PlanItemSheet(hub, trip, i, today(), onDismiss = { itemSheet = null }, onSaved = reload) }
     if (editing) TripSheet(hub, trip, onDismiss = { editing = false }) { editing = false; reload() }
     if (deleting) ConfirmDialog("Delete ${trip.name}?", "Its receipts and their files are deleted too.", "Delete", {
         deleting = false
@@ -191,14 +229,58 @@ private fun TripView(hub: Hub, trip: Trip, receipts: List<Receipt>, onBack: () -
     }, onDismiss = { deleting = false })
 }
 
+// The dates and state under the trip name; only "Now" is styled, after a dot.
+@Composable
+private fun TripSubtitle(trip: Trip, dates: String) {
+    val day = today()
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Text("$dates · ")
+        if (tripState(trip, day) == "now") {
+            Box(Modifier.size(6.dp).background(av.accentFill, CircleShape))
+            Spacer(Modifier.width(Tokens.sp2))
+            Text(tripStateText(trip, day), color = av.accentFill)
+        } else Text(tripStateText(trip, day))
+    }
+}
+
+@Composable
+private fun Itinerary(trip: Trip, onAdd: () -> Unit, onOpen: (PlanItem) -> Unit) {
+    val day = today()
+    val next = if (tripState(trip, day) == "now") nextItem(trip.plan, LocalDateTime.now().format(NOW)) else null
+    SectionHeader("Itinerary", trip.plan.size.takeIf { it > 0 }?.toString(), action = { Button("Add item", onAdd, size = ButtonSize.Sm, icon = "add") })
+    if (trip.plan.isEmpty()) EmptyState("No plan yet", "Find in calendar fills it in, or add an item", icon = "calendar")
+    groupPlan(trip.plan).forEach { g ->
+        SectionHeader(dayLabel(g.day, day))
+        Group {
+            g.items.forEachIndexed { i, item ->
+                if (i > 0) Hairline()
+                val title = if (item === next) buildAnnotatedString { withStyle(SpanStyle(fontWeight = FontWeight.SemiBold)) { append(item.title) } } else item.title
+                ListRow(title, itemMeta(item), leading = {
+                    Row(horizontalArrangement = Arrangement.spacedBy(Tokens.sp4), verticalAlignment = Alignment.CenterVertically) {
+                        Column(Modifier.width(48.dp)) {
+                            val tnum = TextStyle(fontFeatureSettings = "tnum")
+                            if (item.start.isEmpty()) Text("All day", style = Type.meta.merge(tnum), color = av.fgMuted)
+                            else Text(item.start, style = Type.body.merge(tnum), color = av.fg)
+                            if (item.end.isNotEmpty()) Text(item.end, style = Type.meta.merge(tnum), color = av.fgMuted)
+                        }
+                        AvIcon(KIND_ICONS[item.kind] ?: "circle-filled")
+                    }
+                }, modifier = if (item === next) Modifier.background(av.hover) else Modifier, onClick = { onOpen(item) })
+            }
+        }
+    }
+}
+
+private val NOW = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm", Locale.ROOT)
+
 @Composable
 private fun Notes(hub: Hub, trip: Trip, reload: () -> Unit) {
     var text by rememberSaveable(trip.id, trip.notes) { mutableStateOf(trip.notes) }
     val scope = rememberCoroutineScope()
-    val save = { scope.launch { if (hub.travelWrite { api.post("/api/travel/trip", tripJson(trip.copy(notes = text))) }) { hub.notice.value = "Notes saved"; reload() } } }
+    val save = { scope.launch { if (hub.travelWrite { api.post("/api/travel/trip", tripJson(trip, notes = text)) }) { hub.notice.value = "Notes saved"; reload() } } }
     SectionHeader("Notes", action = if (text != trip.notes) ({ Button("Save", { save() }, size = ButtonSize.Sm, variant = ButtonVariant.Filled) }) else null)
     Group(Modifier.padding(horizontal = Tokens.listPad)) {
-        TextField(text, { text = it }, Modifier.fillMaxWidth().padding(Tokens.sp4), placeholder = "Flights, hotel address, booking codes, who to meet", minLines = 4)
+        TextField(text, { text = it }, Modifier.fillMaxWidth().padding(Tokens.sp4), placeholder = "Booking codes, addresses", minLines = 3)
     }
 }
 

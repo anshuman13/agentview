@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { notice } from '../app/store';
 import { Button, Chip } from '../ui/Button';
 import { Sheet } from '../ui/Sheet';
-import { CATEGORIES, type Receipt, type Trip } from '../../../shared/travel';
+import { CATEGORIES, PLAN_KINDS, tripState, type PlanItem, type Receipt, type Trip } from '../../../shared/travel';
 import { deleteReceipt, receiptUrl, saveTrip, updateReceipt } from './travelApi';
 import { isImage } from './travelLogic';
 
@@ -16,7 +16,7 @@ export function TripSheet({ trip, onClose, onSaved }: { trip?: Trip; onClose: ()
   const save = () => {
     if (!name.trim()) return;
     setBusy(true);
-    saveTrip({ ...trip, name, from, to: to || from }).then(onSaved, (e) => { notice(errText(e)); setBusy(false); });
+    saveTrip({ id: trip?.id, name, from, to: to || from }).then(onSaved, (e) => { notice(errText(e)); setBusy(false); });
   };
   return (
     <Sheet label={trip ? 'Edit trip' : 'New trip'} onClose={onClose}>
@@ -29,6 +29,45 @@ export function TripSheet({ trip, onClose, onSaved }: { trip?: Trip; onClose: ()
       <div className="tv-actions">
         <Button size="sm" onClick={onClose}>Cancel</Button>
         <Button size="sm" variant="filled" disabled={busy || !name.trim()} onClick={save}>Save</Button>
+      </div>
+    </Sheet>
+  );
+}
+
+const KIND_LABELS = Object.fromEntries(PLAN_KINDS.map((k) => [k, k[0].toUpperCase() + k.slice(1)]));
+
+// Adds or edits one plan item, or deletes it; an item save sends the whole plan.
+export function PlanItemSheet({ trip, item, today, onClose, onSaved }: { trip: Trip; item?: PlanItem; today: string; onClose: () => void; onSaved: () => void }) {
+  const [f, setF] = useState({
+    kind: item?.kind ?? 'event', title: item?.title ?? '', day: item?.day ?? (tripState(trip, today) === 'now' ? today : trip.from || today),
+    start: item?.start ?? '', end: item?.end ?? '', place: item?.place ?? '', ref: item?.ref ?? '',
+  });
+  const [busy, setBusy] = useState(false);
+  const set = (k: keyof typeof f) => (e: { target: { value: string } }) => setF({ ...f, [k]: e.target.value });
+  const write = (plan: NonNullable<Parameters<typeof saveTrip>[0]['plan']>, done: () => void) => {
+    setBusy(true);
+    saveTrip({ id: trip.id, name: trip.name, from: trip.from, to: trip.to, plan }).then(() => { done(); onSaved(); }, () => { notice('Could not save the item. Your text is still here.'); setBusy(false); });
+  };
+  const plan = trip.plan ?? [];
+  const save = () => write(item ? plan.map((p) => (p.id === item.id ? { ...p, ...f } : p)) : [...plan, f], onClose);
+  const remove = () => write(plan.filter((p) => p.id !== item?.id), () => { notice('Item deleted'); onClose(); });
+  return (
+    <Sheet label={item ? 'Edit item' : 'Add item'} onClose={onClose}>
+      <h2 className="tv-sheet-title">{item ? 'Edit item' : 'Add item'}</h2>
+      <div className="ui-fields">
+        <div className="tv-chips" role="group" aria-label="Kind">
+          {PLAN_KINDS.map((k) => <Chip key={k} size="sm" on={f.kind === k} aria-pressed={f.kind === k} onClick={() => setF({ ...f, kind: k })}>{KIND_LABELS[k]}</Chip>)}
+        </div>
+        <input autoFocus aria-label="Title" placeholder="Title, such as OSL to ARN" value={f.title} onChange={set('title')} />
+        <label className="tv-date">Day<input type="date" value={f.day} onChange={set('day')} /></label>
+        <label className="tv-date">Start<input type="time" value={f.start} onChange={set('start')} /></label>
+        <label className="tv-date">End<input type="time" value={f.end} onChange={set('end')} /></label>
+        <input aria-label="Place" placeholder="Place" value={f.place} onChange={set('place')} />
+        <input aria-label="Booking or flight number" placeholder="Booking or flight number" value={f.ref} onChange={set('ref')} />
+      </div>
+      <div className="tv-actions">
+        {item ? <Button size="sm" variant="danger" icon="trash" disabled={busy} onClick={remove}>Delete</Button> : <Button size="sm" onClick={onClose}>Cancel</Button>}
+        <Button size="sm" variant="filled" disabled={busy || !f.title.trim() || !f.day} onClick={save}>Save</Button>
       </div>
     </Sheet>
   );

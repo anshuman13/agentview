@@ -5,7 +5,7 @@ import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { findTrips, readable, readReceipt } from '../agent/claude/receipts.js';
 import { hubRows } from './assistant.js';
 import { jsonFile, NotFound, BadRequest, readBytes, type Body } from '../json.js';
-import { CATEGORIES, mergeTrips, mimeOf, type Receipt, type Trip, type TravelData } from '../../../shared/travel.js';
+import { applyTripSave, CATEGORIES, fileTrip, mergeTrips, mimeOf, type Receipt, type Trip, type TravelData } from '../../../shared/travel.js';
 
 const DIR = path.join(os.homedir(), '.agentview', 'travel');
 const FILES = path.join(DIR, 'files');
@@ -21,18 +21,19 @@ export async function travelData(now = Date.now()) {
 }
 
 const day = (v: unknown) => (typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : '');
+const newId = () => randomUUID().slice(0, 8);
 const text = (v: unknown, max: number) => String(v ?? '').trim().slice(0, max);
 
 export async function saveTrip(body: Record<string, unknown>) {
   const name = text(body.name, 120);
   if (!name) throw new BadRequest('A trip needs a name');
-  const fields = { name, from: day(body.from), to: day(body.to), notes: text(body.notes, 20_000) };
+  const fields = { name, from: day(body.from), to: day(body.to), ...('notes' in body && { notes: text(body.notes, 20_000) }), ...('plan' in body && { plan: body.plan }) };
   let saved: Trip | undefined;
   await store.update((d) => {
     const id = String(body.id ?? '');
     const old = d.trips.find((t) => t.id === id);
     if (id && !old) throw new NotFound('Trip not found');
-    saved = old ? { ...old, ...fields, ...(old.calendar && { edited: true }) } : { id: randomUUID().slice(0, 8), createdAt: Date.now(), ...fields };
+    saved = old ? applyTripSave(old, fields, newId) : { id: newId(), createdAt: Date.now(), name, from: fields.from, to: fields.to, notes: fields.notes ?? '' };
     return { ...d, trips: old ? d.trips.map((t) => (t.id === id ? saved! : t)) : [...d.trips, saved] };
   });
   return saved;
@@ -50,13 +51,15 @@ export async function deleteTrip(id: string) {
   return { ok: true };
 }
 
-// Saves the uploaded file under the trip and has Claude fill in the fields in the background.
+// Saves the uploaded file. Under a trip it is filed at once and Claude fills in the fields in the background; without a trip
+// the read is awaited and the receipt is filed under the trip that covers its date.
 export async function addReceipt(req: Body, tripId: string, name: string) {
   const d = await store.read();
-  if (!d.trips.some((t) => t.id === tripId)) throw new NotFound('Trip not found');
+  if (tripId && !d.trips.some((t) => t.id === tripId)) throw new NotFound('Trip not found');
+  if (!tripId && !d.trips.length) throw new BadRequest('Add a trip first');
   const bytes = await readBytes(req, MAX_FILE, 'Receipts over 30 MB cannot be added');
   const safe = path.basename(name).replace(/[^\w.-]+/g, '-').slice(-80) || 'receipt';
-  const id = randomUUID().slice(0, 8);
+  const id = newId();
   const file = `${id}-${safe}`;
   await mkdir(FILES, { recursive: true });
   await writeFile(path.join(FILES, file), bytes);
@@ -65,9 +68,28 @@ export async function addReceipt(req: Body, tripId: string, name: string) {
     id, tripId, file, name: safe, mime, merchant: '', amount: null, currency: '', date: '', category: 'Other', note: '',
     read: readable(mime) ? 'pending' : 'skipped', addedAt: Date.now(),
   };
-  await store.update((cur) => ({ ...cur, receipts: [...cur.receipts, receipt] }));
-  if (receipt.read === 'pending') void fillIn(receipt);
-  return receipt;
+  let stored: Receipt | undefined;
+  try {
+    if (tripId) {
+      await store.update((cur) => ({ ...cur, receipts: [...cur.receipts, receipt] }));
+      stored = receipt;
+      if (receipt.read === 'pending') void fillIn(receipt);
+      return receipt;
+    }
+    const found = receipt.read === 'pending' ? await readReceipt(path.join(FILES, file), mime).catch(() => null) : null;
+    const read = found ? 'done' : receipt.read === 'pending' ? 'failed' : 'skipped';
+    const filled: Receipt = { ...receipt, ...(found && fill(receipt, found)), read };
+    await store.update((cur) => {
+      const trip = fileTrip(cur.trips, filled.date, local(Date.now()).slice(0, 10));
+      if (!trip) return cur;
+      stored = { ...filled, tripId: trip.id };
+      return { ...cur, receipts: [...cur.receipts, stored] };
+    });
+    if (!stored) throw new BadRequest('Add a trip first');
+    return stored;
+  } finally {
+    if (!stored) await rm(path.join(FILES, file), { force: true });
+  }
 }
 
 async function fillIn(r: Receipt) {
@@ -145,7 +167,7 @@ export async function scanCalendar(now = Date.now(), find = findTrips) {
   const found = await find(events);
   let result = { added: 0, updated: 0 };
   await store.update((d) => {
-    const { added, updated, ...next } = mergeTrips(d, found, () => randomUUID().slice(0, 8), now);
+    const { added, updated, ...next } = mergeTrips(d, found, newId, now);
     result = { added, updated };
     return next;
   });

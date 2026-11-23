@@ -13,6 +13,146 @@
       {"id": "past-new", "from": "2026-10-01", "to": ""},
       {"id": "now", "from": "2026-11-24", "to": "2026-11-26"},
       {"id": "soon", "from": "2026-11-30", "to": "2026-12-01"}
-    ], "expected": ["now", "soon", "later", "past-new", "past-old"]}
+    ], "expected": ["now", "soon", "later", "past-new", "past-old"]},
+    {"name": "undated last", "today": "2026-11-24", "trips": [
+      {"id": "none", "from": "", "to": ""},
+      {"id": "past", "from": "2026-10-01", "to": "2026-10-03"},
+      {"id": "now", "from": "2026-11-24", "to": ""}
+    ], "expected": ["now", "past", "none"]}
+  ],
+  "tripState": [
+    {"name": "no dates", "trip": {"from": "", "to": ""}, "today": "2026-11-24", "state": "", "text": ""},
+    {"name": "first day", "trip": {"from": "2026-11-24", "to": "2026-11-26"}, "today": "2026-11-24", "state": "now", "text": "Now"},
+    {"name": "last day", "trip": {"from": "2026-11-22", "to": "2026-11-24"}, "today": "2026-11-24", "state": "now", "text": "Now"},
+    {"name": "one day trip today", "trip": {"from": "2026-11-24", "to": ""}, "today": "2026-11-24", "state": "now", "text": "Now"},
+    {"name": "tomorrow", "trip": {"from": "2026-11-25", "to": "2026-11-26"}, "today": "2026-11-24", "state": "upcoming", "text": "In 1 day"},
+    {"name": "across a month", "trip": {"from": "2026-12-04", "to": "2026-12-06"}, "today": "2026-11-24", "state": "upcoming", "text": "In 10 days"},
+    {"name": "ended", "trip": {"from": "2026-11-20", "to": "2026-11-23"}, "today": "2026-11-24", "state": "past", "text": "Past"}
+  ],
+  "cleanPlan": [
+    {"name": "repairs, drops and sorts", "raw": [
+      {"id": "a", "day": "2026-11-25", "start": "09:00", "end": "10:30", "kind": "Flight", "title": " SK 400 ", "place": "OSL", "ref": "SK400"},
+      {"id": "a", "day": "2026-11-24", "start": "", "end": "12:00", "kind": "spa", "title": "Hotel", "place": "", "ref": ""},
+      {"day": "2026-11-24", "start": "25:00", "title": "Late check-in"},
+      {"id": "x", "day": "soon", "title": "No day"},
+      {"id": "y", "day": "2026-11-24", "title": " "}
+    ], "expected": [
+      {"id": "n1", "day": "2026-11-24", "start": "", "end": "", "kind": "other", "title": "Hotel", "place": "", "ref": ""},
+      {"id": "n2", "day": "2026-11-24", "start": "", "end": "", "kind": "other", "title": "Late check-in", "place": "", "ref": ""},
+      {"id": "a", "day": "2026-11-25", "start": "09:00", "end": "10:30", "kind": "flight", "title": "SK 400", "place": "OSL", "ref": "SK400"}
+    ]},
+    {"name": "not an array", "raw": {"title": "x"}, "expected": []}
+  ],
+  "parseTrips": [
+    {"name": "plan from compact keys", "text": "Trips: [{\"name\":\"Lyon offsite\",\"from\":\"2026-12-01\",\"to\":\"2026-11-30\",\"plan\":[{\"d\":\"2026-12-01\",\"s\":\"08:15\",\"e\":\"10:00\",\"k\":\"flight\",\"t\":\"OSL to LYS\",\"p\":\"OSL\",\"r\":\"AF 1\"},{\"d\":\"bad\",\"t\":\"x\"}],\"notes\":\"ignored\"},{\"name\":\"\",\"from\":\"2026-12-05\"},{\"name\":\"X\",\"from\":\"soon\"},{\"name\":\"Bare\",\"from\":\"2026-12-09\"}]", "expected": [
+      {"name": "Lyon offsite", "from": "2026-12-01", "to": "2026-12-01", "plan": [{"id": "n1", "day": "2026-12-01", "start": "08:15", "end": "10:00", "kind": "flight", "title": "OSL to LYS", "place": "OSL", "ref": "AF 1"}]},
+      {"name": "Bare", "from": "2026-12-09", "to": "2026-12-09", "plan": []}
+    ]},
+    {"name": "no json", "text": "none", "expected": []}
+  ],
+  "mergeTrips": [
+    {"name": "unedited calendar trip follows the scan and its notes go", "data": {"trips": [
+      {"id": "cal", "name": "cal", "from": "2026-12-01", "to": "2026-12-02", "notes": "old text", "calendar": true}
+    ]}, "found": [
+      {"name": "Lyon", "from": "2026-12-01", "to": "2026-12-03", "plan": [{"id": "f1", "day": "2026-12-01", "start": "08:00", "end": "", "kind": "flight", "title": "AF 1", "place": "", "ref": ""}]}
+    ], "expected": {"added": 0, "updated": 1, "trips": [
+      {"id": "cal", "name": "Lyon", "to": "2026-12-03", "notes": "", "plan": [{"id": "f1", "title": "AF 1"}]}
+    ]}},
+    {"name": "a rescan with the same plan changes nothing and keeps notes", "data": {"trips": [
+      {"id": "cal", "name": "Lyon", "from": "2026-12-01", "to": "2026-12-03", "notes": "mine", "calendar": true, "plan": [{"id": "keep", "day": "2026-12-01", "start": "08:00", "end": "", "kind": "flight", "title": "AF 1", "place": "", "ref": ""}]}
+    ]}, "found": [
+      {"name": "Lyon", "from": "2026-12-01", "to": "2026-12-03", "plan": [{"id": "f1", "day": "2026-12-01", "start": "08:00", "end": "", "kind": "flight", "title": "AF 1", "place": "", "ref": ""}]}
+    ], "expected": {"added": 0, "updated": 0, "trips": [
+      {"id": "cal", "notes": "mine", "plan": [{"id": "keep"}]}
+    ]}},
+    {"name": "an empty found plan keeps the plan", "data": {"trips": [
+      {"id": "cal", "name": "Lyon", "from": "2026-12-01", "to": "2026-12-03", "notes": "n", "calendar": true, "plan": [{"id": "keep", "day": "2026-12-01", "start": "", "end": "", "kind": "hotel", "title": "Hotel", "place": "", "ref": ""}]}
+    ]}, "found": [{"name": "Lyon", "from": "2026-12-01", "to": "2026-12-03", "plan": []}],
+    "expected": {"added": 0, "updated": 0, "trips": [{"id": "cal", "notes": "n", "plan": [{"id": "keep"}]}]}},
+    {"name": "an edited calendar trip is not changed", "data": {"trips": [
+      {"id": "ed", "name": "ed", "from": "2026-12-20", "to": "2026-12-21", "notes": "mine", "calendar": true, "edited": true}
+    ]}, "found": [
+      {"name": "Edited", "from": "2026-12-20", "to": "2026-12-20", "plan": [{"id": "f1", "day": "2026-12-20", "start": "", "end": "", "kind": "hotel", "title": "Hotel", "place": "", "ref": ""}]}
+    ], "expected": {"added": 0, "updated": 0, "trips": [{"id": "ed", "name": "ed", "to": "2026-12-21", "notes": "mine"}]}},
+    {"name": "a user-made trip gets the plan only while its own is empty", "data": {"trips": [
+      {"id": "mine", "name": "mine", "from": "2026-12-10", "to": "2026-12-11", "notes": "keep me"},
+      {"id": "full", "name": "full", "from": "2026-12-14", "to": "2026-12-15", "notes": "", "plan": [{"id": "own", "day": "2026-12-14", "start": "", "end": "", "kind": "other", "title": "Own", "place": "", "ref": ""}]}
+    ]}, "found": [
+      {"name": "Turin", "from": "2026-12-11", "to": "2026-12-12", "plan": [{"id": "f1", "day": "2026-12-11", "start": "09:00", "end": "", "kind": "train", "title": "Train", "place": "", "ref": ""}]},
+      {"name": "Nice", "from": "2026-12-14", "to": "2026-12-14", "plan": [{"id": "f2", "day": "2026-12-14", "start": "", "end": "", "kind": "hotel", "title": "Hotel", "place": "", "ref": ""}]}
+    ], "expected": {"added": 0, "updated": 1, "trips": [
+      {"id": "mine", "name": "mine", "to": "2026-12-11", "notes": "keep me", "plan": [{"id": "f1"}]},
+      {"id": "full", "name": "full", "notes": "", "plan": [{"id": "own"}]}
+    ]}},
+    {"name": "a new trip has empty notes and respects dismissed dates", "data": {"trips": [], "dismissed": [{"from": "2026-12-15", "to": "2026-12-16"}]}, "found": [
+      {"name": "Gone", "from": "2026-12-16", "to": "2026-12-16", "plan": []},
+      {"name": "Nice", "from": "2027-01-05", "to": "2027-01-06", "plan": []}
+    ], "expected": {"added": 1, "updated": 0, "trips": [{"id": "n1", "name": "Nice", "notes": "", "calendar": true}]}}
+  ],
+  "applyTripSave": [
+    {"name": "unchanged notes do not set edited", "old": {"id": "c", "name": "Lyon", "from": "2026-12-01", "to": "2026-12-03", "notes": "n", "calendar": true},
+      "fields": {"name": "Lyon", "from": "2026-12-01", "to": "2026-12-03", "notes": "n"}, "edited": false, "expected": {"notes": "n"}},
+    {"name": "new notes set edited", "old": {"id": "c", "name": "Lyon", "from": "2026-12-01", "to": "2026-12-03", "notes": "n", "calendar": true},
+      "fields": {"name": "Lyon", "from": "2026-12-01", "to": "2026-12-03", "notes": "m"}, "edited": true, "expected": {"notes": "m"}},
+    {"name": "a rename keeps notes and plan", "old": {"id": "c", "name": "Lyon", "from": "2026-12-01", "to": "2026-12-03", "notes": "n", "calendar": true, "plan": [{"id": "p", "day": "2026-12-01", "start": "", "end": "", "kind": "hotel", "title": "Hotel", "place": "", "ref": ""}]},
+      "fields": {"name": "Lyon trip", "from": "2026-12-01", "to": "2026-12-03"}, "edited": true, "expected": {"name": "Lyon trip", "notes": "n", "plan": [{"id": "p"}]}},
+    {"name": "the same plan with new ids does not set edited", "old": {"id": "c", "name": "Lyon", "from": "2026-12-01", "to": "2026-12-03", "notes": "", "calendar": true, "plan": [{"id": "p", "day": "2026-12-01", "start": "", "end": "", "kind": "hotel", "title": "Hotel", "place": "", "ref": ""}]},
+      "fields": {"name": "Lyon", "from": "2026-12-01", "to": "2026-12-03", "plan": [{"day": "2026-12-01", "title": "Hotel", "kind": "hotel"}]}, "edited": false, "expected": {"plan": [{"title": "Hotel"}]}},
+    {"name": "a plan change on a calendar trip sets edited", "old": {"id": "c", "name": "Lyon", "from": "2026-12-01", "to": "2026-12-03", "notes": "", "calendar": true},
+      "fields": {"name": "Lyon", "from": "2026-12-01", "to": "2026-12-03", "plan": [{"day": "2026-12-02", "title": "Dinner", "kind": "meal"}]}, "edited": true, "expected": {"plan": [{"id": "n1", "title": "Dinner"}]}},
+    {"name": "a user-made trip is never marked edited", "old": {"id": "m", "name": "Mine", "from": "2026-12-01", "to": "2026-12-03", "notes": ""},
+      "fields": {"name": "Mine 2", "from": "2026-12-01", "to": "2026-12-03"}, "edited": false, "expected": {"name": "Mine 2"}}
+  ],
+  "groupPlan": [
+    {"name": "one entry per day in time order, untimed first", "plan": [
+      {"id": "c", "day": "2026-11-25", "start": "09:00"},
+      {"id": "b", "day": "2026-11-24", "start": "18:00"},
+      {"id": "a", "day": "2026-11-24", "start": ""}
+    ], "expected": [{"day": "2026-11-24", "ids": ["a", "b"]}, {"day": "2026-11-25", "ids": ["c"]}]},
+    {"name": "empty", "plan": [], "expected": []}
+  ],
+  "nextItem": [
+    {"name": "first item not yet over", "now": "2026-11-24 10:00", "plan": [
+      {"id": "a", "day": "2026-11-24", "start": "08:00", "end": "09:00"},
+      {"id": "b", "day": "2026-11-24", "start": "09:30", "end": "11:00"},
+      {"id": "c", "day": "2026-11-24", "start": "12:00", "end": ""}
+    ], "expected": "b"},
+    {"name": "all-day items are skipped", "now": "2026-11-24 07:00", "plan": [
+      {"id": "h", "day": "2026-11-24", "start": "", "end": ""},
+      {"id": "a", "day": "2026-11-24", "start": "08:00", "end": ""}
+    ], "expected": "a"},
+    {"name": "an item running past midnight is still next after midnight", "now": "2026-11-25 00:30", "plan": [
+      {"id": "n", "day": "2026-11-24", "start": "23:00", "end": "01:00"},
+      {"id": "m", "day": "2026-11-25", "start": "09:00", "end": ""}
+    ], "expected": "n"},
+    {"name": "an item ending at now is over", "now": "2026-11-24 09:00", "plan": [
+      {"id": "a", "day": "2026-11-24", "start": "08:00", "end": "09:00"}
+    ], "expected": null},
+    {"name": "none left", "now": "2026-11-26 08:00", "plan": [
+      {"id": "a", "day": "2026-11-25", "start": "08:00", "end": ""},
+      {"id": "h", "day": "2026-11-26", "start": "", "end": ""}
+    ], "expected": null}
+  ],
+  "kindIcons": {"flight": "send", "train": "arrow-right", "taxi": "location", "hotel": "home", "event": "calendar", "meal": "coffee", "other": "circle-filled"},
+  "fileTrip": [
+    {"name": "inside", "today": "2026-11-24", "date": "2026-12-11", "trips": [
+      {"id": "now", "from": "2026-11-24", "to": "2026-11-26"}, {"id": "later", "from": "2026-12-10", "to": "2026-12-12"}
+    ], "expected": "later"},
+    {"name": "Now trip when no trip covers the date", "today": "2026-11-24", "date": "2026-11-01", "trips": [
+      {"id": "past", "from": "2026-10-01", "to": "2026-10-03"}, {"id": "now", "from": "2026-11-24", "to": "2026-11-26"}
+    ], "expected": "now"},
+    {"name": "nearest dated trip", "today": "2026-11-20", "date": "2026-12-08", "trips": [
+      {"id": "far", "from": "2027-01-10", "to": "2027-01-12"}, {"id": "near", "from": "2026-12-10", "to": "2026-12-12"}, {"id": "none", "from": "", "to": ""}
+    ], "expected": "near"},
+    {"name": "a tie goes to the earlier start", "today": "2026-11-20", "date": "2026-12-10", "trips": [
+      {"id": "after", "from": "2026-12-14", "to": "2026-12-15"}, {"id": "before", "from": "2026-12-04", "to": "2026-12-06"}
+    ], "expected": "before"},
+    {"name": "unread date files by today", "today": "2026-11-24", "date": "", "trips": [
+      {"id": "later", "from": "2026-12-10", "to": "2026-12-12"}, {"id": "now", "from": "2026-11-23", "to": "2026-11-25"}
+    ], "expected": "now"},
+    {"name": "undated trips only: the first", "today": "2026-11-24", "date": "2026-11-24", "trips": [
+      {"id": "one", "from": "", "to": ""}, {"id": "two", "from": "", "to": ""}
+    ], "expected": "one"},
+    {"name": "no trips", "today": "2026-11-24", "date": "2026-11-24", "trips": [], "expected": null}
   ]
 }
