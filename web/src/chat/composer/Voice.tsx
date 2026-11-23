@@ -24,9 +24,11 @@ const ERRORS: Record<string, string> = {
   'no-speech': 'No speech heard',
   network: 'Speech service unreachable',
   'audio-capture': 'No microphone found',
+  'language-not-supported': 'Speech recognition does not support this language',
 };
 
 const HOLD_MS = 400;
+const ERROR_MS = 4000;
 
 export function Voice({ onText, onSubmit, autoStart }: { onText: (text: string, final: boolean) => void; onSubmit?: () => void; autoStart?: number }) {
   const [listening, setListening] = useState(false);
@@ -39,6 +41,11 @@ export function Voice({ onText, onSubmit, autoStart }: { onText: (text: string, 
   const begin = useRef<() => void>(undefined);
   useEffect(() => () => rec.current?.stop(), []);
   useEffect(() => { if (autoStart && !rec.current) begin.current?.(); }, [autoStart]);
+  useEffect(() => {
+    if (!error) return;
+    const t = setTimeout(() => setError(''), ERROR_MS);
+    return () => clearTimeout(t);
+  }, [error]);
 
   const SR = recognizer();
   if (!SR) return null;
@@ -58,7 +65,7 @@ export function Voice({ onText, onSubmit, autoStart }: { onText: (text: string, 
       handlers.current.onText(pending, final);
       if (final) pending = '';
     };
-    r.onerror = (e) => { if (e.error !== 'aborted') setError(ERRORS[e.error] ?? `Voice input failed: ${e.error}`); };
+    r.onerror = (e) => { if (e.error !== 'aborted') setError(ERRORS[e.error] ?? 'Voice input failed'); };
     r.onend = () => {
       if (pending) handlers.current.onText(pending, true);
       rec.current = null;
@@ -78,6 +85,7 @@ export function Voice({ onText, onSubmit, autoStart }: { onText: (text: string, 
   const stop = () => rec.current?.stop();
 
   return (
+    <>
     <IconButton
       className={`voice${error ? ' error' : ''}`}
       icon={listening ? 'mic-filled' : 'mic'}
@@ -97,6 +105,8 @@ export function Voice({ onText, onSubmit, autoStart }: { onText: (text: string, 
       }}
       onClick={(e) => { if (e.detail === 0) (rec.current ? stop : start)(); }}
     />
+    {error && <div className="as-snack" role="alert">{error}</div>}
+    </>
   );
 }
 

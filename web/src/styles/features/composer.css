@@ -79,12 +79,12 @@
 .cp-name { flex: none; }
 .cp-detail { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; color: var(--fg-muted); font-size: var(--fs-sm); }
 
-.voice.on { color: var(--err); animation: voice-pulse var(--pulse-fast) var(--ease) infinite; }
-@media (hover: hover) { .voice.on:hover:not(:disabled) { color: var(--err); } }
+.voice.on { color: var(--accent); background: var(--accent-soft); animation: voice-pulse var(--pulse-fast) ease-out infinite; }
+@media (hover: hover) { .voice.on:hover:not(:disabled) { color: var(--accent); background: var(--accent-soft); } }
 .voice.error { color: var(--err); }
 @keyframes voice-pulse {
-  0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--err) 45%, transparent); }
-  50% { box-shadow: 0 0 0 4px color-mix(in srgb, var(--err) 0%, transparent); }
+  0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 55%, transparent); }
+  100% { box-shadow: 0 0 0 10px color-mix(in srgb, var(--accent) 0%, transparent); }
 }
 
 @media (max-width: 900px) {

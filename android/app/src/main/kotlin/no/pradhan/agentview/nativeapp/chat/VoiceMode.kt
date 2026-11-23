@@ -51,8 +51,12 @@ import no.pradhan.agentview.nativeapp.ui.av
 class VoiceMode(private val ctx: Context, private val hub: Hub, private val scope: CoroutineScope) {
     private val _state = MutableStateFlow<VoiceState?>(null)
     val state: StateFlow<VoiceState?> = _state
+    private val _level = MutableStateFlow(0f)
+    val level: StateFlow<Float> = _level
     private val main = Handler(Looper.getMainLooper())
+    // One recognizer for voice mode's lifetime: destroying one while the next binds drops the new session with no callback.
     private var rec: SpeechRecognizer? = null
+    private var session = 0
     private var tts: TextToSpeech? = null
     private var chunks = emptyList<String>()
     @Volatile private var at = 0
@@ -63,14 +67,28 @@ class VoiceMode(private val ctx: Context, private val hub: Hub, private val scop
         if (!SpeechRecognizer.isRecognitionAvailable(ctx)) { fail("Speech recognition is not available on this device"); return }
         if (hub.readOnly) { fail("Read-only mode, nothing was asked"); return }
         _state.value = VoiceState(VoicePhase.Listening)
-        val r = SpeechRecognizer.createSpeechRecognizer(ctx)
-        rec = r
+        val r = rec ?: SpeechRecognizer.createSpeechRecognizer(ctx).also { rec = it }
+        val id = ++session
         r.setRecognitionListener(listener(
-            onPartial = { _state.value = VoiceState(VoicePhase.Listening, it) },
-            onResult = { if (it.isEmpty()) fail("No speech heard") else ask(it) },
-            onError = { if (rec === r) fail(speechError(it) ?: "Voice input failed") },
+            onPartial = { if (session == id) _state.value = VoiceState(VoicePhase.Listening, it) },
+            onResult = { if (session == id) heard(it) },
+            onError = { if (session == id) { if (heardSoFar().isNotEmpty()) heard("") else { session++; fail(speechError(it) ?: "Voice input stopped. Try again") } } },
+            onLevel = { if (session == id) _level.value = it },
         ))
         r.startListening(dictationIntent())
+    }
+
+    // Stops listening and asks what was heard so far.
+    fun finish() { rec?.stopListening() }
+
+    private fun heardSoFar() = _state.value?.takeIf { it.phase == VoicePhase.Listening }?.heard.orEmpty()
+
+    // The recognizer can end with an empty result after partial ones; the last partial text is then the question.
+    private fun heard(final: String) {
+        _level.value = 0f
+        val q = final.ifEmpty { heardSoFar() }
+        session++
+        if (q.isEmpty()) fail("No speech heard") else ask(q)
     }
 
     private fun fail(message: String) { _state.value = VoiceState(VoicePhase.Failed, _state.value?.heard.orEmpty(), error = message) }
@@ -126,14 +144,17 @@ class VoiceMode(private val ctx: Context, private val hub: Hub, private val scop
     fun cancel() {
         job?.cancel()
         job = null
-        rec?.destroy()
-        rec = null
+        session++
+        rec?.cancel()
+        _level.value = 0f
         tts?.stop()
         _state.value = null
     }
 
     fun release() {
         cancel()
+        rec?.destroy()
+        rec = null
         tts?.shutdown()
         tts = null
     }
@@ -146,6 +167,7 @@ fun VoiceHost(hub: Hub, modifier: Modifier = Modifier) {
     val scope = rememberCoroutineScope()
     val voice = remember { VoiceMode(ctx, hub, scope) }
     val state by voice.state.collectAsState()
+    val level by voice.level.collectAsState()
     val permission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { ok ->
         if (ok) voice.start() else hub.notice.value = "Microphone blocked. Allow it in the app settings"
     }
@@ -158,13 +180,13 @@ fun VoiceHost(hub: Hub, modifier: Modifier = Modifier) {
     }
     state?.let { s ->
         Box(modifier.fillMaxSize().navigationBarsPadding().padding(bottom = Tokens.fabClear), contentAlignment = Alignment.BottomCenter) {
-            VoicePanel(s, voice::pause, voice::resume, voice::cancel)
+            VoicePanel(s, level, voice::finish, voice::pause, voice::resume, voice::cancel)
         }
     }
 }
 
 @Composable
-fun VoicePanel(s: VoiceState, onPause: () -> Unit, onResume: () -> Unit, onCancel: () -> Unit) {
+fun VoicePanel(s: VoiceState, level: Float, onFinish: () -> Unit, onPause: () -> Unit, onResume: () -> Unit, onCancel: () -> Unit) {
     val title = when (s.phase) {
         VoicePhase.Listening -> "Listening"
         VoicePhase.Thinking -> "Thinking"
@@ -175,13 +197,17 @@ fun VoicePanel(s: VoiceState, onPause: () -> Unit, onResume: () -> Unit, onCance
     }
     Panel(Modifier.padding(horizontal = Tokens.listPad).shadow(Tokens.elev2, RoundedCornerShape(Tokens.shapeLg))) {
         Row(horizontalArrangement = Arrangement.spacedBy(Tokens.sp4), verticalAlignment = Alignment.CenterVertically) {
-            AvIcon(if (s.phase == VoicePhase.Listening) "mic" else "sparkle", null, Tokens.iconMd, tint = av.accentText)
-            Text(title, style = Type.headline, color = av.fg)
+            Box(contentAlignment = Alignment.Center) {
+                if (s.phase == VoicePhase.Listening) ListeningRing(level, Tokens.touch)
+                AvIcon(if (s.phase == VoicePhase.Listening) "mic-filled" else "sparkle", null, Tokens.iconMd, tint = av.accentText)
+            }
+            Text(if (s.phase == VoicePhase.Listening && s.heard.isEmpty()) "Listening, speak now" else title, style = Type.headline, color = av.fg)
         }
         if (s.heard.isNotEmpty()) Text(s.heard, style = Type.subheadline, color = av.fgMuted, maxLines = 2, overflow = TextOverflow.Ellipsis)
         if (s.error.isNotEmpty()) Text(s.error, style = Type.body, color = av.err)
         if (s.answer.isNotEmpty()) Text(s.answer, style = Type.body, color = av.fg, maxLines = 6, overflow = TextOverflow.Ellipsis)
         Row(horizontalArrangement = Arrangement.spacedBy(Tokens.sp3)) {
+            if (s.phase == VoicePhase.Listening) Button("Done", onFinish, icon = "check")
             if (s.phase == VoicePhase.Speaking) Button("Pause", onPause, icon = "debug-pause")
             if (s.phase == VoicePhase.Paused) Button("Resume", onResume, icon = "play")
             Button(if (s.phase == VoicePhase.Done || s.phase == VoicePhase.Failed) "Close" else "Cancel", onCancel, variant = ButtonVariant.Tinted)

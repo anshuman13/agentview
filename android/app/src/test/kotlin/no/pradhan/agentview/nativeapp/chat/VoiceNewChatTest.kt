@@ -91,4 +91,14 @@ class VoiceNewChatTest {
         assertTrue(draft!!.endsWith("Request: fix it"))
         assertEquals(null to "fix it", startTexts(START_MODES[1], "fix it"))
     }
+
+    @Test
+    fun voiceLevelAndErrors() {
+        assertEquals(0f, rmsLevel(-5f))
+        assertEquals(0.5f, rmsLevel(4f))
+        assertEquals(1f, rmsLevel(20f))
+        assertNull(speechError(android.speech.SpeechRecognizer.ERROR_CLIENT))
+        assertEquals("No speech heard", speechError(android.speech.SpeechRecognizer.ERROR_NO_MATCH))
+        assertEquals("Voice input failed", speechError(99))
+    }
 }
