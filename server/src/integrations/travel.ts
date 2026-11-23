@@ -167,7 +167,7 @@ export async function scanCalendar(now = Date.now(), find = findTrips) {
   const found = await find(events);
   let result = { added: 0, updated: 0 };
   await store.update((d) => {
-    const { added, updated, ...next } = mergeTrips(d, found, newId, now);
+    const { added, updated, ...next } = mergeTrips(d, found, newId, now, local(now).slice(0, 10));
     result = { added, updated };
     return next;
   });

@@ -113,6 +113,7 @@ fun TravelScreen(hub: Hub, onBack: () -> Unit) {
     val reading = data?.receipts?.any { it.read == "pending" } == true
     LaunchedEffect(reading) { while (reading) { delay(POLL_MS); reload() } }
     var open by rememberSaveable { mutableStateOf<String?>(null) }
+    var archivedOpen by rememberSaveable { mutableStateOf(false) }
     var adding by remember { mutableStateOf(false) }
     var finding by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
@@ -152,17 +153,31 @@ fun TravelScreen(hub: Hub, onBack: () -> Unit) {
                 data == null -> Loading("Loading trips…")
                 data.trips.isEmpty() -> EmptyState("No trips yet", "Find your trips in the calendar, or add one, then its receipts, bookings and notes", icon = "briefcase", action = { Button(if (finding) "Reading calendar…" else "Find in calendar", find, size = ButtonSize.Sm, enabled = !finding) })
                 else -> Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
-                    val sorted = sortTrips(data.trips, today())
+                    val day = today()
+                    val (active, archived) = splitTrips(data.trips, day)
+                    val row = @Composable { t: Trip -> ListRow(t.name, tripMeta(t, data.receipts.filter { it.tripId == t.id }, day), leading = { AvIcon("briefcase") }, onClick = { open = t.id }) }
                     CaptureRow(attach)
                     if (filing > 0) Group { ListRow("Adding ${plural(filing, "receipt")}…", leading = { AvIcon("loading") }) }
-                    SectionHeader("Trips", sorted.size.toString())
-                    Group {
-                        sorted.take(if (all) sorted.size else FOLD).forEachIndexed { i, t ->
-                            if (i > 0) Hairline(lead = true)
-                            ListRow(t.name, tripMeta(t, data.receipts.filter { it.tripId == t.id }, today()), leading = { AvIcon("briefcase") }, onClick = { open = t.id })
+                    SectionHeader("Trips", active.size.takeIf { it > 0 }?.toString())
+                    if (active.isEmpty()) EmptyState("No upcoming trips", "Find in calendar or New trip adds one", icon = "briefcase")
+                    else {
+                        Group {
+                            active.take(if (all) active.size else FOLD).forEachIndexed { i, t ->
+                                if (i > 0) Hairline(lead = true)
+                                row(t)
+                            }
+                        }
+                        if (!all && active.size > FOLD) Button("Show all ${active.size}", { all = true }, Modifier.padding(horizontal = Tokens.listPad), variant = ButtonVariant.Plain, size = ButtonSize.Sm)
+                    }
+                    if (archived.isNotEmpty()) {
+                        SectionHeader("Archived", archived.size.toString(), archivedOpen, { archivedOpen = !archivedOpen })
+                        if (archivedOpen) Group {
+                            archived.forEachIndexed { i, t ->
+                                if (i > 0) Hairline(lead = true)
+                                row(t)
+                            }
                         }
                     }
-                    if (!all && sorted.size > FOLD) Button("Show all ${sorted.size}", { all = true }, Modifier.padding(horizontal = Tokens.listPad), variant = ButtonVariant.Plain, size = ButtonSize.Sm)
                     Spacer(Modifier.padding(bottom = Tokens.sp16))
                 }
             }

@@ -109,6 +109,12 @@ export function sortTrips(trips: Trip[], today: string) {
   return [...trips].sort((a, b) => rank(a) - rank(b) || (rank(a) === 2 ? (b.to || b.from).localeCompare(a.to || a.from) : rank(a) === 3 ? 0 : a.from.localeCompare(b.from)));
 }
 
+// The sorted trips split into active (now, upcoming, undated) and archived (past, newest end first).
+export function splitTrips(trips: Trip[], today: string) {
+  const sorted = sortTrips(trips, today);
+  return { active: sorted.filter((t) => tripState(t, today) !== 'past'), archived: sorted.filter((t) => tripState(t, today) === 'past') };
+}
+
 const isDay = (v: unknown): v is string => typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v);
 const isTime = (v: unknown): v is string => typeof v === 'string' && /^([01]\d|2[0-3]):[0-5]\d$/.test(v);
 const clip = (v: unknown, max: number) => (typeof v === 'string' ? v.trim().slice(0, max) : '');
@@ -197,12 +203,13 @@ const overlaps = (a: { from: string; to: string }, b: { from: string; to: string
 
 // Puts the found trips into the data: a calendar trip the user has not edited follows the calendar (its notes go when it takes
 // a new plan), a trip the user made gets the found plan only while its own is empty, and a new trip is added unless the user
-// deleted one on those dates.
-export function mergeTrips(d: TravelData, found: FoundTrip[], newId: () => string, now: number): TravelData & { added: number; updated: number } {
+// deleted one on those dates. A found trip that ended before today is skipped.
+export function mergeTrips(d: TravelData, found: FoundTrip[], newId: () => string, now: number, today: string): TravelData & { added: number; updated: number } {
   let trips = d.trips;
   let added = 0;
   let updated = 0;
   for (const f of found) {
+    if ((f.to || f.from) < today) continue;
     const match = trips.find((t) => overlaps(t, f));
     if (match) {
       const mine = match.plan ?? [];

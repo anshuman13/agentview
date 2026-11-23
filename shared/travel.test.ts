@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'bun:test';
 import { readFileSync } from 'node:fs';
-import { applyTripSave, cleanPlan, fileTrip, groupPlan, KIND_ICONS, mergeTrips, nextItem, parseReceipt, parseTrips, receiptsCsv, sortTrips, totalsText, tripState, tripStateText, type PlanItem, type Receipt, type Trip } from './travel';
+import { applyTripSave, cleanPlan, fileTrip, groupPlan, KIND_ICONS, mergeTrips, nextItem, parseReceipt, parseTrips, receiptsCsv, sortTrips, splitTrips, totalsText, tripState, tripStateText, type PlanItem, type Receipt, type Trip } from './travel';
 
 const fx = JSON.parse(readFileSync(new URL('./fixtures/travel.json', import.meta.url), 'utf8'));
 
@@ -12,6 +12,10 @@ const ids = () => {
 describe('travel', () => {
   for (const c of fx.totals) it(`totalsText: ${c.name}`, () => expect(totalsText(c.receipts as Receipt[])).toBe(c.expected));
   for (const c of fx.sortTrips) it(`sortTrips: ${c.name}`, () => expect(sortTrips(c.trips as Trip[], c.today).map((t) => t.id)).toEqual(c.expected));
+  for (const c of fx.splitTrips) it(`splitTrips: ${c.name}`, () => {
+    const out = splitTrips(c.trips as Trip[], c.today);
+    expect([out.active.map((t) => t.id), out.archived.map((t) => t.id)]).toEqual([c.active, c.archived]);
+  });
   for (const c of fx.tripState) it(`tripState: ${c.name}`, () => {
     expect(tripState(c.trip, c.today)).toBe(c.state);
     expect(tripStateText(c.trip, c.today)).toBe(c.text);
@@ -19,7 +23,7 @@ describe('travel', () => {
   for (const c of fx.cleanPlan) it(`cleanPlan: ${c.name}`, () => expect(cleanPlan(c.raw, ids())).toEqual(c.expected));
   for (const c of fx.parseTrips) it(`parseTrips: ${c.name}`, () => expect(parseTrips(c.text, ids())).toEqual(c.expected));
   for (const c of fx.mergeTrips) it(`mergeTrips: ${c.name}`, () => {
-    const out = mergeTrips({ receipts: [], ...c.data }, c.found, ids(), 5);
+    const out = mergeTrips({ receipts: [], ...c.data }, c.found, ids(), 5, c.today);
     expect(out.trips).toMatchObject(c.expected.trips);
     expect([out.added, out.updated]).toEqual([c.expected.added, c.expected.updated]);
   });

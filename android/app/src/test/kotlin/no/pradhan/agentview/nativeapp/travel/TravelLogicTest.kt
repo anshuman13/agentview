@@ -34,6 +34,16 @@ class TravelLogicTest {
         }
     }
 
+    @Test fun tripsSplitLikeWeb() {
+        fx["splitTrips"]!!.jsonArray.forEach { c ->
+            val o = c.jsonObject
+            val trips = o["trips"]!!.jsonArray.map { t -> val to = t.jsonObject; Trip(str(to["id"]), "", str(to["from"]), str(to["to"])) }
+            val out = splitTrips(trips, str(o["today"]))
+            assertEquals(o["active"]!!.jsonArray.map { str(it) }, out.active.map { it.id })
+            assertEquals(o["archived"]!!.jsonArray.map { str(it) }, out.archived.map { it.id })
+        }
+    }
+
     private fun field(o: kotlinx.serialization.json.JsonObject, k: String) = o[k]?.jsonPrimitive?.content ?: ""
     private fun trip(e: JsonElement) = e.jsonObject.let { Trip(field(it, "id"), "", field(it, "from"), field(it, "to")) }
     private fun item(e: JsonElement) = e.jsonObject.let { PlanItem(field(it, "id"), field(it, "day"), field(it, "start"), field(it, "end"), title = "") }

@@ -11,7 +11,7 @@ import { Row } from '../ui/Row';
 import { Section, sectionCount } from '../ui/Section';
 import { Skeleton } from '../ui/Skeleton';
 import { copyText, cx, plural } from '../ui/util';
-import { groupPlan, KIND_ICONS, nextItem, scanText, sortTrips, totalsText, tripState, tripStateText, type PlanItem, type Receipt, type Trip } from '../../../shared/travel';
+import { groupPlan, KIND_ICONS, nextItem, scanText, splitTrips, totalsText, tripState, tripStateText, type PlanItem, type Receipt, type Trip } from '../../../shared/travel';
 import { deleteTrip, exportUrl, receiptUrl, saveTrip, scanCalendar, uploadReceipt } from './travelApi';
 import { dayLabel, isImage, itemMeta, localNow, receiptMeta, shrink, tripDates, tripMeta } from './travelLogic';
 import { PlanItemSheet, ReceiptSheet, TripSheet } from './TravelSheets';
@@ -56,10 +56,12 @@ function CaptureRow({ cap, narrow }: { cap: Capture; narrow: boolean }) {
   );
 }
 
-function TripList({ trips, receipts, filing, cap, narrow, onOpen, onNew, find }: { trips: Trip[]; receipts: Receipt[]; filing: number; cap: Capture; narrow: boolean; onOpen: (id: string) => void; onNew: () => void; find: ReactNode }) {
+function TripList({ trips, receipts, filing, cap, narrow, archivedOpen, onArchived, onOpen, onNew, find }: { trips: Trip[]; receipts: Receipt[]; filing: number; cap: Capture; narrow: boolean; archivedOpen: boolean; onArchived: () => void; onOpen: (id: string) => void; onNew: () => void; find: ReactNode }) {
   const [all, setAll] = useState(false);
-  const sorted = sortTrips(trips, today());
-  const rows = all ? sorted : sorted.slice(0, FOLD);
+  const day = today();
+  const { active, archived } = splitTrips(trips, day);
+  const rows = all ? active : active.slice(0, FOLD);
+  const row = (t: Trip) => <Row key={t.id} leading={<Icon name="briefcase" />} title={t.name} meta={tripMeta(t, receipts.filter((r) => r.tripId === t.id), day)} onClick={() => onOpen(t.id)} />;
   const capture = !narrow && <><Button size="sm" icon="device-camera" onClick={cap.takePhoto}>Take photo</Button><Button size="sm" icon="add" onClick={cap.addFiles}>Add files</Button></>;
   return (
     <div className="tv-trip">
@@ -67,12 +69,16 @@ function TripList({ trips, receipts, filing, cap, narrow, onOpen, onNew, find }:
       {cap.inputs}
       {filing > 0 && <div className="ui-group"><Row plain leading={<span className="tv-thumb tv-file"><Icon name="loading" spin /></span>} title={`Adding ${plural(filing, 'receipt')}…`} /></div>}
       <section>
-        <Section label="Trips" count={sectionCount(trips.length)} action={<>{find}{capture}<Button size="sm" icon="add" onClick={onNew}>New trip</Button></>} />
-        <div className="ui-group">
-          {rows.map((t) => <Row key={t.id} leading={<Icon name="briefcase" />} title={t.name} meta={tripMeta(t, receipts.filter((r) => r.tripId === t.id), today())} onClick={() => onOpen(t.id)} />)}
-        </div>
-        {rows.length < sorted.length && <ShowAll count={sorted.length} className="ov-more" onClick={() => setAll(true)} />}
+        <Section label="Trips" count={sectionCount(active.length)} action={<>{find}{capture}<Button size="sm" icon="add" onClick={onNew}>New trip</Button></>} />
+        {active.length ? <div className="ui-group">{rows.map(row)}</div> : <EmptyState size="sm" icon="briefcase" title="No upcoming trips" hint="Find in calendar or New trip adds one" />}
+        {rows.length < active.length && <ShowAll count={active.length} className="ov-more" onClick={() => setAll(true)} />}
       </section>
+      {archived.length > 0 && (
+        <section>
+          <Section label="Archived" count={archived.length} open={archivedOpen} onToggle={onArchived} />
+          {archivedOpen && <div className="ui-group">{archived.map(row)}</div>}
+        </section>
+      )}
     </div>
   );
 }
@@ -218,6 +224,7 @@ function TripView({ trip, receipts, onBack, reload }: { trip: Trip; receipts: Re
 export function Travel({ shown }: { shown: boolean }) {
   const { data, error, reload } = useTravel(shown);
   const [open, setOpen] = useState<string | null>(null);
+  const [archivedOpen, setArchivedOpen] = useState(false);
   const [adding, setAdding] = useState(false);
   const [finding, setFinding] = useState(false);
   const [filing, setFiling] = useState(0);
@@ -250,7 +257,7 @@ export function Travel({ shown }: { shown: boolean }) {
   const body = trip ? (
     <TripView trip={trip} receipts={data!.receipts.filter((r) => r.tripId === trip.id)} onBack={() => setOpen(null)} reload={reload} />
   ) : data?.trips.length ? (
-    <TripList trips={data.trips} receipts={data.receipts} filing={filing} cap={cap} narrow={narrow} onOpen={setOpen} onNew={() => setAdding(true)} find={find} />
+    <TripList trips={data.trips} receipts={data.receipts} filing={filing} cap={cap} narrow={narrow} archivedOpen={archivedOpen} onArchived={() => setArchivedOpen(!archivedOpen)} onOpen={setOpen} onNew={() => setAdding(true)} find={find} />
   ) : data ? (
     <EmptyState icon="briefcase" title="No trips yet" hint="Find your trips in the calendar, or add one, then its receipts, bookings and notes" action={<>{find}<Button size="sm" onClick={() => setAdding(true)}>New trip</Button></>} />
   ) : error ? (

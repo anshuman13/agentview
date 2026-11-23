@@ -98,6 +98,14 @@ fun sortTrips(trips: List<Trip>, today: String): List<Trip> {
     }
 }
 
+data class TripSplit(val active: List<Trip>, val archived: List<Trip>)
+
+// The sorted trips split into active (now, upcoming, undated) and archived (past, newest end first).
+fun splitTrips(trips: List<Trip>, today: String): TripSplit {
+    val (archived, active) = sortTrips(trips, today).partition { tripState(it, today) == "past" }
+    return TripSplit(active, archived)
+}
+
 private val BY_TIME = compareBy<PlanItem>({ it.day }, { it.start })
 
 class PlanDay(val day: String, val items: List<PlanItem>)
