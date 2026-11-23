@@ -11,7 +11,6 @@ import { ChatSettings, useChatSettings, type Pick } from '../ChatSettings';
 import { ghostFor, joinMarks, splitMarks, type Use } from './composerLogic';
 import { AttachmentsBar } from './AttachmentsBar';
 import { ComposerFoot, SendButton } from './ComposerFoot';
-import { SendAt } from './SendAt';
 import { ComposerStats } from './ComposerStats';
 import { PickerSheets } from './PickerSheets';
 import { SharedConfirm, useSharedIntake } from './SharedText';
@@ -85,6 +84,7 @@ export const Composer = memo(function Composer() {
 
   const [talked, setTalked] = useState(0);
   const [talking, setTalking] = useState(false);
+  const [dictating, setDictating] = useState(false);
   useEffect(() => { if (talked) submit(false, true); }, [talked]);
 
   useComposerEvents({ ta, wantCaret, setText, setUses, sendBuild });
@@ -103,7 +103,7 @@ export const Composer = memo(function Composer() {
         <UsesBar uses={uses} remove={(u) => setUses((l) => l.filter((x) => x !== u))} />
         <AttachmentsBar marks={marks} remove={(i) => setMarks((l) => l.filter((_, j) => j !== i))} />
         <div className={narrow ? 'cp-row' : undefined}>
-        {narrow && <AddMenu uploading={uploading} setPick={setPick} attach={attach} />}
+        {narrow && <AddMenu uploading={uploading} setPick={setPick} attach={attach} laterable={typed && !ac.shell} sendLater={sendLater} />}
         <div className="cp-text">
           <div ref={mirror} className="cp-mirror" aria-hidden><span className="cp-typed">{text}</span><span className="cp-ghost">{ghost}</span>{ghost && !touch() && <kbd className="cp-key">Tab</kbd>}</div>
           <textarea
@@ -125,8 +125,7 @@ export const Composer = memo(function Composer() {
         </div>
         {narrow && (
           <>
-            <Voice onText={dictate} />
-            {typed && <SendAt typed={typed} shell={ac.shell} sendLater={sendLater} />}
+            {(!typed || dictating) && <Voice onText={dictate} onListen={setDictating} />}
             {!talking && (typed || running || !recognizer()) ? <SendButton typed={typed} shell={ac.shell} submit={submit} /> : <Voice onText={dictate} onSubmit={() => setTalked((n) => n + 1)} onListen={setTalking} />}
           </>
         )}

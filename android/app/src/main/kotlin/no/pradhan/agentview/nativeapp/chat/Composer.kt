@@ -4,6 +4,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -262,7 +263,7 @@ fun Composer(hub: Hub, chatId: String, sessionId: String?, session: SessionInfo?
                     s, composerPlaceholder(providerLabel(session?.provider), placeholderState(waiting, session?.compacting == true, running, s.uses.isNotEmpty()), canTalk),
                     Modifier.weight(1f).focusRequester(focus).onFocusChanged { bar = barState(bar, if (it.isFocused) BarEvent.Focus else BarEvent.Blur) }, { multiline = it },
                 )
-                ComposerActions(hub, s, running, uploading, dictation, canTalk) { sheet = Picker.SendAt }
+                ComposerActions(hub, s, running, uploading, dictation, canTalk)
             }
         }
     }
@@ -370,21 +371,20 @@ private fun ComposerInput(s: ComposerState, placeholder: String, modifier: Modif
 }
 
 @Composable
-private fun ComposerActions(hub: Hub, s: ComposerState, running: Boolean, uploading: Int, dictation: Dictation, canTalk: Boolean, onSendAt: () -> Unit) {
+private fun ComposerActions(hub: Hub, s: ComposerState, running: Boolean, uploading: Int, dictation: Dictation, canTalk: Boolean) {
     val c = av
     val text = s.text
     val typed = s.full.isNotBlank()
     var talking by remember { mutableStateOf(false) }
+    var dictating by remember { mutableStateOf(false) }
     val haptic = LocalHapticFeedback.current
     val fill = { spoken: String, final: Boolean -> dictation.apply(text.text, text.selection.end, spoken, final)?.let { (t, caret) -> s.set(TextFieldValue(t, TextRange(caret))) }; Unit }
-    VoiceButton(fill, { hub.notice.value = it })
-    if (typed && !talking) IconBtn("clock", "Send at", onSendAt)
-    if (running && typed) Button("Stop and send", { s.submit(true, uploading) }, variant = ButtonVariant.Plain, size = ButtonSize.Sm)
+    if (!typed || dictating) VoiceButton(fill, { hub.notice.value = it }, onListening = { dictating = it })
     val canSend = typed && uploading == 0
     when {
         talking || (canTalk && !typed && !running) -> VoiceButton(fill, { hub.notice.value = it }, onSubmit = { s.submit(false, uploading, voice = true) }, onListening = { talking = it })
         running && !typed -> SendCircle("Stop", !hub.readOnly, hub::interrupt) { Box(Modifier.size(Tokens.sp6).background(c.bg, RoundedCornerShape(Tokens.radiusXs))) }
-        else -> SendCircle(if (running) "Queue" else "Send", canSend, { haptic.performHapticFeedback(HapticFeedbackType.Confirm); s.submit(false, uploading) }) { AvIcon("send", null, Tokens.iconLg, tint = if (canSend) c.bg else c.fgFaint) }
+        else -> SendCircle(if (running) "Queue" else "Send", canSend, { haptic.performHapticFeedback(HapticFeedbackType.Confirm); s.submit(false, uploading) }, if (running) ({ haptic.performHapticFeedback(HapticFeedbackType.LongPress); s.submit(true, uploading) }) else null) { AvIcon("send", null, Tokens.iconLg, tint = if (canSend) c.bg else c.fgFaint) }
     }
 }
 
@@ -543,8 +543,8 @@ private fun ChatSettingsSheet(hub: Hub, session: SessionInfo?, run: ChatRun?, on
 }
 
 @Composable
-private fun SendCircle(label: String, enabled: Boolean, onClick: () -> Unit, glyph: @Composable () -> Unit) {
-    Box(Modifier.size(Tokens.touch).semantics { contentDescription = label }.clickable(enabled = enabled, onClickLabel = label, onClick = onClick), contentAlignment = Alignment.Center) {
+private fun SendCircle(label: String, enabled: Boolean, onClick: () -> Unit, onLongClick: (() -> Unit)? = null, glyph: @Composable () -> Unit) {
+    Box(Modifier.size(Tokens.touch).semantics { contentDescription = label }.combinedClickable(enabled = enabled, onClickLabel = label, onLongClickLabel = onLongClick?.let { "Stop and send" }, onLongClick = onLongClick, onClick = onClick), contentAlignment = Alignment.Center) {
         RoundFace(enabled, glyph)
     }
 }

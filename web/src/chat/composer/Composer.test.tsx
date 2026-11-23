@@ -18,7 +18,7 @@ stubGlobal('matchMedia', () => ({ matches: false, addEventListener() {}, removeE
 stubGlobal('window', { SpeechRecognition: class {} });
 
 describe('Composer at phone width', () => {
-  it('has Add, a mic and Talk with no foot row while empty, and Send in place of Talk once typed', () => {
+  it('has Add, a mic and Talk with no foot row while empty, and only Send once typed', () => {
     draft.text = '';
     const empty = renderToStaticMarkup(<Composer />);
     expect(empty).toContain('aria-label="Add"');
@@ -29,7 +29,8 @@ describe('Composer at phone width', () => {
     draft.text = 'hello';
     const typed = renderToStaticMarkup(<Composer />);
     expect(typed).toContain('aria-label="Send"');
-    expect(typed).toContain('aria-label="Dictate"');
+    expect(typed).not.toContain('aria-label="Dictate"');
+    expect(typed).not.toContain('aria-label="Send at"');
     expect(typed).not.toContain('aria-label="Talk"');
   });
 });
