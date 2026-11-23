@@ -68,7 +68,7 @@ class VoiceMode(private val ctx: Context, private val hub: Hub, private val scop
         r.setRecognitionListener(listener(
             onPartial = { _state.value = VoiceState(VoicePhase.Listening, it) },
             onResult = { if (it.isEmpty()) fail("No speech heard") else ask(it) },
-            onError = { speechError(it)?.let { m -> fail(m) } },
+            onError = { if (rec === r) fail(speechError(it) ?: "Voice input failed") },
         ))
         r.startListening(dictationIntent())
     }
