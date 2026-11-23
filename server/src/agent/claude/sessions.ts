@@ -84,7 +84,8 @@ export function ownBranch(tail: string) {
   return undefined;
 }
 
-const ownTail = (all: SDKSessionInfo[]) => Promise.all(all.map(async (x) => {
+// A transcript with no folder holds no messages, such as the title-only file a CLI login leaves.
+const ownTail = (all: SDKSessionInfo[]) => Promise.all(all.filter((x) => x.cwd).map(async (x) => {
   const tail = await readTail(x);
   return { ...x, lastModified: lastMessageTime(tail) ?? x.lastModified, gitBranch: ownBranch(tail) };
 }));
