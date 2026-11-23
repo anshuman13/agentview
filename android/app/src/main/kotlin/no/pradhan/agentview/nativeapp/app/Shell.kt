@@ -109,6 +109,7 @@ import no.pradhan.agentview.nativeapp.workspace.BrowserScreen
 import no.pradhan.agentview.nativeapp.workspace.ChangesScreen
 import no.pradhan.agentview.nativeapp.workspace.FilesScreen
 import no.pradhan.agentview.nativeapp.workspace.SketchesScreen
+import no.pradhan.agentview.nativeapp.travel.TravelScreen
 import no.pradhan.agentview.nativeapp.sessions.AdvisorsScreen
 import no.pradhan.agentview.nativeapp.workspace.TerminalScreen
 
@@ -375,6 +376,7 @@ private fun MorePage(m: MoreItem, hub: Hub, onBack: () -> Unit, onTab: (String) 
     "deploy" -> DeployScreen(hub, onBack)
     "mcp" -> McpScreen(hub, onBack)
     "sketches" -> SketchesScreen(hub, onBack)
+    "travel" -> TravelScreen(hub, onBack)
     "advisors" -> AdvisorsScreen(hub, onBack) { onTab(Tab.Chat.route) }
     else -> SettingsScreen(hub, onBack, onOrigin)
 }

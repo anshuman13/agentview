@@ -3,6 +3,7 @@ import { BadRequest, parseObject, readBody, NotFound } from '../json.js';
 import { chatFileRoutes, chatMcpRoutes, chatPrefixes, chatSessionRoutes, streamRoutes } from './chatRoutes.js';
 import { openPrefixes, sessionRoutes, systemRoutes, workspaceRoutes } from './openRoutes.js';
 import { runRoutes } from './runRoutes.js';
+import { travelRoutes } from './travelRoutes.js';
 import { currentChat, type Ctx, type Entry, type Prefix, type Reply, type RouteDeps } from './routeTypes.js';
 
 export type { RouteDeps };
@@ -24,7 +25,7 @@ function find<C>(table: Record<string, Entry<C>>, prefixes: Prefix<C>[], method:
 }
 
 export function createRoutes(d: RouteDeps) {
-  const open = { ...sessionRoutes(d), ...workspaceRoutes(d), ...runRoutes(d), ...systemRoutes(d), ...streamRoutes(d) };
+  const open = { ...sessionRoutes(d), ...workspaceRoutes(d), ...runRoutes(d), ...travelRoutes(), ...systemRoutes(d), ...streamRoutes(d) };
   const chatRoutes = { ...chatSessionRoutes(d), ...chatFileRoutes(), ...chatMcpRoutes(d) };
 
   async function dispatch(req: Request, url: URL, ip: string): Promise<Response> {

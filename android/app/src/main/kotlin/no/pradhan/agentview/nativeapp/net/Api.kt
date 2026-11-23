@@ -132,6 +132,10 @@ class Api(private val origin: () -> String, private val http: OkHttpClient = sha
         return protocolJson.parseToJsonElement(body.decodeToString()).jsonObject["path"]!!.jsonPrimitive.content
     }
 
+    suspend fun bytes(path: String): ByteArray = call(url(path))
+    suspend fun postBytes(path: String, mime: String, bytes: ByteArray): String = call(url(path).post(bytes.toRequestBody(mime.toMediaType()))).decodeToString()
+    fun link(path: String) = origin() + path
+
     suspend fun image(chat: String, path: String): ByteArray = call(url("/api/image?chat=${enc(chat)}&path=${enc(path)}"))
 
     // Chat-scoped routes run in the chat's folder; without a chat the server uses the last viewed one.

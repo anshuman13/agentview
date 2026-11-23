@@ -71,7 +71,7 @@ private fun readUri(ctx: Context, uri: Uri) = ctx.contentResolver.openInputStrea
 @Composable
 fun AttachButton(hub: Hub, onUploading: (Int) -> Unit, choose: Boolean = true, onPath: (String) -> Unit) {
     var open by remember { mutableStateOf(false) }
-    val attach = rememberAttach(hub, onUploading, onPath)
+    val attach = rememberAttach(hub, onUploading, onPath = onPath)
     if (!choose) return IconBtn("device-camera", "Take photo", attach.takePhoto)
     Box {
         IconBtn("add", "Attach image", { open = true })
@@ -86,7 +86,13 @@ fun AttachButton(hub: Hub, onUploading: (Int) -> Unit, choose: Boolean = true, o
 class Attach(val takePhoto: () -> Unit, val choosePhoto: () -> Unit, val chooseFile: () -> Unit)
 
 @Composable
-fun rememberAttach(hub: Hub, onUploading: (Int) -> Unit, onPath: (String) -> Unit): Attach {
+// send uploads the bytes and returns what onPath gets, by default the chat's [Image: path] or [File: path] marker.
+fun rememberAttach(
+    hub: Hub,
+    onUploading: (Int) -> Unit,
+    send: suspend (name: String, mime: String, bytes: ByteArray) -> String? = { n, m, b -> hub.attach(n, m, b)?.let { attachMark(m, it) } },
+    onPath: (String) -> Unit,
+): Attach {
     val ctx = LocalContext.current
     val shot = remember { File(File(ctx.cacheDir, "camera").apply { mkdirs() }, "shot.jpg") }
 
@@ -97,8 +103,8 @@ fun rememberAttach(hub: Hub, onUploading: (Int) -> Unit, onPath: (String) -> Uni
             try {
                 val got = withContext(Dispatchers.IO) { runCatching(read) }
                 val bytes = got.getOrNull()
-                val path = bytes?.let { hub.attach(name, mime, it) }
-                if (path != null) onPath(attachMark(mime, path)) else if (bytes == null) hub.notice.value = if (got.exceptionOrNull() is FileTooBig) TOO_BIG else "Could not read the file"
+                val out = bytes?.let { send(name, mime, it) }
+                if (out != null) onPath(out) else if (bytes == null) hub.notice.value = if (got.exceptionOrNull() is FileTooBig) TOO_BIG else "Could not read the file"
             } finally {
                 onUploading(-1)
             }
