@@ -9,11 +9,14 @@ import { defineTool } from './tool.js';
 export const buildTool = defineTool({
   name: 'start_build',
   description: 'Start the agentview:build workflow for a spec in a new chat in its project, the same as the Build action on the Advisors board. Use it from a chat whose folder is not the project.',
-  schema: { spec: z.string().describe('Absolute path of the spec, <project>/.claude/specs/<slug>.md') },
-  async handler({ spec }, { host }) {
+  schema: {
+    spec: z.string().describe('Absolute path of the spec, <project>/.claude/specs/<slug>.md'),
+    approval: z.boolean().optional().describe('false only when the user asked for builds without approval, such as an unattended loop'),
+  },
+  async handler({ spec, approval }, { host }) {
     const root = path.resolve(spec, '../../..');
     if (!path.isAbsolute(spec) || !isSpecPath(spec) || !existsSync(spec) || !allowedFolder(root)) return `No spec at ${spec} in a project.`;
     if (!host.startChat) return 'This chat cannot start other chats.';
-    return `Build started in chat ${await host.startChat(root, buildSpecPrompt(spec))}.`;
+    return `Build started in chat ${await host.startChat(root, buildSpecPrompt(spec, approval ?? true))}.`;
   },
 });

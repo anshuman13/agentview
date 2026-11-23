@@ -60,7 +60,7 @@ export const buildPrompt = (brief: string) => `Run the agentview:build skill on 
 
 export const sketchSpecPrompt = (path: string) => `Start the agentview:designer subagent on the spec at ${path}. Give it only that path; it writes the sketch to .claude/sketches/<slug>.html. Reply with the sketch path.`;
 
-export const buildSpecPrompt = (path: string) => `Run the agentview:build skill on the existing spec at ${path} (call the Skill tool with skill "agentview:build"). Use the file name as the slug and the spec's title as the brief; the pm starts from that file and changes it only where review finds a problem.`;
+export const buildSpecPrompt = (path: string, approval = true) => `Run the agentview:build skill on the existing spec at ${path} (call the Skill tool with skill "agentview:build"). Use the file name as the slug and the spec's title as the brief; the pm starts from that file and changes it only where review finds a problem.${approval ? '' : ' The user asked to build without approving: pass approval: false.'}`;
 
 export const buildItemPrompt = (title: string, why: string, slug: string) => `Run the agentview:build skill on the backlog item below (call the Skill tool with skill "agentview:build"). No spec exists yet: the pm agent writes it first to .claude/specs/${slug}.md, then the build continues. Use ${slug} as the slug.\n\n<brief>\n${title}. ${why}\n</brief>`;
 
