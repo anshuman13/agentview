@@ -14,6 +14,12 @@ const App = lazy(() => import('./shell/App').then((m) => ({ default: m.App })));
 
 if (touch()) window.addEventListener('focusout', () => window.scrollTo(0, 0));
 
+// Spinners and pulsing dots repaint the window every frame; pause them while the window is not in front to save energy.
+const still = () => document.documentElement.classList.toggle('still', document.hidden || !document.hasFocus());
+for (const ev of ['focus', 'blur']) window.addEventListener(ev, still);
+document.addEventListener('visibilitychange', still);
+still();
+
 // A rebuild replaces the hashed chunks; a page from the previous build reloads instead of failing to open a pane.
 window.addEventListener('vite:preloadError', () => location.reload());
 
