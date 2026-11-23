@@ -258,6 +258,8 @@ export type ServerMessage =
   | { type: 'runs'; runs: ChatRun[] }
   | { type: 'attention'; items: AttentionItem[] }
   | { type: 'restarting' }
+  // To one phone app: set this alarm. The phone answers with phone_alarm_result.
+  | { type: 'phone_alarm'; id: string; time: string; day?: string; label?: string }
   // A build in this chat waits for approval and nobody is viewing the chat.
   | { type: 'approval'; chat: string; slug: string; title: string }
   | { type: 'error'; text: string };
@@ -402,6 +404,7 @@ export type ClientMessage =
   | { type: 'open_advisor'; id: AdvisorId; fresh?: boolean; text?: string }
   | { type: 'new_session'; cwd?: string; fork?: string; profile?: 'work' | 'personal'; model?: string; provider?: Provider; text?: string; hub?: boolean }
   | { type: 'mcp_status' }
+  | { type: 'phone_alarm_result'; id: string; ok: boolean; notified?: boolean; weekday?: string; error?: string }
   | { type: 'usage' }
   | { type: 'mcp_reconnect'; name: string }
   | { type: 'mcp_toggle'; name: string; enabled: boolean }

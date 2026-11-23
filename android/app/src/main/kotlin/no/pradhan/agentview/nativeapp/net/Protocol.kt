@@ -304,6 +304,7 @@ sealed interface ServerMessage {
     data class Findings(val review: ReviewFindings) : ServerMessage
     data class FileChanged(val path: String) : ServerMessage
     data class Approval(val chat: String, val slug: String, val title: String) : ServerMessage
+    data class PhoneAlarm(val id: String, val time: String, val day: String?, val label: String) : ServerMessage
     data class Other(val type: String) : ServerMessage
 }
 
@@ -334,6 +335,7 @@ fun parseMessage(data: String): ServerMessage {
         "findings" -> ServerMessage.Findings(protocolJson.decodeFromJsonElement(ReviewFindings.serializer(), o["review"]!!))
         "file_changed" -> ServerMessage.FileChanged(o["path"]!!.jsonPrimitive.content)
         "approval" -> ServerMessage.Approval(o["chat"]!!.jsonPrimitive.content, o["slug"]!!.jsonPrimitive.content, o["title"]!!.jsonPrimitive.content)
+        "phone_alarm" -> ServerMessage.PhoneAlarm(o["id"]!!.jsonPrimitive.content, o["time"]!!.jsonPrimitive.content, o["day"]?.jsonPrimitive?.contentOrNull, o["label"]?.jsonPrimitive?.contentOrNull ?: "")
         else -> ServerMessage.Other(type)
     }
 }
@@ -394,6 +396,9 @@ fun setReviewCmd(on: Boolean) = cmd("set_review") { put("on", on) }
 fun setBuildFlowCmd(on: Boolean) = cmd("set_build_flow") { put("on", on) }
 fun reviewCmd(id: String, action: String, file: String? = null, hunk: Int? = null) = cmd("review") { put("id", id); put("action", action); if (file != null) put("file", file); if (hunk != null) put("hunk", hunk) }
 fun newSessionCmd(profile: String? = null, cwd: String? = null, model: String? = null, fork: String? = null, provider: String? = null, text: String? = null, hub: Boolean = false) = cmd("new_session") { if (hub) put("hub", true); if (profile != null) put("profile", profile); if (cwd != null) put("cwd", cwd); if (model != null) put("model", model); if (fork != null) put("fork", fork); if (provider != null) put("provider", provider); if (text != null) put("text", text) }
+fun phoneAlarmResultCmd(id: String, ok: Boolean, notified: Boolean = false, weekday: String? = null, error: String? = null) = cmd("phone_alarm_result") {
+    put("id", id); put("ok", ok); if (notified) put("notified", true); if (weekday != null) put("weekday", weekday); if (error != null) put("error", error)
+}
 fun closeCmd(id: String) = cmd("close") { put("id", id) }
 fun openSessionCmd(sessionId: String) = cmd("open_session") { put("sessionId", sessionId) }
 fun openAdvisorCmd(id: String, fresh: Boolean, text: String? = null) = cmd("open_advisor") { put("id", id); if (fresh) put("fresh", true); if (text != null) put("text", text) }

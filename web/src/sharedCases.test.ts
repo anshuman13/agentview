@@ -33,7 +33,7 @@ import { attachMark } from '../../shared/attachMark';
 import { chatSessionOf } from '../../shared/chatLink';
 import { latestTodos, todoCount, todoCurrent, todoProgress, type TodoItem } from '../../shared/todos';
 import { mergeTail, trimHeld } from './app/runtime/pageEvents';
-import { buildTranscript, openAtNew, rewindReplies, turnAnswers, type Item } from './chat/transcript/steps';
+import { alarmCard, buildTranscript, openAtNew, rewindReplies, turnAnswers, type Item } from './chat/transcript/steps';
 import { filePath } from './chat/transcript/md';
 import { unreadOrder, type UnreadChat } from './sessions/chatNav';
 import { foldTurns, proposalState, rememberedOf, usedClaimState, workTitle } from './chat/transcript/workFold';
@@ -124,6 +124,14 @@ describe('cases shared with the Android app', () => {
       if (c.steps) expect(rows.flatMap((r) => (r.kind === 'fold' ? [r.steps] : []))).toEqual(c.steps);
       if (c.now) expect(rows.flatMap((r) => (r.kind === 'fold' ? [r.now] : []))).toEqual(c.now);
       if (c.proposed) expect(rows.flatMap((r) => (r.kind === 'fold' ? [r.proposed] : []))).toEqual(c.proposed);
+    });
+  }
+
+  for (const c of cases<{ name: string; time: string; label: string | null; result: string | null; running: boolean; expected: object }>('alarm-card')) {
+    it(`alarmCard: ${c.name}`, () => {
+      const use = { id: 'u', kind: 'tool_use', name: 'mcp__agentview__phone_alarm', input: { time: c.time, ...(c.label && { label: c.label }) }, summary: '', at: 0 } as never;
+      const result = c.result === null ? undefined : ({ id: 'r', kind: 'tool_result', toolUseId: 'u', text: c.result, isError: false, at: 1 } as never);
+      expect(alarmCard(use, result, c.running)).toEqual(c.expected);
     });
   }
 

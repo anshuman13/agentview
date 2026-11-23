@@ -1,7 +1,9 @@
 package no.pradhan.agentview.nativeapp.chat
 
+import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.provider.AlarmClock
 import android.util.LruCache
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
@@ -47,6 +49,7 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInParent
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import kotlin.math.roundToInt
@@ -66,6 +69,9 @@ import no.pradhan.agentview.nativeapp.ops.tokensText
 
 import no.pradhan.agentview.nativeapp.ui.AvIcon
 import no.pradhan.agentview.nativeapp.ui.Badge
+import no.pradhan.agentview.nativeapp.ui.Button
+import no.pradhan.agentview.nativeapp.ui.ButtonSize
+import no.pradhan.agentview.nativeapp.ui.ButtonVariant
 import no.pradhan.agentview.nativeapp.ui.BadgeTone
 import no.pradhan.agentview.nativeapp.ui.Chevron
 import no.pradhan.agentview.nativeapp.ui.DotState
@@ -304,6 +310,29 @@ private fun SpecBody(hub: Hub, d: BuildDetail, open: (BuildSheet) -> Unit) {
 internal fun SpecRow(slug: String, meta: String) {
     Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(Tokens.shapeLg)).background(av.groupCard)) {
         ListRow(slug, meta, leading = { AvIcon("beaker", null, Tokens.icon) })
+    }
+}
+
+// web AlarmCard.tsx: an alarm the agent set on the phone, with the time, its label and whether the phone took it.
+@Composable
+internal fun AlarmCard(it: Item.Step, running: Boolean) {
+    val card = alarmCard(it.use, it.result, running)
+    val context = LocalContext.current
+    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(Tokens.shapeLg)).background(av.groupCard)) {
+        ListRow(
+            "Alarm", leading = { AvIcon("bell", null, Tokens.icon) },
+            trailing = {
+                Button("See alarms", { runCatching { context.startActivity(Intent(AlarmClock.ACTION_SHOW_ALARMS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) } }, variant = ButtonVariant.Plain, size = ButtonSize.Sm)
+            },
+        )
+        Column(Modifier.padding(start = Tokens.listPad + Tokens.leadWidth + Tokens.sp8, end = Tokens.listPad, bottom = Tokens.sp6), verticalArrangement = Arrangement.spacedBy(Tokens.sp2)) {
+            Text(card.time, style = Type.display, color = av.fgStrong)
+            if (card.label.isNotEmpty()) Text(card.label, style = Type.body, color = av.fg, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Tokens.sp3)) {
+                if (card.tone == AlarmTone.Pending) CircularProgressIndicator(Modifier.size(Tokens.sp6), strokeWidth = Tokens.stroke, color = av.fgFaint)
+                Text(card.status, style = Type.meta, color = if (card.tone == AlarmTone.Error) av.err else av.metaFg)
+            }
+        }
     }
 }
 

@@ -4,7 +4,14 @@ import { attention } from '../integrations/attention.js';
 import type { Ring } from './stream.js';
 import { RingGate } from './ringGate.js';
 
-export type Client = { send: (m: ServerMessage) => void; sendRaw: (data: string, id?: number) => void; view: string; waiting?: boolean; close?: () => void; phone?: boolean };
+export type Client = { send: (m: ServerMessage) => void; sendRaw: (data: string, id?: number) => void; view: string; waiting?: boolean; close?: () => void; phone?: boolean; app: boolean; readOnly: boolean; opened: number };
+
+// The phone app that came to the foreground last and may write: the later one wins a tie on opened.
+export function alarmPhone(clients: Iterable<Client>) {
+  let best: Client | undefined;
+  for (const c of clients) if (c.app && !c.readOnly && (!best || c.opened >= best.opened)) best = c;
+  return best;
+}
 
 // What the host last told this process about its chats.
 export type Live = { chats: Map<string, LiveChat>; runs: ChatRun[]; lastViewed: string; restarting: boolean };

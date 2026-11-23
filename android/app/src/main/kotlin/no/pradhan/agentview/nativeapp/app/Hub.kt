@@ -18,12 +18,14 @@ import no.pradhan.agentview.nativeapp.net.enc
 import no.pradhan.agentview.nativeapp.net.openAdvisorCmd
 import no.pradhan.agentview.nativeapp.net.openSessionCmd
 import no.pradhan.agentview.nativeapp.net.parseMessage
+import no.pradhan.agentview.nativeapp.net.phoneAlarmResultCmd
 import no.pradhan.agentview.nativeapp.net.promptCmd
 import no.pradhan.agentview.nativeapp.net.sharedHttp
 import no.pradhan.agentview.nativeapp.net.steerCmd
 import no.pradhan.agentview.nativeapp.net.viewCmd
 import no.pradhan.agentview.nativeapp.codex.NeedsView
 import android.app.Application
+import android.content.Intent
 import android.net.ConnectivityManager
 import android.net.Network
 import androidx.glance.appwidget.updateAll
@@ -32,6 +34,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import java.io.File
 import java.time.LocalTime
+import java.time.ZonedDateTime
 import java.util.UUID
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -245,7 +248,12 @@ class Hub(internal val app: Application, private val saved: SavedStateHandle) : 
     // Set by the launch intent to check the screens without changing anything on the server beyond viewing a chat.
     var readOnly: Boolean
         get() = AppState.readOnly
-        set(v) { AppState.readOnly = v }
+        set(v) {
+            val changed = AppState.readOnly != v
+            AppState.readOnly = v
+            // The server picks the phone for an alarm by the stream's readonly flag.
+            if (changed) stream.start()
+        }
 
     internal var workspaceAt = 0L
     internal val seenMarks = mutableMapOf<String, SeenMark>()
@@ -254,7 +262,7 @@ class Hub(internal val app: Application, private val saved: SavedStateHandle) : 
         viewModelScope,
         url = { last ->
             val chat = store.wanted
-            "${origin.value}/api/events?cid=$cid&client=phone" + (if (chat.isNotEmpty()) "&chat=${enc(chat)}" else "") + (if (last.isNotEmpty()) "&last=$last" else "")
+            "${origin.value}/api/events?cid=$cid&client=phone" + (if (readOnly) "&readonly=1" else "") + (if (chat.isNotEmpty()) "&chat=${enc(chat)}" else "") + (if (last.isNotEmpty()) "&last=$last" else "")
         },
         onConnected = { up ->
             _connected.value = up
@@ -359,6 +367,7 @@ class Hub(internal val app: Application, private val saved: SavedStateHandle) : 
         if (m is ServerMessage.Live && !foreground && notifyOn.value) notices(store.state.value.live, m.chats, muted.value).forEach(::notify)
         if (m is ServerMessage.Approval && !foreground && notifyOn.value) notifier.post(Notice(NoticeKind.Approval, m.chat, m.title, "Spec waiting for your approval", slug = m.slug))
         if (m is ServerMessage.Error) notice.value = m.text
+        if (m is ServerMessage.PhoneAlarm) setPhoneAlarm(m)
         if (m is ServerMessage.Findings) setFindings(m.review.target, m.review)
         if (m is ServerMessage.FileChanged) fileChanged.tryEmit(m.path)
         store.handle(m)
@@ -371,6 +380,25 @@ class Hub(internal val app: Application, private val saved: SavedStateHandle) : 
             liveLoaded.value = true
             if (outbox.items.value.isNotEmpty() && System.currentTimeMillis() - flushFailedAt > FLUSH_RETRY_MS) flushOutbox()
         }
+    }
+
+    // The server picked this phone for an alarm. Android 10+ blocks a start from the background, so then the user gets a notification to tap.
+    private fun setPhoneAlarm(m: ServerMessage.PhoneAlarm) {
+        if (readOnly) return
+        val plan = alarmPlan(m.time, m.day, ZonedDateTime.now())
+        val result = when (plan) {
+            is AlarmPlan.Refused -> phoneAlarmResultCmd(m.id, false, error = plan.error)
+            is AlarmPlan.Set -> if (!foreground) {
+                notifier.alarm(m.id, m.time, m.label, alarmIntent(plan, m.label))
+                phoneAlarmResultCmd(m.id, true, notified = true, weekday = plan.weekday)
+            } else try {
+                app.startActivity(alarmIntent(plan, m.label).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                phoneAlarmResultCmd(m.id, true, weekday = plan.weekday)
+            } catch (e: Exception) {
+                phoneAlarmResultCmd(m.id, false, error = alarmFailure(e))
+            }
+        }
+        viewModelScope.launch(Dispatchers.IO) { runCatching { api.send("", result) } }
     }
 
     private fun showChat(s: ChatStore, id: String) {

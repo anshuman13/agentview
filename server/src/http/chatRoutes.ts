@@ -55,8 +55,8 @@ export function streamRoutes(d: RouteDeps): Record<string, Entry<Ctx>> {
       const msg = body as ClientMessage;
       if (typeof msg?.type !== 'string') throw new Error('Bad command');
       const client = d.streams.get(url.searchParams.get('cid') ?? '');
-      if (!client && !d.chats().has(url.searchParams.get('chat') ?? '') && msg.type !== 'new_session' && msg.type !== 'open_advisor') return failed(409, 'No stream for this command');
-      d.handleCommand(client ?? { send: () => {}, sendRaw: () => {}, view: current(url)?.id ?? '', phone: isPhone(url.searchParams.get('client'), req.headers.get('user-agent') ?? undefined) }, msg, url.searchParams.get('chat') || undefined);
+      if (!client && !d.chats().has(url.searchParams.get('chat') ?? '') && msg.type !== 'new_session' && msg.type !== 'open_advisor' && msg.type !== 'phone_alarm_result') return failed(409, 'No stream for this command');
+      d.handleCommand(client ?? { send: () => {}, sendRaw: () => {}, view: current(url)?.id ?? '', phone: isPhone(url.searchParams.get('client'), req.headers.get('user-agent') ?? undefined), app: false, readOnly: false, opened: 0 }, msg, url.searchParams.get('chat') || undefined);
       return { ok: true };
     }, true),
   };

@@ -94,6 +94,8 @@ import no.pradhan.agentview.nativeapp.chat.MemoryFile
 import no.pradhan.agentview.nativeapp.chat.MemoryMark
 import no.pradhan.agentview.nativeapp.chat.memoryMark
 import no.pradhan.agentview.nativeapp.chat.leftOutPreferences
+import no.pradhan.agentview.nativeapp.chat.ALARM_TOOL
+import no.pradhan.agentview.nativeapp.chat.alarmCard
 import no.pradhan.agentview.nativeapp.chat.rememberedOf
 import no.pradhan.agentview.nativeapp.chat.Proposal
 import no.pradhan.agentview.nativeapp.chat.StatusStep
@@ -351,6 +353,20 @@ class SharedCasesTest {
                 assertEquals(c.str("name"), want, rows.filterIsInstance<FoldRow.Fold>().map { it.proposed })
             }
             c["now"]?.let { expected -> assertEquals(c.str("name"), expected.jsonArray.map { it.jsonPrimitive.content }, rows.filterIsInstance<FoldRow.Fold>().map { it.now }) }
+        }
+    }
+
+    @Test fun alarmCards() {
+        for (c in cases("alarm-card")) {
+            val input = kotlinx.serialization.json.buildJsonObject {
+                put("time", c.str("time"))
+                c.nullable("label")?.let { put("label", it.jsonPrimitive.content) }
+            }
+            val use = ChatEvent(id = "u", kind = "tool_use", name = ALARM_TOOL, input = input)
+            val result = c.nullable("result")?.let { ChatEvent(id = "r", kind = "tool_result", toolUseId = "u", text = it.jsonPrimitive.content) }
+            val want = c.getValue("expected").jsonObject
+            val got = alarmCard(use, result, c.getValue("running").jsonPrimitive.boolean)
+            assertEquals(c.str("name"), listOf(want.str("time"), want.str("label"), want.str("status"), want.str("tone")), listOf(got.time, got.label, got.status, got.tone.name.lowercase()))
         }
     }
 

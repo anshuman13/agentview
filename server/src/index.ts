@@ -15,9 +15,10 @@ import { forgetPrs, gh, onPrsChanged, useAutoMerge } from './integrations/github
 import { onAttention, startAttention } from './integrations/attention.js';
 import { startSummaries } from './agent/claude/summaries.js';
 import { thisMac } from './http/macs.js';
-import type { AttentionItem, ClientMessage } from '../../shared/protocol.js';
+import type { AttentionItem, ClientMessage, ServerMessage } from '../../shared/protocol.js';
+import type { HostLine } from './socket.js';
 import { Ring, frame } from './http/stream.js';
-import { createClients, type Client, type Live } from './http/clients.js';
+import { alarmPhone, createClients, type Client, type Live } from './http/clients.js';
 import { serveWeb } from './http/web.js';
 import { createRoutes, writers } from './http/routes.js';
 import { OPEN, Peer, type SocketData } from './http/peer.js';
@@ -76,6 +77,7 @@ async function closeByUser(id: string) {
 const host = new Host(PORT, PROJECT, {
   push: (l) => {
     if ('closed' in l) return closeTerminals(l.closed);
+    if ('alarm' in l) return sendAlarm(l.alarm);
     if (l.m.type === 'live') live.chats = new Map(l.m.chats.map((c) => [c.id, c]));
     if (l.m.type === 'restarting') live.restarting = true;
     if (l.m.type === 'runs') {
@@ -108,6 +110,12 @@ const host = new Host(PORT, PROJECT, {
 });
 
 const { clients, gate, runsMessage, broadcast, reportViewers, view, greet } = createClients(host, live, ring, BOOT, protocolHash());
+
+function sendAlarm(a: Extract<HostLine, { alarm: unknown }>['alarm']) {
+  const phone = alarmPhone(clients);
+  if (phone) phone.sendRaw(JSON.stringify({ type: 'phone_alarm', ...a } satisfies ServerMessage));
+  else host.req({ op: 'alarm_result', id: a.id, ok: false, error: 'no phone' }).catch(() => {});
+}
 
 // Restarts this server at once; the host and its chats keep running unless its code changed or `full` asks for it.
 function restart(now: boolean, full: boolean) {
@@ -257,7 +265,7 @@ function openEvents(req: Request, url: URL, chat: string, found = true) {
   };
   const body = new ReadableStream<Uint8Array>({ start: (c) => void (out = c), pull: () => void (stalled = 0), cancel: end }, { highWaterMark: 256_000, size: (c) => c!.byteLength });
   req.signal.addEventListener('abort', end);
-  const client: Client = { send: (m) => client.sendRaw(JSON.stringify(m), ring.seq), sendRaw: (data, id) => write(frame(data, id)), view: chat, close, phone: isPhone(url.searchParams.get('client'), req.headers.get('user-agent') ?? undefined) };
+  const client: Client = { send: (m) => client.sendRaw(JSON.stringify(m), ring.seq), sendRaw: (data, id) => write(frame(data, id)), view: chat, close, phone: isPhone(url.searchParams.get('client'), req.headers.get('user-agent') ?? undefined), app: url.searchParams.get('client') === 'phone', readOnly: url.searchParams.get('readonly') === '1', opened: Date.now() };
   clients.add(client);
   touchDesktop(client);
   streams.set(cid, client);
@@ -305,6 +313,11 @@ function handleCommand(client: Client, msg: ClientMessage, target?: string) {
     case 'restart':
       restart(Boolean(msg.now), false);
       break;
+    case 'phone_alarm_result': {
+      const { type, ...r } = msg;
+      host.req({ op: 'alarm_result', ...r }).catch(fail);
+      break;
+    }
     default: {
       const id = ('run' in msg ? live.runs.find((r) => r.id === msg.run)?.chatId : undefined) ?? target ?? client.view;
       // No pre-check against live.chats: the host's live broadcast is debounced, so a prompt sent right after a new

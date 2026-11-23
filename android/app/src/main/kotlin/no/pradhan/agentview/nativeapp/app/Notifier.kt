@@ -22,6 +22,7 @@ import no.pradhan.agentview.nativeapp.ui.plural
 private const val WAITING_CHANNEL = "needs"
 private const val WAITING_ID = 1
 private const val RUNNING_CHANNEL = "running"
+private const val ALARM_ID = "alarm"
 const val RUNNING_TIMEOUT_MS = 30 * 60_000L
 const val EXTRA_CHAT = "chat"
 const val EXTRA_NOTICE_ID = "noticeId"
@@ -98,6 +99,22 @@ class Notifier(private val app: Application) {
                 manager.notify(id, NotificationCompat.Builder(app, channel).setSmallIcon(R.drawable.ic_notify).setContentTitle(text).setContentIntent(open(chatLink(chat), id)).setAutoCancel(true).build())
             }
         }
+    }
+
+    // The Set alarm notification of a phone_alarm that arrived with the app in the background; a tap fires the alarm intent.
+    @android.annotation.SuppressLint("MissingPermission")
+    fun alarm(id: String, time: String, label: String, intent: Intent) {
+        if (!granted()) return
+        val id = (ALARM_ID + id).hashCode()
+        val tap = PendingIntent.getActivity(app, id, intent, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
+        val builder = NotificationCompat.Builder(app, NoticeKind.Approval.channel)
+            .setSmallIcon(R.drawable.ic_notify)
+            .setContentTitle("Set alarm $time")
+            .setContentIntent(tap)
+            .setAutoCancel(true)
+            .setCategory(NotificationCompat.CATEGORY_REMINDER)
+        if (label.isNotEmpty()) builder.setContentText(label)
+        manager.notify(id, builder.build())
     }
 
     fun clearChats() = manager.activeNotifications.filter { it.id != WAITING_ID && !(it.notification.channelId == RUNNING_CHANNEL && it.isOngoing) }.forEach { manager.cancel(it.id) }

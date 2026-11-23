@@ -7,6 +7,7 @@ import { callTool } from '../agent/tools/index.js';
 import { ownProfile } from '../chrome/chrome.js';
 import { errText } from '../../../shared/util.js';
 import { applyInitialModel } from './initialModel.js';
+import { alarmResult } from './phoneAlarm.js';
 import { command } from './commands.js';
 import { connection } from './connection.js';
 import { closeByUser, createChat, dropJobRun, endRun, jobChat, newChat, openAdvisor, openSaved, prompt, reviseRun } from './chats.js';
@@ -127,6 +128,8 @@ async function handle(req: HostRequest): Promise<unknown> {
     case 'prs_changed':
       forgetPrs(req.cwd);
       return;
+    case 'alarm_result':
+      return alarmResult(req);
     case 'viewers':
       return setViewers(req.counts, req.last);
     case 'restart':

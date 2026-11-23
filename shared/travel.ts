@@ -306,6 +306,7 @@ export function tripAsk(trip: Trip, receipts: Receipt[], home: string) {
     '3. A short packing and weather note for the destination and dates.',
     '4. A checklist of open items at the end.',
     'When I tell you something worth keeping (a time to leave, a booking code, a taxi booked, the deck is done), note it on the trip at once with mcp__agentview__travel, and add or tick checklist items as things get done. The trip page shows them.',
+    'Offer to set a wake-up or leave-home alarm on my phone with mcp__agentview__phone_alarm.',
     `This looks like a ${tripKind(trip)} trip.`,
     home ? `Home: ${home}` : 'My start address is unknown: ask me for it and save it with mcp__agentview__travel (action home).',
     '',

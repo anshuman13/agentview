@@ -191,7 +191,8 @@ fun foldTurns(items: List<Item>, events: List<ChatEvent>): List<FoldRow> {
             val shown = it.id in prompts || i == reply || it is Item.Blocked || it is Item.Review ||
                 (it is Item.System && it.error) ||
                 (it is Item.File && it.error == null && (isSketchPath(it.path) || it.id in cards)) ||
-                (it is Item.Agent && it.id in cards)
+                (it is Item.Agent && it.id in cards) ||
+                (it is Item.Step && it.use.name == ALARM_TOOL)
             if (!shown || it is Item.Agent) hidden += it
             if (shown) rows += FoldRow.Row(it)
         }

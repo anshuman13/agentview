@@ -91,6 +91,8 @@ export interface AgentHost {
   goal(line: string): boolean;
   // Starts a chat in another folder with a first prompt, for a tool call; returns the new chat's id.
   startChat?: (cwd: string, text: string) => Promise<string>;
+  // Sets an alarm on the phone and returns what the tool tells Claude.
+  phoneAlarm(a: { time: string; day?: string; label?: string }): Promise<string>;
   setSession(patch: Partial<SessionInfo>): void;
   noteFile(rel: string, source: 'tool' | 'watcher'): void;
   captureEdit(file: string): void;

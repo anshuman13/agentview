@@ -67,6 +67,29 @@ fun duration(ms: Long): String = when {
     else -> "${Math.round(ms / 3_600_000.0)}h"
 }
 
+const val ALARM_TOOL = "mcp__agentview__phone_alarm"
+
+enum class AlarmTone { Pending, Ok, Error }
+
+data class AlarmCardText(val time: String, val label: String, val status: String, val tone: AlarmTone)
+
+private val alarmWeekday = Regex("^Set on the phone for (\\w+);")
+
+// web steps.ts alarmCard: what the alarm card shows for a phone_alarm call.
+fun alarmCard(use: ChatEvent, result: ChatEvent?, running: Boolean): AlarmCardText {
+    val time = use.input.s("time")
+    val label = use.input.s("label").trim()
+    if (result == null) return if (running) AlarmCardText(time, label, "Setting on the phone", AlarmTone.Pending) else AlarmCardText(time, label, "Not set", AlarmTone.Error)
+    return when {
+        result.text.startsWith("Set on the phone") -> {
+            val weekday = alarmWeekday.find(result.text)?.groupValues?.get(1)
+            AlarmCardText(time, label, "This alarm was set on your device" + (if (weekday != null) " \u00B7 Repeats every $weekday" else ""), AlarmTone.Ok)
+        }
+        result.text.startsWith("Sent to the phone as a notification") -> AlarmCardText(time, label, "Sent to your phone: tap the notification to set it", AlarmTone.Ok)
+        else -> AlarmCardText(time, label, result.text, AlarmTone.Error)
+    }
+}
+
 fun stepLabel(name: String, input: JsonObject, cwd: String = ""): Label {
     fun rel(k: String) = relPath(input.s(k), cwd)
     val inDir = if (input.s("path").isNotEmpty() && rel("path") != ".") rel("path") else ""
@@ -88,6 +111,7 @@ fun stepLabel(name: String, input: JsonObject, cwd: String = ""): Label {
         "Skill" -> return Label("Loaded", "the ${input.s("skill")} skill")
         "ToolSearch" -> return Label("Looked up", "tools for \"${input.s("query")}\"")
         "Advisor" -> return Label("Consulted", "the advisor")
+        ALARM_TOOL -> return Label("Set", "an alarm")
         "ExitPlanMode" -> return Label("Proposed", "a plan")
         "EnterPlanMode" -> return Label("Entered", "plan mode")
     }

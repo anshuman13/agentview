@@ -66,6 +66,7 @@ export function stepLabel(name: string, input: Record<string, unknown>, cwd = ''
     case 'AskUserQuestion': return { verb: 'Asked', object: 'you a question' };
     case 'Skill': return { verb: 'Loaded', object: `the ${s('skill')} skill` };
     case 'ToolSearch': return { verb: 'Looked up', object: `tools for "${s('query')}"` };
+    case ALARM_TOOL: return { verb: 'Set', object: 'an alarm' };
     case 'Advisor': return { verb: 'Consulted', object: 'the advisor' };
     case 'ExitPlanMode': return { verb: 'Proposed', object: 'a plan' };
     case 'EnterPlanMode': return { verb: 'Entered', object: 'plan mode' };
@@ -86,6 +87,22 @@ const TONES: Record<string, Tone> = {
 };
 
 export const stepTone = (name: string): Tone => TONES[name] ?? (name.startsWith('mcp__') ? 'mcp' : 'other');
+
+export const ALARM_TOOL = 'mcp__agentview__phone_alarm';
+
+export type AlarmCard = { time: string; label: string; status: string; tone: 'pending' | 'ok' | 'error' };
+
+// What the alarm card shows for a phone_alarm call. Android Steps.kt alarmCard says the same.
+export function alarmCard(use: ToolUse, result: ToolResult | undefined, running: boolean): AlarmCard {
+  const card = { time: str(use.input.time), label: str(use.input.label).trim() };
+  if (!result) return running ? { ...card, status: 'Setting on the phone', tone: 'pending' } : { ...card, status: 'Not set', tone: 'error' };
+  if (result.text.startsWith('Set on the phone')) {
+    const weekday = /^Set on the phone for (\w+);/.exec(result.text)?.[1];
+    return { ...card, status: `This alarm was set on your device${weekday ? ` \u00b7 Repeats every ${weekday}` : ''}`, tone: 'ok' };
+  }
+  if (result.text.startsWith('Sent to the phone as a notification')) return { ...card, status: 'Sent to your phone: tap the notification to set it', tone: 'ok' };
+  return { ...card, status: result.text, tone: 'error' };
+}
 
 export function buildTranscript(events: ChatEvent[]): Item[] {
   const results = new Map<string, ToolResult>();

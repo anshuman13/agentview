@@ -23,6 +23,7 @@ import { SPEC_REVIEW_COMMAND, specReviewPrompt } from '../../../shared/specTasks
 import { RunLinks } from './runLinks.js';
 import { SESSION_COMMANDS, withSessionCommands } from './commands.js';
 import { Runs } from './runs.js';
+import { phoneAlarm } from '../host/phoneAlarm.js';
 import { SessionSettings } from './settings.js';
 import { Stopper } from './stopper.js';
 import { Turn } from './turn.js';
@@ -166,6 +167,8 @@ export class AgentSession implements AgentHost {
     const parsed = parseGoal(line);
     return parsed !== null && parsed !== 'usage' && this.repeater.command(line, () => undefined);
   }
+
+  phoneAlarm = phoneAlarm;
 
   private setResumeCommand() {
     const { sessionId, account } = this.state.session;

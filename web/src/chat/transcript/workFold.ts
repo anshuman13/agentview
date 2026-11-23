@@ -3,7 +3,7 @@ import { costRise } from '../../../../shared/cost';
 import type { ChatEvent } from '../../../../shared/protocol';
 import { isSketchPath } from '../../../../shared/sketches';
 import { money, plural } from '../../ui/util';
-import { denied, duration, firstLine, MEMORY_FILE, specCards, type Item } from './steps';
+import { ALARM_TOOL, denied, duration, firstLine, MEMORY_FILE, specCards, type Item } from './steps';
 
 export type Work = { tools: number; files: number; agents: number; failed: number; ms: number; cost: number; note?: string };
 
@@ -160,7 +160,8 @@ export function foldTurns(items: Item[], events: ChatEvent[], cards = specCards(
       const shown = prompts.has(it.id) || i === reply || it.kind === 'blocked' || it.kind === 'review'
         || (it.kind === 'system' && Boolean(it.error))
         || (it.kind === 'file' && !it.error && (isSketchPath(it.path) || cards.has(it.id)))
-        || (it.kind === 'agent' && cards.has(it.id));
+        || (it.kind === 'agent' && cards.has(it.id))
+        || (it.kind === 'step' && it.use.name === ALARM_TOOL);
       if (!shown || it.kind === 'agent') hidden.push(it);
       if (shown) rows.push({ kind: 'item', it });
     });

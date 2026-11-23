@@ -1,0 +1,11 @@
+[
+  {"name": "pending", "time": "07:30", "label": "Flight", "result": null, "running": true, "expected": {"time": "07:30", "label": "Flight", "status": "Setting on the phone", "tone": "pending"}},
+  {"name": "not set", "time": "07:30", "label": "Flight", "result": null, "running": false, "expected": {"time": "07:30", "label": "Flight", "status": "Not set", "tone": "error"}},
+  {"name": "set", "time": "06:15", "label": "Leave home", "result": "Set on the phone", "running": false, "expected": {"time": "06:15", "label": "Leave home", "status": "This alarm was set on your device", "tone": "ok"}},
+  {"name": "weekday", "time": "06:15", "label": "Leave home", "result": "Set on the phone for Tuesday; it repeats weekly until the user deletes it", "running": false, "expected": {"time": "06:15", "label": "Leave home", "status": "This alarm was set on your device · Repeats every Tuesday", "tone": "ok"}},
+  {"name": "notified", "time": "07:30", "label": "Flight", "result": "Sent to the phone as a notification: the user taps it to set the alarm", "running": false, "expected": {"time": "07:30", "label": "Flight", "status": "Sent to your phone: tap the notification to set it", "tone": "ok"}},
+  {"name": "no phone", "time": "07:30", "label": "Flight", "result": "No phone connected: tell the user to open AgentView on the phone", "running": false, "expected": {"time": "07:30", "label": "Flight", "status": "No phone connected: tell the user to open AgentView on the phone", "tone": "error"}},
+  {"name": "failed", "time": "07:30", "label": "Flight", "result": "Not set on the phone: time has already passed today", "running": false, "expected": {"time": "07:30", "label": "Flight", "status": "Not set on the phone: time has already passed today", "tone": "error"}},
+  {"name": "timeout", "time": "07:30", "label": "Flight", "result": "The phone did not answer: ask the user to check their alarms", "running": false, "expected": {"time": "07:30", "label": "Flight", "status": "The phone did not answer: ask the user to check their alarms", "tone": "error"}},
+  {"name": "no label", "time": "05:00", "label": null, "result": "Set on the phone", "running": false, "expected": {"time": "05:00", "label": "", "status": "This alarm was set on your device", "tone": "ok"}}
+]

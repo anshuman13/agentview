@@ -434,7 +434,7 @@ internal fun ItemRow(hub: Hub, it: Item, chat: String, cwd: String, settled: Boo
             if (!it.streaming && rewind != null) ReplyActions(hub, rewind)
         }
         is Item.System -> Text(it.text, Modifier.padding(start = Tokens.sp12), style = Type.footnote, color = if (it.error) av.err else av.fgMuted)
-        is Item.Step -> StepRow(it, cwd, settled)
+        is Item.Step -> if (it.use.name == ALARM_TOOL) AlarmCard(it, !settled) else StepRow(it, cwd, settled)
         is Item.File -> if (it.error != null) FileCard(it, cwd)
             else if (isRepoSpec(it.path, cwd)) {
                 val meta = if (it.uses.first().name == "Write") "Spec written" else "Spec edited \u00B7 +${it.add} -${it.del}"

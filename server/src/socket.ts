@@ -9,7 +9,7 @@ export const socketPath = (port: number | string) => path.join(os.homedir(), '.a
 export const SOCK = socketPath(process.env.PORT ?? 7777);
 
 // Host to API: replies carry the request number; everything else is a broadcast, to one chat's viewers or to all.
-export type HostLine = { n: number; ok: true; r: unknown } | { n: number; ok: false; error: string } | { chat: string | null; m: ServerMessage } | { closed: string };
+export type HostLine = { n: number; ok: true; r: unknown } | { n: number; ok: false; error: string } | { chat: string | null; m: ServerMessage } | { closed: string } | { alarm: { id: string; time: string; day?: string; label?: string } };
 
 // Newline-delimited JSON. Lines are handled synchronously in order, so a reply and the broadcasts after it keep their order.
 export function lines(sock: Socket, on: (v: unknown) => void) {

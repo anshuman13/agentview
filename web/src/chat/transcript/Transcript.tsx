@@ -7,6 +7,7 @@ import { Markdown } from '../Chat';
 import { BlockedCard } from '../cards/Pending';
 import { ReviewCard } from '../cards/ReviewCard';
 import { FileIcon } from '../../workspace/FileIcon';
+import { AlarmCard } from './AlarmCard';
 import { SketchCard } from './SketchCard';
 import { DocCard } from './DocCard';
 import { SpecCard, SpecRow } from './SpecCard';
@@ -25,7 +26,7 @@ import { agentSummary } from '../../sessions/agents';
 import { unreadOrder } from '../../sessions/chatNav';
 import { chatState } from '../../sessions/folders';
 import { UNTITLED } from '../../../../shared/util';
-import { createTranscriptBuilder, denied, exploreLabel, exploreRuns, dayDividers, duration, newMarker, newReplies, openAtNew, rewindReplies, turnAnswers, firstLine, itemSpecSlug, relPath, specBumps, specCards, docCards, isDocFile, stepLabel, stepTone, type Item, type Rewind, type StepItem, type ToolResult, type ToolUse } from './steps';
+import { ALARM_TOOL, createTranscriptBuilder, denied, exploreLabel, exploreRuns, dayDividers, duration, newMarker, newReplies, openAtNew, rewindReplies, turnAnswers, firstLine, itemSpecSlug, relPath, specBumps, specCards, docCards, isDocFile, stepLabel, stepTone, type Item, type Rewind, type StepItem, type ToolResult, type ToolUse } from './steps';
 import { clickOnKey, command, plural, pressable } from '../../ui/util';
 import { useCan } from '../useCan';
 import { copyPrompt, copyReply } from '../chatActions';
@@ -360,7 +361,7 @@ function TranscriptView({ sessionId, events, earlier, cwd, running, bill, failed
     const card = cards.has(it.id);
     const agentCard = card && it.kind === 'agent' && slug && where !== 'hidden' ? <SpecCard slug={slug} bump={bump} /> : null;
     if (where === 'shown' && agentCard) return <Fragment key={it.id}>{agentCard}</Fragment>;
-    return <Fragment key={it.id}><Row it={it} cwd={cwd} card={card} answer={answers.has(it.id)} rewind={canRewind && !running ? rewinds.get(it.id) : undefined} bump={card && it.kind === 'file' ? bump : undefined} />{agentCard}</Fragment>;
+    return <Fragment key={it.id}><Row it={it} cwd={cwd} settled={!running} card={card} answer={answers.has(it.id)} rewind={canRewind && !running ? rewinds.get(it.id) : undefined} bump={card && it.kind === 'file' ? bump : undefined} />{agentCard}</Fragment>;
   };
 
   return (
@@ -569,6 +570,7 @@ function RowImpl({ it, cwd, settled, card, answer, rewind, bump = 0 }: { it: Ite
     case 'system':
       return <div className={`tr-system${it.error ? ' err' : ''}`}>{it.text}</div>;
     case 'step':
+      if (it.use.name === ALARM_TOOL) return <AlarmCard use={it.use} result={it.result} running={!settled} />;
       return <Step use={it.use} result={it.result} cwd={cwd} settled={settled} />;
     case 'file':
       if (isSketchPath(it.path) && !it.error) return <SketchCard path={it.path} meta={fileMeta(it, 'Sketch')} />;
