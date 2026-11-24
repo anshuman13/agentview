@@ -324,6 +324,10 @@ export class ClaudeDriver implements AgentDriver {
     this.input.push({ ...userMessage(text), ...(priority && { priority }) });
   }
 
+  read(id: string) {
+    return this.rewinds.echoed(id);
+  }
+
   dropInput() {
     return this.input.drop();
   }

@@ -141,6 +141,17 @@ describe('AgentSession turns', () => {
     expect(s2.state.events.some((e) => e.id === 'q2')).toBe(false);
   });
 
+  it('Send now does not stop the turn that already read the message', async () => {
+    const { s, handle, interrupt } = fakeSession();
+    s.sendPrompt('long task');
+    await s.queueNext('go now', 'q1');
+    handle({ type: 'user', uuid: 'u1', parent_tool_use_id: null, message: { role: 'user', content: 'go now' } });
+    await s.sendNow('q1');
+    expect(interrupt).not.toHaveBeenCalled();
+    expect(s.state.session.stopping).toBe(false);
+    expect(s.state.events.find((e) => e.id === 'q1')).toMatchObject({ queued: false });
+  });
+
   it('continues on the other account when a turn ends on a usage limit', async () => {
     const { s, handle } = fakeSession();
     const limitHit = vi.fn(() => 'alt' as const);

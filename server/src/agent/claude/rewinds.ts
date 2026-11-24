@@ -26,6 +26,11 @@ export class Rewinds {
     this.sent.splice(0, at + 1);
   }
 
+  // True once the CLI has taken the prompt into the conversation.
+  echoed(id: string) {
+    return this.ids.has(id);
+  }
+
   uuidOf(id: string) {
     return this.ids.get(id) ?? id.replace(/:\d+$/, '');
   }
