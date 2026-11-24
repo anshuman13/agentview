@@ -24,11 +24,6 @@ private fun notes(items: List<Item>) = (if (items.size == 1) noteOf(items[0]) el
 
 data class StatusStep(val id: String, val title: String, val done: Boolean)
 
-// The one line a turn's work folds into, as in the Claude apps: while live, what it does now; once done, the last task it finished (web workFold.ts foldLine).
-fun foldLine(steps: List<StatusStep>, now: String, live: Boolean, tools: Int): String =
-    if (live) now.ifEmpty { steps.firstOrNull { !it.done }?.title ?: "Working" }
-    else steps.lastOrNull { it.done }?.title ?: if (tools > 0) "Used ${plural(tools, "tool")}" else ""
-
 private class Tasks(val done: MutableList<StatusStep> = mutableListOf(), var next: List<StatusStep> = emptyList(), var now: String = "") {
     fun list() = done + next.filter { n -> done.none { it.title == n.title } }
 }

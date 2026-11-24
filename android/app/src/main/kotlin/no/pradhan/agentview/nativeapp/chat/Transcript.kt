@@ -1,19 +1,5 @@
 package no.pradhan.agentview.nativeapp.chat
 
-import android.provider.Settings
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
-import androidx.compose.foundation.layout.IntrinsicSize
-import androidx.compose.foundation.layout.RowScope
-import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.platform.LocalContext
-import no.pradhan.agentview.nativeapp.ui.Sheet
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -326,33 +312,14 @@ private fun LazyListScope.transcriptRows(hub: Hub, view: ChatView, list: List<Fo
     }
 }
 
-// A turn's work as one grey line, as in the Claude apps: pulsing dots and what it does now while live, a clock and the last finished task once done.
-// A tap opens a Summary sheet with the tasks as a timeline, ending in a row that opens the turn's tool calls on their own screen (web Transcript.tsx Tasks).
+// The turn's tasks from set_status as small lines, and on the right a button that opens the turn's tool calls on their own screen (web Transcript.tsx Tasks).
 @Composable
 private fun TaskLines(hub: Hub, fold: FoldRow.Fold, cwd: String, live: Boolean, onOpenWork: (String) -> Unit) {
-    // A finished turn lists only the tasks it marked done: the steps it never reached are no longer next.
+    // A finished turn shows only the tasks it marked done: the steps it never reached are no longer next.
     val steps = if (live) fold.steps else fold.steps.filter { it.done }
+    val done = steps.count { it.done }
     val current = if (live) steps.firstOrNull { !it.done } else null
-    val line = foldLine(fold.steps, fold.now, live, fold.work.tools)
-    var summary by remember { mutableStateOf(false) }
-    if (summary) Sheet({ summary = false }, "Summary", full = false) {
-        val rows = steps.map { s -> (if (s == current) fold.now.ifEmpty { s.title } else s.title) to when { s == current -> av.fgStrong; s.done -> av.fg; else -> av.fgFaint } } +
-            (if (live && current == null && fold.now.isNotEmpty()) listOf(fold.now to av.fgStrong) else emptyList())
-        val tools = fold.work.tools > 0
-        rows.forEachIndexed { i, (text, color) ->
-            TimelineRow(first = i == 0, last = i == rows.lastIndex && !tools, mark = { Box(Modifier.size(Tokens.dot).clip(CircleShape).background(av.border)) }) {
-                Text(text, style = Type.reading, color = color)
-            }
-        }
-        if (tools) TimelineRow(first = rows.isEmpty(), last = true, markSize = Tokens.sp16, onClick = { summary = false; onOpenWork(fold.id) }, mark = {
-            Box(Modifier.size(Tokens.sp16).clip(RoundedCornerShape(Tokens.radiusMd)).border(Tokens.hairline, av.border, RoundedCornerShape(Tokens.radiusMd)).background(av.containerLow), contentAlignment = Alignment.Center) {
-                AvIcon("tools", null, Tokens.sp7, tint = av.fg)
-            }
-        }) {
-            Text("Used ${plural(fold.work.tools, "tool")}", Modifier.weight(1f), style = Type.headline, color = av.fg)
-            AvIcon("chevron-right", null, Tokens.sp7, tint = av.fgMuted)
-        }
-    }
+    val spin = @Composable { CircularProgressIndicator(Modifier.size(Tokens.sp5), strokeWidth = Tokens.stroke, color = av.fgFaint) }
     var reading by remember { mutableStateOf(false) }
     var proposing by remember { mutableStateOf(false) }
     var memory by remember { mutableStateOf(false) }
@@ -361,20 +328,22 @@ private fun TaskLines(hub: Hub, fold: FoldRow.Fold, cwd: String, live: Boolean, 
         MemorySheet(hub, cwd, files, fold.remembered.singleOrNull()) { memory = false }
     }
     Column(verticalArrangement = Arrangement.spacedBy(Tokens.sp1)) {
-        if (line.isNotEmpty()) Row(
-            Modifier.heightIn(min = Tokens.touchSm).clickable(onClickLabel = "Show the summary") { summary = true },
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(Tokens.sp3),
-        ) {
-            if (live) WorkDots() else AvIcon("history", null, Tokens.iconSm, tint = av.fgMuted)
-            Text(line, Modifier.weight(1f, fill = false), style = Type.subheadline, color = av.fgMuted, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            AvIcon("chevron-right", null, Tokens.sp7, tint = av.fgMuted)
-        }
-        if (fold.claims.isNotEmpty() || fold.proposed.isNotEmpty() || fold.remembered.isNotEmpty()) Row(horizontalArrangement = Arrangement.spacedBy(Tokens.sp2)) {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            if (steps.isNotEmpty()) Text(if (done < steps.size) "Tasks \u00b7 $done of ${steps.size}" else plural(steps.size, "task"), style = Type.label, color = av.fgMuted)
+            Spacer(Modifier.weight(1f))
             if (fold.claims.isNotEmpty()) Chip("Used ${plural(fold.claims.size, "claim")}", { reading = !reading }, on = reading)
             if (fold.proposed.isNotEmpty()) Chip("Proposed ${plural(fold.proposed.size, "claim")}", { proposing = !proposing }, on = proposing)
             if (fold.remembered.isNotEmpty()) Chip("Remembered ${plural(fold.remembered.size, "memory", "memories")}", { memory = true })
+            if (fold.work.tools > 0) Row(
+                Modifier.clip(RoundedCornerShape(Tokens.shapeFull)).border(Tokens.hairline, av.border, RoundedCornerShape(Tokens.shapeFull)).clickable { onOpenWork(fold.id) }.padding(horizontal = Tokens.sp4, vertical = Tokens.sp1),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(plural(fold.work.tools, "tool"), style = Type.label, color = av.fgMuted)
+                AvIcon("chevron-right", null, Tokens.sp5, tint = av.fgMuted)
+            }
         }
+        @Composable fun Task(icon: @Composable () -> Unit, text: String, color: androidx.compose.ui.graphics.Color) =
+            Row(horizontalArrangement = Arrangement.spacedBy(Tokens.sp2)) { Box(Modifier.padding(top = Tokens.sp1)) { icon() }; Text(text, style = Type.footnote, color = color) }
         if (reading) {
             val facts by hub.codex.state.select { it.facts }
             fold.claims.forEach { c ->
@@ -391,42 +360,14 @@ private fun TaskLines(hub: Hub, fold: FoldRow.Fold, cwd: String, live: Boolean, 
                 Text("${p.text} (${proposalState(facts.firstOrNull { it.id == p.id })})", Modifier.padding(start = Tokens.sp8), style = Type.footnote, color = av.fgMuted)
             }
         }
-    }
-}
-
-// Two accent dots pulsing in turn, Claude's mark for a step that is still running; still when animations are off.
-@Composable
-private fun WorkDots() {
-    val resolver = LocalContext.current.contentResolver
-    val moving = remember(resolver) { Settings.Global.getFloat(resolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f) > 0f }
-    val t = rememberInfiniteTransition(label = "work")
-    val phase = if (moving) t.animateFloat(0f, 1f, infiniteRepeatable(tween(Tokens.dur * 8)), label = "phase").value else 0.5f
-    Row(horizontalArrangement = Arrangement.spacedBy(Tokens.sp1)) {
-        listOf(0f, 0.5f).forEach { off ->
-            val x = (phase + off) % 1f
-            Box(Modifier.size(Tokens.sp3).alpha(0.35f + 0.65f * (1f - kotlin.math.abs(2f * x - 1f))).clip(CircleShape).background(av.accent))
+        steps.forEach { s ->
+            when {
+                s.done -> Task({ AvIcon("check", null, Tokens.sp5, tint = av.ok) }, s.title, av.fg)
+                s == current -> Task(spin, fold.now.ifEmpty { s.title }, av.fgStrong)
+                else -> Task({ AvIcon("circle-large-outline", null, Tokens.sp5, tint = av.fgFaint) }, s.title, av.fgMuted)
+            }
         }
-    }
-}
-
-// One step of the Summary sheet: its mark on a thread that joins it to the steps above and below.
-@Composable
-private fun TimelineRow(first: Boolean, last: Boolean, markSize: Dp = Tokens.dot, onClick: (() -> Unit)? = null, mark: @Composable () -> Unit, content: @Composable RowScope.() -> Unit) {
-    val thread = av.border
-    Row(
-        Modifier.fillMaxWidth().height(IntrinsicSize.Min).then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier),
-        horizontalArrangement = Arrangement.spacedBy(Tokens.sp6),
-    ) {
-        Box(
-            Modifier.width(Tokens.sp16).fillMaxHeight().drawBehind {
-                val x = size.width / 2
-                val mid = Tokens.sp12.toPx()
-                if (!first) drawLine(thread, Offset(x, 0f), Offset(x, mid), Tokens.hairline.toPx())
-                if (!last) drawLine(thread, Offset(x, mid), Offset(x, size.height), Tokens.hairline.toPx())
-            },
-            contentAlignment = Alignment.TopCenter,
-        ) { Box(Modifier.padding(top = Tokens.sp12 - markSize / 2)) { mark() } }
-        Row(Modifier.weight(1f).padding(vertical = Tokens.sp6), verticalAlignment = Alignment.CenterVertically, content = content)
+        if (live && current == null && fold.now.isNotEmpty()) Task(spin, fold.now, av.fgStrong)
     }
 }
 
