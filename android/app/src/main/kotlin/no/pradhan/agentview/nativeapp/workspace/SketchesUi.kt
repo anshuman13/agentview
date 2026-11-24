@@ -27,8 +27,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalClipboardManager
-import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.viewinterop.AndroidView
 import kotlin.math.abs
 import kotlinx.serialization.builtins.ListSerializer
@@ -110,8 +108,7 @@ private fun newSketch(hub: Hub) {
 @Composable
 private fun SketchView(hub: Hub, file: SketchFile, onBack: () -> Unit) {
     BackHandler(onBack = onBack)
-    val cwd by hub.store.state.select { st -> st.session?.cwd?.ifEmpty { null } ?: st.live.firstOrNull { it.id == st.shownId }?.cwd.orEmpty() }
-    val clip = LocalClipboardManager.current
+    val cwd by hub.store.state.select { st -> shownCwd(st).orEmpty() }
     val (load, reload) = rememberLoad(file.path, hub.pageChat) { hub.readFile(file.path) }
     var desktop by rememberSaveable { mutableStateOf(false) }
     var dark by rememberSaveable { mutableStateOf<Boolean?>(null) }
@@ -119,7 +116,7 @@ private fun SketchView(hub: Hub, file: SketchFile, onBack: () -> Unit) {
     val isDark = dark ?: dark0
     Column(Modifier.fillMaxSize()) {
         WorkspaceHeader(hub, sketchTitle(file.name), onBack) {
-            MoreButton { close -> MenuItem("Copy path", "copy", { close(); clip.setText(AnnotatedString("$cwd/${file.path}")); hub.notice.value = "Path copied" }) }
+            MoreButton { close -> CopyPathItems(hub, file.path, cwd, close) }
         }
         Row(Modifier.fillMaxWidth().padding(horizontal = Tokens.listPad, vertical = Tokens.sp3), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Tokens.sp2)) {
             DeviceChips(desktop) { desktop = it }

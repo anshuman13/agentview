@@ -11,6 +11,7 @@ import { Section } from '../ui/Section';
 import { touch } from '../app/touch/touch';
 import { ariaKeys, keyText } from '../app/shell/keys';
 import { FileIcon } from './FileIcon';
+import { CopyPathMenu, type MenuPoint } from './CopyPathItems';
 import { OpenEditors } from './OpenEditors';
 import { useFileTree, type Row } from './useFileTree';
 
@@ -42,9 +43,9 @@ function FilesMenu({ showHidden, setShowHidden, refresh, collapseAll, closeFile 
   );
 }
 
-type TreeRowProps = { r: Row; id: string; open: boolean; loading: boolean; changed: boolean; selected: boolean; onClick: () => void };
+type TreeRowProps = { r: Row; id: string; open: boolean; loading: boolean; changed: boolean; selected: boolean; onClick: () => void; onMenu: (at: { x: number; y: number }) => void };
 
-function TreeRow({ r, id, open, loading, changed, selected, onClick }: TreeRowProps) {
+function TreeRow({ r, id, open, loading, changed, selected, onClick, onMenu }: TreeRowProps) {
   return (
     <UiRow
       plain
@@ -68,6 +69,8 @@ function TreeRow({ r, id, open, loading, changed, selected, onClick }: TreeRowPr
       title={<span title={r.path} className={`ex-name${changed ? ' changed' : ''}`}>{r.name}</span>}
       trailing={changed && <span className="ex-m">M</span>}
       onClick={onClick}
+      onLongPress={() => onMenu({ x: 0, y: 0 })}
+      onContextMenu={(e) => { e.preventDefault(); onMenu({ x: e.clientX, y: e.clientY }); }}
     />
   );
 }
@@ -76,6 +79,7 @@ function ExplorerView({ cwd, phone }: { cwd: string; phone?: boolean }) {
   const openFile = useStore((s) => s.ui.openFile);
   const recent = useStore((s) => s.recentFiles);
   const [picking, setPicking] = useState(false);
+  const [copy, setCopy] = useState<MenuPoint | null>(null);
   const here = findHere(useWorkspace(cwd).folders, cwd);
   const treeId = useId();
   const t = useFileTree(cwd, openFile, recent);
@@ -98,9 +102,10 @@ function ExplorerView({ cwd, phone }: { cwd: string; phone?: boolean }) {
       <div className="ex-tree" ref={t.tree} tabIndex={0} role="tree" aria-label="Files" aria-activedescendant={t.selAt >= 0 ? `${treeId}-${t.selAt}` : undefined} onKeyDown={t.onKey}>
         {t.rows.map((r, i) => {
           const open = r.dir && t.expanded.has(r.path);
-          return <TreeRow key={r.path} r={r} id={`${treeId}-${i}`} open={open} loading={open && !t.dirs[r.path]} changed={!r.dir && recent.includes(r.path)} selected={r.path === t.sel} onClick={() => { t.setSel(r.path); t.activate(r); }} />;
+          return <TreeRow key={r.path} r={r} id={`${treeId}-${i}`} open={open} loading={open && !t.dirs[r.path]} changed={!r.dir && recent.includes(r.path)} selected={r.path === t.sel} onClick={() => { t.setSel(r.path); t.activate(r); }} onMenu={(at) => setCopy({ path: r.path, ...at })} />;
         })}
       </div>
+      {copy && <CopyPathMenu path={copy.path} cwd={cwd} at={copy} onClose={() => { setCopy(null); t.tree.current?.focus(); }} />}
     </div>
   );
 }

@@ -57,7 +57,7 @@ fun pageFolder(hub: Hub): String = pageRepo(hub).ifEmpty { "Last viewed chat" }
 // The repo name of the chat the page belongs to, empty when there is none.
 @Composable
 fun pageRepo(hub: Hub): String {
-    val cwd by hub.store.state.select { st -> st.session?.cwd?.ifEmpty { null } ?: st.live.firstOrNull { it.id == st.shownId }?.cwd }
+    val cwd by hub.store.state.select { st -> shownCwd(st) }
     return cwd?.substringAfterLast('/').orEmpty()
 }
 

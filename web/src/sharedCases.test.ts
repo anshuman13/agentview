@@ -24,6 +24,7 @@ import { appendRule } from '../../shared/steering';
 import { addPreset, parsePresets, removePreset, type GoalPreset } from '../../shared/goalPresets';
 import { goalCommand, parseEvery, parseFiveHour, planOf, rerunForm, type GoalForm } from '../../shared/goalForm';
 import { buildPrompt, isSpecPath, planCondition, runAllPrompt, specProgress, specPrompt, specSlug, specTasks, startTaskPrompt, withoutOpenTasks, type SpecTask } from '../../shared/specTasks';
+import { pathCopies } from './workspace/copyPathLogic';
 import { isSketchPath, sketchDoc, type SketchTheme } from '../../shared/sketches';
 import { taskChatPrompt } from '../../shared/taskChat';
 import { findInChat, findStart } from '../../shared/findInChat';
@@ -260,6 +261,10 @@ describe('cases shared with the Android app', () => {
       expect(c.doc).toContain(`data-theme="${c.theme}"`);
       expect(c.doc.replace(/^<!doctype html>\s*/i, '').replace(/^<html[^>]*>(<head[^>]*>)?/i, '')).toMatch(/^<meta http-equiv="Content-Security-Policy"/);
     });
+  }
+
+  for (const c of cases<{ name: string; path: string; cwd: string; absolute: string; relative: string | null; base: string }>('copy-path')) {
+    it(`pathCopies: ${c.name}`, () => expect(pathCopies(c.path, c.cwd)).toEqual({ absolute: c.absolute, relative: c.relative, name: c.base }));
   }
 
   for (const c of cases<{ name: string; path: string; sketch: boolean }>('sketch-path')) {

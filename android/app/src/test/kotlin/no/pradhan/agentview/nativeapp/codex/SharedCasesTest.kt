@@ -248,6 +248,7 @@ import no.pradhan.agentview.nativeapp.workspace.Finding
 import no.pradhan.agentview.nativeapp.workspace.findingFixPrompt
 import no.pradhan.agentview.nativeapp.workspace.findingsFixPrompt
 import no.pradhan.agentview.nativeapp.workspace.isSketchPath
+import no.pradhan.agentview.nativeapp.workspace.pathCopies
 import no.pradhan.agentview.nativeapp.workspace.isSpecPath
 import no.pradhan.agentview.nativeapp.workspace.sketchDoc
 import no.pradhan.agentview.nativeapp.workspace.planCondition
@@ -1044,6 +1045,15 @@ class SharedCasesTest {
 
     @Test fun specSlug() {
         for (c in cases("spec-slug")) assertEquals(c.str("name"), c.str("slug"), specSlug(c.str("path")))
+    }
+
+    @Test fun copyPath() {
+        for (c in cases("copy-path")) {
+            val got = pathCopies(c.str("path"), c.str("cwd"))
+            assertEquals(c.str("name"), c.str("absolute"), got.absolute)
+            assertEquals(c.str("name"), (c["relative"] as? JsonPrimitive)?.contentOrNull, got.relative)
+            assertEquals(c.str("name"), c.str("base"), got.name)
+        }
     }
 
     @Test fun sketchPath() {

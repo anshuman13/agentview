@@ -79,7 +79,9 @@ import no.pradhan.agentview.nativeapp.ui.Group
 import no.pradhan.agentview.nativeapp.ui.IconBtn
 import no.pradhan.agentview.nativeapp.ui.ListRow
 import no.pradhan.agentview.nativeapp.ui.Loading
+import no.pradhan.agentview.nativeapp.ui.Menu
 import no.pradhan.agentview.nativeapp.ui.MenuItem
+import no.pradhan.agentview.nativeapp.workspace.CopyPathItems
 import no.pradhan.agentview.nativeapp.ui.Mono
 import no.pradhan.agentview.nativeapp.ui.MonoFont
 import no.pradhan.agentview.nativeapp.ui.MoreButton
@@ -385,7 +387,11 @@ internal fun DocCard(hub: Hub, it: Item.File, cwd: String) {
     var open by rememberSaveable(it.id) { mutableStateOf(false) }
     val rel = relPath(it.path, cwd)
     val meta = if (it.pending) "Updating\u2026" else "${if (it.uses.size == 1 && it.uses.first().name == "Write") "Written" else "Edited \u00B7 +${it.add} -${it.del}"} \u00B7 $rel"
-    TranscriptBox(hub, "doc:${it.id}", docTitle(rel), meta, icon = "markdown", onOpen = { open = true }, action = { LinkAction("Open") { open = true } })
+    var copying by remember(it.id) { mutableStateOf(false) }
+    Box {
+        TranscriptBox(hub, "doc:${it.id}", docTitle(rel), meta, icon = "markdown", onOpen = { open = true }, onLongClick = { copying = true }, action = { LinkAction("Open") { open = true } })
+        Menu(copying, { copying = false }) { CopyPathItems(hub, it.path, cwd) { copying = false } }
+    }
     if (open) FileSheet(hub, rel, docTitle(rel)) { open = false }
 }
 
@@ -401,22 +407,27 @@ internal fun FileCard(hub: Hub, it: Item.File, cwd: String) {
     var sheet by rememberSaveable(it.id) { mutableStateOf(false) }
     val rel = relPath(it.path, cwd)
     val cut = rel.lastIndexOf('/')
-    TranscriptBox(
-        hub, "file:${it.id}", rel.substring(cut + 1), if (cut >= 0) rel.substring(0, cut + 1) else "", icon = "file",
-        state = {
-            if (it.error != null) WordClamp(androidx.compose.ui.text.AnnotatedString(it.error), Type.footnote, if (it.denied) av.fgMuted else av.err, 1, modifier = Modifier.widthIn(max = Tokens.fileError))
-            else Row(horizontalArrangement = Arrangement.spacedBy(Tokens.sp2)) {
-                Text("+${it.add}", style = Type.footnote, color = av.diffAdd)
-                Text("-${it.del}", style = Type.footnote, color = av.diffDel)
+    var copying by remember(it.id) { mutableStateOf(false) }
+    Box {
+        TranscriptBox(
+            hub, "file:${it.id}", rel.substring(cut + 1), if (cut >= 0) rel.substring(0, cut + 1) else "", icon = "file",
+            onLongClick = { copying = true },
+            state = {
+                if (it.error != null) WordClamp(androidx.compose.ui.text.AnnotatedString(it.error), Type.footnote, if (it.denied) av.fgMuted else av.err, 1, modifier = Modifier.widthIn(max = Tokens.fileError))
+                else Row(horizontalArrangement = Arrangement.spacedBy(Tokens.sp2)) {
+                    Text("+${it.add}", style = Type.footnote, color = av.diffAdd)
+                    Text("-${it.del}", style = Type.footnote, color = av.diffDel)
+                }
+            },
+            action = { LinkAction("Open") { sheet = true } },
+            onOpen = if (it.error != null) ({ sheet = true }) else null,
+        ) {
+            Column(Modifier.padding(start = Tokens.sp7, end = Tokens.sp5, top = Tokens.sp4, bottom = Tokens.sp5), verticalArrangement = Arrangement.spacedBy(Tokens.sp3)) {
+                val diffs = remember(it.uses) { it.uses.flatMap { u -> editPairs(u).map { (a, b) -> lineDiff(a, b) } } }
+                for (d in diffs) DiffView(d)
             }
-        },
-        action = { LinkAction("Open") { sheet = true } },
-        onOpen = if (it.error != null) ({ sheet = true }) else null,
-    ) {
-        Column(Modifier.padding(start = Tokens.sp7, end = Tokens.sp5, top = Tokens.sp4, bottom = Tokens.sp5), verticalArrangement = Arrangement.spacedBy(Tokens.sp3)) {
-            val diffs = remember(it.uses) { it.uses.flatMap { u -> editPairs(u).map { (a, b) -> lineDiff(a, b) } } }
-            for (d in diffs) DiffView(d)
         }
+        Menu(copying, { copying = false }) { CopyPathItems(hub, it.path, cwd) { copying = false } }
     }
     if (sheet) FileSheet(hub, rel, rel.substring(cut + 1)) { sheet = false }
 }

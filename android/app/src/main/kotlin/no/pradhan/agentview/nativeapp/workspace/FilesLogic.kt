@@ -2,6 +2,8 @@ package no.pradhan.agentview.nativeapp.workspace
 
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.builtins.ListSerializer
+import no.pradhan.agentview.nativeapp.chat.StoreState
+import no.pradhan.agentview.nativeapp.chat.relPath
 import no.pradhan.agentview.nativeapp.net.protocolJson
 
 // web/src/workspace/Explorer.tsx: the tree is the listed folders walked from the root, expanded folders inline.
@@ -16,7 +18,23 @@ data class FileData(val content: String = "", val original: String = "", val ima
 fun parseDir(body: String): List<DirEntry> = protocolJson.decodeFromString(ListSerializer(DirEntry.serializer()), body)
 fun parseFile(body: String): FileData = protocolJson.decodeFromString(FileData.serializer(), body)
 
+fun shownCwd(st: StoreState): String? = st.session?.cwd?.ifEmpty { null } ?: st.live.firstOrNull { it.id == st.shownId }?.cwd
+
 fun parentOf(path: String) = path.substringBeforeLast('/', "")
+
+data class PathCopies(val absolute: String, val relative: String?, val name: String)
+
+// web/src/workspace/copyPathLogic.ts: a path in full, relative to the chat's folder (null outside it) and as a name.
+fun pathCopies(path: String, cwd: String): PathCopies {
+    if (path.startsWith("~/") || (cwd.isEmpty() && !path.startsWith("/"))) return PathCopies(path, null, path.substringAfterLast('/'))
+    val out = mutableListOf<String>()
+    for (seg in (if (path.startsWith("/")) path else "$cwd/$path").split('/')) {
+        if (seg == "..") out.removeLastOrNull() else if (seg.isNotEmpty() && seg != ".") out += seg
+    }
+    val absolute = "/" + out.joinToString("/")
+    val rel = relPath(absolute, cwd)
+    return PathCopies(absolute, rel.takeUnless { it == "." || it.startsWith("/") }, absolute.substringAfterLast('/'))
+}
 
 // The visible rows and the folders that are open but not listed yet.
 fun treeRows(dirs: Map<String, List<DirEntry>>, expanded: Set<String>, showHidden: Boolean): Pair<List<TreeRow>, List<String>> {

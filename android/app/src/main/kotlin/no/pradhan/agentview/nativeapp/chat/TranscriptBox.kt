@@ -3,7 +3,9 @@ package no.pradhan.agentview.nativeapp.chat
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -42,6 +44,7 @@ internal fun LinkAction(label: String, onClick: () -> Unit) {
 
 // Web chat/transcript/Box.tsx: the Report card header (icon, headline title, action) over a hairline and the body; the header toggles the body, and the open state is kept per box id on this device.
 // With onOpen the card has no body to fold: the header opens the thing instead. A plain box is a faint line at the right until opened.
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 internal fun TranscriptBox(
     hub: Hub,
@@ -59,6 +62,7 @@ internal fun TranscriptBox(
     plain: Boolean = false,
     icon: String? = null,
     onOpen: (() -> Unit)? = null,
+    onLongClick: (() -> Unit)? = null,
     content: @Composable () -> Unit = {},
 ) {
     val kv = remember(hub) { PrefsKeyValue(hub.prefs) }
@@ -80,7 +84,7 @@ internal fun TranscriptBox(
     }
     Column(Modifier.fillMaxWidth().background(av.surface, shape).border(BorderStroke(Tokens.hairline, av.border), shape).clip(shape)) {
         Row(
-            Modifier.fillMaxWidth().heightIn(min = Tokens.rowOne).clickable(onClick = onOpen ?: toggle).padding(start = Tokens.listPad, end = Tokens.sp4, top = Tokens.sp3, bottom = Tokens.sp3),
+            Modifier.fillMaxWidth().heightIn(min = Tokens.rowOne).let { if (onLongClick != null) it.combinedClickable(onLongClick = onLongClick, onClick = onOpen ?: toggle) else it.clickable(onClick = onOpen ?: toggle) }.padding(start = Tokens.listPad, end = Tokens.sp4, top = Tokens.sp3, bottom = Tokens.sp3),
             verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Tokens.sp6),
         ) {
             val chevron = if (shown) "chevron-down" else "chevron-right"

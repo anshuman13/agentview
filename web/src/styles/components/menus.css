@@ -25,6 +25,9 @@
   padding: var(--sp-2) var(--sp-2) calc(var(--sp-2) + var(--safe-bottom)); border-radius: var(--radius-sheet) var(--radius-sheet) 0 0; background: var(--raised); box-shadow: var(--elev-3);
 }
 .ui-menu.sheet .ui-menu-item { min-height: var(--touch); }
+/* A zero-size anchor at the pointer for a right-click menu; the menu opens down and right from the point. */
+.ui-menu-anchor { position: fixed; z-index: var(--z-popover); width: 0; height: 0; }
+.ui-menu-anchor > .ui-menu:not(.sheet) { top: 0; right: auto; left: 0; }
 @keyframes ui-sheet-up { from { transform: translateY(100%); } }
 @keyframes ui-sheet-fade { from { background-color: transparent; } }
 @media (prefers-reduced-motion: no-preference) {

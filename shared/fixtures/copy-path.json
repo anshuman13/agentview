@@ -1,0 +1,14 @@
+[
+  { "name": "relative", "path": "src/a.ts", "cwd": "/w/app", "absolute": "/w/app/src/a.ts", "relative": "src/a.ts", "base": "a.ts" },
+  { "name": "dot slash", "path": "./src/a.ts", "cwd": "/w/app", "absolute": "/w/app/src/a.ts", "relative": "src/a.ts", "base": "a.ts" },
+  { "name": "absolute inside", "path": "/w/app/src/a.ts", "cwd": "/w/app", "absolute": "/w/app/src/a.ts", "relative": "src/a.ts", "base": "a.ts" },
+  { "name": "trailing slash", "path": "src/", "cwd": "/w/app", "absolute": "/w/app/src", "relative": "src", "base": "src" },
+  { "name": "dot is the folder", "path": ".", "cwd": "/w/app", "absolute": "/w/app", "relative": null, "base": "app" },
+  { "name": "the folder itself", "path": "/w/app", "cwd": "/w/app", "absolute": "/w/app", "relative": null, "base": "app" },
+  { "name": "dot dot inside", "path": "src/../lib/c.ts", "cwd": "/w/app", "absolute": "/w/app/lib/c.ts", "relative": "lib/c.ts", "base": "c.ts" },
+  { "name": "dot dot outside", "path": "../other/b.ts", "cwd": "/w/app", "absolute": "/w/other/b.ts", "relative": null, "base": "b.ts" },
+  { "name": "similar folder name", "path": "/w/apple/x.ts", "cwd": "/w/app", "absolute": "/w/apple/x.ts", "relative": null, "base": "x.ts" },
+  { "name": "absolute outside", "path": "/etc/hosts", "cwd": "/w/app", "absolute": "/etc/hosts", "relative": null, "base": "hosts" },
+  { "name": "home path", "path": "~/notes/x.md", "cwd": "/w/app", "absolute": "~/notes/x.md", "relative": null, "base": "x.md" },
+  { "name": "empty cwd", "path": "src/a.ts", "cwd": "", "absolute": "src/a.ts", "relative": null, "base": "a.ts" }
+]

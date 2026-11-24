@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { notice, setUi, useStore } from '../app/store';
+import { setUi, useStore } from '../app/store';
 import { useNarrow } from '../app/shell/useNarrow';
 import { useThemeName } from '../app/theme';
 import { Back } from '../app/touch/back';
@@ -9,8 +9,9 @@ import { EmptyState } from '../ui/Panel';
 import { Row } from '../ui/Row';
 import { Section } from '../ui/Section';
 import { Skeleton } from '../ui/Skeleton';
-import { ago, copyText } from '../ui/util';
+import { ago } from '../ui/util';
 import { sketchDoc, sketchOpenable, sketchTitle, type SketchTheme } from '../../../shared/sketches';
+import { CopyPathItems } from './CopyPathItems';
 import type { SketchFile } from './fileApi';
 import { useSketch, useSketches } from './useSketches';
 
@@ -83,7 +84,7 @@ function SketchView({ file, device, theme, onDevice, onTheme, onBack }: { file: 
           {menu && (
             <Menu trigger={more} onClose={() => setMenu(false)}>
               <MenuItem onClick={() => { setMenu(false); setUi({ openFile: file.path, follow: false }); }}>Open file</MenuItem>
-              <MenuItem onClick={() => { setMenu(false); copyText(`${cwd}/${file.path}`).then(() => notice('Path copied'), () => notice('Copy failed')); }}>Copy path</MenuItem>
+              <CopyPathItems path={file.path} cwd={cwd} onDone={() => setMenu(false)} />
             </Menu>
           )}
         </span>

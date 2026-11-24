@@ -6,6 +6,7 @@ import { EmptyState } from '../../ui/Panel';
 import { Markdown } from '../Chat';
 import { BlockedCard } from '../cards/Pending';
 import { ReviewCard } from '../cards/ReviewCard';
+import { CopyPathItems } from '../../workspace/CopyPathItems';
 import { FileIcon } from '../../workspace/FileIcon';
 import { AlarmCard } from './AlarmCard';
 import { SketchCard } from './SketchCard';
@@ -622,6 +623,7 @@ function FileCard({ it, cwd }: { it: Extract<Item, { kind: 'file' }>; cwd: strin
       meta={it.error ? <span className="tr-err">{it.error}</span> : <>{cut >= 0 && <span className="tr-dir">{rel.slice(0, cut + 1)} </span>}<span className="tr-count"><span className="add">+{it.count.add}</span> <span className="del">-{it.count.del}</span></span></>}
       action={<LinkAction label="Open" onClick={open} />}
       onOpen={open}
+      menu={<CopyPathItems path={it.path} cwd={cwd} />}
     />
   );
 }

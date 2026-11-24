@@ -21,6 +21,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
@@ -73,6 +74,8 @@ fun FilesScreen(hub: Hub, onBack: () -> Unit) {
     val (rows, missing) = treeRows(dirs, expanded.toSet(), showHidden)
     val loading = remember(chat) { mutableStateMapOf<String, Boolean>() }
     var refresh by remember { mutableStateOf(0) }
+    var copying by remember(chat) { mutableStateOf<String?>(null) }
+    val cwd by hub.store.state.select { st -> shownCwd(st).orEmpty() }
 
     suspend fun fetch(paths: List<String>) = coroutineScope {
         for (p in paths.filter { loading[it] != true }) launch {
@@ -105,23 +108,38 @@ fun FilesScreen(hub: Hub, onBack: () -> Unit) {
                 item { Spacer(Modifier.padding(top = Tokens.sp4)) }
                 lazyGroup(rows, key = { it.path }) { r ->
                     val isOpen = r.dir && r.path in expanded
-                    ListRow(
-                        r.name,
-                        modifier = Modifier.padding(start = Tokens.sp6 * minOf(r.depth, 6)),
-                        muted = r.hidden,
-                        leading = {
-                            AvIcon(if (!r.dir) "file" else if (isOpen) "folder-opened" else "folder", null, Tokens.iconMd, tint = av.fgMuted)
-                        },
-                        onClick = {
-                            if (r.dir) expanded = if (isOpen) expanded - r.path else expanded + r.path
-                            else open = r.path
-                        },
-                    )
+                    Box {
+                        ListRow(
+                            r.name,
+                            modifier = Modifier.padding(start = Tokens.sp6 * minOf(r.depth, 6)),
+                            muted = r.hidden,
+                            leading = {
+                                AvIcon(if (!r.dir) "file" else if (isOpen) "folder-opened" else "folder", null, Tokens.iconMd, tint = av.fgMuted)
+                            },
+                            onClick = {
+                                if (r.dir) expanded = if (isOpen) expanded - r.path else expanded + r.path
+                                else open = r.path
+                            },
+                            onLongClick = { copying = r.path },
+                        )
+                        Menu(copying == r.path, { copying = null }) { CopyPathItems(hub, r.path, cwd) { copying = null } }
+                    }
                 }
                 item { Spacer(Modifier.padding(bottom = Tokens.sp16)) }
             }
         }
     }
+}
+
+// web/src/workspace/CopyPathItems.tsx: the Copy path, Copy relative path and Copy name items of a menu.
+@Composable
+fun CopyPathItems(hub: Hub, path: String, cwd: String, close: () -> Unit) {
+    val clip = LocalClipboardManager.current
+    val copies = pathCopies(path, cwd)
+    fun copy(text: String, done: String) { close(); clip.setText(AnnotatedString(text)); hub.notice.value = done }
+    MenuItem("Copy path", "copy", { copy(copies.absolute, "Path copied") })
+    copies.relative?.let { MenuItem("Copy relative path", "copy", { copy(it, "Relative path copied") }) }
+    MenuItem("Copy name", "copy", { copy(copies.name, "Name copied") })
 }
 
 // A file of the chat's folder: syntax highlighted, as a diff against HEAD when it changed, Markdown rendered.

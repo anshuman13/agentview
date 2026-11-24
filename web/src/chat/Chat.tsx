@@ -1,7 +1,8 @@
 import { memo, useEffect, useMemo, useState, type MouseEvent } from 'react';
 import type { Token } from './transcript/md';
 import { copyText } from '../codex/view';
-import { setUi } from '../app/store';
+import { getState, setUi } from '../app/store';
+import { CopyPathMenu, type MenuPoint } from '../workspace/CopyPathItems';
 import { runInTerminal } from './chatApi';
 import { cachedHtml, mdKey, storeHtml } from './transcript/mdCache';
 
@@ -44,6 +45,14 @@ const Block = memo(
 
 export function Markdown({ text, id, files = true }: { text: string; id?: string; files?: boolean }) {
   const m = useMd();
+  const [menu, setMenu] = useState<MenuPoint | null>(null);
+  const onMenu = (e: MouseEvent<HTMLDivElement>) => {
+    const link = (e.target as HTMLElement).closest<HTMLElement>('[data-open]');
+    if (!link) return;
+    e.preventDefault();
+    setMenu({ path: link.dataset.open!, x: e.clientX, y: e.clientY });
+  };
+  const copyMenu = menu && <CopyPathMenu path={menu.path} cwd={getState().session.cwd} at={menu} onClose={() => setMenu(null)} />;
   const html = useMemo(() => {
     if (!m || !id) return null;
     const key = mdKey(id, text);
@@ -57,9 +66,9 @@ export function Markdown({ text, id, files = true }: { text: string; id?: string
   const blocks = useMemo(() => (m && files && html === null ? m.splitBlocks(text) : null), [m, files, html, text]);
   if (!m) return <div className="md" style={{ whiteSpace: 'pre-wrap' }}>{text}</div>;
   if (!files) return <div className="md" onClick={onCopy} dangerouslySetInnerHTML={{ __html: m.mdNoFiles.parse(text, { async: false }) as string }} />;
-  if (html !== null) return <div className="md" onClick={onCopy} dangerouslySetInnerHTML={{ __html: html }} />;
-  if (!blocks) {
-    return <div className="md" onClick={onCopy} dangerouslySetInnerHTML={{ __html: m.md.parse(text, { async: false }) as string }} />;
-  }
-  return <div className="md" onClick={onCopy}>{blocks.map((t, i) => <Block key={i} m={m} token={t} />)}</div>;
+  let body;
+  if (html !== null) body = <div className="md" onClick={onCopy} onContextMenu={onMenu} dangerouslySetInnerHTML={{ __html: html }} />;
+  else if (!blocks) body = <div className="md" onClick={onCopy} onContextMenu={onMenu} dangerouslySetInnerHTML={{ __html: m.md.parse(text, { async: false }) as string }} />;
+  else body = <div className="md" onClick={onCopy} onContextMenu={onMenu}>{blocks.map((t, i) => <Block key={i} m={m} token={t} />)}</div>;
+  return <>{body}{copyMenu}</>;
 }
