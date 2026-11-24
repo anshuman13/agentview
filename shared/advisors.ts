@@ -63,6 +63,21 @@ export const moveBacklog = (md: string, slug: string, dir: 'up' | 'down'): strin
   return lines.join('\n');
 };
 
+// Drops the done lines stamped ttl or more before now, renumbers the backlog lines left 1 to n, and stamps unstamped done lines with seen; stamps of slugs that are not done lines are dropped.
+export const expireBacklog = (md: string, doneAt: Record<string, number>, now: number, seen: number, ttl = 4 * HOUR): { md: string; doneAt: Record<string, number> } => {
+  const lines = md.split('\n');
+  const done = lines.map((l) => { const m = BACKLOG_LINE.exec(l.trim()); return m?.[5] === 'done' ? m[2] : null; });
+  const stamps: Record<string, number> = {};
+  for (const slug of done) if (slug) stamps[slug] = doneAt[slug] ?? seen;
+  const expired = (slug: string) => stamps[slug] <= now - ttl;
+  const kept = lines.filter((_, n) => done[n] === null || !expired(done[n]!));
+  let rank = 0;
+  const text = kept.length === lines.length ? md : kept.map((l) => (BACKLOG_LINE.test(l.trim()) ? l.replace(/^(\s*)\d+/, `$1${++rank}`) : l)).join('\n');
+  for (const slug of Object.keys(stamps)) if (expired(slug)) delete stamps[slug];
+  const same = Object.keys(stamps).length === Object.keys(doneAt).length && Object.entries(stamps).every(([k, v]) => doneAt[k] === v);
+  return { md: text, doneAt: same ? doneAt : stamps };
+};
+
 // A project's newest .claude/audits/<date>.md: one line per finding, `<rank>. <screen> | <problem> | <severity> | <fix>[ | fixed <slug> | open]`, the Designer's usability audit.
 export type AuditSeverity = 'high' | 'med' | 'low';
 export type AuditFinding = { rank: number; screen: string; problem: string; severity: AuditSeverity; fix: string; status: 'open' | 'fixed'; by: string };
@@ -83,7 +98,7 @@ export const auditPrompt = (root: string) => `Audit the usability of the app in 
 
 export const specsFromAuditPrompt = (root: string) => `Read the newest file in ${root}/.claude/audits and add its top findings to ${root}/.claude/backlog.md as \`proposed\` lines, with the audit line as the why. Skip findings marked fixed and ones a done backlog line names. A spec written from a finding has a line Fixes: <audit date> #<rank>, #<rank> under its title. Keep the existing lines, reread the file before you edit it and renumber the ranks. Reply with the lines you added.`;
 
-const HOUR = 3_600_000;
+export const HOUR = 3_600_000;
 
 export const ADVISOR_LOOP_EVERY = 4 * HOUR;
 export const ADVISOR_LOOP_CAP = 70;

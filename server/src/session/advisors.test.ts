@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'bun:test';
-import { mkdir, mkdtemp, readFile, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, open, readFile, stat, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import { ADVISORS, advisorOf } from '../../../shared/advisors.js';
-import { prepareAdvisor, projectIndex, readAudit, readBacklog } from './advisors.js';
+import { ADVISORS, HOUR, advisorOf } from '../../../shared/advisors.js';
+import { prepareAdvisor, projectIndex, moveBacklogFile, readAudit, readBacklog } from './advisors.js';
 
 describe('prepareAdvisor', () => {
   it('writes the role with the memory import and keeps an existing memory', async () => {
@@ -36,11 +36,66 @@ describe('prepareAdvisor', () => {
     await mkdir(path.join(root, '.claude/specs'), { recursive: true });
     await writeFile(path.join(root, '.claude/specs/cards.md'), '# Cards\n');
     await writeFile(path.join(root, '.claude/backlog.md'), '# Backlog\n1. cards | Sketch cards | one tap | specced\n2. audit | Usability audit | nobody checks | a or b | proposed\nnot a line\n3. ../x | Bad | slug | proposed\n');
-    expect(await readBacklog(root)).toEqual([
+    const stamps = path.join(root, 'stamps.json');
+    expect(await readBacklog(root, { stamps })).toEqual([
       { rank: 1, slug: 'cards', title: 'Sketch cards', why: 'one tap', status: 'specced', spec: true },
       { rank: 2, slug: 'audit', title: 'Usability audit', why: 'nobody checks | a or b', status: 'proposed', spec: false },
     ]);
-    expect(await readBacklog(path.join(root, 'none'))).toEqual([]);
+    expect(await readBacklog(path.join(root, 'none'), { stamps })).toEqual([]);
+  });
+
+  describe('done lines', () => {
+    const NOW = 1_000 * HOUR;
+    const setup = async (md: string) => {
+      const root = await mkdtemp(path.join(os.tmpdir(), 'expire-'));
+      await mkdir(path.join(root, '.claude'), { recursive: true });
+      const file = path.join(root, '.claude/backlog.md');
+      await writeFile(file, md);
+      return { root, file, stamps: path.join(root, 'stamps.json') };
+    };
+    const MD = '1. a | A | w | proposed\n2. b | B | w | done\n3. c | C | w | done\n4. d | D | w | specced\n';
+
+    it('removes the expired done line, renumbers, and writes nothing on a second read', async () => {
+      const { root, file, stamps } = await setup(MD);
+      await writeFile(stamps, JSON.stringify({ [root]: { b: NOW - 5 * HOUR, c: NOW - HOUR } }));
+      expect((await readBacklog(root, { stamps, now: NOW })).map((i) => [i.rank, i.slug])).toEqual([[1, 'a'], [2, 'c'], [3, 'd']]);
+      expect(await readFile(file, 'utf8')).toBe('1. a | A | w | proposed\n2. c | C | w | done\n3. d | D | w | specced\n');
+      expect(JSON.parse(await readFile(stamps, 'utf8'))).toEqual({ [root]: { c: NOW - HOUR } });
+      const times = [(await stat(file)).mtimeMs, (await stat(stamps)).mtimeMs];
+      await readBacklog(root, { stamps, now: NOW });
+      expect([(await stat(file)).mtimeMs, (await stat(stamps)).mtimeMs]).toEqual(times);
+    });
+
+    it('leaves stamps alone for a missing backlog', async () => {
+      const { root, stamps } = await setup(MD);
+      await writeFile(stamps, JSON.stringify({ '/other': { x: 1 }, [path.join(root, 'none')]: { y: 2 } }));
+      expect(await readBacklog(path.join(root, 'none'), { stamps, now: NOW })).toEqual([]);
+      expect(JSON.parse(await readFile(stamps, 'utf8'))).toEqual({ '/other': { x: 1 }, [path.join(root, 'none')]: { y: 2 } });
+    });
+
+    it('keeps a file that changed during the read and expires the row on the next read', async () => {
+      const { root, file, stamps } = await setup(MD);
+      await Bun.spawn(['mkfifo', stamps]).exited;
+      const read = readBacklog(root, { stamps, now: NOW });
+      const w = await open(stamps, 'w');
+      const changed = `${MD}5. e | E | w | proposed\n`;
+      await writeFile(file, changed);
+      await w.writeFile(JSON.stringify({ [root]: { b: NOW - 5 * HOUR, c: NOW - HOUR } }));
+      await w.close();
+      await read;
+      expect(await readFile(file, 'utf8')).toBe(changed);
+      expect(JSON.parse(await readFile(stamps, 'utf8'))[root]).toEqual({ b: NOW - 5 * HOUR, c: NOW - HOUR });
+      expect((await readBacklog(root, { stamps, now: NOW })).map((i) => i.slug)).toEqual(['a', 'c', 'd', 'e']);
+    });
+
+    it('lets a move and a read started together both take effect', async () => {
+      const { root, file, stamps } = await setup(MD);
+      await writeFile(stamps, JSON.stringify({ [root]: { b: NOW - 5 * HOUR, c: NOW - HOUR } }));
+      const [moved, items] = await Promise.all([moveBacklogFile(root, 'd', 'up'), readBacklog(root, { stamps, now: NOW })]);
+      expect(moved).toBe(true);
+      expect(items.map((i) => i.slug)).toEqual(['d', 'c', 'a']);
+      expect(await readFile(file, 'utf8')).toBe('1. d | D | w | specced\n2. c | C | w | done\n3. a | A | w | proposed\n');
+    });
   });
 
   it('lets the designer edit sketches and audits only', async () => {

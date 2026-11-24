@@ -1,9 +1,11 @@
 import { existsSync } from 'node:fs';
 import { randomUUID } from 'node:crypto';
 import { mkdir, readFile, readdir, rename, stat, writeFile } from 'node:fs/promises';
+import os from 'node:os';
 import path from 'node:path';
-import { ADVISORS, moveBacklog, parseAudit, parseBacklog, type Advisor, type AdvisorId, type AdvisorInfo, type Audit, type BacklogItem } from '../../../shared/advisors.js';
+import { ADVISORS, expireBacklog, moveBacklog, parseAudit, parseBacklog, type Advisor, type AdvisorId, type AdvisorInfo, type Audit, type BacklogItem } from '../../../shared/advisors.js';
 import { listSessions, savedSession } from '../agent/claude/sessions.js';
+import { jsonFile } from '../json.js';
 import { ADVISOR_HOME, ROOTS } from '../workspace/files.js';
 
 const ROLES = path.join(import.meta.dirname, '../../advisors');
@@ -97,29 +99,69 @@ export const advisorsInfo = (home = ADVISOR_HOME): Promise<AdvisorInfo[]> =>
     return { id: a.id, memory, chats: list.map((x) => savedSession(x)).map(({ sessionId, title, lastModified }) => ({ sessionId, title, lastModified })) };
   }));
 
-// A project's ranked backlog, each item with whether its spec file exists.
-export async function readBacklog(root: string): Promise<BacklogItem[]> {
-  const items = parseBacklog(await readFile(path.join(root, '.claude/backlog.md'), 'utf8').catch(() => ''));
-  return items.map((i) => ({ ...i, spec: existsSync(path.join(root, '.claude/specs', `${i.slug}.md`)) }));
-}
+type Stamps = Record<string, Record<string, number>>;
 
+const STAMPS = path.join(os.homedir(), '.agentview', 'backlog-done.json');
+const stampStores = new Map<string, ReturnType<typeof jsonFile<Stamps>>>();
+const stampStore = (file: string) => {
+  let store = stampStores.get(file);
+  if (!store) stampStores.set(file, (store = jsonFile<Stamps>(file, {})));
+  return store;
+};
+
+// Backlog reads and moves on one root run one at a time.
 const moves = new Map<string, Promise<unknown>>();
-
-// Moves one backlog line up or down; false when the slug is not in it. Moves on one root run one at a time.
-export function moveBacklogFile(root: string, slug: string, dir: 'up' | 'down'): Promise<boolean> {
-  const run = async () => {
-    const file = path.join(root, '.claude/backlog.md');
-    const next = moveBacklog(await readFile(file, 'utf8').catch(() => ''), slug, dir);
-    if (next === null) return false;
-    const tmp = `${file}.${randomUUID()}.tmp`;
-    await writeFile(tmp, next);
-    await rename(tmp, file);
-    return true;
-  };
+const queued = <T>(root: string, run: () => Promise<T>): Promise<T> => {
   const p = (moves.get(root) ?? Promise.resolve()).then(run);
   moves.set(root, p.catch(() => {}));
   return p;
-}
+};
+
+const writeBacklog = async (file: string, text: string) => {
+  const tmp = `${file}.${randomUUID()}.tmp`;
+  await writeFile(tmp, text);
+  await rename(tmp, file);
+};
+
+// A project's ranked backlog, each item with whether its spec file exists. Done lines leave the file 4 hours after they were first seen done.
+export const readBacklog = (root: string, opts: { stamps?: string; now?: number } = {}): Promise<BacklogItem[]> =>
+  queued(root, async () => {
+    const file = path.join(root, '.claude/backlog.md');
+    const now = opts.now ?? Date.now();
+    const store = stampStore(opts.stamps ?? STAMPS);
+    const before = await stat(file).catch(() => null);
+    if (!before) return [];
+    const text = await readFile(file, 'utf8');
+    let next = text;
+    let lost: Record<string, number> = {};
+    const done = new Set(parseBacklog(text).filter((i) => i.status === 'done').map((i) => i.slug));
+    await store.update((map) => {
+      const old = map[root] ?? {};
+      const r = expireBacklog(text, old, now, Math.min(now, before.mtimeMs));
+      next = r.md;
+      lost = Object.fromEntries(Object.entries(old).filter(([slug]) => done.has(slug) && !(slug in r.doneAt)));
+      return r.doneAt === old ? map : { ...map, [root]: r.doneAt };
+    });
+    if (next !== text) {
+      const after = await stat(file).catch(() => null);
+      if (after?.mtimeMs === before.mtimeMs && after.size === before.size) await writeBacklog(file, next);
+      else {
+        await store.update((map) => ({ ...map, [root]: { ...map[root], ...lost } }));
+        next = text;
+      }
+    }
+    return parseBacklog(next).map((i) => ({ ...i, spec: existsSync(path.join(root, '.claude/specs', `${i.slug}.md`)) }));
+  });
+
+// Moves one backlog line up or down; false when the slug is not in it.
+export const moveBacklogFile = (root: string, slug: string, dir: 'up' | 'down'): Promise<boolean> =>
+  queued(root, async () => {
+    const file = path.join(root, '.claude/backlog.md');
+    const next = moveBacklog(await readFile(file, 'utf8').catch(() => ''), slug, dir);
+    if (next === null) return false;
+    await writeBacklog(file, next);
+    return true;
+  });
 
 // A project's newest audit with its parsed findings, null when none was written.
 export async function readAudit(root: string): Promise<Audit | null> {

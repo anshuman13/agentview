@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'bun:test';
-import { advisorLoopCommand, advisorLoopGoal, auditPrompt, moveBacklog, parseAudit, specsFromAuditPrompt } from './advisors.js';
+import { advisorLoopCommand, advisorLoopGoal, auditPrompt, expireBacklog, HOUR, moveBacklog, parseAudit, specsFromAuditPrompt } from './advisors.js';
 
 const kotlin = readFileSync(new URL('../android/app/src/main/kotlin/no/pradhan/agentview/nativeapp/sessions/AdvisorsUi.kt', import.meta.url), 'utf8');
 const kotlinPrompt = (name: string, root: string) => new RegExp(`fun ${name}\\(root: String\\) = "(.*)"$`, 'm').exec(kotlin)?.[1].replaceAll('$root', root);
@@ -42,6 +42,39 @@ describe('parseAudit', () => {
 
   it('keeps an unknown fifth field in the fix and the line open', () => {
     expect(read('1. Home | Tiny tap | med | Enlarge | later')).toMatchObject({ status: 'open', fix: 'Enlarge | later' });
+  });
+});
+
+describe('expireBacklog', () => {
+  const now = 100 * HOUR;
+  const md = '# Backlog\n1. a | A | w | proposed\n2. b | B | w | done\nnote\n3. c | C | w | done\n4. d | D | w | specced\n';
+
+  it('stamps an unstamped done line and keeps it', () => {
+    expect(expireBacklog(md, {}, now, now - HOUR)).toEqual({ md, doneAt: { b: now - HOUR, c: now - HOUR } });
+  });
+
+  it('removes a line stamped 4 hours ago, renumbers and drops its stamp', () => {
+    const r = expireBacklog(md, { b: now - 4 * HOUR, c: now - HOUR }, now, now);
+    expect(r).toEqual({ md: '# Backlog\n1. a | A | w | proposed\nnote\n2. c | C | w | done\n3. d | D | w | specced\n', doneAt: { c: now - HOUR } });
+  });
+
+  it('keeps a line stamped 3 h 59 min ago, and an open line whatever the stamps say', () => {
+    const doneAt = { b: now - 4 * HOUR + 60_000, c: now - HOUR, a: 0, d: 0 };
+    const r = expireBacklog(md, doneAt, now, now);
+    expect(r.md).toBe(md);
+    expect(r.doneAt).toEqual({ b: now - 4 * HOUR + 60_000, c: now - HOUR });
+  });
+
+  it('removes duplicate lines of one slug together', () => {
+    const dup = '1. b | B | w | done\n2. x | X | w | proposed\n3. b | B | w | done\n';
+    expect(expireBacklog(dup, { b: 0 }, now, now)).toEqual({ md: '1. x | X | w | proposed\n', doneAt: {} });
+  });
+
+  it('returns the same string and object when nothing changed', () => {
+    const doneAt = { b: now - HOUR, c: now - HOUR };
+    const r = expireBacklog(md, doneAt, now, now);
+    expect(r.md).toBe(md);
+    expect(r.doneAt).toBe(doneAt);
   });
 });
 
