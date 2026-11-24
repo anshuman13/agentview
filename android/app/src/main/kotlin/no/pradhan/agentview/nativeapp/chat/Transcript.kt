@@ -1,5 +1,14 @@
 package no.pradhan.agentview.nativeapp.chat
 
+import android.provider.Settings
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -319,7 +328,7 @@ private fun TaskLines(hub: Hub, fold: FoldRow.Fold, cwd: String, live: Boolean, 
     val steps = if (live) fold.steps else fold.steps.filter { it.done }
     val done = steps.count { it.done }
     val current = if (live) steps.firstOrNull { !it.done } else null
-    val spin = @Composable { CircularProgressIndicator(Modifier.size(Tokens.sp5), strokeWidth = Tokens.stroke, color = av.fgFaint) }
+    val spin = @Composable { WorkDots() }
     var reading by remember { mutableStateOf(false) }
     var proposing by remember { mutableStateOf(false) }
     var memory by remember { mutableStateOf(false) }
@@ -368,6 +377,21 @@ private fun TaskLines(hub: Hub, fold: FoldRow.Fold, cwd: String, live: Boolean, 
             }
         }
         if (live && current == null && fold.now.isNotEmpty()) Task(spin, fold.now, av.fgStrong)
+    }
+}
+
+// Two accent dots pulsing in turn, the Claude apps' mark for a running step; still when animations are off.
+@Composable
+private fun WorkDots() {
+    val resolver = LocalContext.current.contentResolver
+    val moving = remember(resolver) { Settings.Global.getFloat(resolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f) > 0f }
+    val t = rememberInfiniteTransition(label = "work")
+    val phase = if (moving) t.animateFloat(0f, 1f, infiniteRepeatable(tween(Tokens.dur * 8)), label = "phase").value else 0.5f
+    Row(Modifier.height(Tokens.sp5), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Tokens.sp1)) {
+        listOf(0f, 0.5f).forEach { off ->
+            val x = (phase + off) % 1f
+            Box(Modifier.size(Tokens.sp2).alpha(0.35f + 0.65f * (1f - kotlin.math.abs(2f * x - 1f))).clip(CircleShape).background(av.accent))
+        }
     }
 }
 
