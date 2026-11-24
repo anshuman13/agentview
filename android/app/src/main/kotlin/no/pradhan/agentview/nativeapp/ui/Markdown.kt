@@ -1,9 +1,7 @@
 package no.pradhan.agentview.nativeapp.ui
 
 import android.util.LruCache
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -165,10 +163,11 @@ private fun TableView(t: MdBlock.Table) {
                         inlineText(row.getOrElse(c) { emptyList() }),
                         style = Type.subheadline.copy(color = av.fg),
                         fontWeight = if (r == 0 && t.header.isNotEmpty()) FontWeight.SemiBold else null,
-                        modifier = Modifier.width(Tokens.tableCell).border(BorderStroke(Tokens.hairline, av.border)).padding(Tokens.sp4),
+                        modifier = Modifier.width(Tokens.tableCell).padding(top = Tokens.sp4, bottom = Tokens.sp4, end = Tokens.sp6),
                     )
                 }
             }
+            HorizontalDivider(Modifier.width(Tokens.tableCell * cols), color = if (r == 0 && t.header.isNotEmpty()) av.borderStrong else av.border, thickness = Tokens.hairline)
         }
     }
 }

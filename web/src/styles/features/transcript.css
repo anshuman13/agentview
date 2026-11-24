@@ -154,3 +154,5 @@
 .tr-alarm-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--type-body-size); line-height: var(--type-body-line); }
 .tr-alarm-status { display: flex; align-items: center; gap: var(--sp-3); font-size: var(--type-meta-size); line-height: var(--type-meta-line); color: var(--meta-fg); }
 .tr-alarm-status.error { color: var(--err); }
+.tr-assistant .md :is(th, td) { border-width: 0 0 1px; border-color: var(--border); padding: var(--sp-3) var(--sp-8) var(--sp-3) 0; }
+.tr-assistant .md th { border-bottom-color: var(--border-strong); }
