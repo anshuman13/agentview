@@ -232,7 +232,7 @@ internal fun SpecCard(hub: Hub, chat: String, slug: String, path: String, bump: 
     val actions = buildActions(hub, slug, reload)
     TranscriptBox(
         hub, "build:$chat:$slug", d?.title?.ifEmpty { null } ?: slug,
-        if (gone) "Spec removed" else d?.let { listOf(pipelineLabel(it.pipeline), it.summary.conclusion).filter(String::isNotEmpty).joinToString(" · ") }.orEmpty(),
+        if (gone) "Spec removed" else d?.let { specMeta(it.pipeline, it.summary.conclusion) }.orEmpty(),
         state = {
             if (d?.hold == true) Badge(HOLD_BADGE.first, HOLD_BADGE.second)
             else if (d != null && d.entries.isNotEmpty()) stateBadge(d.summary.state).let { Badge(it.first, it.second) }

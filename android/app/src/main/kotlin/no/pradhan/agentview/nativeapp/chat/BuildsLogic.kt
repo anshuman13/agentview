@@ -131,12 +131,15 @@ private fun specHomeGroup(i: SpecHomeItem) = when {
     else -> 3
 }
 
+// A spec's stage and conclusion, saying "Merged" once for a merged spec (web shared/builds.ts specMeta).
+fun specMeta(pipeline: String, conclusion: String) =
+    listOf(if (pipeline == "merged" && conclusion.startsWith("Merged")) "" else pipelineLabel(pipeline), conclusion).filter { it.isNotEmpty() }.joinToString(" \u00b7 ")
+
 // A Specs row's meta and age (web shared/builds.ts specRowParts).
 data class SpecRowParts(val meta: String, val age: String)
 
 fun specRowParts(i: SpecHomeItem, ago: (Long) -> String): SpecRowParts {
-    val label = if (i.pipeline == "merged" && i.conclusion.startsWith("Merged")) "" else pipelineLabel(i.pipeline)
-    return SpecRowParts(listOf(label, i.conclusion).filter { it.isNotEmpty() }.joinToString(" · "), if (i.updatedAt > 0) ago(i.updatedAt) else "")
+    return SpecRowParts(specMeta(i.pipeline, i.conclusion), if (i.updatedAt > 0) ago(i.updatedAt) else "")
 }
 
 fun specHomeOrder(items: List<SpecHomeItem>) = items.sortedWith(compareBy<SpecHomeItem> { specHomeGroup(it) }.thenByDescending { it.updatedAt })

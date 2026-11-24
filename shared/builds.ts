@@ -65,10 +65,12 @@ const specHomeGroup = (i: SpecHomeItem) =>
   i.waiting || i.hold ? 0 : ['running', 'failed', 'waiting'].includes(i.state) ? 1 : i.pipeline === 'merged' ? 4 : i.built ? 2 : 3;
 
 // The spec home list: what needs you first, then what runs, what is built but not merged, what is not built, what is merged; newest first within each.
-// A Specs row's meta and age: the stage and conclusion, a merged spec saying "Merged" once, and the age of the last change when known.
+// A spec's stage and conclusion, saying "Merged" once for a merged spec.
+export const specMeta = (pipeline: BuildPipeline, conclusion: string) => [pipeline === 'merged' && conclusion.startsWith('Merged') ? '' : pipelineLabel(pipeline), conclusion].filter(Boolean).join(' · ');
+
+// A Specs row's meta and age: specMeta and the age of the last change when known.
 export function specRowParts({ pipeline, conclusion, updatedAt }: Pick<SpecHomeItem, 'pipeline' | 'conclusion' | 'updatedAt'>, ago: (t: number) => string) {
-  const label = pipeline === 'merged' && conclusion.startsWith('Merged') ? '' : pipelineLabel(pipeline);
-  return { meta: [label, conclusion].filter(Boolean).join(' · '), when: updatedAt > 0 ? ago(updatedAt) : '' };
+  return { meta: specMeta(pipeline, conclusion), when: updatedAt > 0 ? ago(updatedAt) : '' };
 }
 
 export const specHomeOrder = (items: SpecHomeItem[]) => [...items].sort((a, b) => specHomeGroup(a) - specHomeGroup(b) || b.updatedAt - a.updatedAt);

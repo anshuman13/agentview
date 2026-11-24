@@ -16,7 +16,7 @@ import { useBuild } from '../../sessions/useBuilds';
 import { currentStep, FLOW_LABEL, flowBadge, holdBadge, stateBadge } from '../../sessions/buildsLogic';
 import { useCan } from '../useCan';
 import { Findings } from '../../ops/Findings';
-import { buildTotals, canBuild, canSketch, pipelineLabel, type BuildDetail, type FlowStep } from '../../../../shared/builds';
+import { buildTotals, canBuild, canSketch, specMeta, type BuildDetail, type FlowStep } from '../../../../shared/builds';
 import { SPEC_REVIEW_COMMAND, buildSpecPrompt, sketchSpecPrompt } from '../../../../shared/specTasks';
 import { TranscriptBox } from './Box';
 import { readBox } from './boxOpen';
@@ -36,7 +36,7 @@ export const SpecCard = memo(function SpecCard({ slug, path, bump }: { slug: str
     setUi({ spec: null });
     if (d) sheets.open({ kind: 'spec' });
   }, [want, d, gone]);
-  const meta = gone ? 'Spec removed' : d && [pipelineLabel(d.pipeline), d.summary.conclusion].filter(Boolean).join(' · ');
+  const meta = gone ? 'Spec removed' : d && specMeta(d.pipeline, d.summary.conclusion);
   const state = d?.hold ? <Badge {...holdBadge} /> : d?.entries.length ? <Badge {...stateBadge(d.summary.state)} /> : undefined;
   return (
     <>
