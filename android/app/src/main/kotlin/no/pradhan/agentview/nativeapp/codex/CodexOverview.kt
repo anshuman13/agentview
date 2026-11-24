@@ -41,8 +41,8 @@ fun calendarFailText(scan: SyncScan, count: Int) = "Calendar sync failed" + if (
 class Meetings(val next: Row?, val today: List<Row>, val nextLater: Row?)
 
 fun meetingsOf(meetings: List<Row>, profile: String?, now: Long): Meetings {
-    // An event on both the work and personal calendars shows once.
-    val all = meetings.filter { !it.deleted && it.startsAt != null && matchesProfile(profile, it) && !isBlock(it) }.distinctBy { it.id }
+    // An event on both the work and personal calendars, or copied with another id, shows once.
+    val all = uniqueEvents(meetings.filter { !it.deleted && it.startsAt != null && matchesProfile(profile, it) && !isBlock(it) })
     val endOfDay = dayEnd(now)
     val ahead = all.filter { (it.endsAt ?: it.startsAt!!) > now }.sortedBy { it.startsAt }
     val todayAhead = ahead.filter { it.startsAt!! < endOfDay }

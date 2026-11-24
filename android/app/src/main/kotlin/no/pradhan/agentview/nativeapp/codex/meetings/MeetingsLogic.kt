@@ -1,5 +1,6 @@
 package no.pradhan.agentview.nativeapp.codex.meetings
 
+import no.pradhan.agentview.nativeapp.codex.uniqueEvents
 import java.time.Instant
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -89,7 +90,7 @@ fun groupMeetings(meetings: List<Row>, now: Long): List<MeetingGroup> {
 fun comingDays(meetings: List<Row>, now: Long): List<MeetingGroup> {
     val today = dayStart(now)
     val end = dayPlus(today, 7)
-    val ahead = liveRows(meetings).filter { it.startsAt != null && (it.endsAt ?: it.startsAt!!) > now && it.startsAt!! < end }.sortedBy { it.startsAt }
+    val ahead = uniqueEvents(liveRows(meetings).filter { it.startsAt != null && (it.endsAt ?: it.startsAt!!) > now && it.startsAt!! < end }.sortedBy { it.startsAt })
     val byDay = LinkedHashMap<Long, MutableList<Row>>()
     for (m in ahead) byDay.getOrPut(maxOf(today, dayStart(m.startsAt!!))) { ArrayList() }.add(m)
     return byDay.map { (d, rows) -> MeetingGroup(if (d == today) "Today" else if (d == dayEnd(now)) "Tomorrow" else weekdayDate(d), rows) }

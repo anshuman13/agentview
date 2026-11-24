@@ -10,6 +10,7 @@ import { DAY, HOUR, addWorkdays, inWeekHours, localDate, ymd } from '../core/tim
 import { run } from '../slack/slack.js';
 import { scanPaused } from '../core/claude.js';
 import { ACCOUNT_OF } from '../calendar/calendar.js';
+import { sameEvent, uniqueEvents } from '../../../shared/sameEvent.js';
 
 const PROFILES: Profile[] = ['work', 'personal'];
 const TOP = 5;
@@ -57,7 +58,9 @@ export function buildBrief(db: Database, profile: Profile, now = Date.now()): Br
   const start = new Date(now).setHours(0, 0, 0, 0);
   const end = new Date(now).setHours(24, 0, 0, 0);
   const busy = db.prepare('SELECT id, title, starts_at, ends_at FROM meetings WHERE deleted = 0 AND profile = ? AND starts_at >= ? AND starts_at < ? ORDER BY starts_at').all(profile, start, end) as (Row & { id: string; starts_at: number; ends_at: number | null })[];
-  const meetings = busy.filter((m) => !isBlock(m.id) && (m.ends_at ?? m.starts_at) >= now);
+  // The personal brief leaves out events the work brief already lists, and copies of one event show once.
+  const work = profile === 'personal' ? db.prepare("SELECT id, title, starts_at, ends_at FROM meetings WHERE deleted = 0 AND profile = 'work' AND starts_at >= ? AND starts_at < ?").all(start, end) as (Row & { id: string; starts_at: number; ends_at: number | null })[] : [];
+  const meetings = uniqueEvents(busy.filter((m) => !isBlock(m.id) && (m.ends_at ?? m.starts_at) >= now)).filter((m) => !work.some((w) => sameEvent(w, m)));
   const timed = busy.filter((m) => m.ends_at != null && m.ends_at > m.starts_at && m.ends_at - m.starts_at < LONG);
   const gaps = workGaps(timed.map((m) => [m.starts_at, m.ends_at!] as Span), now);
   const tasks = db.prepare("SELECT id, title, at, rolls FROM items WHERE deleted = 0 AND profile = ? AND status = 'open' AND COALESCE(source, '') NOT IN ('calendar', 'meeting', 'slack') AND (at IS NULL OR at = '' OR CAST(at AS INTEGER) < ?) ORDER BY at IS NULL OR at = '', CAST(at AS INTEGER)").all(profile, end) as (Row & { id: string; at: number | null; rolls: number | null })[];

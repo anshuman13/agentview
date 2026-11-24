@@ -236,3 +236,14 @@ it('prunes wrapup rows past 60 days only', async () => {
     { id: 'wrapup:old', deleted: 1, text: null },
   ]);
 });
+
+it('lists an event once, and leaves work events out of the personal brief', () => {
+  const db = openDb(':memory:');
+  const add = db.prepare("INSERT INTO meetings (id, profile, version, updated_at, title, starts_at, ends_at) VALUES (?, ?, 1, 0, ?, ?, ?)");
+  add.run('w1', 'work', 'Training', at(MON, 12), at(MON, 16));
+  add.run('w1', 'personal', 'Training', at(MON, 12), at(MON, 16));
+  add.run('f1', 'personal', 'Flight to Stockholm Arlanda (D84102)', at(MON, 9), at(MON, 10));
+  add.run('f2', 'personal', 'Flight to Stockholm (D8 4102)', at(MON, 9), at(MON, 10));
+  expect(buildBrief(db, 'personal', at(MON, 8)).rows.filter((r) => r.section === 'meetings').map((r) => r.meeting)).toEqual(['f1']);
+  expect(buildBrief(db, 'work', at(MON, 8)).rows.filter((r) => r.section === 'meetings').map((r) => r.meeting)).toEqual(['w1']);
+});
