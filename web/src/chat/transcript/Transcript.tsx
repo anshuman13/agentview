@@ -37,8 +37,6 @@ import { FIRST_ROWS, hiddenCount, needsEarlier, revealMore, stageRows, windowSta
 import { ROW_WINDOW, type ChatEvent } from '../../../../shared/protocol';
 import { quoteText } from '../../../../shared/composerText';
 import { useSelectionAt } from '../../ui/useSelectionAt';
-import { time } from '../../sessions/brief/time';
-import { useMinute } from '../../codex/tasks/split';
 
 export function Transcript() {
   const events = useStore((s) => s.events);
@@ -540,16 +538,11 @@ function ProposedClaims({ proposed }: { proposed: Proposal[] }) {
   );
 }
 
-function SentAt({ at }: { at: number }) {
-  useMinute();
-  return <span className="muted">Sent {time(at)}</span>;
-}
-
 function RowImpl({ it, cwd, settled, card, answer, rewind, bump = 0 }: { it: Item; cwd: string; settled?: boolean; card?: boolean; answer?: boolean; rewind?: Rewind; bump?: number }) {
   const label = useStore((s) => providerLabel(s.session.provider));
   switch (it.kind) {
     case 'user':
-      return <div id={`turn-${it.id}`} className={`tr-user ${it.stopping ? 'stopping' : ''} ${it.queued ? 'queued' : ''}`}>{it.voice && <span className="tr-mic" title="Spoken"><Icon name="mic" small /></span>}<UserText id={it.id} text={it.text} />{it.stopping && <span className="tr-stop"><Icon name="loading" small spin />{`Stopping ${label} to send this`}</span>}{it.queued && <span className="tr-stop"><Icon name="clock" small />{`Waiting for ${label}'s next step`}<Button variant="plain" size="sm" className="tl-send-now" title={`Stop ${label}'s current step and send this now`} onClick={() => send({ type: 'send_now', id: it.id })}>Send now</Button></span>}{!it.stopping && !it.queued && <span className="tr-acts"><SentAt at={it.at} /><Button variant="plain" size="sm" icon="reply" title="Put this prompt in the composer to edit and send again" onClick={() => window.dispatchEvent(new CustomEvent('agentview:insert', { detail: { text: it.text } }))}>Use again</Button><Button variant="plain" size="sm" icon="copy" onClick={() => copyPrompt(it.text)}>Copy</Button></span>}</div>;
+      return <div id={`turn-${it.id}`} className={`tr-user ${it.stopping ? 'stopping' : ''} ${it.queued ? 'queued' : ''}`}>{it.voice && <span className="tr-mic" title="Spoken"><Icon name="mic" small /></span>}<UserText id={it.id} text={it.text} />{it.stopping && <span className="tr-stop"><Icon name="loading" small spin />{`Stopping ${label} to send this`}</span>}{it.queued && <span className="tr-stop"><Icon name="clock" small />{`Waiting for ${label}'s next step`}<Button variant="plain" size="sm" className="tl-send-now" title={`Stop ${label}'s current step and send this now`} onClick={() => send({ type: 'send_now', id: it.id })}>Send now</Button></span>}{!it.stopping && !it.queued && <span className="tr-acts"><Button variant="plain" size="sm" icon="reply" title="Put this prompt in the composer to edit and send again" onClick={() => window.dispatchEvent(new CustomEvent('agentview:insert', { detail: { text: it.text } }))}>Use again</Button><Button variant="plain" size="sm" icon="copy" onClick={() => copyPrompt(it.text)}>Copy</Button></span>}</div>;
     case 'auto':
       return <AutoRow it={it} />;
     case 'assistant':
