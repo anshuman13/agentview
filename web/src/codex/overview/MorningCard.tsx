@@ -11,11 +11,12 @@ const DISMISSED = 'codex:morning:dismissed';
 export function MorningCard({ briefs, filter, now }: { briefs: Brief[]; filter: Filter; now: number }) {
   const [hidden, setHidden] = useState(() => stored<string[]>(DISMISSED, []));
   const day = new Date(now).setHours(0, 0, 0, 0);
-  const all = live(briefs).filter((b) => b.kind === 'morning' && b.from_at === day && (filter === 'all' || b.profile === filter));
+  const mornings = live(briefs).filter((b) => b.kind === 'morning' && b.from_at === day);
+  const all = mornings.filter((b) => filter === 'all' || b.profile === filter);
   const today = all.filter((b) => !hidden.includes(b.profile + b.id));
   if (!today.length) return null;
   const close = (b: Brief) => {
-    const next = [...hidden.filter((k) => all.some((x) => x.profile + x.id === k)), b.profile + b.id];
+    const next = [...hidden.filter((k) => mornings.some((x) => x.profile + x.id === k)), b.profile + b.id];
     save(DISMISSED, next);
     setHidden(next);
   };

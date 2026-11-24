@@ -32,6 +32,12 @@ export function goalProgress(items: ItemRow[], goal: ItemRow) {
   return { done: tasks.filter((r) => r.status === 'done').length, total: tasks.length };
 }
 
+// Muse's next step for a goal: its open task due soonest, undated ones last.
+export function goalNext(items: ItemRow[], goal: ItemRow) {
+  const open = linkedTo(items, goal).filter((r) => r.status === 'open');
+  return open.sort((a, b) => (atTime(a.at) ?? Infinity) - (atTime(b.at) ?? Infinity))[0]?.title ?? null;
+}
+
 // A goal's tasks, open ones first then done, and its done/total count (undefined when it has no tasks).
 export function goalSummary(items: ItemRow[], goal: ItemRow) {
   const tasks = linkedTo(items, goal);

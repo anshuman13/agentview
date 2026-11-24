@@ -137,19 +137,21 @@ fun OverviewPage(hub: Hub, st: CodexState, profile: String?, now: Long, actions:
     val seen by hub.workspace.select { it.seen }
     val shown by hub.store.state.select { it.shownId }
     val groups = remember(live, seen, shown) { agentGroups(live, seen, shown) }
+    val done = remember(live, groups, shown, now / 60_000) { activity(live, groups.flatMap { g -> g.second.map { it.id } }.toSet() + listOfNotNull(shown), dayStart(now)) }
     val failedCalendars = remember(st.scans) { failedCalendars(st.scans) }
     LazyColumn(Modifier.fillMaxSize()) {
-        if (failedCalendars.isNotEmpty()) item {
+        if (failedCalendars.isNotEmpty()) item(key = "failed-calendars") {
             Group { failedCalendars.forEachIndexed { i, h -> if (i > 0) Hairline(); ListRow(calendarFailText(h, failedCalendars.size), h.ok?.let { "Last synced ${clock(it)}" } ?: "Never synced") } }
         }
         morningSection(hub, st, profile, now)
-        item { UpNextSection(hub, st, d, now, actions, onOpen, onNeeds, onAdd, onMeeting, onNotes) }
+        item(key = "up-next") { UpNextSection(hub, st, d, now, actions, onOpen, onNeeds, onAdd, onMeeting, onNotes) }
         agentSections(groups) { hub.link.value = DeepLink(chat = it) }
+        if (done.isNotEmpty()) activitySection(done) { hub.link.value = DeepLink(chat = it) }
         if (d.rows.isNotEmpty()) todaySection(d, now, actions, all, { all = true }, onOpen, onMeeting)
         ideasSection(hub, st, d, now)
         planDaySection(d, plan, { plan = it }, now, actions)
         if (goals.isNotEmpty()) goalsSection(st, profile, goals, free, onGoals)
-        item { androidx.compose.foundation.layout.Spacer(Modifier.padding(bottom = Tokens.fab + Tokens.sp20)) }
+        item(key = "end") { androidx.compose.foundation.layout.Spacer(Modifier.padding(bottom = Tokens.fab + Tokens.sp20)) }
     }
 }
 
@@ -186,17 +188,18 @@ private fun LazyListScope.morningSection(hub: Hub, st: CodexState, profile: Stri
     item(key = "morning") {
         var hidden by remember { mutableStateOf(hub.prefs.getStringSet(MORNING_HIDDEN, emptySet()).orEmpty()) }
         val all = remember(st.briefs, profile, now / 60_000) { morningBriefs(st.briefs, profile, now) }
+        val lines = remember(all) { all.associate { it.key to morningLines(parseMorningRows(it.str("rows"))) } }
         for (b in all.filter { it.key !in hidden }) {
             Group {
                 Column(Modifier.padding(start = Tokens.sp8, end = Tokens.sp2, top = Tokens.sp2, bottom = Tokens.sp6)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text((if (profile == null) "${if (b.profile == "work") "Work" else "Personal"} · " else "") + (b.str("text") ?: ""), style = Type.headline, color = av.fg, modifier = Modifier.weight(1f))
                         IconBtn("close", "Close brief", {
-                            hidden = all.map { it.key }.filter { it in hidden }.toSet() + b.key
+                            hidden = morningBriefs(st.briefs, null, now).map { it.key }.filter { it in hidden }.toSet() + b.key
                             hub.prefs.edit().putStringSet(MORNING_HIDDEN, hidden).apply()
                         })
                     }
-                    for (l in morningLines(parseMorningRows(b.str("rows")))) Text(
+                    for (l in lines[b.key].orEmpty()) Text(
                         buildAnnotatedString { withStyle(SpanStyle(color = av.fg, fontWeight = FontWeight.SemiBold)) { append("${l.label}: ") }; append(l.text) },
                         style = Type.subheadline, color = av.fgMuted, modifier = Modifier.padding(end = Tokens.sp6, top = Tokens.sp1),
                     )
@@ -207,13 +210,13 @@ private fun LazyListScope.morningSection(hub: Hub, st: CodexState, profile: Stri
 }
 
 private const val MORNING_HIDDEN = "morning:hidden"
-private const val IDEAS_HIDDEN = "ideas:hidden"
+private const val IDEAS_HIDDEN = "ideas:hidden:list"
 
 // Muse's Ideas: up to three open tasks an agent could take on, each as "I can help: …"; Start asks Codex about it, Not now hides it.
 private fun LazyListScope.ideasSection(hub: Hub, st: CodexState, d: OverviewData, now: Long) {
     item(key = "ideas") {
-        var hidden by remember { mutableStateOf(hub.prefs.getStringSet(IDEAS_HIDDEN, emptySet()).orEmpty()) }
-        val ideas = remember(d.s, hidden) { pickIdeas(d.s.overdue + d.s.today + d.s.later, hidden) }
+        var hidden by remember { mutableStateOf(hub.prefs.getString(IDEAS_HIDDEN, "").orEmpty().split("\n").filter { it.isNotEmpty() }) }
+        val ideas = remember(d.s, hidden) { pickIdeas(d.s.overdue + d.s.today + d.s.later, hidden.toSet()) }
         if (ideas.isEmpty()) return@item
         val start = { r: Row -> hub.askCodex(askIn(st, "Help me with this item.", r.profile, r), r.profile) }
         SectionHeader("Ideas")
@@ -225,8 +228,8 @@ private fun LazyListScope.ideasSection(hub: Hub, st: CodexState, d: OverviewData
                 ListRow(ideaTitle(r.title ?: ""), meta, leading = { AvIcon("lightbulb", null, Tokens.iconMd, tint = av.fgMuted) }, onClick = { start(r) }, trailing = {
                     if (!hub.readOnly) Button("Start", { start(r) }, variant = ButtonVariant.Tinted, size = ButtonSize.Sm)
                     IconBtn("close", "Not now", {
-                        hidden = hidden + r.key
-                        hub.prefs.edit().putStringSet(IDEAS_HIDDEN, hidden.toList().takeLast(50).toSet()).apply()
+                        hidden = (hidden - r.key + r.key).takeLast(50)
+                        hub.prefs.edit().putString(IDEAS_HIDDEN, hidden.joinToString("\n")).apply()
                     })
                 })
             }
@@ -258,11 +261,23 @@ private fun LazyListScope.agentSections(groups: List<Pair<AgentGroup, List<LiveC
     }
 }
 
+private fun LazyListScope.activitySection(rows: List<ActivityRow>, onOpen: (String) -> Unit) {
+    item(key = "activity") { SectionHeader("Done today", count = "${rows.size}") }
+    item(key = "activity:rows") {
+        Group {
+            rows.forEachIndexed { i, a ->
+                if (i > 0) Hairline()
+                ListRow(a.title, "${a.line} · ${clock(a.at)}", leading = { AvIcon(if (a.failed) "error" else "pass", null, Tokens.icon, tint = if (a.failed) av.warn else av.ok) }, lines = 1, onClick = { onOpen(a.id) })
+            }
+        }
+    }
+}
+
 private fun LazyListScope.todaySection(d: OverviewData, now: Long, actions: TaskActions, all: Boolean, onShowAll: () -> Unit, onOpen: (Row) -> Unit, onMeeting: (Row) -> Unit) {
     val rows = d.rows
-    item { SectionHeader("Today", action = doneCount(d.s.doneToday.size, d.today.openCount)?.let { t -> { Badge(t, BadgeTone.Quiet) } }) }
+    item(key = "today") { SectionHeader("Today", action = doneCount(d.s.doneToday.size, d.today.openCount)?.let { t -> { Badge(t, BadgeTone.Quiet) } }) }
     val shown = if (all) rows else rows.take(TODAY_SHOWN)
-    item {
+    item(key = "today:rows") {
         Group {
             shown.forEachIndexed { i, (_, m, r) ->
                 if (i > 0) Hairline()
@@ -285,7 +300,7 @@ private fun LazyListScope.planDaySection(d: OverviewData, plan: List<PlanSlot>?,
     }
     if (plan == null) {
         if (tasks.none { !hasTime(it.at) && estimateMinutes(it.title) != null }) return
-        item {
+        item(key = "plan:button") {
             Button("Plan my day", {
                 val busy = d.mt.today.filter { it.endsAt != null && it.endsAt!! > it.startsAt!! && it.endsAt!! - it.startsAt!! < 20 * 3_600_000L }.map { it.startsAt!! to it.endsAt!! }
                 val slots = planToday(plans(), busy, now)
@@ -294,8 +309,8 @@ private fun LazyListScope.planDaySection(d: OverviewData, plan: List<PlanSlot>?,
         }
         return
     }
-    item { SectionHeader("Plan my day", action = { Button("Close", { onPlan(null) }, variant = ButtonVariant.Plain, size = ButtonSize.Sm) }) }
-    item {
+    item(key = "plan") { SectionHeader("Plan my day", action = { Button("Close", { onPlan(null) }, variant = ButtonVariant.Plain, size = ButtonSize.Sm) }) }
+    item(key = "plan:rows") {
         Group {
             plan.sortedBy { it.span.first }.forEachIndexed { i, x ->
                 if (i > 0) Hairline()
@@ -324,14 +339,18 @@ private fun TodayTaskRow(r: Row, late: Boolean, actions: TaskActions, onOpen: (R
 }
 
 private fun LazyListScope.goalsSection(st: CodexState, profile: String?, goals: List<Row>, free: Long, onGoals: () -> Unit) {
-    item { SectionHeader("Goals this week", goals.size.toString()) }
-    item {
+    item(key = "goals") { SectionHeader("Goals this week", goals.size.toString()) }
+    item(key = "goals:rows") {
+        val metas = remember(st.items, goals, free, profile) {
+            goals.map { g ->
+                val p = goalProgress(st.items, g)
+                listOfNotNull("At risk".takeIf { goalAtRisk(st.items, g, free) }, if (profile == null) profileLabel(g.profile) else null, if (p.total > 0) "${p.done}/${p.total} done" else "No tasks yet", if (p.total == 0) null else if (p.done == p.total) "All done" else "Next: ${goalNext(st.items, g)}").joinToString(" · ")
+            }
+        }
         Group {
             goals.forEachIndexed { i, g ->
                 if (i > 0) Hairline()
-                val p = goalProgress(st.items, g)
-                val meta = listOfNotNull("At risk".takeIf { goalAtRisk(st.items, g, free) }, if (profile == null) profileLabel(g.profile) else null, if (p.total > 0) "${p.done}/${p.total} done" else "No tasks yet").joinToString(" · ")
-                ListRow(g.title ?: "", meta, onClick = onGoals, trailing = { Chevron() })
+                ListRow(g.title ?: "", metas[i], onClick = onGoals, trailing = { Chevron() })
             }
         }
     }

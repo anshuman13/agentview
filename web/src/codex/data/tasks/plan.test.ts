@@ -2,7 +2,7 @@ import { describe, expect, it } from 'bun:test';
 import { afterNextMeeting, atRisk, defaultBlock, estimateMin, fitBlock, freeMinutes, nextFreeSlot, packDay, planToday, suggestEstimate, takeEstimate, timedMeetings, weekFreeMinutes, withEstimate, workGaps } from './plan';
 import { parseWhen, stripWhen } from './engine';
 import { parseRepeat } from './recur';
-import { goalProgress, goalsOf } from './goals';
+import { goalNext, goalProgress, goalsOf } from './goals';
 import type { ItemRow } from '../sync';
 
 const at = (h: number, m = 0) => new Date(2026, 9, 30, h, m).getTime();
@@ -115,6 +115,7 @@ describe('weekly goals', () => {
     const nextWeek = item('Next week', { status: 'goal', at: new Date(2026, 10, 2).getTime() });
     expect(goalsOf([goal, shifted, nextWeek], at(10))).toEqual([goal, shifted]);
     expect(goalProgress(items, goal)).toEqual({ done: 1, total: 2 });
+    expect(goalNext(items, goal)).toBe('Fix login');
     const tasks = [{ title: 'Tidy inbox', due: at(11) }, { title: 'Fix login', due: null, goal: true }];
     expect(packDay(tasks, [[at(10), at(10, 30)]]).map((p) => p.task.title)).toEqual(['Fix login']);
   });

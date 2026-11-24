@@ -9,7 +9,7 @@ import { Row } from '../ui/Row';
 import { Skeleton } from '../ui/Skeleton';
 import { EmptyState } from '../ui/Panel';
 import { replyQueue } from './overview/ReplyQueue';
-import { useCounts } from '../app/shell/counts';
+import { useNeedsYouCount } from '../app/shell/counts';
 import { track } from '../app/featureUse';
 import { useNeedsYou } from './NeedsYou';
 import { AddSheet } from './tasks/AddSheet';
@@ -39,7 +39,7 @@ export function Overview({ s, dueToday, onPrep, onAsk }: { s: Split; dueToday: I
   const minute = Math.floor(now / 60000);
   const queue = useMemo(() => replyQueue(s.asks, minute * 60000), [s.asks, minute]);
   const ignored = useMemo(() => ignoredToday(snap.briefs, filter, minute * 60000), [snap.briefs, filter, minute]);
-  const { needsYou: count } = useCounts();
+  const count = useNeedsYouCount();
   const [sheet, setSheet] = useState(false);
   const [adding, setAdding] = useState(false);
   const needsRow = useRef<HTMLDivElement>(null);

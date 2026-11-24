@@ -199,6 +199,7 @@ class CodexLogicTest {
         assertEquals(listOf("Next week", "This week", "Last week"), goalHistory(items, NOW).map { it.label })
         assertEquals(2, goalProgress(items, g).total)
         assertEquals(1, goalProgress(items, g).done)
+        assertEquals(goalTasks(items, g).first { it.status == "open" }.title, goalNext(items, g))
         assertEquals(listOf("t1", "t2"), goalTasks(items, g).map { it.id })
         assertEquals(listOf("g1"), goalsOf(items, NOW).map { it.id })
         assertNull(moveBlock(items, g, NOW))

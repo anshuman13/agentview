@@ -31,7 +31,7 @@ export function QuickPick({ title, items, current, anchor, extra, onPick, onClos
         aria-modal="true"
         aria-label={title}
         style={anchor && {
-          left: Math.max(8, Math.min(anchor.left, window.innerWidth - 348)),
+          left: Math.max(8, Math.min(anchor.left, window.innerWidth - 408)),
           ...(anchor.top > window.innerHeight / 2 ? { bottom: window.innerHeight - anchor.top + 6, maxHeight: anchor.top - 14 } : { top: anchor.bottom + 6, maxHeight: window.innerHeight - anchor.bottom - 14 }),
         }}
         onClick={(e) => e.stopPropagation()}

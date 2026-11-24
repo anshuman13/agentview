@@ -124,3 +124,4 @@
   .cp-add > .ui-menu { top: auto; right: auto; bottom: 100%; left: 0; white-space: nowrap; }
 }
 .cp-quick { display: flex; flex-wrap: wrap; gap: var(--sp-3); padding: 0 0 var(--sp-4); }
+.cp-quick .chip { height: 30px; padding: 0 var(--sp-5); border: var(--hairline); border-radius: var(--radius-pill); background: transparent; color: var(--fg); font-size: var(--fs-sm); }
