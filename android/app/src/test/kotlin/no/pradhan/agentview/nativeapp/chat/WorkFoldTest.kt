@@ -107,4 +107,14 @@ class WorkFoldTest {
         val events = protocolJson.decodeFromString<List<ChatEvent>>(File("../../shared/fixtures/remembered-history.json").readText())
         assertEquals(listOf("/Users/x/.claude-alt/projects/-Users-x-repo/memory/prefs.md"), fold(events).filterIsInstance<FoldRow.Fold>().single().remembered)
     }
+
+    @Test fun foldLineShowsNowWhileLiveAndTheLastDoneTaskAfter() {
+        val steps = listOf(StatusStep("a", "Read the code", true), StatusStep("b", "Fix the bug", true), StatusStep("c", "Run the checks", false))
+        assertEquals("Reading tokens.css", foldLine(steps, "Reading tokens.css", true, 3))
+        assertEquals("Run the checks", foldLine(steps, "", true, 3))
+        assertEquals("Working", foldLine(emptyList(), "", true, 0))
+        assertEquals("Fix the bug", foldLine(steps, "old", false, 3))
+        assertEquals("Used 2 tools", foldLine(emptyList(), "", false, 2))
+        assertEquals("", foldLine(emptyList(), "", false, 0))
+    }
 }

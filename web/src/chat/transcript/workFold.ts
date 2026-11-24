@@ -79,6 +79,12 @@ export function usedClaimState(facts: UsedFact[], id: string) {
 
 export type StatusStep ={ id: string; title: string; done: boolean };
 
+// The one line a turn's work folds into, as in the Claude apps: while live, what it does now; once done, the last task it finished. Android WorkFold.kt foldLine says the same.
+export function foldLine(steps: StatusStep[], now: string, live: boolean, tools: number): string {
+  if (live) return now || steps.find((s) => !s.done)?.title || 'Working';
+  return steps.filter((s) => s.done).at(-1)?.title || (tools > 0 ? `Used ${plural(tools, 'tool')}` : '');
+}
+
 const text = (v: unknown) => (typeof v === 'string' ? v.trim() : '');
 
 type Tasks = { done: StatusStep[]; next: StatusStep[]; now: string };

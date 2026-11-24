@@ -17,7 +17,7 @@ import { FindBar, findPending, markHit, takeFind, type FindRequest } from './Fin
 import { showTurn, turnPending } from '../../sessions/goalLogic';
 import { readBox, saveBox } from './boxOpen';
 import { RewindLink } from './Rewind';
-import { createFoldBuilder, openWork, proposalState, usedClaimState, type Claim, type FoldRow, type Proposal } from './workFold';
+import { createFoldBuilder, foldLine, openWork, proposalState, usedClaimState, type Claim, type FoldRow, type Proposal } from './workFold';
 import { useAssistantTable } from '../../codex/data';
 import { setView } from '../../codex/view';
 import { MEMORY } from '../../codex/wiki/shared';
@@ -470,39 +470,43 @@ function UserText({ id, text }: { id: string; text: string }) {
   );
 }
 
-// A turn's tasks as small lines, and on the right a button that opens the turn's tool calls in their own tab.
-// A finished turn shows only the tasks it marked done: the steps it never reached are no longer next.
+// A turn's work as one grey line, as in the Claude apps: pulsing dots and what it does now while live, the last finished task once done.
+// The line opens a framed list of the tasks, ending in a row that opens the turn's tool calls in their own tab.
+// A finished turn lists only the tasks it marked done: the steps it never reached are no longer next.
 const Tasks = memo(function Tasks({ row: { id, steps: all, now, work, claims, proposed, remembered }, live }: { row: Extract<FoldRow, { kind: 'fold' }>; live: boolean }) {
   const tools = work.tools;
+  const [open, setOpen] = useState(() => readBox(`work:${id}`, false));
   const [reading, setReading] = useState(false);
   const [proposing, setProposing] = useState(false);
   const [memory, setMemory] = useState(false);
   const cwd = useStore((s) => s.session.cwd);
   const steps = live ? all : all.filter((s) => s.done);
-  const done = steps.filter((s) => s.done).length;
   const current = live ? steps.find((s) => !s.done) : undefined;
-  const spin = <Icon name="loading" small spin />;
+  const line = foldLine(all, now, live, tools);
+  const toggle = () => { saveBox(`work:${id}`, !open); setOpen(!open); };
+  const chips = claims.length > 0 || proposed.length > 0 || remembered.length > 0;
   return (
-    <div id={`turn-work:${id}`} className="tr-steps">
-      <div className="tr-steps-head">
-        {steps.length > 0 && <span>{done < steps.length ? `Tasks \u00b7 ${done} of ${steps.length}` : plural(steps.length, 'task')}</span>}
+    <div id={`turn-work:${id}`} className={`tr-steps${live ? ' live' : ''}`}>
+      {line && <div className="tr-steps-line" {...pressable(toggle)} aria-expanded={open}>
+        {live && <span className="tr-dots" aria-hidden="true"><i /><i /></span>}
+        <span className="tr-steps-text">{line}</span>
+        <Icon name={open ? 'chevron-down' : 'chevron-right'} small />
+      </div>}
+      {open && (steps.length > 0 || tools > 0) && <ul className="tr-tasks">
+        {steps.map((s) => (
+          <li key={s.id} className={s === current ? 'now' : s.done ? undefined : 'next'}>{s === current && now ? now : s.title}</li>
+        ))}
+        {live && !current && now && <li className="now">{now}</li>}
+        {tools > 0 && <li className="tr-tasks-tools" {...pressable(() => openWork(id))} title="Open this turn's tool calls in a tab"><span>Used</span> <b>{plural(tools, 'tool')}</b><Icon name="chevron-right" small /></li>}
+      </ul>}
+      {chips && <div className="tr-steps-head">
         {claims.length > 0 && <Chip size="sm" on={reading} className="tr-claims-chip" aria-expanded={reading} onClick={() => setReading((v) => !v)}>{`Used ${plural(claims.length, 'claim')}`}</Chip>}
         {proposed.length > 0 && <Chip size="sm" on={proposing} className="tr-claims-chip" aria-expanded={proposing} onClick={() => setProposing((v) => !v)}>{`Proposed ${plural(proposed.length, 'claim')}`}</Chip>}
         {remembered.length > 0 && <Chip size="sm" className="tr-claims-chip" onClick={() => setMemory(true)}>{`Remembered ${plural(remembered.length, 'memory', 'memories')}`}</Chip>}
-        {tools > 0 && <Chip size="sm" className="tr-tools" title="Open this turn's tool calls in a tab" onClick={() => openWork(id)}>{plural(tools, 'tool')}<Icon name="chevron-right" small /></Chip>}
-      </div>
+      </div>}
       {reading && <UsedClaims claims={claims} />}
       {proposing && <ProposedClaims proposed={proposed} />}
       {memory && <MemoryPick cwd={cwd} initial={remembered.length === 1 ? remembered[0] : undefined} onClose={() => setMemory(false)} />}
-      {steps.length > 0 && <ul className="tr-tasks">
-        {steps.map((s) => (
-          <li key={s.id} className={s.done ? 'done' : s === current ? 'now' : undefined}>
-            {s.done ? <Icon name="check" small /> : s === current ? spin : <Icon name="circle-large-outline" small />}
-            <span>{s === current && now ? now : s.title}</span>
-          </li>
-        ))}
-        {live && !current && now && <li className="now">{spin}<span>{now}</span></li>}
-      </ul>}
     </div>
   );
 });

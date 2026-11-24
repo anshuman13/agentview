@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import { buildTranscript, createTranscriptBuilder, docCards, specCards } from './steps';
-import { createFoldBuilder, foldTurns, workTitle, type FoldRow } from './workFold';
+import { createFoldBuilder, foldLine, foldTurns, workTitle, type FoldRow } from './workFold';
 import type { ChatEvent } from '../../../../shared/protocol';
 
 let n = 0;
@@ -151,5 +151,19 @@ describe('remembered', () => {
     const items = buildTranscript(events);
     const rows = foldTurns(items, events, new Set([...specCards(items), ...docCards(items)]));
     expect(rows.flatMap((r) => (r.kind === 'fold' ? [r.remembered] : []))).toEqual([['/Users/x/.claude-alt/projects/-Users-x-repo/memory/prefs.md']]);
+  });
+});
+
+describe('foldLine', () => {
+  const steps = [{ id: 'a', title: 'Read the code', done: true }, { id: 'b', title: 'Fix the bug', done: true }, { id: 'c', title: 'Run the checks', done: false }];
+  it('shows what a live turn does now, else its next task', () => {
+    expect(foldLine(steps, 'Reading tokens.css', true, 3)).toBe('Reading tokens.css');
+    expect(foldLine(steps, '', true, 3)).toBe('Run the checks');
+    expect(foldLine([], '', true, 0)).toBe('Working');
+  });
+  it('shows the last finished task of a done turn, else its tool count', () => {
+    expect(foldLine(steps, 'old', false, 3)).toBe('Fix the bug');
+    expect(foldLine([], '', false, 2)).toBe('Used 2 tools');
+    expect(foldLine([], '', false, 0)).toBe('');
   });
 });
