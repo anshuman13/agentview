@@ -25,12 +25,36 @@ import no.pradhan.agentview.nativeapp.codex.meetings.SUMMARY_TEMPLATES
 import no.pradhan.agentview.nativeapp.codex.meetings.encodeNotesPicks
 import no.pradhan.agentview.nativeapp.codex.meetings.notesPickKey
 import no.pradhan.agentview.nativeapp.codex.meetings.parseNotesPicks
+import no.pradhan.agentview.nativeapp.travel.Receipt
+import no.pradhan.agentview.nativeapp.travel.parseTravel
 
 internal suspend fun Hub.attachUri(uri: String): String? {
     val r = app.contentResolver
     val mime = r.getType(Uri.parse(uri)) ?: "image/jpeg"
     val bytes = withContext(Dispatchers.IO) { runCatching { r.openInputStream(Uri.parse(uri))?.use { it.readBytes() } }.getOrNull() } ?: return null
     return attach("shared.${mime.substringAfter('/', "jpg").substringBefore('+')}", mime, bytes)
+}
+
+// Files each shared image or PDF as a trip receipt (the server picks the trip by date) and opens Travel; no chat needed.
+fun Hub.shareToTravel(item: SharedItem) {
+    if (readOnly) { notice.value = READ_ONLY_SENT; return }
+    viewModelScope.launch {
+        val r = app.contentResolver
+        var added = 0
+        var trip = ""
+        for (uri in item.images) {
+            val mime = r.getType(Uri.parse(uri)) ?: "image/jpeg"
+            val bytes = withContext(Dispatchers.IO) { runCatching { r.openInputStream(Uri.parse(uri))?.use { it.readBytes() } }.getOrNull() } ?: continue
+            val name = "receipt.${mime.substringAfter('/', "jpg").substringBefore('+')}"
+            runCatching { api.postBytes("/api/travel/receipt?name=${enc(name)}", mime, bytes, slow = true) }
+                .onSuccess { trip = protocolJson.decodeFromString(Receipt.serializer(), it).tripId; added++ }
+                .onFailure { notice.value = "Receipt not added: ${it.message}" }
+        }
+        if (added == 0) return@launch
+        val name = runCatching { parseTravel(api.get("/api/travel")).trips.firstOrNull { it.id == trip }?.name }.getOrNull() ?: "a trip"
+        notice.value = if (added == 1) "Receipt added to $name" else "$added receipts added to $name"
+        link.value = DeepLink(page = "travel")
+    }
 }
 
 // Sends shared text and images to a chat and shows the chat.

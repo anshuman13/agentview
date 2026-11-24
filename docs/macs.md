@@ -7,7 +7,7 @@ Open the phone icon in the status bar for a QR code. Works over NetBird.
 The page listens on one event stream from the Mac and resumes it from the last event it saw after a drop, so a
 tab that was in the background catches up without a reload. A link that stays silent for 50 s is reopened.
 
-Files and text shared to the phone app are attached in the chat composer, once; reopening the app from recents does
+Files and text shared to the phone app open a Share sheet: images and PDFs can go to Travel as receipts (Add as receipt, filed under the trip of their date, no chat needed), text can become a Codex task, and both can go to an open chat, where they are attached in the composer, once; reopening the app from recents does
 not attach them again. The desktop window app opens mailto and vscode links in the Mac apps that handle them.
 
 AgentView only accepts connections from this Mac and the peers `netbird status` lists, and refuses requests and

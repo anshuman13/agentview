@@ -27,6 +27,12 @@ fun ShareSheet(hub: Hub, item: SharedItem) {
                 })
             }
         }
+        if (item.images.isNotEmpty()) {
+            SectionHeader("Travel")
+            Group {
+                ListRow(if (item.images.size == 1) "Add as receipt" else "Add ${item.images.size} receipts", "Filed under the trip of its date", onClick = { hub.shareToTravel(item); done() })
+            }
+        }
         SectionHeader("Send to chat")
         if (live.isEmpty()) EmptyState("No open chats")
         else Group {
