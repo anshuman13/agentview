@@ -102,3 +102,11 @@ class VoiceNewChatTest {
         assertEquals("Voice input failed", speechError(99))
     }
 }
+
+class JoinSpeechTest {
+    @org.junit.Test fun joinsSegmentsAcrossPauses() {
+        org.junit.Assert.assertEquals("hello there", joinSpeech("hello", "there"))
+        org.junit.Assert.assertEquals("there", joinSpeech("", "there"))
+        org.junit.Assert.assertEquals("hello", joinSpeech("hello", " "))
+    }
+}
