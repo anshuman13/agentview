@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test';
-import { goalHistory, goalSummary, moveBlock, reopenBlock } from './goals';
+import { goalHistory, goalSummary, goalsLine, moveBlock, reopenBlock } from './goals';
 import type { ItemRow } from '../sync';
 
 const row = (o: Partial<ItemRow>) => ({ profile: 'work', deleted: 0, ...o }) as ItemRow;
@@ -77,4 +77,9 @@ describe('goalSummary', () => {
   it('has no count without tasks', () => {
     expect(goalSummary([goal], goal)).toEqual({ tasks: [], count: undefined });
   });
+});
+
+it('sums up the week goals in one line', () => {
+  expect(goalsLine([{ done: 2, total: 2, risk: false }, { done: 0, total: 3, risk: false }, { done: 0, total: 0, risk: false }])).toBe('1 of 3 done');
+  expect(goalsLine([{ done: 1, total: 2, risk: true }, { done: 0, total: 1, risk: false }])).toBe('At risk · 0 of 2 done');
 });

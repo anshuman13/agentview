@@ -33,9 +33,11 @@ describe('page smoke', () => {
     const row = (o: object) => ({ profile: 'work', deleted: 0, ...o }) as never;
     const items = [row({ id: 'g', title: 'Ship it', status: 'goal', at: weekStart(Date.now()) }), row({ id: 'a', status: 'done', goal: 'g' }), row({ id: 'b', status: 'open', goal: 'g' })];
     const html = renderToStaticMarkup(<GoalsBlock items={items} meetings={[]} filter="work" now={Date.now()} />);
-    expect(html).toContain('Goals this week');
     expect(html).toContain('Ship it');
     expect(html).toContain('1/2 done');
+    const two = renderToStaticMarkup(<GoalsBlock items={[...items, row({ id: 'h', title: 'Plan it', status: 'goal', at: weekStart(Date.now()) })]} meetings={[]} filter="work" now={Date.now()} />);
+    expect(two).toContain('Goals this week');
+    expect(two).toContain('0 of 2 done');
     expect(renderToStaticMarkup(<GoalsBlock items={[]} meetings={[]} filter="all" now={Date.now()} />)).toBe('');
   });
 

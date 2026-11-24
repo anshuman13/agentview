@@ -107,14 +107,14 @@ describe('Overview', () => {
     expect(render({ later: [] })).not.toContain('Needs you');
   });
 
-  it('shows 7 rows then Show all N', () => {
+  it('shows 5 rows then Show all N', () => {
     mocks.needs = []; mocks.queue = [];
     const rows = Array.from({ length: 9 }, (_, i) => task(`r${i}`, `Chore ${i}`, at(10 + i)));
     const a = meeting('a', 'Standup', at(5));
     const html = render({ next: a, meetingsToday: [a] }, rows);
     expect(html).toContain('Show all 9');
-    expect(html).toContain('Chore 6');
-    expect(html).not.toContain('Chore 7');
+    expect(html).toContain('Chore 4');
+    expect(html).not.toContain('Chore 5');
   });
 
   it('shows N of M done in the Today header and only when something is done', () => {

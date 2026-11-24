@@ -80,7 +80,7 @@ export function Overview({ s, dueToday, onPrep, onAsk }: { s: Split; dueToday: I
       )}
       <RunningChats />
       <TodayList meetings={others} overdue={late} tasks={task ? todo.filter((r) => r !== task) : todo} now={now} done={s.doneToday.length} open={openCount} />
-      <IdeasBlock tasks={[...s.overdue, ...s.today, ...s.later]} now={now} onAsk={onAsk} />
+      {!s.overdue.length && !s.today.length && <IdeasBlock tasks={[...s.overdue, ...s.today, ...s.later]} now={now} onAsk={onAsk} />}
       <PlanDay meetings={s.meetingsToday} tasks={todo} now={now} />
       <GoalsBlock items={snap.items} meetings={snap.meetings} filter={filter} now={now} />
       {sheet && <NeedsYouSheet needs={needs} queue={queue} ignored={ignored} now={now} onClose={closeSheet} onAsk={onAsk} />}

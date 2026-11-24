@@ -84,3 +84,9 @@ export function moveBlock(items: ItemRow[], goal: ItemRow, now: number) {
 }
 
 export const titleKey = (t: string | null) => (t ?? '').trim().toLowerCase();
+
+// One line for the week's goals on Overview: how many are done, and At risk first when any is.
+export function goalsLine(goals: { done: number; total: number; risk: boolean }[]) {
+  const done = goals.filter((g) => g.total > 0 && g.done === g.total).length;
+  return [goals.some((g) => g.risk) && 'At risk', `${done} of ${goals.length} done`].filter(Boolean).join(' · ');
+}

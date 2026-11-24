@@ -29,7 +29,8 @@ export function PlanDay({ meetings, tasks, now }: { meetings: Meeting[]; tasks: 
     if (slots.length) setPlan(slots);
     else showSnack('No estimated task fits the free time today');
   };
-  if (!plan) return tasks.some((r) => !hasTime(atTime(r.at)) && estimateMin(r.title) != null) ? <Button variant="quiet" size="sm" onClick={propose}>Plan my day</Button> : null;
+  // The offer shows in the morning only; later the day is already planned or gone.
+  if (!plan) return new Date(now).getHours() < 12 && tasks.some((r) => !hasTime(atTime(r.at)) && estimateMin(r.title) != null) ? <Button variant="quiet" size="sm" onClick={propose}>Plan my day</Button> : null;
   return (
     <section>
       <Section label="Plan my day" action={<Button variant="quiet" size="sm" onClick={() => setPlan(null)}>Close</Button>} />

@@ -16,7 +16,7 @@ import { clock } from '../tasks/time';
 import { Check } from '../tasks/TaskCheck';
 import { todayTaskMenu } from '../../../../shared/actionMenu';
 
-const SHOWN = 7;
+const SHOWN = 5;
 
 export const doneCount = (done: number, open: number) => (done > 0 ? `${done} of ${done + open} done` : undefined);
 
