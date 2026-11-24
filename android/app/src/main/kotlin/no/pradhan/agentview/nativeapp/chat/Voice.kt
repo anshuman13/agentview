@@ -4,8 +4,6 @@ import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Bundle
-import android.os.Handler
-import android.os.Looper
 import android.os.SystemClock
 import android.provider.Settings
 import android.speech.RecognitionListener
@@ -127,60 +125,30 @@ fun VoiceButton(onText: (String, Boolean) -> Unit, onNotice: (String) -> Unit, o
     val session = remember { intArrayOf(0) }
     val pending = remember { arrayOf("") }
 
-    // Text of the segments that already ended, the user's stop, and when speech was last heard.
-    val sofar = remember { arrayOf("") }
-    val main = remember { Handler(Looper.getMainLooper()) }
-    val stopped = remember { booleanArrayOf(false) }
-    val heardAt = remember { longArrayOf(0L) }
-
     fun flush(failed: Boolean = false) {
         session[0]++
         val heard = pending[0]
         if (heard.isNotEmpty()) text(heard, true)
         pending[0] = ""
-        sofar[0] = ""
         listening = false
         level = 0f
         submit?.let { go -> if (heard.isNotEmpty()) go() else if (!failed) notice("No speech heard") }
     }
 
-    fun listen() {
-        val r = rec[0] ?: SpeechRecognizer.createSpeechRecognizer(ctx).also { rec[0] = it }
-        val id = ++session[0]
-        // After a pause, listen again unless the user stopped or it has been quiet for QUIET_MS; the restart waits for the recognizer to free up.
-        fun goOn(): Boolean {
-            if (stopped[0] || SystemClock.uptimeMillis() - heardAt[0] > QUIET_MS) return false
-            sofar[0] = pending[0]
-            main.post { if (session[0] == id) { if (stopped[0]) flush() else listen() } }
-            return true
-        }
-        r.setRecognitionListener(listener(
-            onPartial = { if (session[0] == id) { heardAt[0] = SystemClock.uptimeMillis(); pending[0] = joinSpeech(sofar[0], it); text(pending[0], false) } },
-            onResult = { if (session[0] == id) { if (it.isNotEmpty()) { heardAt[0] = SystemClock.uptimeMillis(); pending[0] = joinSpeech(sofar[0], it) }; if (!goOn()) flush() } },
-            onError = {
-                if (session[0] != id) return@listener
-                val quiet = it == SpeechRecognizer.ERROR_NO_MATCH || it == SpeechRecognizer.ERROR_SPEECH_TIMEOUT
-                if (quiet && goOn()) return@listener
-                if (pending[0].isEmpty() && !(quiet && stopped[0])) notice(speechError(it) ?: "Voice input stopped. Tap the mic to try again")
-                flush(failed = true)
-            },
-            onLevel = { if (session[0] == id) level = it },
-        ))
-        r.startListening(dictationIntent())
-    }
-
     fun start() {
         if (!SpeechRecognizer.isRecognitionAvailable(ctx)) { notice("Speech recognition is not available on this device"); return }
+        val r = rec[0] ?: SpeechRecognizer.createSpeechRecognizer(ctx).also { rec[0] = it }
+        val id = ++session[0]
+        r.setRecognitionListener(listener(
+            onPartial = { if (session[0] == id) { pending[0] = it; text(it, false) } },
+            onResult = { if (session[0] == id) { if (it.isNotEmpty()) pending[0] = it; flush() } },
+            onError = { if (session[0] == id) { if (pending[0].isEmpty()) notice(speechError(it) ?: "Voice input stopped. Tap the mic to try again"); flush(failed = true) } },
+            onLevel = { if (session[0] == id) level = it },
+        ))
         pending[0] = ""
-        sofar[0] = ""
-        stopped[0] = false
-        heardAt[0] = SystemClock.uptimeMillis()
         listening = true
-        listen()
+        r.startListening(dictationIntent())
     }
-
-    // Ends the current segment; its final result then ends the dictation.
-    fun stop() { stopped[0] = true; rec[0]?.stopListening() }
 
     val permission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { ok ->
         if (ok) start() else notice("Microphone blocked. Allow it in the app settings")
@@ -189,7 +157,7 @@ fun VoiceButton(onText: (String, Boolean) -> Unit, onNotice: (String) -> Unit, o
     LaunchedEffect(listening) { listeningNow(listening) }
     val toggle = {
         when {
-            listening -> stop()
+            listening -> rec[0]?.stopListening()
             ContextCompat.checkSelfPermission(ctx, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED -> start()
             else -> permission.launch(Manifest.permission.RECORD_AUDIO)
         }
@@ -208,7 +176,7 @@ fun VoiceButton(onText: (String, Boolean) -> Unit, onNotice: (String) -> Unit, o
                         val started = !listeningRef
                         val at = SystemClock.uptimeMillis()
                         toggleNow()
-                        if (tryAwaitRelease() && started && SystemClock.uptimeMillis() - at > HOLD_MS) stop()
+                        if (tryAwaitRelease() && started && SystemClock.uptimeMillis() - at > HOLD_MS) rec[0]?.stopListening()
                     })
                 },
                 contentAlignment = Alignment.Center,

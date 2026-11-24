@@ -7,12 +7,6 @@ import no.pradhan.agentview.nativeapp.net.LiveChat
 // A press on the Talk button longer than this is a hold: letting go ends the dictation (web Voice.tsx HOLD_MS).
 const val HOLD_MS = 400L
 
-// Dictation keeps listening through pauses and ends on stop or after this long without speech.
-const val QUIET_MS = 60_000L
-
-// The recognizer ends a segment at each pause; dictation restarts it and joins the segments.
-fun joinSpeech(sofar: String, segment: String) = listOf(sofar, segment).filter { it.isNotBlank() }.joinToString(" ")
-
 enum class VoicePhase { Listening, Thinking, Speaking, Paused, Done, Failed }
 
 data class VoiceState(val phase: VoicePhase, val heard: String = "", val answer: String = "", val error: String = "")
