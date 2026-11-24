@@ -489,7 +489,7 @@ const Tasks = memo(function Tasks({ row: { id, steps: all, now, work, claims, pr
         {claims.length > 0 && <Chip size="sm" on={reading} className="tr-claims-chip" aria-expanded={reading} onClick={() => setReading((v) => !v)}>{`Used ${plural(claims.length, 'claim')}`}</Chip>}
         {proposed.length > 0 && <Chip size="sm" on={proposing} className="tr-claims-chip" aria-expanded={proposing} onClick={() => setProposing((v) => !v)}>{`Proposed ${plural(proposed.length, 'claim')}`}</Chip>}
         {remembered.length > 0 && <Chip size="sm" className="tr-claims-chip" onClick={() => setMemory(true)}>{`Remembered ${plural(remembered.length, 'memory', 'memories')}`}</Chip>}
-        {tools > 0 && <Chip size="sm" className="tr-tools" title="Open this turn's tool calls in a tab" onClick={() => openWork(id)}>{plural(tools, 'tool')}<Icon name="chevron-right" small /></Chip>}
+        {tools > 0 && <button type="button" className="tr-tools" title="Open this turn's tool calls in a tab" onClick={() => openWork(id)}>{`Used ${plural(tools, 'tool')}`}<Icon name="chevron-right" small /></button>}
       </div>
       {reading && <UsedClaims claims={claims} />}
       {proposing && <ProposedClaims proposed={proposed} />}

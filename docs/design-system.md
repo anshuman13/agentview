@@ -393,7 +393,7 @@ Colours are Material 3 roles. `NATIVE_COLORS` in TokenGen sets each value for bo
 | containerLowest | `containerLowest` | #171614 | #FFFFFF | code, diff and output wells |
 | containerLow | `containerLow` | #201F1D | #F6F5F0 | sheets |
 | container | `surface`, `groupCard` | #262522 | #F3F1EB | grouped cards, nav bar, rail, tool result cards, terminal |
-| containerHigh | `raised` | #2E2D2A | #FFFFFF | composer, user bubble, menus, dialogs, pickers, active tab |
+| containerHigh | `raised` | #2E2D2A | #FFFFFF | composer, menus, dialogs, pickers, active tab |
 | containerHighest | `sunken`, `hover` | #33322E | #EDEAE2 | text fields, Gray button, Default and Quiet badges, empty-state icon disc |
 | onSurface | `fg`, `fgStrong` | #ECEAE4 / #F7F6F2 | #1F1E1C / #141311 | text |
 | onSurfaceVariant | `fgMuted`, `metaFg` | #A9A69E | #57544D | secondary text |

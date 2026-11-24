@@ -337,22 +337,21 @@ private fun TaskLines(hub: Hub, fold: FoldRow.Fold, cwd: String, live: Boolean, 
         MemorySheet(hub, cwd, files, fold.remembered.singleOrNull()) { memory = false }
     }
     Column(verticalArrangement = Arrangement.spacedBy(Tokens.sp1)) {
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            if (steps.isNotEmpty()) Text(if (done < steps.size) "Tasks \u00b7 $done of ${steps.size}" else plural(steps.size, "task"), style = Type.label, color = av.fgMuted)
-            Spacer(Modifier.weight(1f))
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Tokens.sp3), verticalAlignment = Alignment.CenterVertically) {
+            if (steps.isNotEmpty()) Text(if (done < steps.size) "Tasks \u00b7 $done of ${steps.size}" else plural(steps.size, "task"), style = Type.footnote, color = av.fgMuted)
             if (fold.claims.isNotEmpty()) Chip("Used ${plural(fold.claims.size, "claim")}", { reading = !reading }, on = reading)
             if (fold.proposed.isNotEmpty()) Chip("Proposed ${plural(fold.proposed.size, "claim")}", { proposing = !proposing }, on = proposing)
             if (fold.remembered.isNotEmpty()) Chip("Remembered ${plural(fold.remembered.size, "memory", "memories")}", { memory = true })
             if (fold.work.tools > 0) Row(
-                Modifier.clip(RoundedCornerShape(Tokens.shapeFull)).border(Tokens.hairline, av.border, RoundedCornerShape(Tokens.shapeFull)).clickable { onOpenWork(fold.id) }.padding(horizontal = Tokens.sp4, vertical = Tokens.sp1),
+                Modifier.heightIn(min = Tokens.touchSm).clickable { onOpenWork(fold.id) },
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text(plural(fold.work.tools, "tool"), style = Type.label, color = av.fgMuted)
+                Text("Used ${plural(fold.work.tools, "tool")}", style = Type.footnote, color = av.fgMuted)
                 AvIcon("chevron-right", null, Tokens.sp5, tint = av.fgMuted)
             }
         }
         @Composable fun Task(icon: @Composable () -> Unit, text: String, color: androidx.compose.ui.graphics.Color) =
-            Row(horizontalArrangement = Arrangement.spacedBy(Tokens.sp2)) { Box(Modifier.padding(top = Tokens.sp1)) { icon() }; Text(text, style = Type.footnote, color = color) }
+            Row(Modifier.fillMaxWidth().padding(horizontal = Tokens.sp6, vertical = Tokens.sp4), horizontalArrangement = Arrangement.spacedBy(Tokens.sp4)) { Box(Modifier.padding(top = Tokens.sp1)) { icon() }; Text(text, style = Type.footnote, color = color) }
         if (reading) {
             val facts by hub.codex.state.select { it.facts }
             fold.claims.forEach { c ->
@@ -369,14 +368,21 @@ private fun TaskLines(hub: Hub, fold: FoldRow.Fold, cwd: String, live: Boolean, 
                 Text("${p.text} (${proposalState(facts.firstOrNull { it.id == p.id })})", Modifier.padding(start = Tokens.sp8), style = Type.footnote, color = av.fgMuted)
             }
         }
-        steps.forEach { s ->
-            when {
-                s.done -> Task({ AvIcon("check", null, Tokens.sp5, tint = av.ok) }, s.title, av.fg)
-                s == current -> Task(spin, fold.now.ifEmpty { s.title }, av.fgStrong)
-                else -> Task({ AvIcon("circle-large-outline", null, Tokens.sp5, tint = av.fgFaint) }, s.title, av.fgMuted)
+        // The task checklist sits in a framed list with a line between rows, as the Claude apps show a step's details.
+        if (steps.isNotEmpty()) Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(Tokens.shapeLg)).border(Tokens.hairline, av.border, RoundedCornerShape(Tokens.shapeLg))) {
+            steps.forEachIndexed { i, s ->
+                if (i > 0) HorizontalDivider(thickness = Tokens.hairline, color = av.border)
+                when {
+                    s.done -> Task({ AvIcon("check", null, Tokens.sp5, tint = av.ok) }, s.title, av.fg)
+                    s == current -> Task(spin, fold.now.ifEmpty { s.title }, av.fgStrong)
+                    else -> Task({ AvIcon("circle-large-outline", null, Tokens.sp5, tint = av.fgFaint) }, s.title, av.fgMuted)
+                }
+            }
+            if (live && current == null && fold.now.isNotEmpty()) {
+                HorizontalDivider(thickness = Tokens.hairline, color = av.border)
+                Task(spin, fold.now, av.fgStrong)
             }
         }
-        if (live && current == null && fold.now.isNotEmpty()) Task(spin, fold.now, av.fgStrong)
     }
 }
 
@@ -468,7 +474,7 @@ fun Modifier.leftBar(color: androidx.compose.ui.graphics.Color, width: Dp = Toke
 private fun UserBubble(onLongClick: (() -> Unit)? = null, content: @Composable ColumnScope.() -> Unit) {
     BoxWithConstraints(Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterEnd) {
         Column(
-            Modifier.widthIn(max = maxWidth * 0.85f).clip(RoundedCornerShape(Tokens.shapeLg)).background(av.raised).border(BorderStroke(Tokens.hairline, av.border), RoundedCornerShape(Tokens.shapeLg))
+            Modifier.widthIn(max = maxWidth * 0.85f).clip(RoundedCornerShape(Tokens.shapeLg)).background(av.fg.copy(alpha = 0.06f))
                 .then(if (onLongClick != null) Modifier.combinedClickable(onClick = {}, onLongClick = onLongClick) else Modifier)
                 .padding(horizontal = Tokens.sp8, vertical = Tokens.sp6),
             verticalArrangement = Arrangement.spacedBy(Tokens.sp3),
