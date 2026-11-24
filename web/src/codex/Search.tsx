@@ -1,11 +1,13 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useAssistantData, useCodex } from './data';
 import { GROUP_CAP, searchAll, type Group, type Hit } from './data/ask/search';
-import { IconButton, ShowAll } from '../ui/Button';
+import { ShowAll } from '../ui/Button';
 import { EmptyState } from '../ui/Panel';
 import { Row } from '../ui/Row';
 import { Section } from '../ui/Section';
-import { leaveOverlay, openMeeting, openTask, setView, takeSearchQuery, useEscapeBack, useView } from './view';
+import { openMeeting, openTask, setView, takeSearchQuery, useView } from './view';
+import { useScrolledHeader } from './gestures/usePullRefresh';
+import { CodexHead } from './CodexHead';
 import { useTranscriptHits } from './meetings/list/useTranscriptHits';
 import { live } from './data/wiki/wiki';
 import { dayLabel } from './data/dates';
@@ -27,11 +29,12 @@ function Hits({ label, group, open, onAll, said }: { label: string; group: Group
   );
 }
 
-export function Search() {
+export function Search({ onMenu }: { onMenu: () => void }) {
   const snap = useAssistantData();
   const { meetings } = useCodex();
   const { filter } = useView();
-  useEscapeBack(leaveOverlay, { inField: true });
+  const scroller = useRef<HTMLDivElement>(null);
+  useScrolledHeader(scroller, true);
   const [query, setQuery] = useState(takeSearchQuery);
   const [expanded, setExpanded] = useState<string[]>([]);
   useEffect(() => setExpanded([]), [query]);
@@ -52,11 +55,8 @@ export function Search() {
   const key = (h: Hit) => `${h.profile}:${h.id}`;
   return (
     <div className="wk narrow">
-      <header className="wk-head">
-        <IconButton icon="arrow-left" label="Back" onClick={leaveOverlay} />
-        <h1>Search</h1>
-      </header>
-      <div className="wk-scroll">
+      <CodexHead title="Search" onMenu={onMenu} />
+      <div className="wk-scroll" ref={scroller}>
         <div className="mt-page">
           <input autoFocus type="search" enterKeyHint="search" value={query} placeholder="Search tasks, meetings, transcripts, wiki and jobs" aria-label="Search" onChange={(e) => setQuery(e.target.value)} />
           <Hits label="Tasks and notes" group={r.tasks} onAll={more('tasks')} open={(h) => (h.page ? openMeeting({ profile: h.profile, id: h.page }) : openTask(h))} />

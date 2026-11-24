@@ -169,7 +169,7 @@ Elevation 3 on `--raised`, `--shape-lg`, padding `--sp-2`. Items 40px, padding 0
 `--sp-4`, body type, `--shape-sm`, state layers as buttons. Danger item last, in `--danger`.
 `<Menu trigger onClose>` with `<MenuItem icon danger href>` and `<MenuSeparator>` (web/src/ui/Menu.tsx,
 components/menus.css). Arrow keys, Home and End move, typing a letter focuses the next item starting with it (repeats cycle, a multi-letter buffer resets after 700ms), Esc closes and refocuses the trigger, a press
-outside closes. At max-width 480px the Menu is a bottom sheet portaled to the body (`--scrim` backdrop that closes it, 44px items, top radius `--radius-sheet`, `--safe-bottom` padding); the popover stays above 480px. Status: built; every menu uses it. cp-pop stays (it is a listbox), and `.as-menu` is the drawer hamburger button, not a menu.
+outside closes. At max-width 480px the Menu is a bottom sheet portaled to the body (`--scrim` backdrop that closes it, 44px items, top radius `--radius-sheet`, `--safe-bottom` padding); the popover stays above 480px. Status: built; every menu uses it. cp-pop stays (it is a listbox), and `.as-menu` is the Lists button at the start of a Codex header (phone width only), not a menu.
 A menu's items either all carry an icon or none do; a list of choices (times, people) carries none. The same action has the same icon on web and Android:
 
 | Action | Icon | Action | Icon |
@@ -376,7 +376,7 @@ Rules for the native app in `android/`. TokenGen applies `NATIVE_OVERRIDES`, `NA
 | Mono | 14/20 | 400 |
 
 - **Chat header** (`ChatHeader`) is 64dp: a hamburger that opens the Sessions tab, a centred one-line headline title over the muted repo, New chat (the Sessions New chat sheet for this chat's repo) and the chat menu. The Sessions tab bar (`PillTabBar` below 840dp) is a floating `surface` pill with a 1px `border`, icon above label and a neutral `raised` pill on the active tab; the rail from 840dp takes the same indicator. The composer is the same pill as the web phone: round Add, field, mic, SendAt when typed, and the round Send, Stop or Talk button (hold or tap; `HOLD_MS`).
-- **Header** is 64dp with a 22sp one-line title and an optional muted subheadline subtitle, and at most one action on a page (more go in a More menu). On the web phone the same header is `PhoneHeader` (`.wk-head`: Back, a one-line title, a muted subtitle and one trailing control) for Observe, Deploy, MCP, Settings, Files, Source Control and Pull Requests; a Section label that repeats that title is not rendered there. The scope chip shows only on tab roots, never on a page with a back button.
+- **Header** is 64dp with a 22sp one-line title and an optional muted subheadline subtitle, and at most one action on a page (more go in a More menu). On the web phone the same header is `PhoneHeader` (`.wk-head`: Back, a one-line title, a muted subtitle and one trailing control) for Observe, Deploy, MCP, Settings, Files, Source Control and Pull Requests; a Section label that repeats that title is not rendered there. The scope chip shows only on tab roots, never on a page with a back button. Codex roots have no chip: a Lists button (`menu`, opening the drawer) replaces Back, and the profile label is muted text after the title (`PageHeader` `trailing`). On the web all eight Codex roots render `CodexHead` (`.codex-head`): Lists, one title size and weight, the muted profile label, then at most one search field and two controls; `.wk-head` and `.tasks-head` stay on sub-pages.
 - **Sheet** opens with a title row (56dp, 22sp, an optional count and one trailing icon action), and its rows sit in Groups.
 - **Menu icons** are 24dp, and a menu opened from a kebab keeps 12dp from the screen edge.
 - **Loading and EmptyState**: a loading page shows `Loading` (spinner and one line). A page-level EmptyState has an icon and `small = false`. A section's EmptyState is small and sits under its SectionHeader, never inside a Group.
@@ -506,7 +506,7 @@ Custom list-row and header classes still in web/src. Todo means no use has been 
 | wk-contest-head | none | Section header | Done |
 | wk-feed-head | none | Section header | Done |
 | wk-feed-list | none | Grouped list | Done |
-| wk-head, wk-head-act | codex/GoalsPage.tsx, codex/Search.tsx, codex/TaskEditor.tsx, codex/jobs/JobPage.tsx, codex/jobs/Jobs.tsx, codex/meetings/MeetingList.tsx, codex/meetings/MeetingPage.tsx, codex/meetings/Person.tsx, codex/meetings/SeriesPage.tsx, codex/summary/Summary.tsx, codex/wiki/ReviewList.tsx, codex/wiki/WikiIndex.tsx, codex/wiki/WikiPage.tsx | keep: layout (page title bar with actions, not a list header) | Keep |
+| wk-head, wk-head-act | codex/TaskEditor.tsx, codex/jobs/JobPage.tsx, codex/jobs/AutopilotPage.tsx, codex/meetings/MeetingPage.tsx, codex/meetings/Person.tsx, codex/meetings/SeriesPage.tsx, codex/wiki/ReviewList.tsx, codex/wiki/WikiPage.tsx | keep: layout (page title bar with actions, not a list header) | Keep |
 | wk-label-row | none | Row | Done |
 | wk-older-head | none | Section header | Done |
 

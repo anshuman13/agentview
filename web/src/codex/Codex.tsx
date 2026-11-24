@@ -7,13 +7,13 @@ import { reviewedSince } from './data/tasks/engine';
 import { queued } from './overview/ReplyQueue';
 import { greeting } from './tasks/days';
 import { dropRow as dropRowTo, moveOverdue } from './tasks/rowMoves';
-import { TasksHead } from './TasksHead';
+import { CodexHead } from './CodexHead';
 import { useHubLifecycle } from './useHubLifecycle';
 import { rowKey, type ItemRow } from './data/sync';
 import type { BulkKind } from './useActions';
 import { Icon } from '../ui/Icon';
 import { EmptyState } from '../ui/Panel';
-import { Button } from '../ui/Button';
+import { Button, IconButton } from '../ui/Button';
 import { Section, sectionCount } from '../ui/Section';
 import { haptic } from '../ui/haptic';
 import { searchRun, setView, showSnack, useSpotBack, useView } from './view';
@@ -28,6 +28,7 @@ import { useSplit } from './tasks/split';
 import { dayGroups } from './tasks/dayGroups';
 import { BulkBar } from './tasks/BulkBar';
 import { SearchBar, SearchResults, useTaskSearch } from './tasks/TaskSearch';
+import { TasksMenu } from './tasks/TasksMenu';
 import { pickable, useTaskSelection } from './tasks/useTaskSelection';
 import { ListsDrawer, LockedCodex } from './CodexChrome';
 import { LISTS } from './nav';
@@ -133,7 +134,10 @@ export function Assistant() {
   const synced = <span className="as-synced">{syncedAt(gate.last, now)}</span>;
   return (
     <div className={`assistant${list === 'tasks' ? ' tasks' : ''}`} ref={root}>
-      <TasksHead list={list} heading={heading} filter={filter} searching={query != null} selecting={!!picked} onMenu={() => setDrawer(true)} onAdd={() => setAdding(true)} onSelect={() => setPicked(new Set())} onSearch={() => setQuery('')} />
+      <CodexHead title={heading} greeting={list === 'today'} onMenu={() => setDrawer(true)}
+        search={list === 'tasks' && query != null && <SearchBar query={query} setQuery={setQuery} />}
+        action={list === 'tasks' && query == null && !picked && <IconButton className="desktop-only" icon="add" label="Add task" onClick={() => setAdding(true)} />}
+        menu={list === 'tasks' && query == null && !picked && <TasksMenu onSearch={() => setQuery('')} onSelect={() => setPicked(new Set())} />} />
       {gate.reconnecting && <div className="as-error muted"><Icon name="sync" small /> Reconnecting to the hub…{synced}</div>}
       {gate.error && !gate.reconnecting && <button className="as-error" onClick={() => store.syncNow()}><Icon name="warning" small /> Sync failed: {gate.error}. Your changes are kept on this device.{synced}</button>}
       {calError && <div className="as-error"><Icon name="warning" small /> Calendar not updated <span title={calError} aria-label={calError}><Icon name="info" small /></span> · <Button variant="plain" size="sm" onClick={() => void retryCalendar()}>Retry</Button></div>}
@@ -141,7 +145,6 @@ export function Assistant() {
       <div className="as-ptr" ref={ptr} aria-hidden><Icon name="refresh" /></div>
       <div className={`as-scroll${drag ? ' dragging' : ''}`} ref={scroller}>
         {list === 'today' && <Overview s={s} dueToday={dueToday} onAsk={askAbout} onPrep={() => ask(askText(prepText(s.next!), s.next!.profile, snap.items, undefined, codexMeetings(snap.meetings)), s.next!.profile)} />}
-        {list === 'tasks' && query != null && <SearchBar query={query} setQuery={setQuery} />}
         {list === 'tasks' && query?.trim() && <SearchResults query={query} candidates={[...s.overdue, ...days.flatMap((d) => d.rows), ...review, ...s.doneToday]} rows={rows} />}
         {list === 'tasks' && !query?.trim() && (
           <>

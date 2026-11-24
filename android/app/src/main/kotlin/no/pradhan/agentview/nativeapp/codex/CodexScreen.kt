@@ -2,19 +2,26 @@ package no.pradhan.agentview.nativeapp.codex
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.ModalDrawerSheet
+import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
+import androidx.compose.material3.rememberDrawerState
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -47,17 +54,17 @@ import no.pradhan.agentview.nativeapp.codex.wiki.proposals
 import no.pradhan.agentview.nativeapp.app.Hub
 import no.pradhan.agentview.nativeapp.app.track
 import no.pradhan.agentview.nativeapp.app.setCodexFilter
+import no.pradhan.agentview.nativeapp.ui.AvIcon
+import no.pradhan.agentview.nativeapp.ui.Badge
+import no.pradhan.agentview.nativeapp.ui.BadgeTone
 import no.pradhan.agentview.nativeapp.ui.Button
 import no.pradhan.agentview.nativeapp.ui.ButtonSize
 import no.pradhan.agentview.nativeapp.ui.Chip
-import no.pradhan.agentview.nativeapp.ui.ChipTone
 import no.pradhan.agentview.nativeapp.ui.Fab
 import no.pradhan.agentview.nativeapp.ui.Group
 import no.pradhan.agentview.nativeapp.ui.IconBtn
 import no.pradhan.agentview.nativeapp.ui.ListRow
 import no.pradhan.agentview.nativeapp.ui.Loading
-import no.pradhan.agentview.nativeapp.ui.Menu
-import no.pradhan.agentview.nativeapp.ui.MenuItem
 import no.pradhan.agentview.nativeapp.ui.MoreButton
 import no.pradhan.agentview.nativeapp.ui.PageHeader
 import no.pradhan.agentview.nativeapp.ui.SnackHost
@@ -89,7 +96,7 @@ private class CodexNav(private val pageS: MutableState<String>, private val rout
     var picked by pickS
     val route get() = routesOf(routeText).lastOrNull()
     val extra get() = route ?: page.takeIf { it in EXTRA_ROOTS }
-    val sub get() = route != null || page == "search" || page.startsWith("tag:")
+    val sub get() = route != null || page.startsWith("tag:")
     val chips get() = chipS.value.split(',').filter { it.isNotEmpty() }.toSet()
 
     fun push(r: String) { routeText = pushRoute(routeText, r) }
@@ -167,30 +174,38 @@ fun CodexScreen(hub: Hub) {
     LaunchedEffect(editing, nav.editKey) { if (nav.editKey != null && editing == null && st.loaded) nav.editKey = null }
     LaunchedEffect(nav.page, nav.route, nav.searching, filterKey) { nav.picked = null; if (nav.page != "meetings") nav.decisions = false }
     BackHandler(enabled = nav.picked != null || nav.sub || nav.searching || nav.page != "overview") { nav.back() }
+    val drawerState = rememberDrawerState(DrawerValue.Closed)
+    BackHandler(enabled = drawerState.isOpen) { scope.launch { drawerState.close() } }
     val refresh = { scope.launch { refreshing = true; hub.codex.sync(); refreshing = false }; Unit }
+    val go = { p: String -> if (p != nav.page) hub.track("list:$p"); nav.go(p); scope.launch { drawerState.close() }; Unit }
 
-    Box(Modifier.fillMaxSize().background(av.groupPage)) {
-        Column(Modifier.align(Alignment.TopCenter).widthIn(max = Tokens.pageMax).fillMaxSize()) {
-            CodexHeader(hub, st, nav, profile, filterKey, now)
-            if (st.reconnecting) Group { ListRow("Reconnecting to the hub…", syncedAt(st.lastSync, now), muted = true) }
-            else st.error?.let { error -> Group { ListRow(error, syncedAt(st.lastSync, now), trailing = { Button("Retry", { refresh() }, size = ButtonSize.Sm) }) } }
-            PullToRefreshBox(refreshing, { refresh() }, Modifier.weight(1f)) { CodexBody(hub, st, nav, profile, now, actions, ops) }
-            if (nav.page == "overview" && nav.route == null && st.loaded) AskBar(hub, st, profile)
+    ModalNavigationDrawer(
+        drawerContent = { ListsDrawer(hub, st, nav.page, profile, filterKey, go) },
+        drawerState = drawerState,
+        gesturesEnabled = drawerState.isOpen,
+    ) {
+        Box(Modifier.fillMaxSize().background(av.groupPage)) {
+            Column(Modifier.align(Alignment.TopCenter).widthIn(max = Tokens.pageMax).fillMaxSize()) {
+                CodexHeader(hub, st, nav, profile, filterKey, now) { scope.launch { drawerState.open() } }
+                if (st.reconnecting) Group { ListRow("Reconnecting to the hub…", syncedAt(st.lastSync, now), muted = true) }
+                else st.error?.let { error -> Group { ListRow(error, syncedAt(st.lastSync, now), trailing = { Button("Retry", { refresh() }, size = ButtonSize.Sm) }) } }
+                PullToRefreshBox(refreshing, { refresh() }, Modifier.weight(1f)) { CodexBody(hub, st, nav, profile, now, actions, ops) }
+                if (nav.page == "overview" && nav.route == null && st.loaded) AskBar(hub, st, profile)
+            }
+            if (nav.route == null && nav.picked == null && (nav.page == "overview" || nav.page == "tasks" || nav.page.startsWith("tag:"))) Fab(
+                "add", "Add task", { nav.adding = true },
+                Modifier.align(Alignment.BottomEnd).padding(end = Tokens.sp8, bottom = if (nav.page == "overview") Tokens.fab + Tokens.sp16 else Tokens.sp8),
+            )
+            SnackHost(snack, Modifier.align(Alignment.BottomCenter))
         }
-        if (nav.route == null && nav.picked == null && (nav.page == "overview" || nav.page == "tasks" || nav.page.startsWith("tag:"))) Fab(
-            "add", "Add task", { nav.adding = true },
-            Modifier.align(Alignment.BottomEnd).padding(end = Tokens.sp8, bottom = if (nav.page == "overview") Tokens.fab + Tokens.sp16 else Tokens.sp8),
-        )
-        SnackHost(snack, Modifier.align(Alignment.BottomCenter))
     }
     CodexSheetsHost(hub, st, nav, profile, now, actions, ops, editing, snack)
 }
 
 @Composable
-private fun CodexHeader(hub: Hub, st: CodexState, nav: CodexNav, profile: String?, filterKey: String, now: Long) {
+private fun CodexHeader(hub: Hub, st: CodexState, nav: CodexNav, profile: String?, filterKey: String, now: Long, onMenu: () -> Unit) {
     val page = nav.page
     val extra = nav.extra
-    val go = { p: String -> if (p != page) hub.track("list:$p"); nav.go(p) }
     CodexTopBar(
         title = when {
             extra != null -> routeTitle(extra, st)
@@ -201,22 +216,47 @@ private fun CodexHeader(hub: Hub, st: CodexState, nav: CodexNav, profile: String
             else -> "#" + page.removePrefix("tag:")
         },
         back = if (nav.sub) nav::back else null,
-        filter = filterKey.takeIf { !nav.sub }, onFilter = hub::setCodexFilter,
-        onSearch = if (nav.route == null && (page == "overview" || page == "tasks")) { { nav.page = "tasks"; nav.searching = true } } else null,
-        menu = if (nav.route != null) null else { close ->
+        onMenu = if (nav.sub) null else onMenu,
+        profileLabel = filterKey.takeIf { it != "all" && !nav.sub }?.let { profileLabel(it) },
+        onSearch = if (nav.route == null && page == "tasks") { { nav.searching = true } } else null,
+        menu = if (nav.route == null && page == "meetings") { close ->
             ExtraMenu(page, hub, profile, now, nav.decisions, { nav.decisions = !nav.decisions }, nav::push, close)
-            MenuItem("Search everything", "search", { close(); nav.page = "search" })
-        },
+        } else null,
         greeting = extra == null && page == "overview",
     )
-    if (!nav.sub) Row(Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = Tokens.listPad, vertical = Tokens.sp4), horizontalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
-        val claims = remember(st.facts, profile) { proposals(st.facts.filter { matchesProfile(profile, it) }).size }
-        Chip("Overview", { go("overview") }, on = page == "overview")
-        Chip("Tasks", { go("tasks") }, on = page == "tasks")
-        Chip("Meetings", { go("meetings") }, on = page == "meetings")
-        Chip("Jobs", { go("jobs") }, on = page == "jobs")
-        Chip(if (claims > 0) "Wiki $claims" else "Wiki", { go("wiki") }, on = page == "wiki")
-        Chip("Goals", { go("goals") }, on = page == "goals")
+}
+
+private val DRAWER_ROWS = listOf(
+    Triple("search", "Search", "search"),
+    Triple("overview", "Overview", "home"),
+    Triple("tasks", "Tasks", "checklist"),
+    Triple("meetings", "Meetings", "record"),
+    Triple("wiki", "Wiki", "book"),
+    Triple("jobs", "Jobs", "history"),
+    Triple("goals", "Goals", "target"),
+)
+
+@Composable
+private fun ListsDrawer(hub: Hub, st: CodexState, page: String, profile: String?, filterKey: String, go: (String) -> Unit) {
+    val claims = remember(st.facts, profile) { proposals(st.facts.filter { matchesProfile(profile, it) }).size }
+    ModalDrawerSheet(Modifier.widthIn(max = 300.dp), drawerContainerColor = av.groupPage) {
+        Column(Modifier.fillMaxSize().padding(vertical = Tokens.sp8)) {
+            DRAWER_ROWS.forEach { (id, label, icon) ->
+                if (id == "goals") HorizontalDivider(Modifier.padding(horizontal = Tokens.listPad, vertical = Tokens.sp3), color = av.border, thickness = Tokens.hairline)
+                ListRow(
+                    label,
+                    leading = { AvIcon(icon) },
+                    trailing = if (id == "wiki" && claims > 0) { { Badge(claims.toString(), BadgeTone.Quiet) } } else null,
+                    compact = true,
+                    modifier = Modifier.padding(horizontal = Tokens.sp4).clip(RoundedCornerShape(Tokens.shapeMd)).then(if (page == id) Modifier.background(av.raised) else Modifier),
+                    onClick = { go(id) },
+                )
+            }
+            Spacer(Modifier.weight(1f))
+            Row(Modifier.padding(horizontal = Tokens.listPad), horizontalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
+                listOf("all" to "All", WORK to "Work", PERSONAL to "Personal").forEach { (k, label) -> Chip(label, { hub.setCodexFilter(k) }, on = filterKey == k) }
+            }
+        }
     }
 }
 
@@ -268,17 +308,8 @@ private fun CodexSheetsHost(hub: Hub, st: CodexState, nav: CodexNav, profile: St
 }
 
 @Composable
-private fun CodexTopBar(title: String, back: (() -> Unit)?, filter: String?, onFilter: (String) -> Unit, onSearch: (() -> Unit)?, menu: (@Composable (() -> Unit) -> Unit)?, greeting: Boolean = false) {
-    PageHeader(title, back, greeting = greeting) {
-        var open by remember { mutableStateOf(false) }
-        if (filter != null) Box {
-            Chip(if (filter == "all") "All" else profileLabel(filter), { open = true }, tone = when (filter) { WORK -> ChipTone.Work; PERSONAL -> ChipTone.Personal; else -> ChipTone.Default }, trailingIcon = "chevron-down")
-            Menu(open, { open = false }) {
-                listOf("all" to "All", WORK to "Work", PERSONAL to "Personal").forEach { (k, label) ->
-                    MenuItem(label, "filter", { open = false; onFilter(k) }, checked = filter == k)
-                }
-            }
-        }
+private fun CodexTopBar(title: String, back: (() -> Unit)?, onMenu: (() -> Unit)?, profileLabel: String?, onSearch: (() -> Unit)?, menu: (@Composable (() -> Unit) -> Unit)?, greeting: Boolean = false) {
+    PageHeader(title, back, greeting = greeting, onMenu = onMenu, trailing = profileLabel) {
         if (onSearch != null) IconBtn("search", "Search tasks", onSearch)
         if (menu != null) MoreButton { close -> menu(close) }
     }

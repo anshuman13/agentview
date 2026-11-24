@@ -4,10 +4,11 @@ import { GOAL, MAX_GOALS, goalHistory, goalSummary, goalsOf, moveBlock, reopenBl
 import { weekStart } from '../data/dates';
 import { atTime } from '../data/tasks/engine';
 import type { ItemRow } from '../data/sync';
-import { attempt, leaveOverlay, openTask, previousList, showSnack, useEscapeBack, useView } from '../view';
+import { attempt, openTask, showSnack, useView } from '../view';
+import { useScrolledHeader } from '../gestures/usePullRefresh';
+import { CodexHead } from '../CodexHead';
 import { GoalField, useAddGoal } from './Goals';
 import { useMinute } from './split';
-import { LISTS } from '../nav';
 import { dueText } from './Task';
 import { Button, IconButton } from '../../ui/Button';
 import { AddSheet } from './AddSheet';
@@ -68,7 +69,7 @@ function GoalGroup({ goal, items, showProfile, now, reopen, move, rename, remove
   );
 }
 
-export function GoalsPage() {
+export function GoalsPage({ onMenu }: { onMenu: () => void }) {
   const store = useAssistantStore();
   const items = useAssistantTable('items');
   const gate = useSyncGate();
@@ -76,9 +77,10 @@ export function GoalsPage() {
   const now = useMinute();
   const weeks = useMemo(() => goalHistory(items, now, filter === 'all' ? undefined : filter), [items, now, filter]);
   const busy = useRef(false);
+  const scroller = useRef<HTMLDivElement>(null);
+  useScrolledHeader(scroller, true);
   const [adding, setAdding] = useState<string | null>(null);
   const add = useAddGoal(now);
-  useEscapeBack(leaveOverlay);
   const reopen = async (g: ItemRow) => {
     if (busy.current) return;
     busy.current = true;
@@ -103,14 +105,8 @@ export function GoalsPage() {
   };
   return (
     <div className="wk narrow">
-      <header className="wk-head">
-        <IconButton icon="arrow-left" label="Back" onClick={leaveOverlay} />
-        <div className="as-title-wrap">
-          <button className="as-crumb" onClick={leaveOverlay}>{LISTS.find((l) => l.id === previousList())?.label}</button>
-          <h1>{LISTS.find((l) => l.id === 'goals')!.label}</h1>
-        </div>
-      </header>
-      <div className="wk-scroll">
+      <CodexHead title="Goals" onMenu={onMenu} />
+      <div className="wk-scroll" ref={scroller}>
         <div className="mt-page">
           {gate.loading && !items.length ? <Skeleton /> : (
             <>

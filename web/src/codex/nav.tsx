@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { Fragment, useEffect, useMemo, useState } from 'react';
 import { useAssistantStore, useAssistantData, useCodex, useSyncStatus } from './data';
 import { reviewCount } from './data/wiki/wiki';
 import { atTime } from './data/tasks/engine';
@@ -13,14 +13,14 @@ import { clock } from './tasks/time';
 import type { Paused, ScanHealth } from './data/sync';
 
 export const LISTS: { id: List; icon: string; label: string; hidden?: boolean }[] = [
+  { id: 'search', icon: 'search', label: 'Search' },
   { id: 'today', icon: 'home', label: 'Overview' },
   { id: 'tasks', icon: 'checklist', label: 'Tasks' },
   { id: 'meetings', icon: 'record', label: 'Meetings' },
-  { id: 'jobs', icon: 'history', label: 'Jobs' },
   { id: 'wiki', icon: 'book', label: 'Wiki' },
+  { id: 'jobs', icon: 'history', label: 'Jobs' },
   { id: 'summary', icon: 'comment-discussion', label: 'Slack summary', hidden: true },
-  { id: 'goals', icon: 'target', label: 'All goals', hidden: true },
-  { id: 'search', icon: 'search', label: 'Search', hidden: true },
+  { id: 'goals', icon: 'target', label: 'Goals' },
 ];
 const taskCount = (s: ReturnType<typeof sharedSplit>, endOfDay: number) => s.overdue.length + s.today.length + s.later.filter((r) => atTime(r.at)! < endOfDay).length + s.review.filter((r) => !queued(r)).length;
 const FILTERS: Filter[] = ['all', 'work', 'personal'];
@@ -96,17 +96,22 @@ export function AssistantNav({ onPick }: { onPick?: () => void }) {
   return (
     <nav className="as-nav">
       {LISTS.filter((l) => !l.hidden).map((l) => (
-        <button key={l.id} className={list === l.id ? 'active' : ''} aria-current={list === l.id ? 'page' : undefined} onClick={() => { setView({ list: l.id, open: null, anchor: null, person: null, tag: null }); onPick?.(); }}>
-          <Icon name={l.icon} /><span>{l.label}</span>{count[l.id] > 0 && <span className="as-count">{count[l.id]}</span>}
-        </button>
+        <Fragment key={l.id}>
+          {l.id === 'goals' && <hr className="as-nav-rule" />}
+          <button className={list === l.id ? 'active' : ''} aria-current={list === l.id ? 'page' : undefined} onClick={() => { setView({ list: l.id, open: null, anchor: null, person: null, tag: null }); onPick?.(); }}>
+            <Icon name={l.icon} /><span>{l.label}</span>{count[l.id] > 0 && <span className="as-count">{count[l.id]}</span>}
+          </button>
+        </Fragment>
       ))}
-      <div className="as-nav-label">Show</div>
-      <div className="as-seg" role="radiogroup" aria-label="Show work, personal or both">
-        {FILTERS.map((f) => <button key={f} role="radio" aria-checked={filter === f} className={filter === f ? 'on' : ''} onClick={() => setView({ filter: f })}>{FILTER_LABEL[f]}</button>)}
+      <div className="as-nav-foot">
+        <div className="as-nav-label">Show</div>
+        <div className="as-seg" role="radiogroup" aria-label="Show work, personal or both">
+          {FILTERS.map((f) => <button key={f} role="radio" aria-checked={filter === f} className={filter === f ? 'on' : ''} onClick={() => setView({ filter: f })}>{FILTER_LABEL[f]}</button>)}
+        </div>
+        <button className={`as-nav-sync ${dot}`} title="Sync now and show each scan" onClick={() => { setScans(true); void store.syncNow(); }}><span className="as-dot" /><span>{status}</span></button>
+        {paused && <div className="as-nav-paused">{paused}</div>}
+        <ScanLines scans={sync.scans} show={scans || !!paused} />
       </div>
-      <button className={`as-nav-sync ${dot}`} title="Sync now and show each scan" onClick={() => { setScans(true); void store.syncNow(); }}><span className="as-dot" /><span>{status}</span></button>
-      {paused && <div className="as-nav-paused">{paused}</div>}
-      <ScanLines scans={sync.scans} show={scans || !!paused} />
     </nav>
   );
 }

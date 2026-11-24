@@ -17,6 +17,8 @@ import { Notes } from './Notes';
 import { PageTile } from './PageTile';
 import { NeedsLook, ToReview } from './Review';
 import { usePullSync } from '../gestures/pullSync';
+import { useScrolledHeader } from '../gestures/usePullRefresh';
+import { CodexHead } from '../CodexHead';
 import { MEMORY, shortDate } from './shared';
 import { ago, plural } from '../../ui/util';
 import { Sheet } from '../../ui/Sheet';
@@ -155,6 +157,7 @@ function Results({ pages, facts, stats, query }: { pages: Page[]; facts: Fact[];
 
 export function WikiIndex({ onMenu }: { onMenu: () => void }) {
   const pull = usePullSync();
+  useScrolledHeader(pull.ref, true);
   useSpotBack(pull.ref, 'wiki');
   const { pages, facts } = useCodex();
   const [query, setQuery] = useState('');
@@ -174,26 +177,28 @@ export function WikiIndex({ onMenu }: { onMenu: () => void }) {
   const newPageButton = <Button size="sm" variant="tinted" onClick={() => setAdding(true)}>New page</Button>;
   return (
     <div className="wk">
-      <header className="wk-head">
-        <IconButton icon="menu" label="Lists" className="as-menu" onClick={onMenu} />
-        <h1>Wiki</h1>
-        <span className="spacer" />
-        <label className="wk-search">
-          <Icon name="search" small />
-          <input enterKeyHint="search" value={query} placeholder="Search" aria-label="Search the wiki" onChange={(e) => setQuery(e.target.value)} onKeyDown={(e) => e.key === 'Escape' && setQuery('')} />
-          {query && <IconButton icon="close" small label="Clear" onClick={() => setQuery('')} />}
-        </label>
-        <IconButton ref={add} size="sm" icon="add" label="New page" disabled={adding} onClick={() => setAdding(true)} />
-        <IconButton ref={more} size="sm" icon="kebab-horizontal" label="More" aria-haspopup="menu" aria-expanded={menu} onClick={() => setMenu(!menu)} />
-        {menu && (
-          <Menu trigger={more} onClose={() => setMenu(false)}>
-            <MenuItem icon="history" onClick={choose('Feed')}>Feed</MenuItem>
-            <MenuItem icon="note" onClick={choose('Notes')}>Notes</MenuItem>
-            <MenuItem icon="sparkle" onClick={choose('Ask')}>Ask</MenuItem>
-            {archived.length > 0 && <MenuItem icon="archive" onClick={choose('Archived pages')}>Archived pages</MenuItem>}
-          </Menu>
+      <CodexHead title="Wiki" onMenu={onMenu}
+        search={(
+          <label className="wk-search">
+            <Icon name="search" small />
+            <input enterKeyHint="search" value={query} placeholder="Search" aria-label="Search the wiki" onChange={(e) => setQuery(e.target.value)} onKeyDown={(e) => e.key === 'Escape' && setQuery('')} />
+            {query && <IconButton icon="close" small label="Clear" onClick={() => setQuery('')} />}
+          </label>
         )}
-      </header>
+        action={<IconButton ref={add} size="sm" icon="add" label="New page" disabled={adding} onClick={() => setAdding(true)} />}
+        menu={(
+          <>
+            <IconButton ref={more} size="sm" icon="kebab-horizontal" label="More" aria-haspopup="menu" aria-expanded={menu} onClick={() => setMenu(!menu)} />
+            {menu && (
+              <Menu trigger={more} onClose={() => setMenu(false)}>
+                <MenuItem icon="history" onClick={choose('Feed')}>Feed</MenuItem>
+                <MenuItem icon="note" onClick={choose('Notes')}>Notes</MenuItem>
+                <MenuItem icon="sparkle" onClick={choose('Ask')}>Ask</MenuItem>
+                {archived.length > 0 && <MenuItem icon="archive" onClick={choose('Archived pages')}>Archived pages</MenuItem>}
+              </Menu>
+            )}
+          </>
+        )} />
       {pull.indicator}
       <div className="wk-scroll" ref={pull.ref}>
         <div className="wk-index">

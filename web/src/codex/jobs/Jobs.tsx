@@ -9,6 +9,8 @@ import { IconButton, Button } from '../../ui/Button';
 import { Menu, MenuItem, MenuSeparator } from '../../ui/Menu';
 import { setView, useView } from '../view';
 import { usePullSync } from '../gestures/pullSync';
+import { useScrolledHeader } from '../gestures/usePullRefresh';
+import { CodexHead } from '../CodexHead';
 import { useMinute } from '../tasks/split';
 import '../../styles/features/wiki.css';
 import '../../styles/features/meetings.css';
@@ -53,6 +55,7 @@ function JobRow({ j, runs, paused, now, store, enable }: { j: Job; runs: Run[]; 
 
 function JobsList({ onMenu }: { onMenu: () => void }) {
   const pull = usePullSync();
+  useScrolledHeader(pull.ref, true);
   useMinute();
   const { jobs, runs, paused, store, filter, enable } = useJobs();
   const now = Date.now();
@@ -63,12 +66,7 @@ function JobsList({ onMenu }: { onMenu: () => void }) {
   };
   return (
     <div className="wk narrow">
-      <header className="wk-head">
-        <IconButton icon="menu" label="Lists" className="as-menu" onClick={onMenu} />
-        <h1>Jobs</h1>
-        <span className="spacer" />
-        <IconButton icon="add" label="New job" onClick={() => add()} />
-      </header>
+      <CodexHead title="Jobs" onMenu={onMenu} action={<IconButton icon="add" label="New job" onClick={() => add()} />} />
       {pull.indicator}
       <div className="wk-scroll" ref={pull.ref}>
         <div className="mt-page">

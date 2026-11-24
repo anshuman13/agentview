@@ -1,15 +1,17 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useAssistantStore, useAssistantData } from '../data';
 import { errorText } from '../data/tasks/engine';
 import { Markdown } from '../../chat/Chat';
 import { Icon } from '../../ui/Icon';
-import { Button, Chip, IconButton } from '../../ui/Button';
+import { Button, Chip } from '../../ui/Button';
 import { EmptyState, Panel } from '../../ui/Panel';
 import { AskRow } from '../../ui/AskRow';
 import { Row } from '../../ui/Row';
 import { Section } from '../../ui/Section';
 import { ago, safeHref } from '../../ui/util';
 import { clock } from '../tasks/time';
+import { useScrolledHeader } from '../gestures/usePullRefresh';
+import { CodexHead } from '../CodexHead';
 import { dayLabel } from '../data/dates';
 import { copyText, openTask, setView, showSnack, useView } from '../view';
 import { buildReport, type DateRange, type StatusFilter } from './report';
@@ -53,6 +55,8 @@ export function Summary({ onMenu }: { onMenu: () => void }) {
   const snap = useAssistantData();
   const { brief, asks, busy, summarize } = useSlack();
   const { filter } = useView();
+  const scroller = useRef<HTMLDivElement>(null);
+  useScrolledHeader(scroller, true);
   const [openKinds, setOpenKinds] = useState<Kind[]>([]);
   const [allBrief, setAllBrief] = useState(false);
   const [range, setRange] = useState<DateRange>('week');
@@ -65,13 +69,9 @@ export function Summary({ onMenu }: { onMenu: () => void }) {
   const longBrief = briefLines.length > BRIEF_LINES;
   return (
     <div className="wk narrow">
-      <header className="wk-head">
-        <IconButton icon="menu" label="Lists" className="as-menu" onClick={onMenu} />
-        <h1>Summary</h1>
-        <span className="spacer" />
-        <Button variant="primary" icon={busy ? 'loading' : 'sparkle'} className="mt-take" disabled={busy} onClick={summarize}><span>{busy ? 'Summarizing' : 'Summarize'}</span></Button>
-      </header>
-      <div className="wk-scroll">
+      <CodexHead title="Summary" onMenu={onMenu}
+        action={<Button variant="primary" icon={busy ? 'loading' : 'sparkle'} className="mt-take" disabled={busy} onClick={summarize}><span>{busy ? 'Summarizing' : 'Summarize'}</span></Button>} />
+      <div className="wk-scroll" ref={scroller}>
         <div className="mt-page">
           <div className="sm-report">
             <div className="sm-body">

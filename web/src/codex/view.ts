@@ -17,9 +17,6 @@ export const FILTER_LABEL: Record<Filter, string> = { all: 'All', work: 'Work', 
 // The list, filter and open page, meeting or task are shared by the sidebar on desktop and the drawer on the phone.
 export type View = { list: List; filter: Filter; open: string | null; anchor: string | null; person: string | null; series: string | null; tag: string | null };
 
-// The list open before the current one (never goals or search), so Back from either page lands there.
-let prevList: List = 'today';
-let fromWeek = false;
 let weekReturn = false;
 
 let view: View = { list: 'today', filter: 'all', open: null, anchor: null, person: null, series: null, tag: null };
@@ -75,8 +72,6 @@ export const setView = (patch: Partial<View>) => {
     track(`list:${next.list === 'today' ? 'overview' : next.list}`);
     spot = null;
     clearScroll(view.list);
-    if (view.list === 'goals' || view.list === 'search') fromWeek = false;
-    else prevList = view.list;
   }
   else if (!depth(view) && depth(next)) {
     saveSpot(view.list);
@@ -88,7 +83,6 @@ export const setView = (patch: Partial<View>) => {
 };
 export function openWeekGoals() {
   setView({ list: 'goals' });
-  fromWeek = true;
 }
 export function openWeek() {
   weekReturn = true;
@@ -103,11 +97,6 @@ export function wikiBack() {
   const r = wikiReturn;
   wikiReturn = null;
   setView(r ? { ...r, anchor: null } : { open: null, anchor: null });
-}
-export const previousList = () => prevList;
-export function leaveOverlay() {
-  weekReturn = fromWeek && prevList === 'meetings';
-  setView({ list: prevList });
 }
 // The query handed to Search by openSearch; seq changes on every call so a mounted Search restarts with it.
 let searchQuery = '';

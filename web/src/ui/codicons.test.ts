@@ -21,7 +21,8 @@ describe('codicon subset', () => {
     for (const file of files(src)) {
       const text = readFileSync(file, 'utf8');
       for (const m of text.matchAll(/(?:<Icon name|\bicon)=(?:"([^"]*)"|\{([^{}]*)\})|\bicon: ('[^']*'|"[^"]*")/g)) {
-        for (const t of (m[1] ?? m[2] ?? m[3]).matchAll(/['"]?([a-z][a-z0-9-]*)['"]?/g)) {
+        const expr = m[1] === undefined ? (m[2] ?? m[3]) : `"${m[1]}"`;
+        for (const t of expr.matchAll(/['"]([a-z][a-z0-9-]*)['"]/g)) {
           if (known.has(t[1]) && !subset.has(t[1])) missing.push(`${path.relative(src, file)}: ${t[1]}`);
         }
       }

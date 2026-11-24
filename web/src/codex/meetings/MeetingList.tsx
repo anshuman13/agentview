@@ -2,7 +2,7 @@ import { useMemo, useRef, useState } from 'react';
 import { useCodex } from '../data';
 import { rowKey } from '../data/sync';
 import { Icon } from '../../ui/Icon';
-import { Button, Chip, IconButton } from '../../ui/Button';
+import { Button, Chip } from '../../ui/Button';
 import { EmptyState } from '../../ui/Panel';
 import { Section } from '../../ui/Section';
 import { ShowMore } from '../../ui/useWindow';
@@ -10,7 +10,8 @@ import { setView, takeWeekReturn, useSpotBack, useView } from '../view';
 import { Decisions } from './Decisions';
 import { Load } from './Load';
 import { Week } from './Week';
-import { usePullRefresh } from '../gestures/usePullRefresh';
+import { usePullRefresh, useScrolledHeader } from '../gestures/usePullRefresh';
+import { CodexHead } from '../CodexHead';
 import { useMinute } from '../tasks/split';
 import { ComingDays } from './list/ComingDays';
 import { ListMenu, type ListMode } from './list/ListMenu';
@@ -27,6 +28,7 @@ export function MeetingsList({ onMenu }: { onMenu: () => void }) {
   const pullRef = useRef<HTMLDivElement>(null);
   const ptr = usePullRefresh(pullRef, () => Promise.all([store.syncNow(), store.syncCalendar()]), true);
   useSpotBack(pullRef, 'meetings');
+  useScrolledHeader(pullRef, true);
   const { filter } = useView();
   const [query, setQuery] = useState('');
   const [topicBar, setTopicBar] = useState(false);
@@ -44,16 +46,14 @@ export function MeetingsList({ onMenu }: { onMenu: () => void }) {
   };
   return (
     <div className="wk narrow">
-      <header className="wk-head">
-        <IconButton icon="menu" label="Lists" className="as-menu" onClick={onMenu} />
-        <h1>Meetings</h1>
-        <span className="spacer" />
-        <label className="wk-search">
-          <Icon name="search" small />
-          <input enterKeyHint="search" value={query} placeholder="Search" aria-label="Search meetings" onChange={(e) => setQuery(e.target.value)} onKeyDown={(e) => e.key === 'Escape' && setQuery('')} />
-        </label>
-        <ListMenu mode={mode} setMode={setMode} chips={chips} toggleChip={toggleChip} trackTopic={trackTopic} />
-      </header>
+      <CodexHead title="Meetings" onMenu={onMenu}
+        search={(
+          <label className="wk-search">
+            <Icon name="search" small />
+            <input enterKeyHint="search" value={query} placeholder="Search" aria-label="Search meetings" onChange={(e) => setQuery(e.target.value)} onKeyDown={(e) => e.key === 'Escape' && setQuery('')} />
+          </label>
+        )}
+        menu={<ListMenu mode={mode} setMode={setMode} chips={chips} toggleChip={toggleChip} trackTopic={trackTopic} />} />
       <div className="as-ptr" ref={ptr} aria-hidden><Icon name="refresh" /></div>
       <div className="wk-scroll" ref={pullRef}>
         {mode === 'log' ? <Decisions meetings={mine} /> : mode === 'load' ? <Load meetings={mine} now={now} /> : mode === 'week' ? <Week meetings={mine} facts={myFacts} now={now} /> : <div className="mt-page mt-page-list">
