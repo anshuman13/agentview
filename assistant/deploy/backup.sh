@@ -21,3 +21,11 @@ mv -f "$TEMP_TARGET" "$TARGET"
 
 # Delete backups older than 14 days
 find "$BACKUPS_DIR" -name 'assistant-*.db' -mtime +14 -delete
+
+# Travel receipts and trips, kept the same 14 days
+TRAVEL_DIR="${TRAVEL_DIR:-$HOME/.agentview/travel}"
+if [ -d "$TRAVEL_DIR" ]; then
+  tar -czf "$BACKUPS_DIR/travel-$(date +%Y-%m-%d).tgz.tmp" -C "$TRAVEL_DIR" .
+  mv -f "$BACKUPS_DIR/travel-$(date +%Y-%m-%d).tgz.tmp" "$BACKUPS_DIR/travel-$(date +%Y-%m-%d).tgz"
+  find "$BACKUPS_DIR" -name 'travel-*.tgz' -mtime +14 -delete
+fi

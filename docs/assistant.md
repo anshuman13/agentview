@@ -22,7 +22,7 @@ so a power cut, an outage or a reboot at home only pauses scans and sync.
   (an edit is always timed after the value it replaces, so a device with a slow clock still wins). A device whose
   saved version is past the hub's, as after a restore from backup, pulls everything again, and so does the phone app
   when an update adds a synced table. The browser saves its version only together with the rows of that pull
-- Backups: `VACUUM INTO` a dated file, copied nightly to the laptop, plus Time Machine
+- Backups: nightly at 03:00, `VACUUM INTO` a dated file plus a tarball of `~/.agentview/travel`, kept 14 days in `~/.agentview/assistant/backups` on the mini only (no laptop copy or Time Machine yet)
 
 ## Profiles and accounts
 
