@@ -447,7 +447,7 @@ internal fun ItemRow(hub: Hub, it: Item, chat: String, cwd: String, settled: Boo
             Markdown(it.text, Modifier.fillMaxWidth(), it.streaming, reading = true)
             if (!it.streaming && (answer || rewind != null)) ReplyActions(hub, if (answer) it.text.trim() else null, rewind)
         }
-        is Item.System -> Text(it.text, style = Type.footnote, color = if (it.error) av.err else av.fgMuted)
+        is Item.System -> if (it.detail != null) AutoRow(it.text, it.detail) else Text(it.text, style = Type.footnote, color = if (it.error) av.err else av.fgMuted)
         is Item.Step -> if (it.use.name == ALARM_TOOL) AlarmCard(it, !settled) else StepRow(it, cwd, settled)
         is Item.File -> if (it.error != null) FileCard(hub, it, cwd)
             else if (isRepoSpec(it.path, cwd)) {
@@ -464,6 +464,19 @@ internal fun ItemRow(hub: Hub, it: Item, chat: String, cwd: String, settled: Boo
         }
         is Item.Blocked -> BlockedCard(it.ev, hub)
         is Item.Review -> ReviewCard(it.ev, hub)
+    }
+}
+
+// A goal or loop round: the label opens the full prompt, like web's AutoRow.
+@Composable
+private fun AutoRow(label: String, prompt: String) {
+    var open by rememberSaveable { mutableStateOf(false) }
+    Column(Modifier.fillMaxWidth().clickable { open = !open }) {
+        Row(Modifier.heightIn(min = Tokens.touchSm), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Tokens.sp1)) {
+            AvIcon(if (open) "chevron-down" else "chevron-right", null, Tokens.sp5, tint = av.fgMuted)
+            Text(label, style = Type.footnote, color = av.fgMuted)
+        }
+        if (open) Text(prompt, Modifier.padding(top = Tokens.sp2), style = Type.footnote, color = av.fgMuted)
     }
 }
 
