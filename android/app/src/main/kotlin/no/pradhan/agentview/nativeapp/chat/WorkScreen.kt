@@ -14,10 +14,13 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
 import no.pradhan.agentview.nativeapp.app.Hub
 import no.pradhan.agentview.nativeapp.ui.EmptyState
 import no.pradhan.agentview.nativeapp.ui.PageHeader
 import no.pradhan.agentview.nativeapp.ui.Tokens
+import no.pradhan.agentview.nativeapp.ui.Type
+import no.pradhan.agentview.nativeapp.ui.av
 import no.pradhan.agentview.nativeapp.ui.select
 
 // One turn's tool calls and Claude's text between them, in the order they ran (web WorkPane.tsx). Opened from the tools button of a turn.
@@ -30,8 +33,16 @@ fun WorkScreen(hub: Hub, turn: String, onBack: () -> Unit, onOpenAgent: (String)
     val running by hub.store.state.select { it.session?.running ?: false }
     val hidden = remember(view, turn) { view.foldRows.firstNotNullOfOrNull { (it as? FoldRow.Fold)?.takeIf { f -> f.id == turn } }?.hidden ?: emptyList() }
     val prompt = remember(view, turn) { (view.items.firstOrNull { it.id == turn } as? Item.User)?.text?.let(::firstLine) ?: "" }
+    val waiting by hub.store.state.select { it.pending.isNotEmpty() }
+    val last = remember(view, turn) { view.items.lastOrNull { it is Item.User }?.id == turn }
+    val (word, tone) = when {
+        last && waiting -> "Needs input" to av.warn
+        last && running -> "Working" to av.accentText
+        else -> "Done" to av.ok
+    }
     Column(Modifier.fillMaxSize()) {
-        PageHeader("Tool calls", onBack, subtitle = if (prompt.isEmpty()) null else { { Text(prompt, maxLines = 1) } })
+        PageHeader(prompt.ifEmpty { "Tool calls" }, onBack, subtitle = { Text(word, color = tone, fontWeight = FontWeight.SemiBold, maxLines = 1) })
+        Text(if (word == "Done") "What Claude did" else "What Claude is doing", style = Type.label, color = av.fgMuted, modifier = Modifier.padding(horizontal = Tokens.listPad, vertical = Tokens.sp4))
         if (hidden.isEmpty()) {
             EmptyState("No tool calls", "This turn is not in the loaded chat, or it ran no tools", icon = "list-tree")
             return

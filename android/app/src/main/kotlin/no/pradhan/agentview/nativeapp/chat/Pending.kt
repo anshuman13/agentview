@@ -14,6 +14,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
@@ -272,6 +274,7 @@ private fun OptionRow(multi: Boolean, on: Boolean, label: String, description: S
             if (description.isNotEmpty()) Desc(description)
             if (preview != null) CodeBlock(preview, modifier = Modifier.heightIn(max = Tokens.scrollShort))
         }
+        if (!multi && !muted) Text("Pick", style = Type.label, color = if (on) av.bg else av.fg, modifier = Modifier.align(Alignment.CenterVertically).clip(RoundedCornerShape(Tokens.radiusPill)).background(if (on) av.fg else Color.Transparent).border(BorderStroke(Tokens.hairline, if (on) av.fg else av.border), RoundedCornerShape(Tokens.radiusPill)).padding(horizontal = Tokens.sp4, vertical = Tokens.sp1))
     }
 }
 

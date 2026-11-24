@@ -234,10 +234,48 @@ fun handoffText(sessionId: String) =
 // shared/quickReplies.ts: Duet's tap-to-answer replies, offered while the chat's last word is a finished question from the agent.
 val QUICK_REPLIES = listOf("Yes, do that", "No, leave it", "Tell me more")
 
+private const val CHOICE_MAX = 48
+private val CHOICE_LEAD = Regex("^(should i|shall i|do you want me to|want me to|would you like me to|can i|could i|or should i|or)\\s+", RegexOption.IGNORE_CASE)
+
+private fun tidyChoice(s: String): String {
+    val t = s.replace(Regex("\\*\\*|__|`"), "").replace(Regex("[?.!,;:\\s]+$"), "").replace(Regex("^[\\s,]+"), "").replace(CHOICE_LEAD, "").trim()
+    return t.replaceFirstChar { it.uppercase() }
+}
+
+private fun fitsChoices(xs: List<String>) = xs.size in 2..4 && xs.all { it.isNotEmpty() && it.length <= CHOICE_MAX } && xs.toSet().size == xs.size
+
+private fun itemLabel(item: String): String {
+    val bold = Regex("^\\*\\*(.+?)\\*\\*").find(item)
+    return tidyChoice(bold?.groupValues?.get(1) ?: item.split(Regex(":\\s|\\s[-–]\\s"))[0])
+}
+
+// shared/quickReplies.ts questionChoices: the list right above the question, or the parts of an "A or B?" question.
+fun questionChoices(text: String): List<String> {
+    val lines = text.trim().split("\n")
+    val ask = lines.last().trim()
+    if (!ask.endsWith("?")) return emptyList()
+    val items = mutableListOf<String>()
+    for (i in lines.size - 2 downTo 0) {
+        val m = Regex("^\\s*(?:[-*•]|\\d+[.)])\\s+(.+)$").find(lines[i])
+        if (m != null) items.add(0, m.groupValues[1])
+        else if (lines[i].isNotBlank() || items.isNotEmpty()) break
+    }
+    if (items.isNotEmpty()) {
+        val labels = items.map(::itemLabel)
+        if (fitsChoices(labels)) return labels
+    }
+    val sentence = ask.split(Regex("(?<=[.!?])\\s+")).last()
+    val parts = sentence.split(Regex(",?\\s+or\\s+", RegexOption.IGNORE_CASE)).map(::tidyChoice)
+    return if (fitsChoices(parts)) parts else emptyList()
+}
+
 fun quickReplies(events: List<ChatEvent>): List<String> {
     for (e in events.asReversed()) {
         if (e.kind == "user") return emptyList()
-        if (e.kind == "assistant" && e.parent == null) return if (!e.streaming && e.text.trim().endsWith("?")) QUICK_REPLIES else emptyList()
+        if (e.kind == "assistant" && e.parent == null) {
+            if (e.streaming || !e.text.trim().endsWith("?")) return emptyList()
+            return questionChoices(e.text).ifEmpty { QUICK_REPLIES }
+        }
     }
     return emptyList()
 }

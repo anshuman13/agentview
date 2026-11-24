@@ -41,7 +41,7 @@ export const Composer = memo(function Composer() {
   const label = useStore((s) => providerLabel(s.session.provider));
   const compacting = useStore((s) => s.session.compacting);
   const waiting = useStore((s) => s.pending.length > 0);
-  const asked = useStore((s) => quickReplies(s.events).length > 0);
+  const asked = useStore((s) => quickReplies(s.events).join('\n'));
   const { mode, modes } = useChatSettings();
   const [pick, setPick] = useState<Pick | null>(null);
   const [uses, setUses] = useState<Use[]>([]);
@@ -105,7 +105,7 @@ export const Composer = memo(function Composer() {
       {shared !== null && <SharedConfirm shared={shared} setShared={setShared} setText={setText} />}
       {asked && !running && !waiting && !typed && (
         <div className="cp-quick" role="group" aria-label="Quick replies">
-          {QUICK_REPLIES.map((t) => <Chip key={t} size="sm" onClick={() => reply(t)}>{t}</Chip>)}
+          {asked.split('\n').map((t) => <Chip key={t} size="sm" icon={QUICK_REPLIES.includes(t) ? undefined : 'reply'} onClick={() => reply(t)}>{t}</Chip>)}
         </div>
       )}
       <div

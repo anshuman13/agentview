@@ -340,6 +340,7 @@ function Option({ n, multi, on, label, description, preview, className, onPick }
         {description && <span className="pd-opt-desc">{description}</span>}
         {preview && <pre className="pd-preview">{preview}</pre>}
       </span>
+      {!multi && !className && <span className="pd-pick" aria-hidden>Pick</span>}
       <kbd>{n}</kbd>
     </button>
   );

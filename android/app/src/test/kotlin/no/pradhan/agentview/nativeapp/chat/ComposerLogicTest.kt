@@ -117,4 +117,12 @@ class ComposerLogicTest {
         assertEquals(emptyList<String>(), quickReplies(listOf(user, say("Done."))))
         assertEquals(emptyList<String>(), quickReplies(listOf(say("Should I?"), user)))
     }
+
+    @Test fun questionChoicesNameTheOptions() {
+        assertEquals(listOf("Keep the old one", "Remove it"), questionChoices("Should I keep the old one or remove it?"))
+        assertEquals(listOf("Push now", "Wait for review"), questionChoices("Done. Want me to push now, or wait for review?"))
+        assertEquals(listOf("Rebase", "Merge"), questionChoices("Options:\n\n- **Rebase**: cleaner history\n- **Merge**: keeps both\n\nWhich one?"))
+        assertEquals(listOf("Club seats", "Floor seats"), questionChoices("1. Club seats\n2. Floor seats\nWhich seats?"))
+        assertEquals(emptyList<String>(), questionChoices("Should I push it?"))
+    }
 }

@@ -249,9 +249,9 @@ fun Composer(hub: Hub, chatId: String, sessionId: String?, session: SessionInfo?
             s.set(TextFieldValue(r.first, TextRange(r.second)))
         } else if (ghost.isNotEmpty()) GhostRow(s.text.text, ghost) { val next = s.text.text + ghost; s.set(TextFieldValue(next, TextRange(next.length))) }
         StaleNote(hub)
-        val asked by hub.store.state.select { st -> quickReplies(st.events).isNotEmpty() }
-        if (asked && !running && !waiting && s.full.isEmpty()) FlowRow(Modifier.padding(horizontal = Tokens.sp2), horizontalArrangement = Arrangement.spacedBy(Tokens.sp3)) {
-            QUICK_REPLIES.forEach { t -> Chip(t, { s.set(TextFieldValue(t, TextRange(t.length))); s.submit(false, uploading) }) }
+        val asked by hub.store.state.select { st -> quickReplies(st.events) }
+        if (asked.isNotEmpty() && !running && !waiting && s.full.isEmpty()) FlowRow(Modifier.padding(horizontal = Tokens.sp2), horizontalArrangement = Arrangement.spacedBy(Tokens.sp3)) {
+            asked.forEach { t -> Chip(t, { s.set(TextFieldValue(t, TextRange(t.length))); s.submit(false, uploading) }, icon = if (t in QUICK_REPLIES) null else "reply") }
         }
         Column(Modifier.fillMaxWidth().clip(shape).background(c.raised).border(BorderStroke(Tokens.hairline, c.border), shape)) {
             if (s.uses.isNotEmpty()) FlowRow(Modifier.padding(start = Tokens.sp4, end = Tokens.sp4, top = Tokens.sp4), horizontalArrangement = Arrangement.spacedBy(Tokens.sp2)) {

@@ -18,10 +18,14 @@ export function WorkPane({ turn, onBack }: { turn: string; onBack: () => void })
   const prompt = items.find((it) => it.id === turn);
   const title = prompt?.kind === 'user' ? firstLine(prompt.text) : 'Tool calls';
   const hidden = fold?.kind === 'fold' ? fold.hidden : [];
+  const waiting = useStore((s) => s.pending.length > 0);
+  const last = items.filter((it) => it.kind === 'user').at(-1)?.id === turn;
+  const [word, cls] = last && waiting ? ['Needs input', 'input'] : last && running ? ['Working', 'working'] : ['Done', 'review'];
   return (
     <div className="page page-work">
-      <PhoneHeader title="Tool calls" sub={title} onBack={onBack} />
-      <div className="work-head desktop-only"><b>{title}</b><span>{plural(hidden.length, 'step')}</span></div>
+      <PhoneHeader title={title} sub={<span className={`ov-word ${cls}`}>{word}</span>} onBack={onBack} />
+      <div className="work-head desktop-only"><b>{title}</b><span className={`ov-word ${cls}`}>{word}</span><span>{plural(hidden.length, 'step')}</span></div>
+      <div className="work-label">{word === 'Done' ? 'What Claude did' : 'What Claude is doing'}</div>
       <div className="tr">
         <div className="tr-rows">
           {hidden.length === 0

@@ -58,6 +58,8 @@ button.pd-option {
 .pd-note { margin: var(--sp-2) 0 var(--sp-3) var(--sp-4); padding-left: var(--sp-4); border-left: 2px solid var(--accent); font-size: var(--fs-sm); color: var(--fg-muted); white-space: pre-wrap; }
 .pd-preview { margin-top: var(--sp-2); max-height: 160px; }
 .pd-option kbd { margin-top: 3px; }
+.pd-pick { flex: none; align-self: center; padding: var(--sp-1) var(--sp-4); border: 1px solid var(--border); border-radius: var(--radius-pill); font-size: var(--fs-sm); color: var(--fg); }
+.pd-option.on .pd-pick { background: var(--fg); border-color: var(--fg); color: var(--surface); }
 .pd-other .pd-opt-label { color: var(--fg-muted); }
 .pd-other-input {
   display: block; width: calc(100% - 16px); height: var(--size-2xl); margin: var(--sp-2) var(--sp-4) 0;
