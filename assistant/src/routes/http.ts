@@ -18,6 +18,12 @@ export class Reply {
     this.sent = true;
     this.settle(new Response(JSON.stringify(obj), { status, headers: { 'Content-Type': 'application/json', ...this.headers, ...headers } }));
   }
+
+  file(body: Blob) {
+    if (this.sent) return;
+    this.sent = true;
+    this.settle(new Response(body, { headers: { 'Content-Type': 'application/octet-stream', ...this.headers } }));
+  }
 }
 
 export type Ctx = {

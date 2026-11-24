@@ -10,7 +10,7 @@ cost nothing per month.
 | --- | --- |
 | Mac mini | Hub: the main SQLite database, the sync API and the scheduler, running as launchd services |
 | Phone | Full local copy in SQLite, the Assistant screen, voice capture transcribed on the phone |
-| Laptop | Client like the phone, keeping its copy in the browser's IndexedDB, plus a nightly copy of the mini's database as a backup |
+| Laptop | Client like the phone, keeping its copy in the browser's IndexedDB, plus copies of the mini's backups (database and Travel files) |
 
 Devices reach the mini over NetBird. The phone reads and writes its own copy and syncs when the mini is reachable,
 so a power cut, an outage or a reboot at home only pauses scans and sync.
@@ -22,7 +22,7 @@ so a power cut, an outage or a reboot at home only pauses scans and sync.
   (an edit is always timed after the value it replaces, so a device with a slow clock still wins). A device whose
   saved version is past the hub's, as after a restore from backup, pulls everything again, and so does the phone app
   when an update adds a synced table. The browser saves its version only together with the rows of that pull
-- Backups: nightly at 03:00, `VACUUM INTO` a dated file plus a tarball of `~/.agentview/travel`, kept 14 days in `~/.agentview/assistant/backups` on the mini only (no laptop copy or Time Machine yet)
+- Backups: at 07:00 and 19:00, `VACUUM INTO` a dated file plus a tarball of `~/.agentview/travel`, kept 14 days in `~/.agentview/assistant/backups`. The AgentView server on any Mac without the hub checks the hub every hour (`GET /backups`, `GET /backups/file`) and copies new ones to `~/.agentview/mini-backups`, also kept 14 days, so the laptop catches up whenever it is awake. No Time Machine.
 
 ## Profiles and accounts
 

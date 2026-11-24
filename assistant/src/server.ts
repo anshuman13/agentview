@@ -20,8 +20,9 @@ import { transcriptRoutes } from './routes/transcripts.js';
 import { wikiRoutes } from './routes/wiki.js';
 import { taskRoutes } from './routes/tasks.js';
 import { scanRoutes } from './routes/scan.js';
+import { backupRoutes } from './routes/backups.js';
 
-const routes: Routes = { ...syncRoutes, ...calendarRoutes, ...transcriptRoutes, ...wikiRoutes,...taskRoutes, ...scanRoutes() };
+const routes: Routes = { ...syncRoutes, ...calendarRoutes, ...transcriptRoutes, ...wikiRoutes,...taskRoutes, ...scanRoutes(), ...backupRoutes };
 
 const ownHost = (host = '') => allowedHostHeader(host) || host === new URL(HUB_URL).host;
 
