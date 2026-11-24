@@ -13,6 +13,7 @@ import { safeHref } from '../../ui/util';
 import { openMeeting, openTask } from '../view';
 import { useActions } from '../useActions';
 import { clock } from '../tasks/time';
+import { Check } from '../tasks/TaskCheck';
 import { todayTaskMenu } from '../../../../shared/actionMenu';
 
 const SHOWN = 7;
@@ -28,7 +29,7 @@ function TaskRow({ r, late, now }: { r: ItemRow; late: boolean; now: number }) {
     <Row plain className="ov-task" title={<button type="button" className="ov-hit" onClick={() => openTask(r)}>{r.title}</button>}
       meta={!late && due != null ? clock(due) : undefined}
       onLongPress={() => setMenu(true)}
-      leading={<IconButton icon="check" size="sm" label={`Mark ${r.title} done`} onClick={() => { haptic('success'); act.done(r); }} />}
+      leading={<Check row={r} />}
       trailing={(
         <>
           {late && <Badge status="late" reason="Overdue" />}
