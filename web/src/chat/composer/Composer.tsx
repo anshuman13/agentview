@@ -26,6 +26,8 @@ import { useSubmit } from './useSubmit';
 import { useUploads } from './useUploads';
 import { providerLabel } from '../../../../shared/providers';
 import { composerPlaceholder } from '../../../../shared/composerText';
+import { QUICK_REPLIES, quickReplies } from '../../../../shared/quickReplies';
+import { Chip } from '../../ui/Button';
 
 function placeholderFor(label: string, running: boolean, waiting: boolean, compacting: boolean, hasUses: boolean, narrow: boolean) {
   const state = waiting ? 'waiting' : compacting ? 'compacting' : running ? 'running' : hasUses ? 'uses' : 'idle';
@@ -39,6 +41,7 @@ export const Composer = memo(function Composer() {
   const label = useStore((s) => providerLabel(s.session.provider));
   const compacting = useStore((s) => s.session.compacting);
   const waiting = useStore((s) => s.pending.length > 0);
+  const asked = useStore((s) => quickReplies(s.events).length > 0);
   const { mode, modes } = useChatSettings();
   const [pick, setPick] = useState<Pick | null>(null);
   const [uses, setUses] = useState<Use[]>([]);
@@ -89,6 +92,9 @@ export const Composer = memo(function Composer() {
   const [talking, setTalking] = useState(false);
   const [dictating, setDictating] = useState(false);
   useEffect(() => { if (talked) submit(false, true); }, [talked]);
+  const [quick, setQuick] = useState(0);
+  useEffect(() => { if (quick) submit(); }, [quick]);
+  const reply = (t: string) => { applyFull(t); setQuick((n) => n + 1); };
 
   useComposerEvents({ ta, wantCaret, setText, setUses, sendBuild, setPick, root, canEffort });
 
@@ -97,6 +103,11 @@ export const Composer = memo(function Composer() {
   return (
     <div ref={root} className="cp" data-mode={mode}>
       {shared !== null && <SharedConfirm shared={shared} setShared={setShared} setText={setText} />}
+      {asked && !running && !waiting && !typed && (
+        <div className="cp-quick" role="group" aria-label="Quick replies">
+          {QUICK_REPLIES.map((t) => <Chip key={t} size="sm" onClick={() => reply(t)}>{t}</Chip>)}
+        </div>
+      )}
       <div
         ref={ac.card}
         className={`cp-card${ac.shell ? ' shell' : ''}${narrow ? ' pill' : ''}${narrow && multi ? ' multi' : ''}`}

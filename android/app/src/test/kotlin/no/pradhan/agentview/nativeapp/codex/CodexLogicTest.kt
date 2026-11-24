@@ -331,9 +331,9 @@ class CodexLogicTest {
         assertNull(newPage("  ", "Pages", 1, WORK, NOW))
     }
 
-    @Test fun runningChatsListWaitingBeforeRunningAndSkipsStalled() {
-        val live = listOf(LiveChat("a", running = true), LiveChat("b", pending = 1), LiveChat("c", running = true, stalled = true), LiveChat("d"), LiveChat("e", failed = true))
-        assertEquals(listOf("b", "a"), runningChats(live).map { it.id })
+    @Test fun agentGroupsPutInputBeforeWorkingAndSkipStalledAndShown() {
+        val live = listOf(LiveChat("a", running = true), LiveChat("b", pending = 1), LiveChat("c", running = true, stalled = true), LiveChat("d"), LiveChat("e", failed = true), LiveChat("f", running = true))
+        assertEquals(listOf("Needs input" to listOf("b"), "Working" to listOf("a")), agentGroups(live, emptyMap(), "f").map { (g, c) -> g.label to c.map { it.id } })
     }
 
     @Test fun deletesOnSwipePastTheThreshold() {

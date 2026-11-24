@@ -35,3 +35,13 @@ fun appCounts(chats: List<CountChat>, viewing: String, attention: Int, mcp: List
         mcp = McpCounts(servers.count { it.status == "connected" }, servers.size, servers.count { it.status in MCP_BAD }),
     )
 }
+
+enum class AgentGroup(val label: String) { Input("Needs input"), Working("Working"), Review("Ready for review") }
+
+// shared/counts.ts agentGroup: Duet's task groups for live chats.
+fun agentGroup(c: CountChat) = when {
+    c.waits -> AgentGroup.Input
+    c.tone == ChatTone.Running -> AgentGroup.Working
+    c.state == ChatState.Done -> AgentGroup.Review
+    else -> null
+}

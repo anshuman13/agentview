@@ -201,9 +201,7 @@ function Ask({ row, onAsk }: { row: ItemRow; onAsk: (r: ItemRow) => void }) {
       title={row.title}
       meta={<>{row.people || (row.source === 'gmail' ? 'Gmail' : 'Slack')} · {ago(reviewedSince(row))}{row.snoozed_until != null && ' · Snoozed'}{isFaq(row) && ' · FAQ'}</>}
       actions={<>
-        {has
-          ? <Button size="sm" icon={busy ? 'loading' : error ? 'refresh' : primary === 'Approve' ? 'check' : 'send'} disabled={busy} onMouseDown={(e) => e.preventDefault()} onClick={() => void send()}>{error ? 'Retry' : primary}</Button>
-          : row.source_url && <Button size="sm" icon="link" onClick={open}>Open</Button>}
+        {!has && row.source_url && <Button size="sm" icon="link" onClick={open}>Open</Button>}
         <span className="ov-more">
           <IconButton ref={more} size="sm" icon="kebab-horizontal" label="More" aria-haspopup="menu" aria-expanded={menu} onClick={() => setMenu(!menu)} />
           {menu && (
@@ -219,9 +217,21 @@ function Ask({ row, onAsk }: { row: ItemRow; onAsk: (r: ItemRow) => void }) {
         {quote && <span className="ov-ask-quote">{quote}</span>}
         {status === 'Needs you' ? <Badge status="waiting" label="Needs you" /> : showStatus && <span className={status === 'Reply ready' ? 'ov-ask-ready' : undefined}>{status}</span>}
         {steps.map((st, i) => <span key={i} className={st.done ? 'ov-ask-step' : 'ov-ask-step ov-ask-wait'}>{st.done && <Icon name="check" small />}{st.label}</span>)}
-        {has && editing
-          ? <textarea className="ov-ask-edit" autoFocus rows={3} value={text} aria-label="Reply draft" onChange={(e) => setText(e.target.value)} onBlur={keep} />
-          : drafted(row) && <span className="ov-ask-draft clamp">{row.draft}</span>}
+        {drafted(row) && (
+          <div className="ov-mail">
+            <span className="ov-mail-line"><b>To</b>{row.people || (row.source === 'gmail' ? 'Gmail' : 'Slack')}</span>
+            <span className="ov-mail-line"><b>Re</b>{row.title}</span>
+            {has && editing
+              ? <textarea className="ov-ask-edit" autoFocus rows={3} value={text} aria-label="Reply draft" onChange={(e) => setText(e.target.value)} onBlur={keep} />
+              : <span className="ov-ask-draft clamp">{row.draft}</span>}
+            {has && (
+              <span className="ov-mail-foot" onClick={(e) => e.stopPropagation()}>
+                <Button size="sm" disabled={busy} onClick={() => { haptic('tap'); act.snoozeAsk(row, snoozeOptions(Date.now(), row.profile)[0].at); }}>Not now</Button>
+                <Button size="sm" variant="primary" icon={busy ? 'loading' : error ? 'refresh' : primary === 'Approve' ? 'check' : 'send'} disabled={busy} onMouseDown={(e) => e.preventDefault()} onClick={() => void send()}>{error ? 'Retry' : primary}</Button>
+              </span>
+            )}
+          </div>
+        )}
         {history && row.people && <HistoryLines data={data} error={historyError} who={row.people} retry={loadLines} />}
         {error && <span className="ov-ask-err">Not sent: {error}</span>}
       </div>

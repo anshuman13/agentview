@@ -36,7 +36,7 @@ const task = (id: string, title: string, due: number | null) => ({ id, profile: 
 const meeting = (id: string, title: string, start: number) => ({ id: `cal:${id}`, profile: 'work', title, starts_at: start, ends_at: start + 1800000, room: 'Room 4', people: 'Ada, Bo' }) as unknown as Meeting;
 
 const render = (over: { next?: Meeting; meetingsToday?: Meeting[]; overdue?: ItemRow[]; doneToday?: ItemRow[]; later?: ItemRow[]; nextLater?: Meeting }, dueToday: ItemRow[] = []) => {
-  const s = { next: undefined, meetingsToday: [], overdue: [], doneToday: [], later: [], nextLater: undefined, ...over };
+  const s = { next: undefined, meetingsToday: [], overdue: [], today: [], doneToday: [], later: [], nextLater: undefined, ...over };
   return renderToStaticMarkup(<Overview s={s as never} dueToday={dueToday} onPrep={() => {}} />);
 };
 

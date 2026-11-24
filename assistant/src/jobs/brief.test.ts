@@ -25,7 +25,7 @@ function seed() {
 
 it('lists meetings, free time, tasks, Slack asks, my promises and actions left from Friday', () => {
   const b = buildBrief(seed(), 'work', at(MON, 8));
-  expect(b.title).toBe('Today: 2 meetings, 2 tasks');
+  expect(b.title).toBe('Morning. 2 meetings and 2 tasks today, 2 need you');
   expect(b.text.split('\n')).toEqual([
     'Meetings · 2',
     '09:00-09:30 Standup',
@@ -55,7 +55,7 @@ it('lists tasks without a due time after dated ones and never marks them overdue
   item.run('n1', 'No date', null);
   item.run('n2', 'Empty date', '');
   const b = buildBrief(db, 'work', at(MON, 8));
-  expect(b.title).toBe('Today: 2 meetings, 2 tasks');
+  expect(b.title).toBe('Morning. 2 meetings and 2 tasks today, 2 need you');
   expect(b.text).toContain('Tasks · 2 due today, 3 undated, 1 overdue');
   expect(b.text).toContain('- Call bank\n- Share the plan\n- No date\n- Empty date');
 });
@@ -78,7 +78,7 @@ it('stores and pushes once per profile and weekday morning', async () => {
   expect(await runBriefs(db, at(MON, 7, 59), push)).toEqual([]);
   expect(await runBriefs(db, at(MON, 8), push)).toEqual(['work']);
   expect(await runBriefs(db, at(MON, 8, 1), push)).toEqual([]);
-  expect(pushed).toEqual(['Today: 2 meetings, 2 tasks']);
+  expect(pushed).toEqual(['Morning. 2 meetings and 2 tasks today, 2 need you']);
   expect(db.prepare('SELECT profile, kind FROM briefs WHERE id = ?').all(briefId(at(MON, 8)))).toEqual([{ profile: 'work', kind: 'morning' }]);
   expect(await runBriefs(seed(), at(MON + 1, 17), push)).toEqual([]);
   expect(await runBriefs(seed(), at(MON - 2, 8), push)).toEqual([]);
@@ -162,7 +162,7 @@ it('stores only the title line as text and the note as the first row, and keeps 
   const push = async () => (pushed++, true);
   await runBriefs(db, at(MON, 8), push);
   const stored = () => db.prepare('SELECT text, rows FROM briefs WHERE id = ?').get(briefId(at(MON, 8))) as { text: string; rows: string };
-  expect(stored().text).toBe('Today: 2 meetings, 2 tasks');
+  expect(stored().text).toBe('Morning. 2 meetings and 2 tasks today, 2 need you');
   expect(JSON.parse(stored().rows)[0]).toEqual({ section: 'note', title: 'start with the invoice', meta: 'Yesterday you noted', item: '', meeting: '' });
   const before = stored();
   note(db, 'wrapup:mon', 'later', at(MON, 0));

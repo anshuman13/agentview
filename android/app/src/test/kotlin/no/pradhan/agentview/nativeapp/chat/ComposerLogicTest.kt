@@ -108,4 +108,13 @@ class ComposerLogicTest {
         assertEquals("tomorrow", laterDay(9, 30, now, java.time.ZoneId.of("UTC")))
         assertEquals("/loop at 22:00 fix it", loopAt("22:00", "fix it"))
     }
+
+    @Test fun offersQuickRepliesOnlyAfterAFinishedQuestion() {
+        fun say(t: String, streaming: Boolean = false) = no.pradhan.agentview.nativeapp.net.ChatEvent(t, "assistant", t, streaming)
+        val user = no.pradhan.agentview.nativeapp.net.ChatEvent("u", "user", "hi")
+        assertEquals(QUICK_REPLIES, quickReplies(listOf(user, say("Should I push it? "))))
+        assertEquals(emptyList<String>(), quickReplies(listOf(user, say("Should I push it?", true))))
+        assertEquals(emptyList<String>(), quickReplies(listOf(user, say("Done."))))
+        assertEquals(emptyList<String>(), quickReplies(listOf(say("Should I?"), user)))
+    }
 }

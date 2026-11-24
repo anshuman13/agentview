@@ -93,6 +93,8 @@ export function buildBrief(db: Database, profile: Profile, now = Date.now()): Br
   if (said.length) lines.push('', `You said · ${said.length}`, ...top(said));
   if (left.length) lines.push('', `Still open from last workday · ${left.length}`, ...top(left, (a) => `${a.meeting ? ` (${a.meeting})` : ''}${a.status === 'suggested' ? ' (yours?)' : ''}`));
   const orUntitled = (r: Row) => r.title ?? 'Untitled';
+  // Duet's lock-screen line counts what waits on me: overdue and at-risk tasks, late promises and Slack asks.
+  const needs = late + risk + promises + asks.length;
   const rows = [
     ...section('note', noted ? [{ title: noted.text, meta: 'Yesterday you noted' }] : []),
     ...section('meetings', meetings.map((m) => ({ title: m.title ?? 'Meeting', meta: span(m), meeting: m.id }))),
@@ -108,7 +110,7 @@ export function buildBrief(db: Database, profile: Profile, now = Date.now()): Br
     ...section('left', left.map((a) => ({ title: orUntitled(a), item: a.id, meta: [a.meeting, a.status === 'suggested' ? 'yours?' : ''].filter(Boolean).join(', ') }))),
   ];
   return {
-    title: `Today: ${plural(meetings.length, 'meeting')}, ${plural(due, 'task')}`,
+    title: `Morning. ${plural(meetings.length, 'meeting')} and ${plural(due, 'task')} today${needs ? `, ${needs} ${needs === 1 ? 'needs' : 'need'} you` : ''}`,
     text: lines.join('\n'),
     rows,
     empty: !meetings.length && !due && !risk && !promises && !slack.length && !left.length,

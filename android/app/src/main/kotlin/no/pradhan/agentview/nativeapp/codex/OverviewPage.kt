@@ -32,7 +32,16 @@ import androidx.compose.ui.text.input.ImeAction
 import kotlinx.coroutines.flow.update
 import no.pradhan.agentview.nativeapp.app.DeepLink
 import no.pradhan.agentview.nativeapp.app.countChat
-import no.pradhan.agentview.nativeapp.app.waits
+import no.pradhan.agentview.nativeapp.app.AgentGroup
+import no.pradhan.agentview.nativeapp.app.agentGroup
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.withStyle
+import no.pradhan.agentview.nativeapp.ui.av
+import no.pradhan.agentview.nativeapp.ui.Type
+import no.pradhan.agentview.nativeapp.ui.AvIcon
+import androidx.compose.material3.Text
 import no.pradhan.agentview.nativeapp.chat.AttachButton
 import no.pradhan.agentview.nativeapp.chat.ChatTone
 import no.pradhan.agentview.nativeapp.chat.Dictation
@@ -125,16 +134,19 @@ fun OverviewPage(hub: Hub, st: CodexState, profile: String?, now: Long, actions:
     var all by remember { mutableStateOf(false) }
     var plan by remember { mutableStateOf<List<PlanSlot>?>(null) }
     val live by hub.store.state.select { it.live }
-    val running = remember(live) { runningChats(live) }
-    val counts by hub.counts.collectAsState()
+    val seen by hub.workspace.select { it.seen }
+    val shown by hub.store.state.select { it.shownId }
+    val groups = remember(live, seen, shown) { agentGroups(live, seen, shown) }
     val failedCalendars = remember(st.scans) { failedCalendars(st.scans) }
     LazyColumn(Modifier.fillMaxSize()) {
         if (failedCalendars.isNotEmpty()) item {
             Group { failedCalendars.forEachIndexed { i, h -> if (i > 0) Hairline(); ListRow(calendarFailText(h, failedCalendars.size), h.ok?.let { "Last synced ${clock(it)}" } ?: "Never synced") } }
         }
+        morningSection(hub, st, profile, now)
         item { UpNextSection(hub, st, d, now, actions, onOpen, onNeeds, onAdd, onMeeting, onNotes) }
-        if (running.isNotEmpty()) runningSection(running, counts.running + counts.waiting) { hub.link.value = DeepLink(chat = it) }
+        agentSections(groups) { hub.link.value = DeepLink(chat = it) }
         if (d.rows.isNotEmpty()) todaySection(d, now, actions, all, { all = true }, onOpen, onMeeting)
+        ideasSection(hub, st, d, now)
         planDaySection(d, plan, { plan = it }, now, actions)
         if (goals.isNotEmpty()) goalsSection(st, profile, goals, free, onGoals)
         item { androidx.compose.foundation.layout.Spacer(Modifier.padding(bottom = Tokens.fab + Tokens.sp20)) }
@@ -169,20 +181,78 @@ private fun UpNextSection(hub: Hub, st: CodexState, d: OverviewData, now: Long, 
     }
 }
 
-// Chats that run or wait on me, waiting ones first.
-fun runningChats(live: List<LiveChat>) = live.filter { c -> countChat(c, emptyMap()).let { it.waits || it.tone == ChatTone.Running } }.sortedByDescending { countChat(it, emptyMap()).waits }
+// Today's morning brief, as Duet writes it: the headline, then one "Topic: status" line each; Close hides it for the day.
+private fun LazyListScope.morningSection(hub: Hub, st: CodexState, profile: String?, now: Long) {
+    item(key = "morning") {
+        var hidden by remember { mutableStateOf(hub.prefs.getStringSet(MORNING_HIDDEN, emptySet()).orEmpty()) }
+        val all = remember(st.briefs, profile, now / 60_000) { morningBriefs(st.briefs, profile, now) }
+        for (b in all.filter { it.key !in hidden }) {
+            Group {
+                Column(Modifier.padding(start = Tokens.sp8, end = Tokens.sp2, top = Tokens.sp2, bottom = Tokens.sp6)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text((if (profile == null) "${if (b.profile == "work") "Work" else "Personal"} · " else "") + (b.str("text") ?: ""), style = Type.headline, color = av.fg, modifier = Modifier.weight(1f))
+                        IconBtn("close", "Close brief", {
+                            hidden = all.map { it.key }.filter { it in hidden }.toSet() + b.key
+                            hub.prefs.edit().putStringSet(MORNING_HIDDEN, hidden).apply()
+                        })
+                    }
+                    for (l in morningLines(parseMorningRows(b.str("rows")))) Text(
+                        buildAnnotatedString { withStyle(SpanStyle(color = av.fg, fontWeight = FontWeight.SemiBold)) { append("${l.label}: ") }; append(l.text) },
+                        style = Type.subheadline, color = av.fgMuted, modifier = Modifier.padding(end = Tokens.sp6, top = Tokens.sp1),
+                    )
+                }
+            }
+        }
+    }
+}
 
-private fun LazyListScope.runningSection(chats: List<LiveChat>, count: Int, onOpen: (String) -> Unit) {
-    item { SectionHeader("Running", count = "$count") }
-    item {
+private const val MORNING_HIDDEN = "morning:hidden"
+private const val IDEAS_HIDDEN = "ideas:hidden"
+
+// Muse's Ideas: up to three open tasks an agent could take on, each as "I can help: …"; Start asks Codex about it, Not now hides it.
+private fun LazyListScope.ideasSection(hub: Hub, st: CodexState, d: OverviewData, now: Long) {
+    item(key = "ideas") {
+        var hidden by remember { mutableStateOf(hub.prefs.getStringSet(IDEAS_HIDDEN, emptySet()).orEmpty()) }
+        val ideas = remember(d.s, hidden) { pickIdeas(d.s.overdue + d.s.today + d.s.later, hidden) }
+        if (ideas.isEmpty()) return@item
+        val start = { r: Row -> hub.askCodex(askIn(st, "Help me with this item.", r.profile, r), r.profile) }
+        SectionHeader("Ideas")
         Group {
-            chats.forEachIndexed { i, c ->
+            ideas.forEachIndexed { i, r ->
                 if (i > 0) Hairline()
-                val waits = countChat(c, emptyMap()).waits
-                val doing = if (waits) "Waiting for you" else c.status.ifBlank { "Working" }
-                ListRow(c.title.ifBlank { UNTITLED }, "${folderName(c.cwd)} · $doing", onClick = { onOpen(c.id) }, trailing = {
-                    if (waits) Badge("Needs you", BadgeTone.Waiting) else Badge("Running", BadgeTone.Running)
+                val due = r.at
+                val meta = when { due == null -> "No due date"; due < now -> "Overdue · was due ${whenText(due, now)}"; else -> "Due ${whenText(due, now)}" }
+                ListRow(ideaTitle(r.title ?: ""), meta, leading = { AvIcon("lightbulb", null, Tokens.iconMd, tint = av.fgMuted) }, onClick = { start(r) }, trailing = {
+                    if (!hub.readOnly) Button("Start", { start(r) }, variant = ButtonVariant.Tinted, size = ButtonSize.Sm)
+                    IconBtn("close", "Not now", {
+                        hidden = hidden + r.key
+                        hub.prefs.edit().putStringSet(IDEAS_HIDDEN, hidden.toList().takeLast(50).toSet()).apply()
+                    })
                 })
+            }
+        }
+    }
+}
+
+// Live chats in Duet's groups, in AgentGroup order; the chat on screen is left out.
+fun agentGroups(live: List<LiveChat>, seen: Map<String, Long>, viewing: String = "") =
+    live.filter { it.id != viewing }.mapNotNull { c -> agentGroup(countChat(c, seen))?.let { it to c } }.groupBy({ it.first }, { it.second }).toSortedMap().toList()
+
+private fun LazyListScope.agentSections(groups: List<Pair<AgentGroup, List<LiveChat>>>, onOpen: (String) -> Unit) {
+    for ((g, chats) in groups) {
+        item(key = "agents:${g.name}") { SectionHeader(g.label, count = "${chats.size}") }
+        item(key = "agents:${g.name}:rows") {
+            val tone = when (g) { AgentGroup.Input -> av.warn; AgentGroup.Working -> av.accentText; AgentGroup.Review -> av.ok }
+            Group {
+                chats.forEachIndexed { i, c ->
+                    if (i > 0) Hairline()
+                    val detail = if (g == AgentGroup.Input) "Waiting for you" else c.status.ifBlank { if (g == AgentGroup.Working) "Working" else "Finished" }
+                    val meta = buildAnnotatedString {
+                        withStyle(SpanStyle(color = tone, fontWeight = FontWeight.SemiBold)) { append(g.label) }
+                        append(" · $detail · ${folderName(c.cwd)}")
+                    }
+                    ListRow(c.title.ifBlank { UNTITLED }, meta, onClick = { onOpen(c.id) })
+                }
             }
         }
     }

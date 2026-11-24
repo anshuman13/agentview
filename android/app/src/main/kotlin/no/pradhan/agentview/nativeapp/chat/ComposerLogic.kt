@@ -230,3 +230,14 @@ fun draftKey(chat: String, sessionId: String?) = sessionId?.ifEmpty { null } ?: 
 fun handoffText(sessionId: String) =
     "Summarise @chat:$sessionId so we can continue its work in this chat: the goal, decisions made, what is done, what is still open, and the files and commands that matter. At most 15 lines. Then wait for my next message."
 
+
+// shared/quickReplies.ts: Duet's tap-to-answer replies, offered while the chat's last word is a finished question from the agent.
+val QUICK_REPLIES = listOf("Yes, do that", "No, leave it", "Tell me more")
+
+fun quickReplies(events: List<ChatEvent>): List<String> {
+    for (e in events.asReversed()) {
+        if (e.kind == "user") return emptyList()
+        if (e.kind == "assistant" && e.parent == null) return if (!e.streaming && e.text.trim().endsWith("?")) QUICK_REPLIES else emptyList()
+    }
+    return emptyList()
+}

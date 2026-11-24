@@ -37,3 +37,13 @@ export function appCounts(i: CountsInput) {
 }
 
 export type AppCounts = ReturnType<typeof appCounts>;
+
+export type AgentGroup = 'input' | 'working' | 'review';
+
+// Duet's task groups for live chats: waiting on me, still running, or finished since I last looked.
+export const AGENT_GROUPS: [AgentGroup, string][] = [['input', 'Needs input'], ['working', 'Working'], ['review', 'Ready for review']];
+
+export const agentGroup = (c: Pick<CountChat, 'tone' | 'runNeeds' | 'state'>): AgentGroup | null => {
+  const b = chatBucket(c);
+  return b === 'waiting' ? 'input' : b === 'running' ? 'working' : c.state === 'done' ? 'review' : null;
+};

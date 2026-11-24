@@ -3,6 +3,17 @@ package no.pradhan.agentview.nativeapp.codex
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row as LRow
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.withStyle
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -109,8 +120,7 @@ private fun AskRow(row: Row, now: Long, actions: TaskActions, replies: ReplyOps,
             row.title ?: "", listOfNotNull(row.people?.ifEmpty { null } ?: if (row.source == "gmail") "Gmail" else "Slack", agoShort(row.statusTime, now), if (row.snoozedUntil != null) "Snoozed" else null, if (isFaq(row)) "FAQ" else null).joinToString(" · "),
             onClick = onOpen,
             trailing = {
-                if (has) Button(if (error.isNotEmpty()) "Retry" else primary, { send() }, variant = ButtonVariant.Plain, size = ButtonSize.Sm, enabled = !busy)
-                else if (link != null) Button("Open", { uri.openUri(link) }, variant = ButtonVariant.Plain, size = ButtonSize.Sm)
+                if (!has && link != null) Button("Open", { uri.openUri(link) }, variant = ButtonVariant.Plain, size = ButtonSize.Sm)
                 MoreButton { close ->
                     askMenu(row).forEach { k ->
                         when (k) {
@@ -139,12 +149,15 @@ private fun AskRow(row: Row, now: Long, actions: TaskActions, replies: ReplyOps,
                     Text(st.label, style = Type.meta, color = if (st.done) av.metaFg else av.fg, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
             }
-            when {
-                has && editing -> {
+            if (drafted(row)) MailCard(row) {
+                if (has && editing) {
                     TextField(text, { text = it }, minLines = 3, placeholder = "Reply draft")
                     Button("Done", { keep() }, Modifier.padding(top = Tokens.sp2), variant = ButtonVariant.Plain, size = ButtonSize.Sm)
+                } else Text(row.draft ?: "", style = Type.subheadline, color = av.fg, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                if (has) LRow(Modifier.fillMaxWidth().padding(top = Tokens.sp2), horizontalArrangement = Arrangement.spacedBy(Tokens.sp3, Alignment.End)) {
+                    Button("Not now", { actions.snoozeAsk(row, snoozeOptions(now, row.profile).first().at) }, size = ButtonSize.Sm, enabled = !busy)
+                    Button(if (error.isNotEmpty()) "Retry" else primary, { send() }, variant = ButtonVariant.Filled, size = ButtonSize.Sm, enabled = !busy)
                 }
-                drafted(row) -> Text(row.draft ?: "", style = Type.subheadline, color = av.fgMuted, maxLines = 2, overflow = TextOverflow.Ellipsis)
             }
             if (showHistory && row.people != null) {
                 val h = history
@@ -157,5 +170,21 @@ private fun AskRow(row: Row, now: Long, actions: TaskActions, replies: ReplyOps,
             }
             if (error.isNotEmpty()) Text("Not sent: $error", style = Type.meta, color = av.err)
         }
+    }
+}
+
+// Duet's email approval card: To and Re lines over the draft, with its buttons under it.
+@Composable
+private fun MailCard(row: Row, content: @Composable () -> Unit) {
+    val shape = RoundedCornerShape(Tokens.shapeMd)
+    Column(
+        Modifier.padding(top = Tokens.sp2).fillMaxWidth().clip(shape).border(BorderStroke(Tokens.hairline, av.border), shape).background(av.bg).padding(horizontal = Tokens.sp6, vertical = Tokens.sp4),
+        verticalArrangement = Arrangement.spacedBy(Tokens.sp2),
+    ) {
+        listOf("To" to (row.people?.ifEmpty { null } ?: if (row.source == "gmail") "Gmail" else "Slack"), "Re" to (row.title ?: "")).forEach { (k, v) ->
+            Text(buildAnnotatedString { withStyle(SpanStyle(fontWeight = FontWeight.SemiBold)) { append("$k  ") }; append(v) }, style = Type.subheadline, color = av.fgMuted, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }
+        HorizontalDivider(color = av.border, thickness = Tokens.hairline)
+        content()
     }
 }

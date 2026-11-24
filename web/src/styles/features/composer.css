@@ -123,3 +123,4 @@
   .cp-add > .icon-btn, .cp-row > :is(.voice:not(.cp-talk), .later) { width: var(--touch); height: var(--touch); border-radius: var(--radius-round); }
   .cp-add > .ui-menu { top: auto; right: auto; bottom: 100%; left: 0; white-space: nowrap; }
 }
+.cp-quick { display: flex; flex-wrap: wrap; gap: var(--sp-3); padding: 0 0 var(--sp-4); }
