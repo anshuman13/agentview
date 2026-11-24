@@ -1,6 +1,8 @@
 package no.pradhan.agentview.nativeapp.chat
 
+import android.app.Activity
 import android.content.Context
+import android.content.ContextWrapper
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Matrix
@@ -8,6 +10,7 @@ import android.media.ExifInterface
 import android.net.Uri
 import android.provider.OpenableColumns
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Box
@@ -19,6 +22,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.FileProvider
 import androidx.lifecycle.viewModelScope
+import com.google.mlkit.vision.documentscanner.GmsDocumentScannerOptions
+import com.google.mlkit.vision.documentscanner.GmsDocumentScanning
+import com.google.mlkit.vision.documentscanner.GmsDocumentScanningResult
 import java.io.ByteArrayOutputStream
 import java.io.File
 import kotlinx.coroutines.Dispatchers
@@ -85,12 +91,15 @@ fun AttachButton(hub: Hub, onUploading: (Int) -> Unit, choose: Boolean = true, o
 
 class Attach(val takePhoto: () -> Unit, val choosePhoto: () -> Unit, val chooseFile: () -> Unit)
 
+private tailrec fun Context.activity(): Activity? = this as? Activity ?: (this as? ContextWrapper)?.baseContext?.activity()
+
 @Composable
 // send uploads the bytes and returns what onPath gets, by default the chat's [Image: path] or [File: path] marker.
 fun rememberAttach(
     hub: Hub,
     onUploading: (Int) -> Unit,
     send: suspend (name: String, mime: String, bytes: ByteArray) -> String? = { n, m, b -> hub.attach(n, m, b)?.let { attachMark(m, it) } },
+    scan: Boolean = false,
     onPath: (String) -> Unit,
 ): Attach {
     val ctx = LocalContext.current
@@ -120,10 +129,36 @@ fun rememberAttach(
         if (ok) upload("camera.jpg", "image/jpeg") { shrunkJpeg(shot) }
     }
 
-    val takePhoto = {
+    val camShot = {
         shot.delete()
         runCatching { camera.launch(FileProvider.getUriForFile(ctx, "${ctx.packageName}.files", shot)) }
             .onFailure { hub.notice.value = "No camera app to take a photo" }
+        Unit
+    }
+
+    // Google's document scanner, as in Drive: finds the page edges, straightens it and cleans it up.
+    val scanner = rememberLauncherForActivityResult(ActivityResultContracts.StartIntentSenderForResult()) { res ->
+        val uri = GmsDocumentScanningResult.fromActivityResultIntent(res.data)?.pages?.firstOrNull()?.imageUri
+        if (res.resultCode != Activity.RESULT_OK || uri == null) return@rememberLauncherForActivityResult
+        upload("scan.jpg", "image/jpeg") {
+            shot.delete()
+            ctx.contentResolver.openInputStream(uri)?.use { i -> shot.outputStream().use { i.copyTo(it) } }
+            shrunkJpeg(shot)
+        }
+    }
+    val takePhoto = {
+        val act = ctx.activity()
+        if (!scan || act == null) camShot()
+        else GmsDocumentScanning.getClient(
+            GmsDocumentScannerOptions.Builder()
+                .setScannerMode(GmsDocumentScannerOptions.SCANNER_MODE_FULL)
+                .setResultFormats(GmsDocumentScannerOptions.RESULT_FORMAT_JPEG)
+                .setPageLimit(1)
+                .setGalleryImportAllowed(true)
+                .build(),
+        ).getStartScanIntent(act)
+            .addOnSuccessListener { scanner.launch(IntentSenderRequest.Builder(it).build()) }
+            .addOnFailureListener { camShot() }
         Unit
     }
 

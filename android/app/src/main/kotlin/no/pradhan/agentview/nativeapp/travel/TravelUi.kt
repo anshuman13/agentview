@@ -138,7 +138,7 @@ fun TravelScreen(hub: Hub, onBack: () -> Unit) {
         if (hub.readOnly) { hub.notice.value = READ_ONLY_SENT; null }
         else runCatching { hub.api.postBytes("/api/travel/receipt?name=${enc(name)}", mime, bytes, slow = true) }
             .onFailure { hub.notice.value = "Receipt not added: ${it.message}" }.getOrNull()
-    }) { body ->
+    }, scan = true) { body ->
         val r = protocolJson.decodeFromString(Receipt.serializer(), body)
         hub.notice.value = "Added to ${data?.trips?.firstOrNull { it.id == r.tripId }?.name ?: "a trip"}${if (r.read == "failed") ", could not read it" else ""}"
         reload()
@@ -206,7 +206,7 @@ private fun TripView(hub: Hub, trip: Trip, receipts: List<Receipt>, home: String
         if (hub.readOnly) { hub.notice.value = READ_ONLY_SENT; null }
         else runCatching { hub.api.postBytes("/api/travel/receipt?trip=${enc(trip.id)}&name=${enc(name)}", mime, bytes) }
             .onFailure { hub.notice.value = "Could not add $name: ${it.message}" }.getOrNull()
-    }) { reload() }
+    }, scan = true) { reload() }
     val view = { path: String -> runCatching { ctx.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(hub.api.link(path)))) }.onFailure { hub.notice.value = "No app to open it" } }
     val summary = { (listOf("${trip.name} (${tripDates(trip)})") + sorted.map { "- ${receiptMeta(it)} ${it.merchant}".trim() } + "Total: ${totalsText(receipts).ifEmpty { "none" }}").joinToString("\n") }
     Column(Modifier.fillMaxSize()) {
