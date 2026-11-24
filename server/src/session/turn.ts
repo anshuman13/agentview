@@ -7,6 +7,7 @@ import { goalMet as goalMetText, skipText } from '../../../shared/goalText.js';
 import type { Repeat } from '../../../shared/protocol.js';
 import type { TurnResult } from '../agent/types.js';
 import { goalMet } from './repeat.js';
+import type { UserEvent } from './messageQueue.js';
 import { roundResult } from './runs.js';
 import type { AgentSession } from './session.js';
 
@@ -29,6 +30,8 @@ export class Turn {
   private lastCost = 0;
   // A message sent mid-turn missed the turn's last step, so the CLI starts a turn for it.
   private expectTurn = false;
+  // The waiting message Send now stopped the turn for, until that turn's result arrives.
+  sendingNow: string | undefined;
 
   constructor(private s: AgentSession) {}
 
@@ -71,6 +74,13 @@ export class Turn {
 
   result(r: TurnResult) {
     const s = this.s;
+    // Send now stopped this turn on purpose: an error is the stop itself, and the message it cancelled is sent again.
+    const sentNow = this.sendingNow;
+    this.sendingNow = undefined;
+    const stopped = Boolean(sentNow) && !r.ok;
+    if (stopped) r = { ...r, isError: false, ok: true, text: '' };
+    const cancelled = stopped ? s.waiting.pending.find((e) => e.id === sentNow) : undefined;
+    if (cancelled) s.waiting.pending = s.waiting.pending.filter((e) => e !== cancelled);
     // Before a switch to the other account the messages stay held, since the CLI that has them is replaced.
     if (s.waiting.pending.length && !s.usage.reset) this.releaseHeld();
     this.lastResult = r.ok ? r.text : '';
@@ -85,6 +95,7 @@ export class Turn {
     this.reportTurn = undefined;
     s.pushEvent({ id: r.id, kind: 'result', text: r.text, costUsd: r.costUsd, isError: r.isError, at: Date.now(), model: s.state.session.model });
     s.links.record(r, report);
+    if (cancelled) this.resend(cancelled);
     if (repeat?.goal && met) {
       const text = goalMetText(repeat.round);
       s.repeater.set(null, text);
@@ -105,6 +116,15 @@ export class Turn {
     const note = { ...roundResult(text, { failed: this.lastError, met }), goal, ends: met || this.s.repeater.ends() };
     if (report && !this.lastError && !met) note.outcome = 'progress';
     return note;
+  }
+
+  // The stop ended the turn with the waiting message in it unanswered, so it goes again as the next prompt, below the stopped turn.
+  private resend(ev: UserEvent) {
+    const s = this.s;
+    ev.queued = false;
+    ev.at = Date.now();
+    s.log.moveToEnd([ev]);
+    s.enqueue(ev.text, ev.id);
   }
 
   private releaseHeld() {

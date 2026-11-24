@@ -141,6 +141,21 @@ describe('AgentSession turns', () => {
     expect(s2.state.events.some((e) => e.id === 'q2')).toBe(false);
   });
 
+  it('Send now sends the message again when the stop cancels it, with no error line', async () => {
+    const { s, result } = fakeSession();
+    const send = vi.spyOn(s.driver, 'send');
+    s.sendPrompt('long task');
+    await s.queueNext('go now', 'q1');
+    await s.sendNow('q1');
+    send.mockClear();
+    result('r1', 'error_during_execution');
+    expect(send).toHaveBeenCalledWith('go now', 'q1');
+    expect(s.state.events.filter((e) => e.kind === 'result').at(-1)).toMatchObject({ isError: false });
+    expect(s.failed).toBe(false);
+    expect(s.state.session.running).toBe(true);
+    expect(s.state.events.at(-1)).toMatchObject({ id: 'q1', queued: false });
+  });
+
   it('Send now does not stop the turn that already read the message', async () => {
     const { s, handle, interrupt } = fakeSession();
     s.sendPrompt('long task');

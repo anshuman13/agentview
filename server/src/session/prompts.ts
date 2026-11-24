@@ -63,6 +63,7 @@ export class Prompts {
     if (!waiting.hasPending(id) || state.session.stopping) return;
     // Claude already has it, and stopping now would end the turn that answers it.
     if (this.s.driver.read?.(id)) return waiting.release();
+    this.s.turn.sendingNow = id;
     await stopper.stop();
   }
 
