@@ -43,12 +43,12 @@
 .tr-assistant .md code { font-size: 0.82em; }
 .tr-assistant .md :is(p, ul, ol, pre) { margin-bottom: var(--sp-5); }
 .tr-assistant .md > :last-child, .tr-assistant .md > .md-b:last-child > :last-child { margin-bottom: 0; }
-.tr-system { padding-left: var(--sp-12); font-size: var(--fs-sm); color: var(--fg-muted); }
+.tr-system { font-size: var(--fs-sm); color: var(--fg-muted); }
 .tr-system.err { color: var(--err); }
-.tr-auto { padding-left: var(--sp-12); font-size: var(--fs-sm); color: var(--fg-muted); cursor: pointer; }
-.tr-failed { display: flex; align-items: center; gap: var(--sp-4); padding-left: var(--sp-12); font-size: var(--fs-sm); color: var(--err); }
+.tr-auto { display: flex; align-items: center; gap: var(--sp-1); flex-wrap: wrap; font-size: var(--fs-sm); color: var(--fg-muted); cursor: pointer; }
+.tr-failed { display: flex; align-items: center; gap: var(--sp-4); font-size: var(--fs-sm); color: var(--err); }
 .tr-failed-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.tr-auto-text { margin-top: var(--sp-2); white-space: pre-wrap; color: var(--fg-muted); }
+.tr-auto-text { flex-basis: 100%; margin-top: var(--sp-2); white-space: pre-wrap; color: var(--fg-muted); }
 
 .tr-step {
   display: grid; grid-template-columns: 16px minmax(0, 1fr) auto auto; column-gap: var(--sp-4); align-items: center;

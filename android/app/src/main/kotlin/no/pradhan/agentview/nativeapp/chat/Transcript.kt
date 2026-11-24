@@ -446,7 +446,7 @@ internal fun ItemRow(hub: Hub, it: Item, chat: String, cwd: String, settled: Boo
             Markdown(it.text, Modifier.fillMaxWidth(), it.streaming, reading = true)
             if (!it.streaming && (answer || rewind != null)) ReplyActions(hub, if (answer) it.text.trim() else null, rewind)
         }
-        is Item.System -> Text(it.text, Modifier.padding(start = Tokens.sp12), style = Type.footnote, color = if (it.error) av.err else av.fgMuted)
+        is Item.System -> Text(it.text, style = Type.footnote, color = if (it.error) av.err else av.fgMuted)
         is Item.Step -> if (it.use.name == ALARM_TOOL) AlarmCard(it, !settled) else StepRow(it, cwd, settled)
         is Item.File -> if (it.error != null) FileCard(hub, it, cwd)
             else if (isRepoSpec(it.path, cwd)) {
