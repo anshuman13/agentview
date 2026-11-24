@@ -59,3 +59,22 @@ fun speechChunks(text: String, max: Int = 200): List<String> {
     if (cur.isNotEmpty()) out += cur
     return out
 }
+
+// What one dictation has heard: the finished segments (one per pause) and the segment still being spoken.
+class Heard {
+    private var done = ""
+    var partial = ""
+        private set
+
+    val text get() = listOf(done, partial).filter { it.isNotEmpty() }.joinToString(" ")
+
+    fun partial(spoken: String) { partial = spoken }
+
+    // Closes the current segment; an empty final result keeps the last partial text. Returns the segment's text.
+    fun segment(final: String): String {
+        val s = final.ifEmpty { partial }
+        if (s.isNotEmpty()) done = listOf(done, s).filter { it.isNotEmpty() }.joinToString(" ")
+        partial = ""
+        return s
+    }
+}

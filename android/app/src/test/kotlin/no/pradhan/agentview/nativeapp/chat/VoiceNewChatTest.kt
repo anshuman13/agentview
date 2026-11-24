@@ -101,4 +101,18 @@ class VoiceNewChatTest {
         assertEquals("No speech heard", speechError(android.speech.SpeechRecognizer.ERROR_NO_MATCH))
         assertEquals("Voice input failed", speechError(99))
     }
+
+    @Test
+    fun heardKeepsEverySegmentThroughPauses() {
+        val h = Heard()
+        h.partial("hello")
+        assertEquals("hello", h.text)
+        assertEquals("hello there", h.segment("hello there"))
+        h.partial("second")
+        assertEquals("hello there second", h.text)
+        assertEquals("second", h.segment(""))
+        assertEquals("", h.segment(""))
+        assertEquals("hello there second", h.text)
+        assertEquals("", h.partial)
+    }
 }
