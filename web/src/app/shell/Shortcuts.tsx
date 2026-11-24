@@ -13,6 +13,9 @@ export const SHORTCUTS: { group: string; rows: { key: string; label: string }[] 
     { key: 'Enter', label: 'Send; Shift+Enter for a new line' },
     { key: 'Tab', label: 'Accept the suggested command or the ghost text' },
     { key: 'Shift+Tab', label: 'Cycle the permission mode' },
+    { key: '⇧⌘I', label: 'Choose the model' },
+    { key: '⇧⌘M', label: 'Choose the permission mode' },
+    { key: '⇧⌘E', label: 'Choose the effort' },
     { key: '↑ / ↓', label: 'Step through sent prompts when the box is empty' },
   ] },
   { group: 'Navigation', rows: [

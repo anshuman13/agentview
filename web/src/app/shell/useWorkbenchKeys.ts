@@ -54,8 +54,8 @@ export function useWorkbenchKeys({ toggleChat, toggleSidebar, toggleTerminal, sw
       if (e.code === 'KeyB' && e.altKey) { e.preventDefault(); toggleChat(); }
       else if (k === 'b') { e.preventDefault(); toggleSidebar(); }
       if (k === 'j') { e.preventDefault(); toggleTerminal(); }
-      if (k === 'e') { e.preventDefault(); switchEditor(); }
-      if (k === 'i') { e.preventDefault(); command('assistant'); setTimeout(() => window.dispatchEvent(new Event('assistant:focus')), 50); }
+      if (k === 'e' && !e.shiftKey) { e.preventDefault(); switchEditor(); }
+      if (k === 'i' && !e.shiftKey) { e.preventDefault(); command('assistant'); setTimeout(() => window.dispatchEvent(new Event('assistant:focus')), 50); }
     };
     window.addEventListener('keydown', onKey);
     window.addEventListener('pointerdown', onPress, true);

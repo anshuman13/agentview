@@ -18,6 +18,7 @@ import { UsesBar } from './UsesBar';
 import { useAutocomplete } from './useAutocomplete';
 import { useAutoHeight } from './useAutoHeight';
 import { useBarHidden } from './useBarHidden';
+import { useCan } from '../useCan';
 import { useComposerEvents } from './useComposerEvents';
 import { useComposerKeys } from './useComposerKeys';
 import { useDraft, usePromptHistory } from './usePromptHistory';
@@ -43,6 +44,8 @@ export const Composer = memo(function Composer() {
   const [uses, setUses] = useState<Use[]>([]);
   const narrow = useNarrow();
   const [caret, setCaret] = useState(0);
+  const root = useRef<HTMLDivElement>(null);
+  const canEffort = useCan('effort');
   const ta = useRef<HTMLTextAreaElement>(null);
   const mirror = useRef<HTMLDivElement>(null);
   const wantCaret = useRef<number | null>(null);
@@ -87,12 +90,12 @@ export const Composer = memo(function Composer() {
   const [dictating, setDictating] = useState(false);
   useEffect(() => { if (talked) submit(false, true); }, [talked]);
 
-  useComposerEvents({ ta, wantCaret, setText, setUses, sendBuild });
+  useComposerEvents({ ta, wantCaret, setText, setUses, sendBuild, setPick, root, canEffort });
 
   const { choose, onKeyDown } = useComposerKeys({ text, full, mode, modes, ghost, ac, h, apply, applyFull, submit });
 
   return (
-    <div className="cp" data-mode={mode}>
+    <div ref={root} className="cp" data-mode={mode}>
       {shared !== null && <SharedConfirm shared={shared} setShared={setShared} setText={setText} />}
       <div
         ref={ac.card}

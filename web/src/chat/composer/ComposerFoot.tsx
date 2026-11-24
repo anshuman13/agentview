@@ -8,6 +8,7 @@ import { useCan } from '../useCan';
 import { SendAt } from './SendAt';
 import { Voice, type useDictation } from './Voice';
 import type { Use } from './composerLogic';
+import { keyText } from '../../app/shell/keys';
 import { providerLabel, shortModel } from '../../../../shared/providers';
 
 export function useModeText() {
@@ -20,7 +21,7 @@ function ModeChip({ setPick }: { setPick: (p: Pick) => void }) {
   const { modeInfo } = useChatSettings();
   const modeText = useModeText();
   return (
-    <Chip className="cp-mode" title={`${modeInfo.detail} (Shift+Tab to switch mode)`} onClick={(e) => setPick({ kind: 'menu', at: e.currentTarget.getBoundingClientRect() })}>
+    <Chip className="cp-mode" title={`${modeInfo.detail} (Shift+Tab to switch mode, ${keyText('⇧⌘M')} to choose)`} onClick={(e) => setPick({ kind: 'menu', at: e.currentTarget.getBoundingClientRect() })}>
       <Icon name={modeInfo.icon} small /><span>{modeText}</span><Icon name="chevron-down" small />
     </Chip>
   );
