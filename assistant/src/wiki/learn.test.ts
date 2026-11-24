@@ -17,15 +17,23 @@ describe('learn from chats', () => {
       seen.push(events.map((e) => e.id));
       return { claims: taught('Use bun, not npm.', 'b', 'c', 'd'), decisions: [] };
     };
-    expect(await learnFromChat(db, chat([user('u1', 10), tool('t1', 11), reply]), 100, run)).toEqual({ proposed: 3 });
+    expect(await learnFromChat(db, chat([user('u1', 10), tool('t1', 11), reply]), 100, run)).toEqual({ proposed: 1 });
     expect(seen).toEqual([['u1', 'a1']]);
-    expect(db.prepare("SELECT text, page_id, heading, state, replaces, added_by, why, sources FROM facts WHERE id LIKE 'learn:%' ORDER BY text").all()[2]).toEqual({
-      text: 'c', page_id: null, heading: null, state: 'proposed', replaces: null, added_by: 'claude:c1', why: 'I said so', sources: '[{"kind":"chat","label":"Setup"}]',
+    expect(db.prepare("SELECT text, page_id, heading, state, replaces, added_by, why, sources FROM facts WHERE id LIKE 'learn:%' ORDER BY text").all()[0]).toEqual({
+      text: 'Use bun, not npm.', page_id: null, heading: null, state: 'proposed', replaces: null, added_by: 'claude:c1', why: 'I said so', sources: '[{"kind":"chat","label":"Setup"}]',
     });
     expect(await learnFromChat(db, chat([user('u1', 10), reply]), 100, run)).toEqual({ proposed: 0 });
     expect(seen).toHaveLength(1);
     expect(await learnFromChat(db, chat([user('u1', 10), user('u2', 20)]), 100, run)).toEqual({ proposed: 1 });
     expect(seen).toEqual([['u1', 'a1'], ['u2']]);
+    // Two memory proposals a day at most.
+    expect(await learnFromChat(db, chat([user('u2', 20), user('u3', 30)]), 100, run)).toEqual({ proposed: 0 });
+  });
+
+  it('skips a restatement of a known claim', async () => {
+    const db = openDb(':memory:');
+    await learnFromChat(db, chat([user('u1', 10)]), 100, async () => ({ claims: taught('Claude asks questions as plain text in the chat.'), decisions: [] }));
+    expect(await learnFromChat(db, chat([user('u1', 10), user('u2', 20)]), 100, async () => ({ claims: taught('Questions go as plain text in the chat, Claude asks.'), decisions: [] }))).toEqual({ proposed: 0 });
   });
 
   it('records the chat folder in the source', async () => {
