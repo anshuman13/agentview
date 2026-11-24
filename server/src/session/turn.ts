@@ -171,7 +171,7 @@ export class Turn {
     s.driver.clearInjected();
     s.approvals.denyAll(`${providerLabel(s.driver.provider)} exited before this was answered.`);
     const repeat = s.state.session.repeat;
-    if (this.roundTurn && repeat?.runId) s.runs.addRound(repeat.runId, { n: repeat.round, outcome: 'failed', line: `${providerLabel(s.driver.provider)} exited`, costUsd: 0 });
+    if (this.roundTurn && repeat?.runId) s.runs.addRound(repeat.runId, { n: s.runs.nextRoundN(repeat.runId), outcome: 'failed', line: `${providerLabel(s.driver.provider)} exited`, costUsd: 0 });
     this.roundTurn = false;
     // Closing the chat also ends the CLI; a job run stays open so its review or a reopened chat can take it back.
     const job = s.closed ? undefined : s.runs.jobFor(s.id);

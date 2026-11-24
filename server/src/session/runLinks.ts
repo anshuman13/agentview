@@ -119,6 +119,6 @@ export class RunLinks {
       runs.update(this.compareRun, { state: 'paused', why: 'Pick a try to keep' });
       this.compareRun = undefined;
     }
-    if (repeat?.runId && roundNote) runs.addRound(repeat.runId, { n: repeat.round, outcome: roundNote.outcome, line: roundNote.line, costUsd: turn.cost, ...(report && { report }) });
+    if (repeat?.runId && roundNote) runs.addRound(repeat.runId, { n: runs.nextRoundN(repeat.runId), outcome: roundNote.outcome, line: roundNote.line, costUsd: turn.cost, ...(report && { report }) });
   }
 }

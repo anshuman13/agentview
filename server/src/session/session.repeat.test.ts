@@ -258,19 +258,52 @@ describe('runs', () => {
     vi.useRealTimers();
   });
 
-  it('a wake-up turn with a ROUND line adds a round with the same n, one without adds none', async () => {
+  it('a wake-up turn with a ROUND line adds the next round number, one without adds none', async () => {
     const { s, handle } = fakeSession();
     await s.prompt('/goal the tests pass');
     reply(handle, 'r1', 'Started.\nROUND: progress spec drafted', 0.1);
     s.turn.started();
     reply(handle, 'r2', 'Merged.\nROUND: progress Tue spec merged', 0.2);
     const run = s.runs.list()[0];
-    expect(run.rounds.map((r) => [r.n, r.outcome, r.line])).toEqual([[1, 'progress', 'spec drafted'], [1, 'progress', 'Tue spec merged']]);
+    expect(run.rounds.map((r) => [r.n, r.outcome, r.line])).toEqual([[1, 'progress', 'spec drafted'], [2, 'progress', 'Tue spec merged']]);
     expect(run.round).toBe(1);
     expect(run.state).toBe('running');
     s.turn.started();
     reply(handle, 'r3', 'Nothing to add.', 0.2);
     expect(run.rounds).toHaveLength(2);
+  });
+
+  it('wake-up rounds continue the numbering while the tick counter stays', async () => {
+    const { s, handle } = fakeSession();
+    await s.prompt('/goal the tests pass');
+    reply(handle, 'r1', 'Started.\nROUND: progress one', 0.1);
+    s.turn.started();
+    reply(handle, 'r2', 'Two.\nROUND: progress two', 0.1);
+    s.turn.started();
+    reply(handle, 'r3', 'Three.\nROUND: progress three', 0.1);
+    const run = s.runs.list()[0];
+    expect(run.rounds.map((r) => r.n)).toEqual([1, 2, 3]);
+    expect(run.round).toBe(1);
+  });
+
+  it('numbering continues from the last stored round after trimming', async () => {
+    const { s, handle } = fakeSession();
+    await s.prompt('/goal the tests pass');
+    const run = s.runs.list()[0];
+    run.rounds = [{ n: 59, outcome: 'progress', line: 'a', costUsd: 0, at: 1 }, { n: 60, outcome: 'progress', line: 'b', costUsd: 0, at: 2 }];
+    reply(handle, 'r1', 'Next.\nROUND: progress c', 0.1);
+    expect(run.rounds.at(-1)?.n).toBe(61);
+  });
+
+  it('a crash in a round turn is numbered after the wake-up rounds', async () => {
+    const { s, handle } = fakeSession();
+    await s.prompt('/goal the tests pass');
+    reply(handle, 'r1', 'Started.\nROUND: progress one', 0.1);
+    s.turn.started();
+    reply(handle, 'r2', 'Two.\nROUND: progress two', 0.1);
+    s.turn.roundTurn = true;
+    s.turn.exited();
+    expect(s.runs.list()[0].rounds.map((r) => [r.n, r.outcome])).toEqual([[1, 'progress'], [2, 'progress'], [3, 'failed']]);
   });
 
   it('a goal ends done when it is met, and a usage limit pauses the run until the next round', async () => {

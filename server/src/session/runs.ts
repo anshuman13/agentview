@@ -65,6 +65,10 @@ export class Runs {
     return this.runs.find((r) => r.id === id);
   }
 
+  nextRoundN(id: string | undefined) {
+    return (this.get(id)?.rounds.at(-1)?.n ?? 0) + 1;
+  }
+
   // The run a chat is on now, if any.
   activeFor(chatId: string) {
     return this.runs.filter((r) => r.chatId === chatId && r.state !== 'done').at(-1);
