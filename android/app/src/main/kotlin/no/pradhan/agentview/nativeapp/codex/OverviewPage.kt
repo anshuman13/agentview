@@ -107,7 +107,7 @@ fun AskBar(hub: Hub, st: CodexState, profile: String?) {
     }
 }
 
-private const val TODAY_SHOWN = 7
+private const val TODAY_SHOWN = 5
 
 private class OverviewData(val s: Split, val mt: Meetings, val needs: List<Need>, val needsTotal: Int, val today: Today, val rows: List<Triple<Long, Row?, Row?>>)
 
@@ -148,7 +148,7 @@ fun OverviewPage(hub: Hub, st: CodexState, profile: String?, now: Long, actions:
         agentSections(groups) { hub.link.value = DeepLink(chat = it) }
         if (done.isNotEmpty()) activitySection(done) { hub.link.value = DeepLink(chat = it) }
         if (d.rows.isNotEmpty()) todaySection(d, now, actions, all, { all = true }, onOpen, onMeeting)
-        ideasSection(hub, st, d, now)
+        if (d.s.overdue.isEmpty() && d.s.today.isEmpty()) ideasSection(hub, st, d, now)
         planDaySection(d, plan, { plan = it }, now, actions)
         if (goals.isNotEmpty()) goalsSection(st, profile, goals, free, onGoals)
         item(key = "end") { androidx.compose.foundation.layout.Spacer(Modifier.padding(bottom = Tokens.fab + Tokens.sp20)) }
@@ -262,11 +262,12 @@ private fun LazyListScope.agentSections(groups: List<Pair<AgentGroup, List<LiveC
 }
 
 private fun LazyListScope.activitySection(rows: List<ActivityRow>, onOpen: (String) -> Unit) {
-    item(key = "activity") { SectionHeader("Done today", count = "${rows.size}") }
-    item(key = "activity:rows") {
+    item(key = "activity") {
+        var open by rememberSaveable { mutableStateOf(false) }
         Group {
-            rows.forEachIndexed { i, a ->
-                if (i > 0) Hairline()
+            ListRow("Done today", "${rows.size} · last: ${rows[0].title}", lines = 1, onClick = { open = !open }, trailing = { AvIcon(if (open) "chevron-up" else "chevron-down", null, Tokens.icon, tint = av.fgMuted) })
+            if (open) rows.forEach { a ->
+                Hairline()
                 ListRow(a.title, "${a.line} · ${clock(a.at)}", leading = { AvIcon(if (a.failed) "error" else "pass", null, Tokens.icon, tint = if (a.failed) av.warn else av.ok) }, lines = 1, onClick = { onOpen(a.id) })
             }
         }
@@ -299,6 +300,8 @@ private fun LazyListScope.planDaySection(d: OverviewData, plan: List<PlanSlot>?,
         actions.undoable("Planned ${plural(slots.size, "task")}") { slots.forEach { actions.edit(it.task.row, mapOf("at" to it.task.row.at)) } }
     }
     if (plan == null) {
+        // The offer shows in the morning only (web PlanDay).
+        if (java.util.Calendar.getInstance().apply { timeInMillis = now }.get(java.util.Calendar.HOUR_OF_DAY) >= 12) return
         if (tasks.none { !hasTime(it.at) && estimateMinutes(it.title) != null }) return
         item(key = "plan:button") {
             Button("Plan my day", {
@@ -339,20 +342,16 @@ private fun TodayTaskRow(r: Row, late: Boolean, actions: TaskActions, onOpen: (R
 }
 
 private fun LazyListScope.goalsSection(st: CodexState, profile: String?, goals: List<Row>, free: Long, onGoals: () -> Unit) {
-    item(key = "goals") { SectionHeader("Goals this week", goals.size.toString()) }
-    item(key = "goals:rows") {
-        val metas = remember(st.items, goals, free, profile) {
-            goals.map { g ->
+    // One goal shows itself; several fold into one row that opens the week's goals (web GoalsBlock).
+    item(key = "goals") {
+        val meta = remember(st.items, goals, free, profile) {
+            if (goals.size > 1) goalsLine(goals.map { g -> goalProgress(st.items, g).let { GoalTally(it.done, it.total, goalAtRisk(st.items, g, free)) } })
+            else goals[0].let { g ->
                 val p = goalProgress(st.items, g)
-                listOfNotNull("At risk".takeIf { goalAtRisk(st.items, g, free) }, if (profile == null) profileLabel(g.profile) else null, if (p.total > 0) "${p.done}/${p.total} done" else "No tasks yet", if (p.total == 0) null else if (p.done == p.total) "All done" else "Next: ${goalNext(st.items, g)}").joinToString(" · ")
+                listOfNotNull("At risk".takeIf { goalAtRisk(st.items, g, free) }, if (p.total > 0) "${p.done}/${p.total} done" else "No tasks yet", if (p.total == 0) null else if (p.done == p.total) "All done" else "Next: ${goalNext(st.items, g)}").joinToString(" · ")
             }
         }
-        Group {
-            goals.forEachIndexed { i, g ->
-                if (i > 0) Hairline()
-                ListRow(g.title ?: "", metas[i], onClick = onGoals, trailing = { Chevron() })
-            }
-        }
+        Group { ListRow(if (goals.size > 1) "Goals this week" else goals[0].title ?: "", meta, onClick = onGoals, trailing = { Chevron() }) }
     }
 }
 

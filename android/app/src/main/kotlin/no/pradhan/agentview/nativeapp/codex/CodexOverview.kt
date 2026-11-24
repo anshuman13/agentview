@@ -185,6 +185,14 @@ class Progress(val done: Int, val total: Int)
 fun goalProgress(items: List<Row>, goal: Row) = linkedTo(items, goal).let { t -> Progress(t.count { it.status == "done" }, t.size) }
 
 // web goals.ts goalNext: the goal's open task due soonest, undated ones last.
+data class GoalTally(val done: Int, val total: Int, val risk: Boolean)
+
+// One line for the week's goals on Overview (web goals.ts goalsLine).
+fun goalsLine(goals: List<GoalTally>): String {
+    val done = goals.count { it.total > 0 && it.done == it.total }
+    return listOfNotNull("At risk".takeIf { goals.any { it.risk } }, "$done of ${goals.size} done").joinToString(" · ")
+}
+
 fun goalNext(items: List<Row>, goal: Row): String? = linkedTo(items, goal).filter { it.status == "open" }.minByOrNull { it.at ?: Long.MAX_VALUE }?.title
 
 // A goal is at risk when its open tasks' estimates, summed, exceed the free work minutes left this week.

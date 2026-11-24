@@ -356,4 +356,9 @@ class CodexLogicTest {
         assertEquals(listOf("Calendar sync failed (work)", "Calendar sync failed (personal)"), bad.map { calendarFailText(it, bad.size) })
         assertEquals("Calendar sync failed", calendarFailText(bad[0], 1))
     }
+
+    @Test fun goalsLineSumsUpTheWeek() {
+        assertEquals("1 of 3 done", goalsLine(listOf(GoalTally(2, 2, false), GoalTally(0, 3, false), GoalTally(0, 0, false))))
+        assertEquals("At risk · 0 of 2 done", goalsLine(listOf(GoalTally(1, 2, true), GoalTally(0, 1, false))))
+    }
 }
