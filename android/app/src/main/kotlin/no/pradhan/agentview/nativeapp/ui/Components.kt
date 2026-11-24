@@ -53,6 +53,7 @@ import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
 // The shared components, one per web primitive (web/src/ui and web/src/styles/components). Screens build only from these and the tokens.
@@ -148,6 +149,7 @@ fun ListRow(
     title: CharSequence,
     meta: CharSequence? = null,
     leading: (@Composable () -> Unit)? = null,
+    leadMin: Dp = Tokens.leadWidth,
     state: (@Composable RowScope.() -> Unit)? = null,
     stateSlot: Boolean = state != null,
     fitState: Boolean = false,
@@ -179,7 +181,7 @@ fun ListRow(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(Tokens.sp8),
     ) {
-        if (leading != null) Box(Modifier.widthIn(min = Tokens.leadWidth), contentAlignment = Alignment.Center) { CompositionLocalProvider(LocalContentColor provides av.fgMuted) { leading() } }
+        if (leading != null) Box(Modifier.widthIn(min = leadMin), contentAlignment = Alignment.Center) { CompositionLocalProvider(LocalContentColor provides av.fgMuted) { leading() } }
         Column(Modifier.weight(1f)) {
             val color = if (strike || muted) av.fgMuted else av.fg
             val deco = if (strike) TextDecoration.LineThrough else null

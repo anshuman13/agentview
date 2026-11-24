@@ -294,7 +294,7 @@ private fun ChatListRow(title: String, meta: AnnotatedString, shown: ChatState?,
         boldIf(unread, title),
         meta, lines = 1, metaLines = 1, selected = selected, onClick = onClick,
         onLongClick = if (actions.canPin) actions.onRename else null,
-        leading = { StateDot(shown) },
+        leading = { StateDot(shown) }, leadMin = Tokens.sp4,
         state = when {
             run != null && badge != null && badge != RunBadge.Needs -> ({ RunBadgeView(badge, run) })
             actions.muted -> ({ AvIcon("bell-slash", tint = av.fgMuted) })
