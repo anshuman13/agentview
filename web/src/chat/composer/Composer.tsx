@@ -27,11 +27,19 @@ import { useUploads } from './useUploads';
 import { providerLabel } from '../../../../shared/providers';
 import { composerPlaceholder } from '../../../../shared/composerText';
 import { QUICK_REPLIES, quickReplies } from '../../../../shared/quickReplies';
+import type { ChatEvent } from '../../../../shared/protocol';
 import { Chip } from '../../ui/Button';
 
 function placeholderFor(label: string, running: boolean, waiting: boolean, compacting: boolean, hasUses: boolean, narrow: boolean) {
   const state = waiting ? 'waiting' : compacting ? 'compacting' : running ? 'running' : hasUses ? 'uses' : 'idle';
   return composerPlaceholder(label, state, narrow ? 'narrow' : touch() ? 'touch' : 'desktop', recognizer() !== undefined);
+}
+
+// Quick replies worked out once per events list, not on every store update.
+let lastReplies: { events: ChatEvent[]; key: string } | null = null;
+function repliesKey(events: ChatEvent[]) {
+  if (lastReplies?.events !== events) lastReplies = { events, key: quickReplies(events).join('\n') };
+  return lastReplies.key;
 }
 
 export const Composer = memo(function Composer() {
@@ -41,7 +49,7 @@ export const Composer = memo(function Composer() {
   const label = useStore((s) => providerLabel(s.session.provider));
   const compacting = useStore((s) => s.session.compacting);
   const waiting = useStore((s) => s.pending.length > 0);
-  const asked = useStore((s) => quickReplies(s.events).join('\n'));
+  const asked = useStore((s) => repliesKey(s.events));
   const { mode, modes } = useChatSettings();
   const [pick, setPick] = useState<Pick | null>(null);
   const [uses, setUses] = useState<Use[]>([]);

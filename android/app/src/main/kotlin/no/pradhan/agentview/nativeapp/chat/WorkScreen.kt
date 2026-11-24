@@ -31,10 +31,11 @@ fun WorkScreen(hub: Hub, turn: String, onBack: () -> Unit, onOpenAgent: (String)
     val cwd by hub.store.state.select { it.session?.cwd ?: "" }
     val chat by hub.store.state.select { it.shownId }
     val running by hub.store.state.select { it.session?.running ?: false }
-    val hidden = remember(view, turn) { view.foldRows.firstNotNullOfOrNull { (it as? FoldRow.Fold)?.takeIf { f -> f.id == turn } }?.hidden ?: emptyList() }
-    val prompt = remember(view, turn) { (view.items.firstOrNull { it.id == turn } as? Item.User)?.text?.let(::firstLine) ?: "" }
+    val mine = view.chat == chat
+    val hidden = remember(view.foldRows, turn, mine) { if (!mine) emptyList() else view.foldRows.firstNotNullOfOrNull { (it as? FoldRow.Fold)?.takeIf { f -> f.id == turn } }?.hidden ?: emptyList() }
+    val prompt = remember(view.items, turn) { (view.items.firstOrNull { it.id == turn } as? Item.User)?.text?.let(::firstLine) ?: "" }
     val waiting by hub.store.state.select { it.pending.isNotEmpty() }
-    val last = remember(view, turn) { view.items.lastOrNull { it is Item.User }?.id == turn }
+    val last = remember(view.items, turn) { view.items.lastOrNull { it is Item.User }?.id == turn }
     val (word, tone) = when {
         last && waiting -> "Needs input" to av.warn
         last && running -> "Working" to av.accentText

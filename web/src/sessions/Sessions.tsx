@@ -19,6 +19,13 @@ import { ariaKeys, keyText } from '../app/shell/keys';
 
 const PAGE = 5;
 
+// The waiting chats as JSON, worked out once per live list rather than on every store update.
+let lastWaiting: { live: LiveChat[]; json: string } | null = null;
+function waitingKey(live: LiveChat[]) {
+  if (lastWaiting?.live !== live) lastWaiting = { live, json: JSON.stringify(live.filter((c) => c.pending)) };
+  return lastWaiting.json;
+}
+
 export function Sessions() {
   const current = useStore((s) => s.session.sessionId);
   const cwd = useStore((s) => s.session.cwd);
@@ -27,7 +34,7 @@ export function Sessions() {
   const { pins, setPin } = usePins();
   const liveKey = useStore((s) => s.live.map((c) => c.cwd).join('\n'));
   // Only the chats waiting on the user matter here, so the string keeps other live updates from re-rendering the list.
-  const waitingJson = useStore((s) => JSON.stringify(s.live.filter((c) => c.pending)));
+  const waitingJson = useStore((s) => waitingKey(s.live));
   const pending = useMemo<LiveChat[]>(() => JSON.parse(waitingJson), [waitingJson]);
   const [filter, setFilter] = useState('');
   const viewing = useStore((s) => s.session.id);

@@ -85,7 +85,11 @@ fun rememberChatRows(hub: Hub, dialogs: SessionDialogs, onOpen: () -> Unit): Cha
     val shownCwd = live.firstOrNull { it.id == shownId }?.cwd
     val (prLoad) = rememberLoad(shownId, shownCwd) { if (shownCwd == null || live.none { it.pr != null }) emptyList() else hub.pulls(false) }
     val prFor = { c: LiveChat -> c.pr?.let { n -> prChip(n, prLoad.data?.takeIf { c.cwd == shownCwd }?.firstOrNull { it.number == n }, c.prChecks) } }
-    return ChatRows(hub, onOpen, live, ws, saved, ws.pins.toSet(), muted, shownId, prFor, dialogs, rememberCoroutineScope(), LocalClipboardManager.current, remember { mutableStateOf<String?>(null) })
+    val scope = rememberCoroutineScope()
+    val clipboard = LocalClipboardManager.current
+    val menu = remember { mutableStateOf<String?>(null) }
+    val open = rememberUpdatedState(onOpen)
+    return remember(live, ws, saved, muted, shownId, prLoad.data, dialogs) { ChatRows(hub, { open.value() }, live, ws, saved, ws.pins.toSet(), muted, shownId, prFor, dialogs, scope, clipboard, menu) }
 }
 
 class SessionDialogs {

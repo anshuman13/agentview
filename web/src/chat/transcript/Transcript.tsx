@@ -39,7 +39,7 @@ import { ROW_WINDOW, type ChatEvent } from '../../../../shared/protocol';
 import { quoteText } from '../../../../shared/composerText';
 import { useSelectionAt } from '../../ui/useSelectionAt';
 
-export function Transcript() {
+export const Transcript = memo(function Transcript() {
   const events = useStore((s) => s.events);
   const cwd = useStore((s) => s.session.cwd);
   const running = useStore((s) => s.session.running);
@@ -50,7 +50,7 @@ export function Transcript() {
   const stalled = useStore((s) => !!s.live.find((c) => c.id === s.session.id)?.stalled);
   const sessionId = useStore((s) => s.session.sessionId);
   return <TranscriptView key={chat} sessionId={sessionId} events={events} earlier={earlier} cwd={cwd} running={running} bill={billing(provider)} failed={failed} stalled={stalled} label={providerLabel(provider)} />;
-}
+});
 
 function EndLine({ text, label, onPress }: { text: string; label: string; onPress: () => void }) {
   const [sent, setSent] = useState(false);

@@ -21,11 +21,12 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 
-// One field of a state flow, so the screen recomposes only when that field changes.
+// One field of a state flow, so the screen recomposes only when that field changes. Pass `keys` when `pick` reads anything besides the state.
 @Composable
-fun <T, R> StateFlow<T>.select(pick: (T) -> R): State<R> {
-    val flow = remember(this) { map(pick).distinctUntilChanged() }
-    return flow.collectAsState(pick(value))
+fun <T, R> StateFlow<T>.select(vararg keys: Any?, pick: (T) -> R): State<R> {
+    val flow = remember(this, *keys) { map(pick).distinctUntilChanged() }
+    val initial = remember(this, *keys) { pick(value) }
+    return flow.collectAsState(initial)
 }
 
 // Runs `block` while the app is in the foreground, and again after each return to it.

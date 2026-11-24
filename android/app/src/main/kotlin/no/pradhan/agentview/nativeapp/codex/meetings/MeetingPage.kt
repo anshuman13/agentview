@@ -432,14 +432,24 @@ private fun LazyListScope.meetingContext(c: MeetingCtx, all: List<Row>, folds: M
     if (people.isNotEmpty()) item { Group(Modifier.padding(top = Tokens.sp4)) { people.forEachIndexed { i, p -> if (i > 0) Hairline(); ListRow(displayName(p), onClick = { c.onPerson(p) }) } } }
 }
 
+// The last transcript's marked lines and match starts, so recompositions and other folds do not re-scan it; only a new text or query does.
+private var transcriptCache: Triple<String?, List<String>, Pair<List<List<Segment>>, List<Int>>>? = null
+
+private fun markedTranscript(text: String?, words: List<String>): Pair<List<List<Segment>>, List<Int>> {
+    transcriptCache?.let { (t, w, r) -> if (t === text && w == words) return r }
+    val segments = text?.lines()?.filter { it.isNotBlank() }.orEmpty().map { markSegments(it, words) }
+    val r = segments to segments.runningFold(0) { n, line -> n + line.count { it.hit } }
+    transcriptCache = Triple(text, words, r)
+    return r
+}
+
 // Only the Ask field follows the transcript, so a line is counted from the end of the list: k = 1 is the last line, in front
 // of the closing spacer (meetingMore adds one when the Ask field shows).
 private fun LazyListScope.meetingTranscript(folds: MeetingFolds, transcript: Result<String?>?, reload: () -> Unit, scrollFromEnd: (Int) -> Unit) {
     val text = transcript?.getOrNull()?.takeIf { it.isNotEmpty() }
     val query = folds.transcriptQuery.value
     val words = queryWords(query)
-    val segments = text?.lines()?.filter { it.isNotBlank() }.orEmpty().map { markSegments(it, words) }
-    val starts = segments.runningFold(0) { n, line -> n + line.count { it.hit } }
+    val (segments, starts) = markedTranscript(text, words)
     val count = starts.last()
     val cur = folds.transcriptCur.value
     val open = folds.transcriptOpen.value

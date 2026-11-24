@@ -33,3 +33,17 @@ export function useCounts() {
     [live, viewing, seen, attention, mcp, hidden, rows],
   );
 }
+
+// Only the Needs you count, so a page that shows just that number does not re-render on every live update.
+let lastNeeds: { live: LiveChat[]; seen: Record<string, number>; key: string; value: number } | null = null;
+export function useNeedsYouCount() {
+  const hidden = useMcpHidden();
+  const rows = rowCounts.use();
+  return useStore((s) => {
+    const key = `${s.session.id}|${s.attention.length}|${JSON.stringify(s.session.mcp ?? null)}|${JSON.stringify(hidden)}|${rows.needsYouRows}|${rows.replyRows}`;
+    if (lastNeeds && lastNeeds.live === s.live && lastNeeds.seen === s.seen && lastNeeds.key === key) return lastNeeds.value;
+    const value = appCounts({ chats: s.live.map((c) => countChat(c, s.seen)), viewing: s.session.id, attention: s.attention.length, mcp: s.session.mcp, hidden, ...rows }).needsYou;
+    lastNeeds = { live: s.live, seen: s.seen, key, value };
+    return value;
+  });
+}

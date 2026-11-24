@@ -382,7 +382,7 @@ fun NeedsSheet(needs: List<Need>, queue: List<Row>, ignored: List<Ignored>, now:
             Group {
                 shown.forEachIndexed { i, n ->
                     if (i > 0) Hairline()
-                    NeedRow(n, now, actions, hub, onOpen, { onlyStale = true }, onReview, onPerson, onNotes, onJob)
+                    key(n.keys.joinToString()) { NeedRow(n, now, actions, hub, onOpen, { onlyStale = true }, onReview, onPerson, onNotes, onJob) }
                 }
                 if (shown.size < rows.size) { Hairline(); ListRow("Show all ${rows.size}", onClick = { all = all + label }) }
             }

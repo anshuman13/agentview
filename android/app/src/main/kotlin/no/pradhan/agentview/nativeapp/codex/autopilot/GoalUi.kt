@@ -133,7 +133,7 @@ private fun <T> MenuChip(label: String, items: List<T>, name: (T) -> String, che
 private fun GoalStartSheet(hub: Hub, opened: GoalSheet.Start, onClose: () -> Unit) {
     val init = remember(opened) { opened.from?.let { rerunForm(it) } }
     val sheet = if (opened.plan == null && init?.plan != null) opened.copy(plan = init.plan) else opened
-    val cwd by hub.store.state.select { st -> opened.from?.cwd ?: st.live.firstOrNull { it.id == opened.from?.chatId }?.cwd ?: st.session?.cwd.orEmpty() }
+    val cwd by hub.store.state.select(opened) { st -> opened.from?.cwd ?: st.live.firstOrNull { it.id == opened.from?.chatId }?.cwd ?: st.session?.cwd.orEmpty() }
     val chatProvider by hub.store.state.select { it.session?.provider }
     val active by hub.store.state.select { st -> activeRun(st.runs, st.shownId) != null }
     val ws by hub.workspace.collectAsState()

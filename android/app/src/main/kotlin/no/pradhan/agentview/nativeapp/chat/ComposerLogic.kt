@@ -50,10 +50,12 @@ class Suggestion(val label: String, val detail: String, val insert: String)
 
 data class Trigger(val start: Int, val query: String, val file: Boolean = false)
 
+private val COMMAND_AT = Regex("(?:^|\\s)([/@])(\\S*)$")
+
 // The `/command` the caret is in, or null.
 fun commandTrigger(text: String, caret: Int): Trigger? {
     val before = text.substring(0, minOf(caret, text.length))
-    val m = Regex("(?:^|\\s)([/@])(\\S*)$").find(before) ?: return null
+    val m = COMMAND_AT.find(before) ?: return null
     val query = m.groupValues[2]
     return Trigger(before.length - 1 - query.length, query, m.groupValues[1] == "@")
 }
@@ -235,18 +237,26 @@ fun handoffText(sessionId: String) =
 val QUICK_REPLIES = listOf("Yes, do that", "No, leave it", "Tell me more")
 
 private const val CHOICE_MAX = 48
+private val CHOICE_MARKS = Regex("\\*\\*|__|`")
+private val CHOICE_TAIL = Regex("[?.!,;:\\s]+$")
+private val CHOICE_HEAD = Regex("^[\\s,]+")
+private val CHOICE_BOLD = Regex("^\\*\\*(.+?)\\*\\*")
+private val CHOICE_SPLIT = Regex(":\\s|\\s[-–]\\s")
+private val CHOICE_ITEM = Regex("^\\s*(?:[-*•]|\\d+[.)])\\s+(.+)$")
+private val SENTENCE_END = Regex("(?<=[.!?])\\s+")
+private val CHOICE_OR = Regex(",?\\s+or\\s+", RegexOption.IGNORE_CASE)
 private val CHOICE_LEAD = Regex("^(should i|shall i|do you want me to|want me to|would you like me to|can i|could i|or should i|or)\\s+", RegexOption.IGNORE_CASE)
 
 private fun tidyChoice(s: String): String {
-    val t = s.replace(Regex("\\*\\*|__|`"), "").replace(Regex("[?.!,;:\\s]+$"), "").replace(Regex("^[\\s,]+"), "").replace(CHOICE_LEAD, "").trim()
+    val t = s.replace(CHOICE_MARKS, "").replace(CHOICE_TAIL, "").replace(CHOICE_HEAD, "").replace(CHOICE_LEAD, "").trim()
     return t.replaceFirstChar { it.uppercase() }
 }
 
 private fun fitsChoices(xs: List<String>) = xs.size in 2..4 && xs.all { it.isNotEmpty() && it.length <= CHOICE_MAX } && xs.toSet().size == xs.size
 
 private fun itemLabel(item: String): String {
-    val bold = Regex("^\\*\\*(.+?)\\*\\*").find(item)
-    return tidyChoice(bold?.groupValues?.get(1) ?: item.split(Regex(":\\s|\\s[-–]\\s"))[0])
+    val bold = CHOICE_BOLD.find(item)
+    return tidyChoice(bold?.groupValues?.get(1) ?: item.split(CHOICE_SPLIT)[0])
 }
 
 // shared/quickReplies.ts questionChoices: the list right above the question, or the parts of an "A or B?" question.
@@ -256,7 +266,7 @@ fun questionChoices(text: String): List<String> {
     if (!ask.endsWith("?")) return emptyList()
     val items = mutableListOf<String>()
     for (i in lines.size - 2 downTo 0) {
-        val m = Regex("^\\s*(?:[-*•]|\\d+[.)])\\s+(.+)$").find(lines[i])
+        val m = CHOICE_ITEM.find(lines[i])
         if (m != null) items.add(0, m.groupValues[1])
         else if (lines[i].isNotBlank() || items.isNotEmpty()) break
     }
@@ -264,8 +274,8 @@ fun questionChoices(text: String): List<String> {
         val labels = items.map(::itemLabel)
         if (fitsChoices(labels)) return labels
     }
-    val sentence = ask.split(Regex("(?<=[.!?])\\s+")).last()
-    val parts = sentence.split(Regex(",?\\s+or\\s+", RegexOption.IGNORE_CASE)).map(::tidyChoice)
+    val sentence = ask.split(SENTENCE_END).last()
+    val parts = sentence.split(CHOICE_OR).map(::tidyChoice)
     return if (fitsChoices(parts)) parts else emptyList()
 }
 

@@ -172,7 +172,6 @@ private fun FollowNewest(hub: Hub, view: ChatView, list: List<FoldRow>, listStat
         if (turn != null && list.isNotEmpty()) hub.showTurn.value = null
     }
     var opened by rememberSaveable(chatId) { mutableStateOf(false) }
-    val pin = remember(chatId) { mutableStateOf(false) }
     LaunchedEffect(open, list) {
         if (opened || list.isEmpty()) return@LaunchedEffect
         val at = list.indexOfFirst { it.key == open }

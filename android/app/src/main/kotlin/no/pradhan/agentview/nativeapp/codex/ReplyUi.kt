@@ -19,6 +19,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -77,7 +78,7 @@ fun ReplySection(rows: List<Row>, filtered: Boolean, onClear: () -> Unit, now: L
     Group {
         rows.forEachIndexed { i, r ->
             if (i > 0) Hairline()
-            AskRow(r, now, actions, replies, onAsk) { onOpen(r) }
+            key(r.key) { AskRow(r, now, actions, replies, onAsk) { onOpen(r) } }
         }
     }
 }
