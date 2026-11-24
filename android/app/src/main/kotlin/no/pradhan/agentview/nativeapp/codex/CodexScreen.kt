@@ -29,7 +29,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import java.time.Instant
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.update
@@ -75,8 +74,7 @@ import no.pradhan.agentview.nativeapp.ui.select
 
 private const val SYNC_EVERY_MS = 30_000L
 
-private fun greeting(now: Long) = when (hourOf(now)) { in 0..4 -> "Good night"; in 5..11 -> "Good morning"; in 12..16 -> "Good afternoon"; else -> "Good evening" } +
-    ", " + java.time.format.DateTimeFormatter.ofPattern("EEE d", java.util.Locale.ENGLISH).format(Instant.ofEpochMilli(now).atZone(codexZone))
+private fun greeting(now: Long) = when (hourOf(now)) { in 0..4 -> "Good night"; in 5..11 -> "Good morning"; in 12..16 -> "Good afternoon"; else -> "Good evening" }
 
 private class CodexNav(private val pageS: MutableState<String>, private val routeS: MutableState<String>, private val editS: MutableState<String?>, private val addingS: MutableState<Boolean>, private val addingGoalS: MutableState<String?>, private val needsS: MutableState<Boolean>, private val chipS: MutableState<String>, private val decisionsS: MutableState<Boolean>, private val searchingS: MutableState<Boolean>, private val queryS: MutableState<String>, private val pickS: MutableState<Set<String>?>) {
     var page by pageS
@@ -209,6 +207,7 @@ private fun CodexHeader(hub: Hub, st: CodexState, nav: CodexNav, profile: String
             ExtraMenu(page, hub, profile, now, nav.decisions, { nav.decisions = !nav.decisions }, nav::push, close)
             MenuItem("Search everything", "search", { close(); nav.page = "search" })
         },
+        greeting = extra == null && page == "overview",
     )
     if (!nav.sub) Row(Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = Tokens.listPad, vertical = Tokens.sp4), horizontalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
         val claims = remember(st.facts, profile) { proposals(st.facts.filter { matchesProfile(profile, it) }).size }
@@ -269,8 +268,8 @@ private fun CodexSheetsHost(hub: Hub, st: CodexState, nav: CodexNav, profile: St
 }
 
 @Composable
-private fun CodexTopBar(title: String, back: (() -> Unit)?, filter: String?, onFilter: (String) -> Unit, onSearch: (() -> Unit)?, menu: (@Composable (() -> Unit) -> Unit)?) {
-    PageHeader(title, back) {
+private fun CodexTopBar(title: String, back: (() -> Unit)?, filter: String?, onFilter: (String) -> Unit, onSearch: (() -> Unit)?, menu: (@Composable (() -> Unit) -> Unit)?, greeting: Boolean = false) {
+    PageHeader(title, back, greeting = greeting) {
         var open by remember { mutableStateOf(false) }
         if (filter != null) Box {
             Chip(if (filter == "all") "All" else profileLabel(filter), { open = true }, tone = when (filter) { WORK -> ChipTone.Work; PERSONAL -> ChipTone.Personal; else -> ChipTone.Default }, trailingIcon = "chevron-down")

@@ -227,6 +227,8 @@ class CodexLogicTest {
         assertEquals(4L, joinMinutes(meeting("j", NOW + 3 * 60_000 + 1, NOW + 9_000_000), NOW))
         assertNull(joinMinutes(m.nextLater!!, NOW))
         assertEquals("later", meetingsOf(ms1.filter { it.id != "live" }, WORK, NOW).next!!.id)
+        val both = ms1 + meeting("later", ms(2026, 11, 7, 14), ms(2026, 11, 7, 15), PERSONAL)
+        assertEquals(listOf("over", "live", "later", "p"), meetingsOf(both, null, NOW).today.map { it.id })
     }
 
     @Test fun parsedTaskDecodesTheHubReply() {

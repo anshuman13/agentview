@@ -12,11 +12,14 @@
 .tasks-head > .ui-section { flex: 1; min-width: 0; padding-right: 0; }
 .tasks-head .ui-section-head { padding-left: 0; }
 .tasks-head [role='heading'] { font-size: var(--fs-4xl); font-weight: 600; letter-spacing: -0.01em; color: var(--fg); }
+.tasks-head .as-greeting { display: inline-flex; align-items: center; gap: var(--sp-4); font-family: var(--font-serif); font-weight: 400; letter-spacing: 0; }
+.as-greeting > .icon { color: var(--accent-text); }
 .as-menu { display: none; }
 @keyframes as-pulse { to { opacity: 0.3; } }
 .as-error { flex: none; display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2); margin: 0 var(--sp-8) var(--sp-4); padding: var(--sp-4) var(--sp-6); border: 0; border-radius: var(--radius-md); font: inherit; font-size: var(--fs-sm); text-align: left; color: var(--err); background: color-mix(in srgb, var(--err) 12%, transparent); overflow-wrap: anywhere; }
 
 .as-scroll { flex: 1; min-height: 0; overflow-y: auto; padding: 0 var(--sp-8) var(--sp-8); display: flex; flex-direction: column; gap: var(--sp-8); }
+.as-scroll > * { flex-shrink: 0; }
 .as-scroll section { display: flex; flex-direction: column; }
 .as-section { display: flex; align-items: baseline; gap: var(--sp-3); padding: 0 0 var(--sp-3); border-bottom: var(--hairline); font-size: var(--row-title); font-weight: 600; color: var(--fg-strong); }
 .as-section > span { font-weight: 400; color: var(--fg-faint); font-variant-numeric: tabular-nums; }

@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -60,7 +61,7 @@ val Mono = TextStyle(fontFamily = MonoFont, fontSize = Tokens.fsSubheadline, lin
 
 // Page header with an optional back button: 64dp, a one-line title ending in an ellipsis and an optional muted subtitle.
 @Composable
-fun PageHeader(title: String, onBack: (() -> Unit)? = null, subtitle: (@Composable () -> Unit)? = null, actions: @Composable RowScope.() -> Unit = {}) {
+fun PageHeader(title: String, onBack: (() -> Unit)? = null, subtitle: (@Composable () -> Unit)? = null, greeting: Boolean = false, actions: @Composable RowScope.() -> Unit = {}) {
     Row(
         Modifier.fillMaxWidth().height(Tokens.tabbarH).padding(start = if (onBack == null) Tokens.listPad else Tokens.sp2, end = Tokens.sp2),
         verticalAlignment = Alignment.CenterVertically,
@@ -68,7 +69,11 @@ fun PageHeader(title: String, onBack: (() -> Unit)? = null, subtitle: (@Composab
     ) {
         if (onBack != null) IconBtn("arrow-left", "Back", onBack, tint = av.fg)
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.Center) {
-            Text(title, style = Type.title, color = av.fg, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            // A greeting reads as the Claude apps' home: serif type after the accent spark.
+            if (greeting) Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
+                AvIcon("sparkle", null, tint = av.accent)
+                Text(title, style = Type.title.copy(fontFamily = ReadingFont, fontWeight = FontWeight.Normal), color = av.fg, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            } else Text(title, style = Type.title, color = av.fg, maxLines = 1, overflow = TextOverflow.Ellipsis)
             if (subtitle != null) CompositionLocalProvider(LocalContentColor provides av.fgMuted) { ProvideTextStyle(Type.subheadline, subtitle) }
         }
         actions()

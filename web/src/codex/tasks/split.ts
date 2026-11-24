@@ -37,7 +37,9 @@ export function useSplit() {
   const minute = useMinute();
   return useMemo(() => {
     const now = Date.now();
-    const all = live(snap.meetings).filter((m) => m.starts_at != null && (filter === 'all' || m.profile === filter) && !isBlock(m.id));
+    // An event on both the work and personal calendars shows once.
+    const seen = new Set<string>();
+    const all = live(snap.meetings).filter((m) => m.starts_at != null && (filter === 'all' || m.profile === filter) && !isBlock(m.id) && !seen.has(m.id) && Boolean(seen.add(m.id)));
     const ahead = all.filter((m) => (m.ends_at ?? m.starts_at!) > now).sort((a, b) => a.starts_at! - b.starts_at!);
     const endOfDay = dayEnd(now);
     const today = ahead.filter((m) => m.starts_at! < endOfDay);
