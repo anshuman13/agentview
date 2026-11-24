@@ -4,6 +4,12 @@ use assistant::Store;
 use serde_json::{Map, Value};
 use std::net::Ipv4Addr;
 use tauri::{Manager, State};
+#[cfg(desktop)]
+use tauri_plugin_global_shortcut::{GlobalShortcutExt, ShortcutState};
+
+// System-wide key that raises the window with the composer focused. Not Ctrl+Option+Space (macOS Input Sources).
+#[cfg(desktop)]
+const QUICK_ENTRY_KEY: &str = "Super+Shift+Space";
 
 // The WebView gets a JavaScript bridge (clipboard, files, intents), so it may only show AgentView itself.
 fn trusted(url: &tauri::Url) -> bool {
@@ -94,6 +100,29 @@ pub fn run() {
                 tauri::webview::NewWindowResponse::Deny
             });
             builder.build()?;
+            #[cfg(desktop)]
+            {
+                let plugin = tauri_plugin_global_shortcut::Builder::new()
+                    .with_handler(|app, _, event| {
+                        if event.state() != ShortcutState::Pressed {
+                            return;
+                        }
+                        let Some(window) = app.get_webview_window("main") else { return };
+                        let _ = window.unminimize();
+                        let _ = window.show();
+                        let _ = window.set_focus();
+                        let _ = window.eval("window.dispatchEvent(new CustomEvent('agentview:command',{detail:{id:'tab:chat'}}))");
+                    })
+                    .build();
+                match app.handle().plugin(plugin) {
+                    Ok(()) => {
+                        if let Err(e) = app.global_shortcut().register(QUICK_ENTRY_KEY) {
+                            eprintln!("could not register {QUICK_ENTRY_KEY}: {e}");
+                        }
+                    }
+                    Err(e) => eprintln!("could not register {QUICK_ENTRY_KEY}: {e}"),
+                }
+            }
             Ok(())
         })
         .run(tauri::generate_context!())

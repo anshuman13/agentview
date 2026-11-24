@@ -689,6 +689,7 @@ or a page puts focus back on what opened it.
 | ⌘I | Focus the assistant |
 | ? | Show the keyboard shortcuts (outside text fields) |
 | ⌘K | Clear the terminal |
+| ⇧⌘Space | Show the desktop window app with the composer focused (desktop window app only) |
 | Enter | Send; Shift+Enter for a new line |
 | Tab | Accept the suggested command or the ghost text (a Tab chip follows the ghost text on a keyboard device) |
 | Shift+Tab | Cycle the permission mode |

@@ -44,6 +44,8 @@ address field is left.
 The desktop window app bundles the web UI and calls the chosen Mac (the server accepts the origins
 `http://tauri.localhost` and `tauri://localhost` only from this Mac and NetBird peers); the web UI shows an offline state
 with Retry and the Mac list when that Mac cannot be reached.
+The desktop window app registers ⇧⌘Space system-wide: it raises the window and focuses the composer. The key is the
+constant `QUICK_ENTRY_KEY` in `app/src-tauri/src/lib.rs`, picked to avoid the macOS Input Sources key Ctrl+Option+Space.
 A Mac cannot reach its own NetBird address, so the Mac you are viewing from is marked "you are here" and opens on
 localhost.
 
