@@ -290,7 +290,8 @@ function handleCommand(client: Client, msg: ClientMessage, target?: string) {
       if (live.chats.has(msg.id)) closeByUser(msg.id).catch(fail);
       break;
     case 'view':
-      if (live.chats.has(msg.id)) view(client, msg.id);
+      // A chat this client already views passes: right after new_session the debounced live list may not have it yet.
+      if (live.chats.has(msg.id) || client.view === msg.id) view(client, msg.id);
       else fail(new Error('This chat was closed'));
       break;
     case 'open_session':

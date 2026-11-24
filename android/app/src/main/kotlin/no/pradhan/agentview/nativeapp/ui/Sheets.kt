@@ -41,6 +41,11 @@ import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.SnackbarVisuals
+import androidx.compose.material3.SwipeToDismissBox
+import androidx.compose.material3.SwipeToDismissBoxValue
+import androidx.compose.material3.rememberSwipeToDismissBoxState
+import androidx.compose.foundation.clickable
+import androidx.compose.runtime.key
 import androidx.compose.runtime.snapshotFlow
 import kotlinx.coroutines.flow.first
 import androidx.compose.material3.Text
@@ -156,17 +161,22 @@ fun MoreButton(label: String = "More", expanded: MutableState<Boolean> = remembe
     }
 }
 
-// Snackbar (web .as-snack): inverse surface with an inverse primary action.
+// Snackbar (web .as-snack): inverse surface with an inverse primary action. A tap or a sideways swipe dismisses it.
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SnackHost(state: SnackbarHostState, modifier: Modifier = Modifier) {
     SnackbarHost(state, modifier) { data ->
-        Snackbar(
-            data,
-            shape = RoundedCornerShape(Tokens.radius),
-            containerColor = av.inverseSurface,
-            contentColor = av.inverseOnSurface,
-            actionColor = av.inversePrimary,
-        )
+        val swipe = key(data) { rememberSwipeToDismissBoxState(confirmValueChange = { v -> if (v != SwipeToDismissBoxValue.Settled) data.dismiss(); v != SwipeToDismissBoxValue.Settled }) }
+        SwipeToDismissBox(swipe, backgroundContent = {}) {
+            Snackbar(
+                data,
+                modifier = Modifier.clickable { data.dismiss() },
+                shape = RoundedCornerShape(Tokens.radius),
+                containerColor = av.inverseSurface,
+                contentColor = av.inverseOnSurface,
+                actionColor = av.inversePrimary,
+            )
+        }
     }
 }
 
