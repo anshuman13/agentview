@@ -338,7 +338,8 @@ private fun TaskLines(hub: Hub, fold: FoldRow.Fold, cwd: String, live: Boolean, 
     }
     Column(verticalArrangement = Arrangement.spacedBy(Tokens.sp1)) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Tokens.sp3), verticalAlignment = Alignment.CenterVertically) {
-            if (steps.isNotEmpty()) Text((if (done < steps.size) "Tasks \u00b7 $done of ${steps.size}" else plural(steps.size, "task")) + if (fold.work.tools > 0 && fold.claims.isEmpty() && fold.proposed.isEmpty() && fold.remembered.isEmpty()) " \u00b7" else "", style = Type.footnote, color = av.fgMuted)
+            if (steps.isNotEmpty()) Text(if (done < steps.size) "Tasks \u00b7 $done of ${steps.size}" else plural(steps.size, "task"), style = Type.footnote, color = av.fgMuted)
+            if (steps.isNotEmpty() && fold.work.tools > 0 && fold.claims.isEmpty() && fold.proposed.isEmpty() && fold.remembered.isEmpty()) Text("\u00b7", style = Type.footnote, color = av.fgMuted)
             if (fold.claims.isNotEmpty()) Chip("Used ${plural(fold.claims.size, "claim")}", { reading = !reading }, on = reading)
             if (fold.proposed.isNotEmpty()) Chip("Proposed ${plural(fold.proposed.size, "claim")}", { proposing = !proposing }, on = proposing)
             if (fold.remembered.isNotEmpty()) Chip("Remembered ${plural(fold.remembered.size, "memory", "memories")}", { memory = true })
