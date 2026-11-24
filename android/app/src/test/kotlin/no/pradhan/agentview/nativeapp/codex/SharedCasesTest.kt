@@ -244,6 +244,9 @@ import no.pradhan.agentview.nativeapp.codex.meetings.sameName
 import no.pradhan.agentview.nativeapp.codex.meetings.seriesTitle
 import no.pradhan.agentview.nativeapp.ops.McpServer
 import no.pradhan.agentview.nativeapp.ops.setupPrompt
+import no.pradhan.agentview.nativeapp.workspace.Finding
+import no.pradhan.agentview.nativeapp.workspace.findingFixPrompt
+import no.pradhan.agentview.nativeapp.workspace.findingsFixPrompt
 import no.pradhan.agentview.nativeapp.workspace.isSketchPath
 import no.pradhan.agentview.nativeapp.workspace.isSpecPath
 import no.pradhan.agentview.nativeapp.workspace.sketchDoc
@@ -916,6 +919,14 @@ class SharedCasesTest {
             assertEquals(c.str("name"), c.str("progress"), specProgress(tasks))
             assertEquals(c.str("name"), c.nullable("start")?.jsonPrimitive?.content, tasks.firstOrNull { !it.done }?.let { startTaskPrompt(it, c.str("path")) })
             assertEquals(c.str("name"), c.str("all"), runAllPrompt(c.str("path")))
+        }
+    }
+
+    @Test fun findingPrompts() {
+        for (c in cases("finding-prompts")) {
+            val findings = c.getValue("findings").jsonArray.map { protocolJson.decodeFromJsonElement<Finding>(it) }
+            c.nullable("one")?.let { assertEquals(c.str("name"), it.jsonPrimitive.content, findingFixPrompt(findings[0])) }
+            c.nullable("all")?.let { assertEquals(c.str("name"), it.jsonPrimitive.content, findingsFixPrompt(findings)) }
         }
     }
 

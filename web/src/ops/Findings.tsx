@@ -9,6 +9,7 @@ import { Section } from '../ui/Section';
 import { pressable } from '../ui/util';
 import { since } from '../sessions/folders';
 import type { Finding } from '../../../shared/protocol';
+import { findingFixPrompt, findingsFixPrompt } from '../../../shared/reviewPrompt';
 import '../styles/features/github.css';
 
 import { dismissFinding, fetchFindings } from './opsApi';
@@ -55,11 +56,17 @@ export function Findings({ target }: { target: string }) {
   }, [target, cwd]);
   if (!review) return null;
   const open = (f: Finding) => setUi({ openFile: f.file, openLine: f.line, follow: false });
-  const fix = (f: Finding) => send({ type: 'prompt', text: `Fix this review finding in ${f.file}:${f.line}: ${f.summary}${f.failure ? ` (${f.failure})` : ''}` });
+  const fix = (f: Finding) => send({ type: 'prompt', text: findingFixPrompt(f) });
+  const showFixAll = review.findings.length > 1;
   const dismiss = (f: Finding) => dismissFinding(target, findingKey(f)).then(setFindings, () => {});
   return (
     <>
-      <Section label="Findings" count={review.findings.length} action={review.at > 0 && <span className="ui-section-label">Reviewed {since(review.at)}</span>} />
+      <Section label="Findings" count={review.findings.length} action={(review.at > 0 || showFixAll) ? (
+        <>
+          {review.at > 0 && <span className="ui-section-label">Reviewed {since(review.at)}</span>}
+          {showFixAll && <Button variant="plain" size="sm" onClick={() => send({ type: 'prompt', text: findingsFixPrompt(review.findings) })}>Fix all</Button>}
+        </>
+      ) : undefined} />
       {review.findings.length === 0 ? (
         <EmptyState size="sm" title="No findings" />
       ) : (

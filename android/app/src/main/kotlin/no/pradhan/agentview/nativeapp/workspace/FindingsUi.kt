@@ -1,6 +1,8 @@
 package no.pradhan.agentview.nativeapp.workspace
 
 import androidx.compose.material3.Text
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -11,6 +13,7 @@ import no.pradhan.agentview.nativeapp.app.reviewFindings
 import no.pradhan.agentview.nativeapp.sessions.since
 import no.pradhan.agentview.nativeapp.ui.Button
 import no.pradhan.agentview.nativeapp.ui.ButtonSize
+import no.pradhan.agentview.nativeapp.ui.ButtonVariant
 import no.pradhan.agentview.nativeapp.ui.DotState
 import no.pradhan.agentview.nativeapp.ui.EmptyState
 import no.pradhan.agentview.nativeapp.ui.Group
@@ -30,7 +33,11 @@ fun Findings(hub: Hub, target: String, onOpen: ((Finding) -> Unit)? = null) {
     val all by hub.findings.collectAsState()
     LaunchedEffect(target, cwd) { runCatching { hub.reviewFindings(target) }.onSuccess { hub.setFindings(target, it) } }
     val review = all[target] ?: return
-    SectionHeader("Findings", review.findings.size.toString(), action = if (review.at > 0) ({ Text("Reviewed ${since(review.at)}", style = Type.callout, maxLines = 1) }) else null)
+    val showFixAll = review.findings.size > 1 && !hub.readOnly
+    SectionHeader("Findings", review.findings.size.toString(), action = if (review.at > 0 || showFixAll) ({
+        if (review.at > 0) Text("Reviewed ${since(review.at)}", style = Type.callout, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
+        if (showFixAll) Button("Fix all", { hub.askChat(findingsFixPrompt(review.findings)) }, size = ButtonSize.Sm, variant = ButtonVariant.Plain)
+    }) else null)
     Group {
         if (review.findings.isEmpty()) EmptyState("No findings")
         review.findings.forEachIndexed { i, f ->

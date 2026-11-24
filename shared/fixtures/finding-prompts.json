@@ -1,0 +1,33 @@
+[
+  {
+    "name": "with failure",
+    "findings": [{ "file": "a.kt", "line": 4, "summary": "Off by one", "failure": "x=0 crashes" }],
+    "one": "Fix this review finding in a.kt:4: Off by one (x=0 crashes)",
+    "all": null
+  },
+  {
+    "name": "without failure",
+    "findings": [{ "file": "b.ts", "line": 9, "summary": "Missing null check" }],
+    "one": "Fix this review finding in b.ts:9: Missing null check",
+    "all": null
+  },
+  {
+    "name": "two findings",
+    "findings": [
+      { "file": "a.kt", "line": 4, "summary": "Off by one", "failure": "x=0 crashes" },
+      { "file": "b.ts", "line": 9, "summary": "Missing null check" }
+    ],
+    "one": null,
+    "all": "Fix these 2 review findings:\n1. a.kt:4: Off by one (x=0 crashes)\n2. b.ts:9: Missing null check\nFix each one, and skip any you find is not a real problem."
+  },
+  {
+    "name": "three in order with an empty failure",
+    "findings": [
+      { "file": "c.go", "line": 0, "summary": "Leak", "failure": "" },
+      { "file": "a.kt", "line": 4, "summary": "Off by one", "failure": "x=0 crashes" },
+      { "file": "b.ts", "line": 9, "summary": "Missing null check" }
+    ],
+    "one": null,
+    "all": "Fix these 3 review findings:\n1. c.go:0: Leak\n2. a.kt:4: Off by one (x=0 crashes)\n3. b.ts:9: Missing null check\nFix each one, and skip any you find is not a real problem."
+  }
+]

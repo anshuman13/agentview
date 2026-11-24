@@ -19,7 +19,13 @@ fun parseFindings(body: String): ReviewFindings? = if (body.isBlank() || body.tr
 
 fun findingKey(f: Finding) = "${f.file}:${f.line}:${f.summary.take(60)}"
 
-fun findingFixPrompt(f: Finding) = "Fix this review finding in ${f.file}:${f.line}: ${f.summary}" + (f.failure?.let { " ($it)" } ?: "")
+private fun failureOf(f: Finding) = f.failure?.takeIf { it.isNotEmpty() }?.let { " ($it)" } ?: ""
+
+fun findingFixPrompt(f: Finding) = "Fix this review finding in ${f.file}:${f.line}: ${f.summary}${failureOf(f)}"
+
+fun findingsFixPrompt(findings: List<Finding>) =
+    (listOf("Fix these ${findings.size} review findings:") + findings.mapIndexed { i, f -> "${i + 1}. ${f.file}:${f.line}: ${f.summary}${failureOf(f)}" } +
+        "Fix each one, and skip any you find is not a real problem.").joinToString("\n")
 
 // The 0-based line index a finding scrolls the file to: its line, or the last one past the end; null for no line.
 fun findingScroll(line: Int, lineCount: Int): Int? = if (line <= 0 || lineCount <= 0) null else minOf(line, lineCount) - 1

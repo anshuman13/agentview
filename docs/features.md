@@ -387,11 +387,11 @@ cost so far. The status bar usage tooltip adds a Spend block with today's and th
 
 "Ask Claude to review" on a pull request and the inbox's review prompt run `/code-review <number>`. The findings
 it reports show up in the pull request's pane, most severe first: a row opens the file on that line, Fix sends
-the finding to the chat, Dismiss hides it for good (kept per repo in `~/.agentview/findings.json`). "Review changes
+the finding to the chat, Fix all (two or more findings) sends them all in one prompt, Dismiss hides it for good (kept per repo in `~/.agentview/findings.json`). "Review changes
 with Claude" in the Changes view and "Review changes" in the chat menu (web and phone; off while Claude runs or when no file changed)
 run `/code-review` on the working tree; those findings show at the bottom of the Changes view. The Findings header
-reads the count and "Reviewed <since>" (web and phone). On the phone a working-tree finding opens the file as text,
-scrolled to its line (the last line when it is past the end) and tinted for 1.6 s; read-only mode hides Fix and Dismiss.
+reads the count, "Reviewed <since>" and Fix all (web and phone). On the phone a working-tree finding opens the file as text,
+scrolled to its line (the last line when it is past the end) and tinted for 1.6 s; read-only mode hides Fix, Fix all and Dismiss.
 
 In the web Changes view ⌘-click (Ctrl-click) toggles a file into a selection and Shift-click picks a range within
 one section. Discard, Stage and Unstage on a selected row then act on every selected file in that section; Esc

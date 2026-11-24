@@ -14,10 +14,11 @@ import { limitResume } from '../../shared/limitResume';
 import { buildsLine, endedRun, finishedLine, fiveHourLabel, fiveHourLine, goalEnd, mergeQuiet, roundsMarkdown, roundsSummary, runDetail } from '../../shared/goalText';
 import { exploreLabelOf, exploreRunsOf, type ExploreRow } from '../../shared/explore';
 import { FEATURES, featureRows, paletteFeature, shownFeature, type UseDays } from '../../shared/featureUse';
-import type { Capabilities, ChatEvent, ChatRun, FiveHour, LiveChat, Provider, Round, SavedSession, Try } from '../../shared/protocol';
+import type { Capabilities, ChatEvent, Finding, ChatRun, FiveHour, LiveChat, Provider, Round, SavedSession, Try } from '../../shared/protocol';
 import { START_MODES, billing, checkedModel, menuModes, modeSteps, newestModels, providerLabel, providerMark, providerModes, shortModel, startModeFor, startTexts, type Billing } from '../../shared/providers';
 import { recentInRepo } from './app/newChat';
 import { binLeft, buildFolders, chatPlace, since } from './sessions/folders';
+import { findingFixPrompt, findingsFixPrompt } from '../../shared/reviewPrompt';
 import { setupPrompt, type SetupKind } from '../../shared/setupPrompt';
 import { appendRule } from '../../shared/steering';
 import { addPreset, parsePresets, removePreset, type GoalPreset } from '../../shared/goalPresets';
@@ -235,6 +236,12 @@ describe('cases shared with the Android app', () => {
     });
   }
 
+  for (const c of cases<{ name: string; findings: Finding[]; one: string | null; all: string | null }>('finding-prompts')) {
+    it(`findingFixPrompt: ${c.name}`, () => {
+      if (c.one != null) expect(findingFixPrompt(c.findings[0])).toBe(c.one);
+      if (c.all != null) expect(findingsFixPrompt(c.findings)).toBe(c.all);
+    });
+  }
   for (const c of cases<{ name: string; brief: string; expected: string }>('build-prompt')) {
     it(`buildPrompt: ${c.name}`, () => expect(buildPrompt(c.brief)).toBe(c.expected));
   }
