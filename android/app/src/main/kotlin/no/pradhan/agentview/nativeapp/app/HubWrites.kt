@@ -85,6 +85,12 @@ fun Hub.runReview(action: String, run: String, failure: String, body: String = "
 
 fun Hub.saveFile(path: String, content: String, failure: String = "Could not save ${path.substringAfterLast('/')}", done: (Boolean) -> Unit) = writes.run(failure, { api.put("/api/file?path=${enc(path)}", content, pageChat) }, done)
 
+// web fileApi.ts renameSketch and deleteSketch: change a file in the chat's .claude/sketches; the notice carries the server's reason.
+private fun Hub.sketchWrite(failure: String, done: (Boolean) -> Unit, call: suspend () -> String) =
+    writes.run(failure, { try { call() } catch (e: ApiError) { throw ApiError("$failure: ${loadErrorText(e.message.orEmpty())}", e.code) } }, done)
+fun Hub.renameSketch(name: String, to: String, done: (Boolean) -> Unit) = sketchWrite("Not renamed", done) { api.post("/api/sketches/rename?name=${enc(name)}&to=${enc(to)}", "", pageChat) }
+fun Hub.deleteSketch(name: String, done: (Boolean) -> Unit) = sketchWrite("Not deleted", done) { api.delete("/api/sketches?name=${enc(name)}", pageChat) }
+
 // Replaces the body of a memory file; `done` gets the body it had, or null when the save did not go through.
 fun Hub.saveMemory(path: String, text: String, failure: String, done: (String?) -> Unit) =
     write("/api/memory/save", buildJsonObject { put("path", path); put("text", text) }.toString(), failure, { protocolJson.parseToJsonElement(it).jsonObject.getValue("previous").jsonPrimitive.content }, done)

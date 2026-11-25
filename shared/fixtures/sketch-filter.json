@@ -1,0 +1,8 @@
+[
+  { "name": "an empty query keeps every sketch", "names": ["login.html", "trip-cards.html"], "query": "", "shown": ["login.html", "trip-cards.html"] },
+  { "name": "case does not matter", "names": ["Login.html", "trip-cards.html"], "query": "LOG", "shown": ["Login.html"] },
+  { "name": "dashes read as spaces", "names": ["trip-cards.html", "trip_list.html", "cards.html"], "query": "trip cards", "shown": ["trip-cards.html"] },
+  { "name": "a dashed query matches spaced words", "names": ["trip_cards.html", "cards.html"], "query": "trip-cards", "shown": ["trip_cards.html"] },
+  { "name": "every word must match", "names": ["mcp-filter.html", "mcp-list.html"], "query": "mcp  filter", "shown": ["mcp-filter.html"] },
+  { "name": "the extension is not searched", "names": ["login.html"], "query": "html", "shown": [] }
+]

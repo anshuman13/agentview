@@ -217,6 +217,8 @@ import no.pradhan.agentview.nativeapp.workspace.isSketchPath
 import no.pradhan.agentview.nativeapp.workspace.pathCopies
 import no.pradhan.agentview.nativeapp.workspace.isSpecPath
 import no.pradhan.agentview.nativeapp.workspace.sketchDoc
+import no.pradhan.agentview.nativeapp.workspace.sketchMatches
+import no.pradhan.agentview.nativeapp.workspace.sketchRename
 import no.pradhan.agentview.nativeapp.workspace.specProgress
 import no.pradhan.agentview.nativeapp.workspace.specPrompt
 import no.pradhan.agentview.nativeapp.workspace.specSlug
@@ -847,6 +849,14 @@ class SharedCasesTest {
 
     @Test fun sketchPath() {
         for (c in cases("sketch-path")) assertEquals(c.str("name"), c.getValue("sketch").jsonPrimitive.booleanOrNull, isSketchPath(c.str("path")))
+    }
+
+    @Test fun sketchFilter() {
+        for (c in cases("sketch-filter")) assertEquals(c.str("name"), c.getValue("shown").jsonArray.map { it.jsonPrimitive.content }, c.getValue("names").jsonArray.map { it.jsonPrimitive.content }.filter { sketchMatches(it, c.str("query")) })
+    }
+
+    @Test fun sketchRenameFile() {
+        for (c in cases("sketch-rename")) assertEquals(c.str("name"), c.nullable("file")?.jsonPrimitive?.content, sketchRename(c.str("input")))
     }
 
     @Test fun sketchDoc() {

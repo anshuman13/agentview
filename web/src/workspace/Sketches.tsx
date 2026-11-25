@@ -1,19 +1,21 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { flushSync } from 'react-dom';
-import { setUi, useStore } from '../app/store';
+import { notice, setUi, useStore } from '../app/store';
 import { useNarrow } from '../app/shell/useNarrow';
 import { useThemeName } from '../app/theme';
 import { Back } from '../app/touch/back';
 import { Button, Chip, IconButton, ShowAll } from '../ui/Button';
 import { Menu, MenuItem } from '../ui/Menu';
 import { EmptyState } from '../ui/Panel';
+import { Confirm, type ConfirmRequest } from '../ui/Confirm';
+import { Icon } from '../ui/Icon';
 import { Card, CardGrid } from '../ui/Card';
 import { Section } from '../ui/Section';
 import { Skeleton } from '../ui/Skeleton';
 import { ago, showChat, zoom } from '../ui/util';
-import { sketchDoc, sketchOpenable, sketchTitle, type SketchTheme } from '../../../shared/sketches';
+import { SKETCH_SEARCH_MIN, sketchDoc, sketchMatches, sketchOpenable, sketchRename, sketchTitle, type SketchTheme } from '../../../shared/sketches';
 import { CopyPathItems } from './CopyPathItems';
-import type { SketchFile } from './fileApi';
+import { deleteSketch, downloadSketch, renameSketch, type SketchFile } from './fileApi';
 import { useSketch, useSketches } from './useSketches';
 
 export type Device = 'desktop' | 'phone';
@@ -21,20 +23,74 @@ export type Device = 'desktop' | 'phone';
 const FOLD = 5;
 const SIZE: Record<Device, [number, number]> = { desktop: [1280, 800], phone: [390, 844] };
 
-export function SketchList({ sketches, onOpen, zoomed }: { sketches: SketchFile[]; onOpen: (name: string) => void; zoomed?: string | null }) {
+export function SketchList({ sketches, onOpen, onChanged, zoomed }: { sketches: SketchFile[]; onOpen: (name: string) => void; onChanged?: () => void; zoomed?: string | null }) {
   const [all, setAll] = useState(false);
+  const [query, setQuery] = useState('');
+  const [ask, setAsk] = useState<ConfirmRequest | null>(null);
   const theme = useThemeName();
-  const rows = all ? sketches : sketches.slice(0, FOLD);
+  const shown = query ? sketches.filter((s) => sketchMatches(s.name, query)) : sketches;
+  const rows = all || query ? shown : shown.slice(0, FOLD);
+  const changed = () => onChanged?.();
+  const rename = (s: SketchFile) => setAsk({
+    title: 'Rename sketch', detail: 'The file in .claude/sketches gets the new name.', action: 'Rename', icon: 'edit',
+    input: { value: sketchTitle(s.name), placeholder: 'Sketch name', maxLength: 120 },
+    run: (to) => {
+      const file = sketchRename(to);
+      if (!file) return Promise.resolve(notice('Not a valid sketch name'));
+      if (file === s.name) return Promise.resolve();
+      return renameSketch(s.name, to).then(changed, (e) => notice(`Not renamed: ${errText(e)}`));
+    },
+  });
+  const remove = (s: SketchFile) => setAsk({
+    title: `Delete ${sketchTitle(s.name)}?`, detail: 'The file is removed from .claude/sketches. This cannot be undone.', action: 'Delete', icon: 'trash',
+    run: () => deleteSketch(s.name).then(changed, (e) => notice(`Not deleted: ${errText(e)}`)),
+  });
   return (
     <>
-      <Section label="Sketches" count={sketches.length} />
-      <CardGrid className="sk-grid">
-        {rows.map((s) => <Card key={s.name} className="sk-card" cover={<SketchThumb file={s} theme={theme} />} title={sketchTitle(s.name)} meta={ago(s.mtime, ' ago')} style={s.name === zoomed ? { viewTransitionName: ZOOM } : undefined} onClick={() => onOpen(s.name)} />)}
-      </CardGrid>
-      {rows.length < sketches.length && <ShowAll count={sketches.length} className="ov-more" onClick={() => setAll(true)} />}
+      <Section label="Sketches" count={query ? `${shown.length} of ${sketches.length}` : sketches.length} />
+      {sketches.length > SKETCH_SEARCH_MIN && (
+        <label className="sk-search">
+          <Icon name="search" small />
+          <input type="search" enterKeyHint="search" value={query} placeholder="Search sketches" aria-label="Search sketches" onChange={(e) => setQuery(e.target.value)} onKeyDown={(e) => e.key === 'Escape' && setQuery('')} />
+        </label>
+      )}
+      {shown.length ? (
+        <CardGrid className="sk-grid">
+          {rows.map((s) => (
+            <div key={s.name} className="sk-cell">
+              <Card className="sk-card" cover={<SketchThumb file={s} theme={theme} />} title={sketchTitle(s.name)} meta={ago(s.mtime, ' ago')} style={s.name === zoomed ? { viewTransitionName: ZOOM } : undefined} onClick={() => onOpen(s.name)} />
+              <CardMenu name={s.name} items={(close) => (
+                <>
+                  <MenuItem icon="edit" onClick={() => { close(); rename(s); }}>Rename</MenuItem>
+                  <MenuItem icon="desktop-download" onClick={() => { close(); downloadSketch(s).catch((e) => notice(`Not downloaded: ${errText(e)}`)); }}>Download</MenuItem>
+                  <MenuItem icon="trash" danger onClick={() => { close(); remove(s); }}>Delete</MenuItem>
+                </>
+              )} />
+            </div>
+          ))}
+        </CardGrid>
+      ) : (
+        <EmptyState size="sm" icon="search" title="No sketches match" action={<Button size="sm" onClick={() => setQuery('')}>Clear search</Button>} />
+      )}
+      {rows.length < shown.length && <ShowAll count={shown.length} className="ov-more" onClick={() => setAll(true)} />}
+      {ask && <Confirm {...ask} onClose={() => setAsk(null)} />}
     </>
   );
 }
+
+function CardMenu({ name, items }: { name: string; items: (close: () => void) => ReactNode }) {
+  const [open, setOpen] = useState(false);
+  const btn = useRef<HTMLButtonElement>(null);
+  const close = () => setOpen(false);
+  return (
+    <span className="sk-menu">
+      <IconButton ref={btn} size="sm" icon="kebab-vertical" label={`More for ${sketchTitle(name)}`} aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen(!open)} />
+      {open && <Menu trigger={btn} onClose={close}>{items(close)}</Menu>}
+    </span>
+  );
+}
+
+const errText = (e: unknown) => (e instanceof Error ? e.message : String(e));
 
 // The card's preview loads only once the card scrolls into view, so a long folder reads one file per visible card.
 function SketchThumb({ file, theme }: { file: SketchFile; theme: SketchTheme }) {
@@ -165,7 +221,7 @@ export function Sketches({ shown }: { shown: boolean }) {
     <div className="wk"><div className="wk-scroll" ref={scroller}><div className={file ? 'mt-page sk-page' : 'mt-page'}>
       {file && <SketchView file={file} device={device} theme={theme} onDevice={setDevice} onTheme={setTheme} onBack={() => zoom(() => setOpen(null))} />}
       {data?.length ? (
-        <div style={{ display: file ? 'none' : 'contents' }}><SketchList sketches={data} zoomed={zoomed} onOpen={openSketch} /></div>
+        <div style={{ display: file ? 'none' : 'contents' }}><SketchList sketches={data} zoomed={zoomed} onOpen={openSketch} onChanged={() => void reload()} /></div>
       ) : data ? (
         <EmptyState icon="paintcan" title="No sketches yet. Ask for one with /sketch <what>" action={<Button size="sm" onClick={newSketch}>New sketch</Button>} />
       ) : error ? (

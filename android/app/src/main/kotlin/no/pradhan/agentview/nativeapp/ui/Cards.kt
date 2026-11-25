@@ -18,6 +18,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.semantics.Role
@@ -37,6 +38,7 @@ fun Card(
     selected: Boolean = false,
     cover: (@Composable () -> Unit)? = null,
     onClick: (() -> Unit)? = null,
+    menu: (@Composable () -> Unit)? = null,
     content: (@Composable ColumnScope.() -> Unit)? = null,
 ) {
     val shape = RoundedCornerShape(Tokens.shapeLg)
@@ -47,10 +49,13 @@ fun Card(
             Box(Modifier.fillMaxWidth().aspectRatio(16f / 10f).background(av.groupCard)) { cover() }
             HorizontalDivider(color = av.border, thickness = Tokens.hairline)
         }
-        Column(Modifier.padding(start = Tokens.sp6, end = Tokens.sp6, top = Tokens.sp5, bottom = Tokens.sp6), verticalArrangement = Arrangement.spacedBy(Tokens.sp1)) {
-            Text(title, style = Type.body.copy(fontWeight = FontWeight.Medium), color = av.onSurface, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            if (!meta.isNullOrEmpty()) Text(meta, style = Type.meta, color = av.metaFg, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            content?.invoke(this)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f).padding(start = Tokens.sp6, end = if (menu != null) Tokens.sp2 else Tokens.sp6, top = Tokens.sp5, bottom = Tokens.sp6), verticalArrangement = Arrangement.spacedBy(Tokens.sp1)) {
+                Text(title, style = Type.body.copy(fontWeight = FontWeight.Medium), color = av.onSurface, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                if (!meta.isNullOrEmpty()) Text(meta, style = Type.meta, color = av.metaFg, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                content?.invoke(this)
+            }
+            if (menu != null) Box(Modifier.padding(end = Tokens.sp2)) { menu() }
         }
     }
 }

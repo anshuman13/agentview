@@ -24,3 +24,18 @@ export const sketchTitle = (name: string) => name.replace(/\.html$/, '');
 
 // The page and the deep link open only a name the list returned.
 export const sketchOpenable = (name: string, listed: string[]) => /^[^/]+$/.test(name) && listed.includes(name);
+
+// The list shows a search box once it holds more than this many sketches.
+export const SKETCH_SEARCH_MIN = 6;
+
+// A sketch matches when every word of the query is in its title, with dashes and underscores read as spaces.
+export function sketchMatches(name: string, query: string) {
+  const title = sketchTitle(name).toLowerCase().replace(/[-_]+/g, ' ');
+  return query.toLowerCase().split(/\s+/).filter(Boolean).every((w) => title.includes(w.replace(/[-_]+/g, ' ')));
+}
+
+// The file name a rename asks for: the typed title plus .html, or null when it is empty, hidden or names a folder.
+export function sketchRename(input: string) {
+  const title = sketchTitle(input.trim()).trim();
+  return !title || title.startsWith('.') || /[/\\\0]/.test(title) ? null : `${title}.html`;
+}

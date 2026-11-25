@@ -1,8 +1,8 @@
-import { mkdirSync, mkdtempSync, realpathSync, rmSync, symlinkSync, utimesSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, symlinkSync, utimesSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { afterAll, describe, expect, it } from 'bun:test';
-import { listSketches, readFileWithOriginal, safeResolve } from './files.js';
+import { deleteSketch, listSketches, readFileWithOriginal, renameSketch, safeResolve } from './files.js';
 
 describe('readFileWithOriginal access', () => {
   const tmp = realpathSync(mkdtempSync(path.join(os.tmpdir(), 'av-files-')));
@@ -76,5 +76,28 @@ describe('listSketches', () => {
     utimesSync(path.join(dir, 'old.html'), 1, 1);
     expect((await listSketches(tmp)).map((s) => s.name)).toEqual(['new.html', 'old.html']);
     expect((await listSketches(tmp))[0].path).toBe('.claude/sketches/new.html');
+  });
+});
+
+describe('renameSketch and deleteSketch', () => {
+  const tmp = realpathSync(mkdtempSync(path.join(os.tmpdir(), 'av-sketch-edit-')));
+  const dir = path.join(tmp, '.claude/sketches');
+  afterAll(() => rmSync(tmp, { recursive: true, force: true }));
+
+  it('renames and deletes only regular sketch files', async () => {
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(path.join(dir, 'a.html'), 'a');
+    writeFileSync(path.join(dir, 'b.html'), 'b');
+    writeFileSync(path.join(tmp, 'x.html'), 'x');
+    symlinkSync(path.join(tmp, 'x.html'), path.join(dir, 'link.html'));
+    expect(await renameSketch(tmp, 'a.html', 'login v2')).toEqual({ name: 'login v2.html', path: '.claude/sketches/login v2.html' });
+    expect(readFileSync(path.join(dir, 'login v2.html'), 'utf8')).toBe('a');
+    await expect(renameSketch(tmp, 'b.html', 'login v2.html')).rejects.toThrow('exists');
+    await expect(renameSketch(tmp, 'b.html', '../x')).rejects.toThrow('Not a valid');
+    await expect(renameSketch(tmp, '../../x.html', 'y')).rejects.toThrow('not a sketch');
+    await expect(deleteSketch(tmp, 'link.html')).rejects.toThrow('not found');
+    await deleteSketch(tmp, 'b.html');
+    expect((await listSketches(tmp)).map((s) => s.name)).toEqual(['login v2.html']);
+    expect(readFileSync(path.join(tmp, 'x.html'), 'utf8')).toBe('x');
   });
 });

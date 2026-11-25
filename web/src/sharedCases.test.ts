@@ -19,7 +19,7 @@ import { setupPrompt, type SetupKind } from '../../shared/setupPrompt';
 import { appendRule } from '../../shared/steering';
 import { isSpecPath, specProgress, specPrompt, specSlug, specTasks, startTaskPrompt, withoutOpenTasks, type SpecTask } from '../../shared/specTasks';
 import { pathCopies } from './workspace/copyPathLogic';
-import { isSketchPath, sketchDoc, type SketchTheme } from '../../shared/sketches';
+import { isSketchPath, sketchDoc, sketchMatches, sketchRename, type SketchTheme } from '../../shared/sketches';
 import { taskChatPrompt } from '../../shared/taskChat';
 import { findInChat, findStart } from '../../shared/findInChat';
 import { chatMatches } from '../../shared/chatSearch';
@@ -258,6 +258,14 @@ describe('cases shared with the Android app', () => {
 
   for (const c of cases<{ name: string; path: string; sketch: boolean }>('sketch-path')) {
     it(`isSketchPath: ${c.name}`, () => expect(isSketchPath(c.path)).toBe(c.sketch));
+  }
+
+  for (const c of cases<{ name: string; names: string[]; query: string; shown: string[] }>('sketch-filter')) {
+    it(`sketchMatches: ${c.name}`, () => expect(c.names.filter((n) => sketchMatches(n, c.query))).toEqual(c.shown));
+  }
+
+  for (const c of cases<{ name: string; input: string; file: string | null }>('sketch-rename')) {
+    it(`sketchRename: ${c.name}`, () => expect(sketchRename(c.input)).toBe(c.file));
   }
 
   for (const c of cases<{ name: string; text: string; rule: string; expected: string | null }>('append-rule')) {

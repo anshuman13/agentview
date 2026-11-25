@@ -1,5 +1,18 @@
 package no.pradhan.agentview.nativeapp.workspace
 
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.platform.LocalContext
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import no.pradhan.agentview.nativeapp.app.deleteSketch
+import no.pradhan.agentview.nativeapp.app.renameSketch
+import no.pradhan.agentview.nativeapp.ui.ConfirmDialog
+import no.pradhan.agentview.nativeapp.ui.SearchField
+import no.pradhan.agentview.nativeapp.ui.TextDialog
 import android.view.MotionEvent
 import android.webkit.WebResourceRequest
 import android.webkit.WebSettings
@@ -88,6 +101,7 @@ fun SketchesScreen(hub: Hub, onBack: () -> Unit) {
     }
     val file = sketches?.firstOrNull { it.name == open }
     var all by rememberSaveable(chat) { mutableStateOf(false) }
+    var query by rememberSaveable(chat) { mutableStateOf("") }
     val still = motionOff()
     val scroll = rememberScrollState()
     // Zoom in on open and out on back (web: the sk-zoom view transition), instant at animator scale 0.
@@ -102,13 +116,16 @@ fun SketchesScreen(hub: Hub, onBack: () -> Unit) {
         }.apply { targetContentZIndex = if (targetState != null) 1f else -1f }
     }, label = "sketch") { shown ->
         if (shown != null) SketchView(hub, shown, onBack = { open = null })
-        else SketchList(hub, sketches, scroll, load.error, reload, all, { all = true }, onBack) { open = it }
+        else SketchList(hub, sketches, scroll, load.error, reload, all, { all = true }, query, { query = it }, onBack) { open = it }
     }
 }
 
 @Composable
-private fun SketchList(hub: Hub, sketches: List<SketchFile>?, scroll: ScrollState, error: String, reload: () -> Unit, all: Boolean, showAll: () -> Unit, onBack: () -> Unit, onOpen: (String) -> Unit) {
+private fun SketchList(hub: Hub, sketches: List<SketchFile>?, scroll: ScrollState, error: String, reload: () -> Unit, all: Boolean, showAll: () -> Unit, query: String, onQuery: (String) -> Unit, onBack: () -> Unit, onOpen: (String) -> Unit) {
     val now = System.currentTimeMillis()
+    var renaming by remember { mutableStateOf<SketchFile?>(null) }
+    var deleting by remember { mutableStateOf<SketchFile?>(null) }
+    val download = rememberSketchDownload(hub)
     Column(Modifier.fillMaxSize()) {
         WorkspaceHeader(hub, "Sketches", onBack) { IconBtn("refresh", "Refresh", reload) }
         PageBody {
@@ -117,16 +134,59 @@ private fun SketchList(hub: Hub, sketches: List<SketchFile>?, scroll: ScrollStat
                 sketches == null -> Loading("Loading sketches…")
                 sketches.isEmpty() -> EmptyState("No sketches yet. Ask for one with /\u2060sketch <what>", icon = "paintcan", action = { Button("New sketch", { newSketch(hub) }, size = ButtonSize.Sm) })
                 else -> Column(Modifier.fillMaxSize().verticalScroll(scroll)) {
-                    SectionHeader("Sketches", sketches.size.toString())
-                    CardGrid(sketches.take(if (all) sketches.size else FOLD), Modifier.padding(horizontal = Tokens.listPad)) { s ->
-                        Card(sketchTitle(s.name), meta = agoShort(s.mtime.toLong(), now, " ago"), onClick = { onOpen(s.name) }, cover = { SketchThumb(hub, s) { onOpen(s.name) } })
+                    val shown = if (query.isBlank()) sketches else sketches.filter { sketchMatches(it.name, query) }
+                    SectionHeader("Sketches", if (query.isBlank()) sketches.size.toString() else "${shown.size} of ${sketches.size}")
+                    if (sketches.size > SKETCH_SEARCH_MIN) SearchField(query, onQuery, "Search sketches")
+                    if (shown.isEmpty()) EmptyState("No sketches match", icon = "search", action = { Button("Clear search", { onQuery("") }, size = ButtonSize.Sm) })
+                    CardGrid(shown.take(if (all || query.isNotBlank()) shown.size else FOLD), Modifier.padding(horizontal = Tokens.listPad)) { s ->
+                        Card(sketchTitle(s.name), meta = agoShort(s.mtime.toLong(), now, " ago"), onClick = { onOpen(s.name) }, cover = { SketchThumb(hub, s) { onOpen(s.name) } }, menu = {
+                            MoreButton("More for ${sketchTitle(s.name)}") { close ->
+                                MenuItem("Rename", "edit", { close(); renaming = s })
+                                MenuItem("Download", "desktop-download", { close(); download(s) })
+                                MenuItem("Delete", "trash", { close(); deleting = s }, danger = true)
+                            }
+                        })
                     }
-                    if (!all && sketches.size > FOLD) Button("Show all ${sketches.size}", showAll, Modifier.padding(horizontal = Tokens.listPad), variant = ButtonVariant.Plain, size = ButtonSize.Sm)
+                    if (!all && query.isBlank() && shown.size > FOLD) Button("Show all ${shown.size}", showAll, Modifier.padding(horizontal = Tokens.listPad), variant = ButtonVariant.Plain, size = ButtonSize.Sm)
                     Spacer(Modifier.padding(bottom = Tokens.sp16))
                 }
             }
         }
     }
+    renaming?.let { s ->
+        TextDialog("Rename sketch", sketchTitle(s.name), "Rename", { to ->
+            when (sketchRename(to)) {
+                null -> hub.notice.value = "Not a valid sketch name"
+                s.name -> Unit
+                else -> hub.renameSketch(s.name, to) { if (it) reload() }
+            }
+        }, { renaming = null }, maxLength = 120, detail = "The file in .claude/sketches gets the new name.")
+    }
+    deleting?.let { s ->
+        ConfirmDialog("Delete ${sketchTitle(s.name)}?", "The file is removed from .claude/sketches. This cannot be undone.", "Delete", { hub.deleteSketch(s.name) { if (it) reload() } }, onDismiss = { deleting = null })
+    }
+}
+
+// Download asks where to save the file (system picker), then writes the sketch's HTML there.
+@Composable
+private fun rememberSketchDownload(hub: Hub): (SketchFile) -> Unit {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var pending by remember { mutableStateOf<SketchFile?>(null) }
+    val save = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("text/html")) { uri: Uri? ->
+        val file = pending ?: return@rememberLauncherForActivityResult
+        pending = null
+        if (uri == null) return@rememberLauncherForActivityResult
+        scope.launch {
+            val ok = runCatching {
+                val f = hub.readFile(file.path)
+                check(!f.binary && f.error == null) { f.error ?: "not text" }
+                withContext(Dispatchers.IO) { context.contentResolver.openOutputStream(uri)?.use { it.write(f.content.toByteArray()) } ?: error("no file") }
+            }.isSuccess
+            hub.notice.value = if (ok) "Saved ${file.name}" else "Not downloaded"
+        }
+    }
+    return { file -> pending = file; save.launch(file.name) }
 }
 
 private fun newSketch(hub: Hub) {

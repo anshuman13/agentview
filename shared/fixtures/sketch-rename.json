@@ -1,0 +1,10 @@
+[
+  { "name": "a plain title gets .html", "input": "new login", "file": "new login.html" },
+  { "name": "a typed .html is kept once", "input": " login-v2.html ", "file": "login-v2.html" },
+  { "name": "an empty title is refused", "input": "  ", "file": null },
+  { "name": "only .html is refused", "input": ".html", "file": null },
+  { "name": "a hidden name is refused", "input": ".secret", "file": null },
+  { "name": "a folder is refused", "input": "old/login", "file": null },
+  { "name": "a parent path is refused", "input": "../login", "file": null },
+  { "name": "a backslash is refused", "input": "a\\b", "file": null }
+]

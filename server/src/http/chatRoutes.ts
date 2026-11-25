@@ -4,7 +4,7 @@ import { configDef, inSettings, mcpCall, mcpConfig } from '../agent/claude/mcp.j
 import type { McpServerDef } from '../integrations/mcpClient.js';
 import { provider } from '../agent/registry.js';
 import { removeMemory, restoreMemory, saveMemory } from '../agent/memory.js';
-import { listDir, listFiles, listSketches, readFileWithOriginal, readImage, writeFileText } from '../workspace/files.js';
+import { deleteSketch, listDir, listFiles, listSketches, renameSketch, readFileWithOriginal, readImage, writeFileText } from '../workspace/files.js';
 import { github } from '../integrations/github.js';
 import { attention, dismissAttention, refreshAttention } from '../integrations/attention.js';
 import { dismissFinding, getFindings } from '../session/findings.js';
@@ -92,6 +92,8 @@ export function chatFileRoutes(): Record<string, Entry<ChatCtx>> {
     'ANY /api/devscript': entry(({ chat }) => devScript(chat.cwd)),
     'DELETE /api/terms': entry(({ url }) => closeTerminal(url.searchParams.get('id') ?? '')),
     'ANY /api/terms': entry(({ chat }) => listTerminals(chat.id)),
+    'POST /api/sketches/rename': entry(({ url, chat }) => renameSketch(chat.cwd, url.searchParams.get('name') ?? '', url.searchParams.get('to') ?? '')),
+    'DELETE /api/sketches': entry(({ url, chat }) => deleteSketch(chat.cwd, url.searchParams.get('name') ?? '')),
     'ANY /api/sketches': entry(({ chat }) => listSketches(chat.cwd)),
     'ANY /api/files': entry(({ chat }) => listFiles(chat.cwd)),
     'ANY /api/dir': entry(({ url, chat }) => listDir(chat.cwd, url.searchParams.get('path') ?? '')),

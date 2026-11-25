@@ -26,3 +26,19 @@ export type SketchFile = { name: string; path: string; mtime: number };
 export const fetchSketches = () => fetchJson<SketchFile[]>(api('/api/sketches'));
 
 export const readSketch = (path: string) => fetchJson<{ content: string; binary?: boolean }>(api(`/api/file?path=${encodeURIComponent(path)}`));
+
+export const renameSketch = (name: string, to: string) =>
+  fetchJson<SketchFile>(api(`/api/sketches/rename?name=${encodeURIComponent(name)}&to=${encodeURIComponent(to)}`), { method: 'POST' });
+
+export const deleteSketch = (name: string) => fetchJson(api(`/api/sketches?name=${encodeURIComponent(name)}`), { method: 'DELETE' });
+
+// Saves the sketch's HTML through the browser's download.
+export async function downloadSketch(file: SketchFile) {
+  const { content } = await readSketch(file.path);
+  const url = URL.createObjectURL(new Blob([content], { type: 'text/html' }));
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = file.name;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}

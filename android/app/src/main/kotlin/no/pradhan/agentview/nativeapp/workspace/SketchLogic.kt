@@ -14,6 +14,23 @@ fun sketchTitle(name: String) = name.removeSuffix(".html")
 // The page and the deep link open only a name the list returned.
 fun sketchOpenable(name: String, listed: List<String>) = '/' !in name && name.isNotEmpty() && name in listed
 
+// The list shows a search box once it holds more than this many sketches.
+const val SKETCH_SEARCH_MIN = 6
+
+private val DASHES = Regex("[-_]+")
+
+// A sketch matches when every word of the query is in its title, with dashes and underscores read as spaces.
+fun sketchMatches(name: String, query: String): Boolean {
+    val title = sketchTitle(name).lowercase().replace(DASHES, " ")
+    return query.lowercase().split(Regex("\\s+")).filter { it.isNotEmpty() }.all { title.contains(it.replace(DASHES, " ")) }
+}
+
+// The file name a rename asks for: the typed title plus .html, or null when it is empty, hidden or names a folder.
+fun sketchRename(input: String): String? {
+    val title = sketchTitle(input.trim()).trim()
+    return if (title.isEmpty() || title.startsWith('.') || title.any { it == '/' || it == '\\' || it == '\u0000' }) null else "$title.html"
+}
+
 const val MAX_SKETCH = 1_000_000
 
 const val SKETCH_WIDE = 1280

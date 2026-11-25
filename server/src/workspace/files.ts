@@ -1,7 +1,8 @@
-import { open, readFile, readdir, realpath, stat, writeFile } from 'node:fs/promises';
+import { lstat, open, readFile, readdir, realpath, rename, rm, stat, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { inside } from '../../../shared/util.js';
+import { sketchRename, sketchTitle } from '../../../shared/sketches.js';
 import { expandHome, workspaceRoots } from '../settings.js';
 import { git } from './git.js';
 
@@ -50,6 +51,29 @@ export async function listSketches(cwd: string) {
   );
   const files = found.filter((f) => f !== null);
   return files.sort((a, b) => b.mtime - a.mtime).slice(0, MAX_SKETCHES);
+}
+
+// A listed sketch by file name: a regular .html file directly in the sketch folder.
+async function sketchFile(cwd: string, name: string) {
+  if (sketchRename(name) !== name) throw new Error('not a sketch');
+  const abs = path.join(cwd, SKETCHES, name);
+  if (!(await lstat(abs).catch(() => null))?.isFile()) throw new Error('Sketch not found');
+  return abs;
+}
+
+export async function renameSketch(cwd: string, name: string, title: string) {
+  const from = await sketchFile(cwd, name);
+  const to = sketchRename(title);
+  if (!to) throw new Error('Not a valid sketch name');
+  const target = path.join(cwd, SKETCHES, to);
+  if (to !== name && (await lstat(target).catch(() => null))) throw new Error(`A sketch named ${sketchTitle(to)} exists`);
+  await rename(from, target);
+  return { name: to, path: `${SKETCHES}/${to}` };
+}
+
+export async function deleteSketch(cwd: string, name: string) {
+  await rm(await sketchFile(cwd, name));
+  return { name };
 }
 
 export async function listDir(cwd: string, rel: string) {
