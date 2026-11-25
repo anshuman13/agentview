@@ -49,3 +49,18 @@ describe('sub-chat links', () => {
     expect(await again.childrenOf('a')).toEqual(['b', 'c']);
   });
 });
+
+describe('roundOf', () => {
+  const members = [{ sessionId: 'a', startedAt: 0 }, { sessionId: 'b', startedAt: 10 }, { sessionId: 'c', startedAt: 20 }];
+
+  it('takes the round recorded with the sub-chat id', () => {
+    const rounds = [{ at: 5, n: 1 }, { at: 15, n: 2, sessionId: 'b' }, { at: 16, n: 3, sessionId: 'c' }];
+    expect(sub.roundOf('b', members, rounds)?.n).toBe(2);
+  });
+
+  it('matches older rounds by the time span of each sub-chat', () => {
+    const rounds = [{ at: 5, n: 1 }, { at: 12, n: 2 }, { at: 14, n: 3 }, { at: 25, n: 4 }];
+    expect([sub.roundOf('a', members, rounds)?.n, sub.roundOf('b', members, rounds)?.n, sub.roundOf('c', members, rounds)?.n]).toEqual([1, 3, 4]);
+    expect(sub.roundOf('z', members, rounds)).toBeUndefined();
+  });
+});

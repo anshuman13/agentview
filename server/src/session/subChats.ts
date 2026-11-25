@@ -37,3 +37,15 @@ export const groupOf = async (id: string) => {
   const root = await rootOf(id);
   return [root, ...(await childrenOf(root))];
 };
+
+// The round a sub-chat ran: the one recorded with its session id, else the last round that ended in its time span
+// (from its start to the next sub-chat's), for rounds from before rounds kept their session id.
+export function roundOf<R extends { at: number; sessionId?: string }>(id: string, members: { sessionId: string; startedAt: number }[], rounds: R[]) {
+  const own = rounds.filter((r) => r.sessionId === id);
+  if (own.length) return own[own.length - 1];
+  const i = members.findIndex((m) => m.sessionId === id);
+  if (i < 0) return undefined;
+  const from = i === 0 ? -Infinity : members[i].startedAt;
+  const to = members[i + 1]?.startedAt ?? Infinity;
+  return rounds.filter((r) => !r.sessionId && r.at >= from && r.at < to).at(-1);
+}

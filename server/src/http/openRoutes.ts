@@ -3,7 +3,7 @@ import { openInChrome } from '../chrome/chrome.js';
 import { listSessions, renameRoute, savedSession } from '../agent/claude/sessions.js';
 import { loggedInAccounts } from '../agent/claude/accounts.js';
 import { codexSessions } from '../agent/codex/threads.js';
-import { isProvider, providerOptions } from '../agent/registry.js';
+import { isProvider, provider, providerOf, providerOptions } from '../agent/registry.js';
 import { cancelFocus, scheduleFocus } from '../integrations/focus.js';
 import { connectorStatus, mcpGroups, setMcpGroup } from '../agent/claude/mcp.js';
 import { emptyBin, listBin, restoreSession } from '../agent/claude/bin.js';
@@ -12,7 +12,8 @@ import { openRouterView, saveOpenRouter } from '../agent/claude/openrouter.js';
 import { resolvedRoute } from '../agent/claude/resolved.js';
 import { searchMessages } from '../agent/claude/search.js';
 import { seenRoute } from '../agent/claude/seen.js';
-import { groupOf, listLinks } from '../session/subChats.js';
+import { groupOf, listLinks, roundOf } from '../session/subChats.js';
+import { pageBefore } from '../session/eventLog.js';
 import { readSummaries } from '../agent/claude/summaryStore.js';
 import { assistantRoute } from '../integrations/assistant.js';
 import { linkTitleRoute } from '../integrations/linkTitle.js';
@@ -67,6 +68,33 @@ export function sessionRoutes(d: RouteDeps): Record<string, Entry<Ctx>> {
         return l ? { ...s, parentId: l.parent, via: l.via, startedAt: l.at } : s;
       };
       return [...list.filter((x) => !binned.has(x.sessionId)).map((x) => linked(savedSession(x, summaries[x.sessionId]?.text))), ...codex].sort((a, b) => b.lastModified - a.lastModified);
+    }),
+    // The earlier sessions of a chat, oldest first: each one's first prompt, the build round it ran and the first commit it made.
+    'ANY /api/chat/subchats': entry(async ({ url }) => {
+      const ids = await groupOf(url.searchParams.get('session') ?? '');
+      const [list, links] = await Promise.all([listSessions({ limit: 1000 }), listLinks()]);
+      const byId = new Map(list.map((x) => [x.sessionId, x]));
+      const members = ids.map((id) => ({ sessionId: id, startedAt: links[id]?.at ?? byId.get(id)?.createdAt ?? 0 }));
+      const rounds = d.runs().filter((r) => ids.includes(r.sessionId)).flatMap((r) => r.rounds).sort((a, b) => a.at - b.at);
+      return Promise.all(members.slice(0, -1).map(async ({ sessionId, startedAt }) => {
+        const s = byId.get(sessionId);
+        const saved = s && savedSession(s);
+        const round = roundOf(sessionId, members, rounds);
+        const commit = await provider(providerOf(sessionId)).firstCommit(sessionId);
+        return { sessionId, title: saved?.firstPrompt ?? saved?.title ?? '', startedAt, ...(round && { round }), ...(commit && { commit }) };
+      }));
+    }),
+    // A saved sub-chat's events, read-only and paged like /api/chat/events, without starting the agent.
+    'ANY /api/chat/subchat-events': entry(async ({ url }) => {
+      const id = url.searchParams.get('session') ?? '';
+      const events = id ? await provider(providerOf(id)).savedEvents(id) : null;
+      if (!events) return failed(404, 'That chat has no saved transcript');
+      const limit = parseInt(url.searchParams.get('limit') ?? '', 10);
+      try {
+        return pageBefore(events, url.searchParams.get('before') ?? '', Number.isNaN(limit) ? undefined : limit);
+      } catch (err) {
+        return failed(404, err instanceof Error ? err.message : String(err));
+      }
     }),
     'ANY /api/sessions/search': entry(async ({ url }) => {
       const [hits, list, bin, links] = await Promise.all([searchMessages(url.searchParams.get('q') ?? ''), listSessions({ limit: 1000 }), listBin(), listLinks()]);

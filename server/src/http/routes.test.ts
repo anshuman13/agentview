@@ -19,6 +19,8 @@ const mocks = {
   groupOf: vi.fn(async (id: string) => [id]),
   restoreSession: vi.fn(),
   searchMessages: vi.fn(),
+  savedEvents: vi.fn(),
+  firstCommit: vi.fn(async () => null),
 };
 
 vi.mock('../integrations/focus.js', () => ({ scheduleFocus: mocks.scheduleFocus, cancelFocus: mocks.cancelFocus }));
@@ -26,7 +28,9 @@ vi.mock('../workspace/worktrees.js', () => ({ listRepos: mocks.listRepos, isWork
 vi.mock('../agent/claude/sessions.js', () => ({ listSessions: mocks.listSessions, savedSession: (x: unknown) => x, renameRoute: vi.fn() }));
 vi.mock('../agent/claude/pins.js', () => ({ removeChat: mocks.removeChat, pinsRoute: vi.fn() }));
 vi.mock('../agent/claude/bin.js', () => ({ listBin: mocks.listBin, emptyBin: vi.fn(), restoreSession: mocks.restoreSession }));
-vi.mock('../session/subChats.js', () => ({ listLinks: mocks.listLinks, groupOf: mocks.groupOf }));
+const realSub = await import('../session/subChats.js');
+vi.mock('../session/subChats.js', () => ({ listLinks: mocks.listLinks, groupOf: mocks.groupOf, roundOf: realSub.roundOf }));
+vi.mock('../agent/claude/savedChat.js', () => ({ savedEvents: mocks.savedEvents, firstCommit: mocks.firstCommit }));
 vi.mock('../agent/claude/search.js', () => ({ searchMessages: mocks.searchMessages }));
 vi.mock('../workspace/terminal.js', () => ({ listTerminals: mocks.listTerminals, createTerminal: vi.fn(), closeTerminal: vi.fn() }));
 
@@ -87,6 +91,31 @@ describe('routes', () => {
       { sessionId: 'kid', role: 'user', text: 'x', at: '', title: 'Kid', cwd: '/r', parentId: 'root' },
       { sessionId: 'root', role: 'user', text: 'y', at: '', title: 'Root', cwd: '/r' },
     ]);
+  });
+
+  it('lists the earlier sub-chats of a chat with their round and commit', async () => {
+    mocks.groupOf.mockResolvedValue(['root', 'kid', 'now']);
+    mocks.listSessions.mockResolvedValue([
+      { sessionId: 'root', summary: 'Root', firstPrompt: 'Build run, task 1 of 3.', createdAt: 1, lastModified: 9 },
+      { sessionId: 'kid', summary: 'Kid', firstPrompt: 'Build run, task 2 of 3.', lastModified: 19 },
+    ]);
+    mocks.listLinks.mockResolvedValue({ kid: { parent: 'root', via: 'build', at: 10 }, now: { parent: 'root', via: 'build', at: 20 } });
+    mocks.firstCommit.mockImplementation(async (id: string) => (id === 'kid' ? { hash: 'a1b2c3d', subject: 'Add the store' } : null) as never);
+    const rounds = [{ n: 1, at: 8, outcome: 'done', line: 'one', costUsd: 0 }, { n: 2, at: 18, outcome: 'done', line: 'two', costUsd: 0, sessionId: 'kid' }];
+    const r = await call('GET', '/api/chat/subchats?session=now', undefined, { runs: () => [{ sessionId: 'root', rounds }, { sessionId: 'other', rounds: [{ n: 9, at: 9 }] }] } as unknown as Partial<RouteDeps>);
+    expect(r.json).toEqual([
+      { sessionId: 'root', title: 'Build run, task 1 of 3.', startedAt: 1, round: rounds[0] },
+      { sessionId: 'kid', title: 'Build run, task 2 of 3.', startedAt: 10, round: rounds[1], commit: { hash: 'a1b2c3d', subject: 'Add the store' } },
+    ]);
+  });
+
+  it('pages a saved sub-chat\'s events and answers 404 without a transcript', async () => {
+    mocks.savedEvents.mockResolvedValue(['a', 'b', 'c', 'd'].map((id) => ({ id, kind: 'user', text: id, at: 0 })));
+    expect((await call('GET', '/api/chat/subchat-events?session=kid&limit=2')).json).toEqual({ events: [{ id: 'c', kind: 'user', text: 'c', at: 0 }, { id: 'd', kind: 'user', text: 'd', at: 0 }], earlier: 2 });
+    expect((await call('GET', '/api/chat/subchat-events?session=kid&before=c&limit=5')).json.events.map((e: { id: string }) => e.id)).toEqual(['a', 'b']);
+    expect((await call('GET', '/api/chat/subchat-events?session=kid&before=zz')).code).toBe(404);
+    mocks.savedEvents.mockResolvedValue(null);
+    expect((await call('GET', '/api/chat/subchat-events?session=gone')).code).toBe(404);
   });
 
   it('answers 404 for an unknown /api path, falls to the web fallback otherwise, and 503 for /api with no chat', async () => {

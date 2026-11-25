@@ -4,6 +4,14 @@ import type { History } from '../agent/types.js';
 import { EventIndex, MAX_EVENTS, stopAgents, trimHistory } from './events.js';
 import { prFrom } from './pr.js';
 
+// The page of events right before the one with id (the last page when id is empty), oldest first, and how many are left before it.
+export function pageBefore(events: ChatEvent[], id: string, limit = ROW_WINDOW) {
+  const at = id ? events.findIndex((e) => e.id === id) : events.length;
+  if (at < 0) throw new Error('That event is no longer held');
+  const start = Math.max(0, at - Math.min(Math.max(Math.floor(limit), 1), 500));
+  return { events: events.slice(start, at), earlier: start };
+}
+
 export class EventLog {
   private index = new EventIndex(() => this.state.events);
   private orphans = new Set<string>();
@@ -31,10 +39,7 @@ export class EventLog {
 
   // The page of events right before one, oldest first, and how many are left before it.
   before(id: string, limit = ROW_WINDOW) {
-    const at = this.state.events.findIndex((e) => e.id === id);
-    if (at < 0) throw new Error('That event is no longer held');
-    const start = Math.max(0, at - Math.min(Math.max(Math.floor(limit), 1), 500));
-    return { events: this.state.events.slice(start, at), earlier: start };
+    return pageBefore(this.state.events, id, limit);
   }
 
   // The tail only: a client that paged in older events keeps them while their count still adds up (see mergeTail).

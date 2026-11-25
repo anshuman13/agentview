@@ -1,9 +1,10 @@
 import path from 'node:path';
-import type { Account, McpServer, Provider, ProviderOption } from '../../../shared/protocol.js';
+import type { Account, ChatEvent, McpServer, Provider, ProviderOption } from '../../../shared/protocol.js';
 import { providerLabel } from '../../../shared/providers.js';
 import { readJsonSync, writeJsonSync } from '../json.js';
 import { STATE_DIR, loggedInAccounts, verifyLimit } from './claude/accounts.js';
 import { claudeTranscript } from './claude/chatMentions.js';
+import { firstCommit, savedEvents } from './claude/savedChat.js';
 import { chatMemory, memoryDirs } from './claude/memory.js';
 import { allowedServers, mcpProbe } from './claude/mcp.js';
 import { claudeDriver } from './claude/driver.js';
@@ -25,6 +26,9 @@ type Entry = {
   verifyLimits(): Promise<unknown>;
   // The file that holds a chat's transcript, or null when this provider has no such chat.
   transcriptPath(id: string): string | null;
+  // A saved chat's events and the first commit it made, read without starting the agent; null when the provider cannot.
+  savedEvents(id: string): Promise<ChatEvent[] | null>;
+  firstCommit(id: string): Promise<{ hash: string; subject: string } | null>;
   // The instruction files the Memory list shows for a folder.
   memory(cwd: string): Promise<MemoryFile[]>;
   // The folders the provider writes memory files in for a folder, where a removed one may be restored.
@@ -45,6 +49,8 @@ const PROVIDERS: Record<Provider, Entry> = {
     driver: (cwd, resume, fork, unattended, account) => claudeDriver(cwd, { resume, fork, unattended, account, pinned: account != null }),
     verifyLimits: () => Promise.all(loggedInAccounts().map((a) => verifyLimit(a))),
     transcriptPath: claudeTranscript,
+    savedEvents,
+    firstCommit,
     memory: (cwd) => chatMemory(cwd),
     memoryDirs: (cwd) => memoryDirs(cwd),
     resume: claudeResume,
@@ -57,6 +63,8 @@ const PROVIDERS: Record<Provider, Entry> = {
     driver: (cwd, resume, fork, unattended) => claudeDriver(cwd, { resume, fork, openrouter: true, unattended }),
     verifyLimits: () => Promise.resolve(),
     transcriptPath: claudeTranscript,
+    savedEvents,
+    firstCommit,
     memory: (cwd) => chatMemory(cwd),
     memoryDirs: (cwd) => memoryDirs(cwd),
     resume: () => null,
@@ -69,6 +77,8 @@ const PROVIDERS: Record<Provider, Entry> = {
     driver: (_cwd, resume, fork) => codexDriver(resume, fork),
     verifyLimits: () => Promise.resolve(),
     transcriptPath: codexTranscript,
+    savedEvents: async () => null,
+    firstCommit: async () => null,
     memory: (cwd) => readMemory(codexInstructionFiles(cwd)),
     memoryDirs: () => [],
     resume: (cwd, sessionId) => codexResume(cwd, sessionId),
