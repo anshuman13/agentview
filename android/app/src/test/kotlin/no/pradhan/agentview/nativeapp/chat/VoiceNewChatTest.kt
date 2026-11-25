@@ -80,15 +80,15 @@ class VoiceNewChatTest {
 
     @Test
     fun startModesKeepAutoOrSetPlan() {
-        assertEquals(listOf(null, "plan", "plan"), START_MODES.map { it.mode })
+        assertEquals(listOf(null, "plan", null), START_MODES.map { it.mode })
         assertEquals("Auto", START_MODES.first().label)
     }
 
     @Test
-    fun specDraftsTheRequestAndSendsNothingWhileOtherModesSendIt() {
+    fun buildDraftsTheRequestAndSendsNothingWhileOtherModesSendIt() {
         val (draft, first) = startTexts(START_MODES.last(), "fix it")
         assertNull(first)
-        assertTrue(draft!!.endsWith("Request: fix it"))
+        assertEquals("/build fix it", draft)
         assertEquals(null to "fix it", startTexts(START_MODES[1], "fix it"))
     }
 

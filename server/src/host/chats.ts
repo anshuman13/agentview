@@ -13,6 +13,7 @@ import { hasWork } from '../workspace/git.js';
 import { runWorktree } from '../workspace/review.js';
 import { removeRunWorktree } from '../workspace/worktrees.js';
 import { errText } from '../../../shared/util.js';
+import { parseBuild } from '../../../shared/build.js';
 import { loadSettings } from '../settings.js';
 import { desktopActive } from '../presence.js';
 import { notifyAway } from '../integrations/notify.js';
@@ -72,6 +73,7 @@ export async function createChat(cwd: string, resume?: string, title = '', fork 
   const job = runs.jobOfSession(resume);
   if (job) runs.update(job.id, { chatId: chat.id });
   chat.onJobTurn = (id, failed) => void reviewJob(chat, id, failed);
+  chat.startBuild = buildChat;
   await chat.loadHistory();
   await chat.hooks.load();
   chat.onMessage((m) => onChatMessage(chat, m));
@@ -136,6 +138,15 @@ export async function prompt(cwd: string, text: string, from?: string, fresh = f
   const chat = reuse ?? (from ? await newChat(cwd, get(from), undefined, choice) : await createChat(cwd, undefined, '', false, choice));
   if (!reuse) applyInitialModel(chat, model);
   chat.prompt(text).catch((err) => chat.system(`Not sent: ${errText(err)}`, true));
+  return chat.id;
+}
+
+// The start_build tool: a new chat in the project runs the build, so the calling chat keeps its context.
+export async function buildChat(cwd: string, line: string) {
+  const args = parseBuild(line);
+  if (!args || args === 'usage') throw new Error('Give a request or a spec');
+  const chat = await newChat(cwd, undefined);
+  chat.build.start(line, args);
   return chat.id;
 }
 

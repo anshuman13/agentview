@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { BUILD_RULES, buildTool } from './build.js';
 import { chatSearchTool } from './chats.js';
 import { DATA_RULES, dataFindTool, dataWriteTool } from './data.js';
 import { findingsTool } from './findings.js';
@@ -10,7 +11,7 @@ import { TRAVEL_RULES, travelTool } from './travel.js';
 import { WIKI_RULES, wikiPageTool, wikiProposeTool, wikiSearchTool } from './wiki.js';
 
 // The tools every provider's chats get, as mcp__agentview__<name>.
-export const TOOLS: Tool[] = [statusTool, wikiSearchTool, wikiPageTool, wikiProposeTool, chatSearchTool, dataFindTool, dataWriteTool, findingsTool, runCodeTool, travelTool, phoneAlarmTool];
+export const TOOLS: Tool[] = [statusTool, wikiSearchTool, wikiPageTool, wikiProposeTool, chatSearchTool, dataFindTool, dataWriteTool, findingsTool, buildTool, runCodeTool, travelTool, phoneAlarmTool];
 
 // Tools that go through the chat's permission mode like Bash, since they run code.
 export const ASK_TOOLS = ['run_code'];
@@ -21,7 +22,7 @@ const HOST_RULES = [
   'An MCP server or connector that connects after this chat started is not loaded here; it loads when AgentView restarts the server (Developer: Restart Server When Agents Are Idle). Say that in one line and carry on with the rest of the work.',
 ].join(' ');
 
-export const TOOL_INSTRUCTIONS = [HOST_RULES, STATUS_RULES, WIKI_RULES, DATA_RULES, TRAVEL_RULES, PHONE_ALARM_RULES].join(' ');
+export const TOOL_INSTRUCTIONS = [HOST_RULES, STATUS_RULES, WIKI_RULES, DATA_RULES, BUILD_RULES, TRAVEL_RULES, PHONE_ALARM_RULES].join(' ');
 
 export async function callTool(name: string, args: unknown, ctx: ToolCtx, tools = TOOLS): Promise<string> {
   const tool = tools.find((t) => t.name === name);

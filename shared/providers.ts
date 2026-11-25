@@ -1,5 +1,5 @@
 import { PERMISSION_MODES, type Provider } from './protocol.js';
-import { specPrompt } from './specTasks.js';
+import { BUILD_COMMAND } from './build.js';
 
 // What each provider fixes: its name, how its use is billed and the permission modes it offers.
 export type Billing = 'usd' | 'none' | 'plan';
@@ -34,12 +34,12 @@ export const providerModes = (p?: Provider): ModeOption[] => (p === 'codex' ? CO
 // A start mode the provider does not offer (Plan on Codex) starts in Default (Android startModeFor).
 export const startModeFor = (mode: string | null, p?: Provider) => (mode !== null && !providerModes(p).some((m) => m.value === mode) ? 'default' : mode);
 
-// The "Start as" choices of the new chat sheet (Android START_MODES): no mode keeps the chat's default; the others are set once the chat opens, and Spec also puts the spec prompt in the composer.
-export type StartMode = { label: string; mode: string | null; spec?: boolean };
-export const START_MODES: StartMode[] = [{ label: 'Auto', mode: null }, { label: 'Plan first', mode: 'plan' }, { label: 'Spec', mode: 'plan', spec: true }];
+// The "Start as" choices of the new chat sheet (Android START_MODES): no mode keeps the chat's default; the others are set once the chat opens, and Build puts /build and the request in the composer.
+export type StartMode = { label: string; mode: string | null; build?: boolean };
+export const START_MODES: StartMode[] = [{ label: 'Auto', mode: null }, { label: 'Plan first', mode: 'plan' }, { label: 'Build', mode: null, build: true }];
 
-// What the new chat gets: Spec puts the request in the composer after the spec prompt and sends nothing, the others send it as the first message (Android startTexts).
-export const startTexts = (m: StartMode, text?: string | null) => (m.spec ? { draft: specPrompt(text ?? ''), first: null } : { draft: null, first: text ?? null });
+// What the new chat gets: Build puts /build and the request in the composer and sends nothing, the others send it as the first message (Android startTexts).
+export const startTexts = (m: StartMode, text?: string | null) => (m.build ? { draft: `/${BUILD_COMMAND.name} ${text ?? ''}`, first: null } : { draft: null, first: text ?? null });
 
 // A model's id or display name as a chip shows it: "claude-opus-4-8" is "Opus 4.8" and a "(1M context)" suffix is dropped (Android shortModel).
 export const shortModel = (name: string) => name.replace(/\s*\(.*\)$/, '').replace(/^claude-([a-z]+)-(\d+)-(\d+).*$/, (_, n: string, a, b) => `${n[0].toUpperCase()}${n.slice(1)} ${a}.${b}`);

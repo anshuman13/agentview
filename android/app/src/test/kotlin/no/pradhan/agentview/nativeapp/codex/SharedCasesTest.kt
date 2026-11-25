@@ -471,7 +471,7 @@ class SharedCasesTest {
         for (c in cases("start-texts")) {
             val m = START_MODES.first { it.label == c.str("start") }
             assertEquals(c.str("name"), c.nullable("mode")?.jsonPrimitive?.content, m.mode)
-            val draft = c.nullable("specRequest")?.jsonPrimitive?.content?.let { specPrompt(it) }
+            val draft = c.nullable("draft")?.jsonPrimitive?.content
             assertEquals(c.str("name"), draft to c.nullable("first")?.jsonPrimitive?.content, startTexts(m, c.nullable("text")?.jsonPrimitive?.content))
         }
     }

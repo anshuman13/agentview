@@ -794,11 +794,11 @@ describe('cases shared with the Android app', () => {
     it(`startModeFor: ${c.name}`, () => expect(startModeFor(c.mode, c.provider ?? undefined)).toBe(c.expected));
   }
 
-  for (const c of cases<{ name: string; start: string; text: string | null; mode: string | null; specRequest: string | null; first: string | null }>('start-texts')) {
+  for (const c of cases<{ name: string; start: string; text: string | null; mode: string | null; draft: string | null; first: string | null }>('start-texts')) {
     it(`startTexts: ${c.name}`, () => {
       const m = START_MODES.find((x) => x.label === c.start)!;
       expect(m.mode).toBe(c.mode);
-      expect(startTexts(m, c.text)).toEqual({ draft: c.specRequest === null ? null : specPrompt(c.specRequest), first: c.first });
+      expect(startTexts(m, c.text)).toEqual({ draft: c.draft, first: c.first });
     });
   }
 
