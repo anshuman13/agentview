@@ -143,7 +143,7 @@ export function Assistant() {
       {calError && <div className="as-error"><Icon name="warning" small /> Calendar not updated <span title={calError} aria-label={calError}><Icon name="info" small /></span> · <Button variant="plain" size="sm" onClick={() => void retryCalendar()}>Retry</Button></div>}
 
       <div className="as-ptr" ref={ptr} aria-hidden><Icon name="refresh" /></div>
-      <div className={`as-scroll${drag ? ' dragging' : ''}`} ref={scroller}>
+      <div className={`as-scroll${list === 'today' ? ' ov-page' : ''}${drag ? ' dragging' : ''}`} ref={scroller}>
         {list === 'today' && <Overview s={s} dueToday={dueToday} onAsk={askAbout} onPrep={() => ask(askText(prepText(s.next!), s.next!.profile, snap.items, undefined, codexMeetings(snap.meetings)), s.next!.profile)} />}
         {list === 'tasks' && query?.trim() && <SearchResults query={query} candidates={[...s.overdue, ...days.flatMap((d) => d.rows), ...review, ...s.doneToday]} rows={rows} />}
         {list === 'tasks' && !query?.trim() && (

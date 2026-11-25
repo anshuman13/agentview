@@ -661,6 +661,7 @@ The palette's Keyboard shortcuts command shows the same list.
   and the Slack DMs under Since <meeting> are lists, and Esc in a goal field restores its text
 
 - Codex lists share design tokens in tokens.css: `--row-h` (40px), `--row-title` and `--row-meta` (md and sm type), `--meta-fg` (muted secondary text) and `--hairline` (1px separators). Task rows, section headers with counts and the Slack Summary page use them.
+- On the web Overview every group (Up next, Needs you, Running chats, Today, Plan your day, Goals, the morning card) is a hairline card: `--hairline` border, `--shape-lg` radius and `--surface` fill, the same shell as the design system Card.
 
 ## Copy a file path
 

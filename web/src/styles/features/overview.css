@@ -1,4 +1,6 @@
 /* Overview rows, groups, reply queue. */
+.ov-page :is(.as-group, .ui-group, .ov-morning) { border: var(--hairline); border-radius: var(--shape-lg); background: var(--surface); }
+.ov-page .as-group .as-swipe:is(.right, .left) .as-swipe-row { background: var(--surface); }
 .ov-task :is(.ui-row-lead, .ui-row-trail) { position: relative; z-index: 1; }
 .ov-hit { padding: 0; border: 0; background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; }
 .ov-hit::after { content: ''; position: absolute; inset: 0; }
