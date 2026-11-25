@@ -97,7 +97,7 @@ export function AssistantNav({ onPick }: { onPick?: () => void }) {
     <nav className="as-nav">
       {LISTS.filter((l) => !l.hidden).map((l) => (
         <Fragment key={l.id}>
-          {l.id === 'goals' && <hr className="as-nav-rule" />}
+          {l.id === 'goals' && <div className="as-nav-label">Planning</div>}
           <button className={list === l.id ? 'active' : ''} aria-current={list === l.id ? 'page' : undefined} onClick={() => { setView({ list: l.id, open: null, anchor: null, person: null, tag: null }); onPick?.(); }}>
             <Icon name={l.icon} /><span>{l.label}</span>{count[l.id] > 0 && <span className="as-count">{count[l.id]}</span>}
           </button>
