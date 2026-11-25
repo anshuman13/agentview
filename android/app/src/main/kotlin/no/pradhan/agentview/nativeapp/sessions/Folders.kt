@@ -33,10 +33,13 @@ data class Workspace(val repos: List<Repo> = emptyList(), val trees: List<Worktr
 @Serializable
 data class BinnedSession(val sessionId: String, val title: String = "", val cwd: String = "", val lastModified: Long = 0, val deletedAt: Long = 0)
 
-const val BIN_MS = 24 * 60 * 60 * 1000L
+const val BIN_MS = 7 * 24 * 60 * 60 * 1000L
 
-// web binLeft in folders.ts: the hours a binned chat has left, at least one.
-fun binLeft(deletedAt: Long, now: Long = System.currentTimeMillis()) = "${maxOf(1L, Math.round((deletedAt + BIN_MS - now) / 3_600_000.0))}h left"
+// web binLeft in folders.ts: days from 24 hours, else hours, at least one.
+fun binLeft(deletedAt: Long, now: Long = System.currentTimeMillis()): String {
+    val h = maxOf(1L, Math.round((deletedAt + BIN_MS - now) / 3_600_000.0))
+    return if (h >= 24) "${Math.round(h / 24.0)}d left" else "${h}h left"
+}
 
 fun withRestored(ws: Workspace, saved: SavedSession, pinned: Boolean) = ws.copy(
     saved = listOf(saved) + ws.saved.filter { it.sessionId != saved.sessionId },

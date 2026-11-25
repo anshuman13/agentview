@@ -12,11 +12,11 @@ stubGlobal('location', { search: '', hash: '' });
 const { BinRow } = await import('./Bin');
 
 describe('bin row', () => {
-  it('shows Untitled for a chat without a title, and its repo with the hours left', () => {
+  it('shows Untitled for a chat without a title, and its repo with the time left', () => {
     const folders: Folder[] = [{ cwd: '/w/agentview', name: 'agentview', trees: [], chats: [], last: 0 }];
     const b = { sessionId: 's1', title: '', cwd: '/w/agentview/server', lastModified: 0, deletedAt: Date.now() - 3600000 };
     const html = renderToStaticMarkup(<BinRow b={b} folders={folders} onRestore={() => {}} onDelete={() => {}} />);
     expect(html).toContain('>Untitled<');
-    expect(html).toContain('agentview · 23h left');
+    expect(html).toContain('agentview · 7d left');
   });
 });

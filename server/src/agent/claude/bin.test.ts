@@ -28,7 +28,7 @@ beforeAll(async () => {
   stubEnv('HOME', home);
   stubEnv('CLAUDE_CONFIG_DIR', path.join(home, '.claude'));
   transcript(ID);
-  transcript(OLD, 3);
+  transcript(OLD, 8);
   bin = await import('./bin.js');
   sessions = await import('./sessions.js');
 });
@@ -62,7 +62,7 @@ describe('removeSession', () => {
   });
 
   it('deletes a chat older than the bin window without archive', async () => {
-    transcript(OLD, 3);
+    transcript(OLD, 8);
     expect(await bin.removeSession(OLD, false)).toEqual({ purged: true });
     expect(await sessions.getSessionInfo(OLD, { dir: cwd })).toBeUndefined();
   });

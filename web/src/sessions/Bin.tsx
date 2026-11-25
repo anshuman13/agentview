@@ -56,7 +56,7 @@ export function Bin({ folders, ask, onRestore }: { folders: Folder[]; ask: (r: C
 
 export function BinRow({ b, folders, onRestore, onDelete }: { b: BinnedSession; folders: Folder[]; onRestore: () => void; onDelete: () => void }) {
   return (
-    <div className="row session recent" title={`${b.title}\n${b.cwd}\nDeleted for good after 24 hours`}>
+    <div className="row session recent" title={`${b.title}\n${b.cwd}\nDeleted for good after 7 days`}>
       <span className="name">{b.title || 'Untitled'}</span>
       <span className="when">{metaLine(repoName(folders, b.cwd), binLeft(b.deletedAt))}</span>
       <span className="acts">

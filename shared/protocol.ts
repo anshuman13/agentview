@@ -327,7 +327,10 @@ export const compactAt = (contextWindow?: number | null) => (contextWindow ? Mat
 
 export const STALE_MS = 12 * 60 * 60 * 1000;
 
-export const BIN_MS = 24 * 60 * 60 * 1000;
+export const BIN_MS = 7 * 24 * 60 * 60 * 1000;
+
+// An unpinned chat idle this long moves to the bin on its own.
+export const ARCHIVE_MS = 2 * 24 * 60 * 60 * 1000;
 
 export type BinnedSession = { sessionId: string; title: string; cwd: string; lastModified: number; deletedAt: number };
 

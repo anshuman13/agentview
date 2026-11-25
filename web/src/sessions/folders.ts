@@ -157,7 +157,7 @@ export const deleteChat = (s: { sessionId: string; title: string; lastModified: 
   return {
     title: forever ? 'Delete this chat?' : 'Move this chat to the bin?',
     detail: s.title,
-    warning: forever ? 'The transcript is removed permanently.' : 'You can restore it from the bin for 24 hours.',
+    warning: forever ? 'The transcript is removed permanently.' : 'You can restore it from the bin for 7 days.',
     action: 'Delete',
     run: removeRequest(s.sessionId, purge ? '&purge' : '', onDone, onError),
   };
@@ -166,7 +166,7 @@ export const deleteChat = (s: { sessionId: string; title: string; lastModified: 
 export const archiveChat = (s: { sessionId: string; title: string }, onDone: () => void, onError: (e: string) => void): ConfirmRequest => ({
   title: 'Archive this chat?',
   detail: s.title,
-  warning: 'You can restore it from the bin for 24 hours.',
+  warning: 'You can restore it from the bin for 7 days.',
   action: 'Archive',
   run: removeRequest(s.sessionId, '&archive', onDone, onError),
 });
@@ -359,8 +359,11 @@ export const newChatGroups = (prev: ReadonlySet<string> | null, live: [id: strin
 export const unreadCount = (live: LiveChat[], viewing: string, seen: Record<string, number>, attention: number) =>
   live.filter((c) => c.id !== viewing && ['done', 'needs'].includes(chatState({ live: c }, seen) ?? '')).length + attention;
 
-// The hours a binned chat has left before the server deletes it, at least one (Android binLeft).
-export const binLeft = (deletedAt: number, now = Date.now()) => `${Math.max(1, Math.round((deletedAt + BIN_MS - now) / 3600000))}h left`;
+// The time a binned chat has left before the server deletes it: days from 24 hours, else hours, at least one (Android binLeft).
+export const binLeft = (deletedAt: number, now = Date.now()) => {
+  const h = Math.max(1, Math.round((deletedAt + BIN_MS - now) / 3600000));
+  return h >= 24 ? `${Math.round(h / 24)}d left` : `${h}h left`;
+};
 
 export function since(t: number, now = Date.now()) {
   const m = Math.max(0, Math.floor((now - t) / 60_000));
