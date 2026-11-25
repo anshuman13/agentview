@@ -10,8 +10,7 @@ import { EmptyState } from '../ui/Panel';
 import { Card, CardGrid } from '../ui/Card';
 import { Section } from '../ui/Section';
 import { Skeleton } from '../ui/Skeleton';
-import { showChat } from '../ui/util';
-import { ago } from '../ui/util';
+import { ago, showChat, zoom } from '../ui/util';
 import { sketchDoc, sketchOpenable, sketchTitle, type SketchTheme } from '../../../shared/sketches';
 import { CopyPathItems } from './CopyPathItems';
 import type { SketchFile } from './fileApi';
@@ -67,13 +66,6 @@ export function ThumbFrame({ file, theme, scale }: { file: SketchFile; theme: Sk
 
 const ZOOM = 'sk-zoom';
 
-// The opened card and the sketch view share one view-transition name, so the card zooms into the view and back out.
-// Without the View Transitions API, or with reduced motion, the switch is instant.
-function zoom(update: () => void) {
-  const doc = document as Document & { startViewTransition?: (cb: () => void) => unknown };
-  if (!doc.startViewTransition || matchMedia('(prefers-reduced-motion: reduce)').matches) return update();
-  doc.startViewTransition(() => flushSync(update));
-}
 
 const newSketch = () => {
   showChat();

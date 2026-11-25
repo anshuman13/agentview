@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState, type ChangeEvent, type ReactNode } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, type ChangeEvent, type ReactNode } from 'react';
+import { flushSync } from 'react-dom';
 import { notice } from '../app/store';
 import { Back } from '../app/touch/back';
 import { useNarrow } from '../app/shell/useNarrow';
@@ -12,7 +13,7 @@ import { Row } from '../ui/Row';
 import { Section, sectionCount } from '../ui/Section';
 import { Skeleton } from '../ui/Skeleton';
 import { ask } from '../codex/data/ask/ask';
-import { copyText, cx, plural } from '../ui/util';
+import { copyText, cx, plural, zoom } from '../ui/util';
 import { groupPlan, KIND_ICONS, nextItem, scanText, splitTrips, totalsText, tripAsk, tripCard, tripKind, tripState, tripStateText, type CheckItem, type PlanItem, type Receipt, type Trip } from '../../../shared/travel';
 import { deleteTrip, exportUrl, receiptUrl, saveTrip, scanCalendar, setCheck, uploadReceipt } from './travelApi';
 import { dayLabel, isImage, itemMeta, localNow, receiptMeta, shrink, tripDates, tripMeta } from './travelLogic';
@@ -58,7 +59,9 @@ function CaptureRow({ cap, narrow }: { cap: Capture; narrow: boolean }) {
   );
 }
 
-function TripList({ trips, receipts, filing, cap, narrow, archivedOpen, onArchived, onOpen, onNew, find }: { trips: Trip[]; receipts: Receipt[]; filing: number; cap: Capture; narrow: boolean; archivedOpen: boolean; onArchived: () => void; onOpen: (id: string) => void; onNew: () => void; find: ReactNode }) {
+const ZOOM = 'tv-zoom';
+
+function TripList({ trips, receipts, filing, cap, narrow, zoomed, archivedOpen, onArchived, onOpen, onNew, find }: { trips: Trip[]; receipts: Receipt[]; filing: number; cap: Capture; narrow: boolean; zoomed: string | null; archivedOpen: boolean; onArchived: () => void; onOpen: (id: string) => void; onNew: () => void; find: ReactNode }) {
   const [all, setAll] = useState(false);
   const day = today();
   const { active, archived } = splitTrips(trips, day);
@@ -66,7 +69,7 @@ function TripList({ trips, receipts, filing, cap, narrow, archivedOpen, onArchiv
   const row = (t: Trip) => {
     const c = tripCard(t, receipts.filter((r) => r.tripId === t.id), day);
     return (
-      <Card key={t.id} className="tv-card" cover={c.cover ? <img src={receiptUrl(c.cover)} alt="" loading="lazy" /> : <span className="tv-strip"><Icon name="briefcase" /></span>} title={t.name} meta={tripMeta(t, c)} onClick={() => onOpen(t.id)}>
+      <Card key={t.id} className="tv-card" cover={c.cover ? <img src={receiptUrl(c.cover)} alt="" loading="lazy" /> : <span className="tv-strip"><Icon name="briefcase" /></span>} title={t.name} meta={tripMeta(t, c)} style={t.id === zoomed ? { viewTransitionName: ZOOM } : undefined} onClick={() => onOpen(t.id)}>
         {c.stateText && <span className={cx('tv-state', c.state)}>{c.stateText}</span>}
       </Card>
     );
@@ -199,7 +202,7 @@ function TripView({ trip, receipts, home, onBack, reload }: { trip: Trip; receip
   const summary = () => [`${trip.name} (${tripDates(trip)})`, ...sorted.map((r) => `- ${receiptMeta(r)} ${r.merchant}`.trim()), `Total: ${totalsText(receipts) || 'none'}`].join('\n');
 
   return (
-    <div className="tv-trip">
+    <div className="tv-trip" style={{ viewTransitionName: ZOOM }}>
       <div className="tv-head">
         <Back close={onBack} />
         {!narrow && <IconButton icon="arrow-left" label="Back" onClick={onBack} />}
@@ -262,6 +265,7 @@ function TripView({ trip, receipts, home, onBack, reload }: { trip: Trip; receip
 export function Travel({ shown }: { shown: boolean }) {
   const { data, error, reload } = useTravel(shown);
   const [open, setOpen] = useState<string | null>(null);
+  const [zoomed, setZoomed] = useState<string | null>(null);
   const [archivedOpen, setArchivedOpen] = useState(false);
   const [adding, setAdding] = useState(false);
   const [finding, setFinding] = useState(false);
@@ -304,11 +308,31 @@ export function Travel({ shown }: { shown: boolean }) {
   };
   const find = <Button size="sm" icon="calendar" disabled={finding} onClick={findTrips}>{finding ? 'Reading calendar…' : 'Find in calendar'}</Button>;
   const trip = data?.trips.find((t) => t.id === open);
+  const scroller = useRef<HTMLDivElement>(null);
+  const listTop = useRef(0);
+  useLayoutEffect(() => {
+    if (scroller.current) scroller.current.scrollTop = trip ? 0 : listTop.current;
+  }, [!!trip]);
+  const openTrip = (id: string) => {
+    listTop.current = scroller.current?.scrollTop ?? 0;
+    flushSync(() => setZoomed(id));
+    zoom(() => setOpen(id));
+  };
+  const closeTrip = () => {
+    if (open) flushSync(() => setZoomed(open));
+    zoom(() => setOpen(null));
+  };
+  const list = data?.trips.length ? (
+    <div style={{ display: trip ? 'none' : 'contents' }}>
+      <TripList trips={data.trips} receipts={data.receipts} filing={filing} cap={cap} narrow={narrow} zoomed={zoomed} archivedOpen={archivedOpen} onArchived={() => setArchivedOpen(!archivedOpen)} onOpen={openTrip} onNew={() => setAdding(true)} find={find} />
+    </div>
+  ) : null;
   const body = trip ? (
-    <TripView trip={trip} receipts={data!.receipts.filter((r) => r.tripId === trip.id)} home={data!.home ?? ''} onBack={() => setOpen(null)} reload={reload} />
-  ) : data?.trips.length ? (
-    <TripList trips={data.trips} receipts={data.receipts} filing={filing} cap={cap} narrow={narrow} archivedOpen={archivedOpen} onArchived={() => setArchivedOpen(!archivedOpen)} onOpen={setOpen} onNew={() => setAdding(true)} find={find} />
-  ) : data ? (
+    <>
+      <TripView trip={trip} receipts={data!.receipts.filter((r) => r.tripId === trip.id)} home={data!.home ?? ''} onBack={closeTrip} reload={reload} />
+      {list}
+    </>
+  ) : list ? list : data ? (
     <div className="tv-empty">
       {cap.inputs}
       <EmptyState icon="briefcase" title="No trips yet. Add one, or start with a receipt" action={<span className="tv-empty-actions">{find}<Button size="sm" icon="add" onClick={() => setAdding(true)}>New trip</Button></span>} />
@@ -320,7 +344,7 @@ export function Travel({ shown }: { shown: boolean }) {
     <Skeleton />
   );
   return (
-    <div className="wk"><div className="wk-scroll"><div className="mt-page tv-page">
+    <div className="wk"><div className="wk-scroll" ref={scroller}><div className="mt-page tv-page">
       {body}
       {adding && <TripSheet onClose={() => { setAdding(false); setHeld([]); }} onSaved={saved} />}
     </div></div></div>

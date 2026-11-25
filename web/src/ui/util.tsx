@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type KeyboardEvent, type MouseEvent, type RefObject } from 'react';
+import { flushSync } from 'react-dom';
 import { money } from '../../../shared/cost';
 import { narrow } from '../app/shell/useNarrow';
 import { createStore } from './createStore';
@@ -42,6 +43,14 @@ export function showChat() {
 // Header slots a screen portals into. The slot registers itself, so a slot that mounts later (a resize to phone width) still gets its content.
 const slots = createStore<Record<string, HTMLElement | undefined>>({});
 const slotRefs = new Map<string, (el: HTMLElement | null) => void>();
+// The opened card and the view share one view-transition name, so the card zooms into the view and back out.
+// Without the View Transitions API, or with reduced motion, the switch is instant.
+export function zoom(update: () => void) {
+  const doc = document as Document & { startViewTransition?: (cb: () => void) => unknown };
+  if (!doc.startViewTransition || matchMedia('(prefers-reduced-motion: reduce)').matches) return update();
+  doc.startViewTransition(() => flushSync(update));
+}
+
 export function slotRef(id: string) {
   let ref = slotRefs.get(id);
   if (!ref) {

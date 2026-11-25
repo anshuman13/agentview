@@ -4,6 +4,15 @@ import android.content.Intent
 import android.graphics.BitmapFactory
 import android.net.Uri
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -46,6 +55,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -84,6 +94,7 @@ import no.pradhan.agentview.nativeapp.ui.TextField
 import no.pradhan.agentview.nativeapp.ui.Tokens
 import no.pradhan.agentview.nativeapp.ui.Type
 import no.pradhan.agentview.nativeapp.ui.av
+import no.pradhan.agentview.nativeapp.ui.motionOff
 import no.pradhan.agentview.nativeapp.ui.plural
 import no.pradhan.agentview.nativeapp.ui.rememberLoad
 
@@ -131,11 +142,9 @@ fun TravelScreen(hub: Hub, onBack: () -> Unit) {
         }
         Unit
     }
-    val trip = data?.trips?.firstOrNull { it.id == open }
-    if (trip != null) {
-        TripView(hub, trip, data.receipts.filter { it.tripId == trip.id }, data.home, onBack = { open = null }, reload = reload)
-        return
-    }
+    val shown = open?.takeIf { id -> data?.trips?.any { it.id == id } == true }
+    val listScroll = rememberScrollState()
+    val still = motionOff()
     var all by rememberSaveable { mutableStateOf(false) }
     var filing by remember { mutableIntStateOf(0) }
     // With no trips the server refuses a receipt, so a picked file waits here until New trip is saved.
@@ -163,7 +172,19 @@ fun TravelScreen(hub: Hub, onBack: () -> Unit) {
             hub.viewModelScope.launch { try { post(id, name, mime, bytes)?.let(added) } finally { filing-- } }
         }
     }
-    Column(Modifier.fillMaxSize()) {
+    // The trip pushes in from the right over the list and slides back out on back, like McpScreen.
+    AnimatedContent(shown, Modifier.fillMaxSize(), transitionSpec = {
+        val ease = if (targetState != null) Tokens.motionEaseIn else Tokens.motionEaseOut
+        val slide = tween<IntOffset>(Tokens.motionDuration, easing = ease)
+        val fade = tween<Float>(Tokens.motionDuration, easing = ease)
+        (if (still) EnterTransition.None togetherWith ExitTransition.None
+        else if (targetState != null) (slideInHorizontally(slide) { it } + fadeIn(fade)) togetherWith fadeOut(fade)
+        else fadeIn(fade) togetherWith (slideOutHorizontally(slide) { it } + fadeOut(fade)))
+            .apply { targetContentZIndex = if (targetState != null) 1f else -1f }
+    }, label = "trip") { key ->
+    val trip = data?.trips?.firstOrNull { it.id == key }
+    if (trip != null) TripView(hub, trip, data.receipts.filter { it.tripId == trip.id }, data.home, onBack = { open = null }, reload = reload)
+    else Column(Modifier.fillMaxSize()) {
         PageHeader("Travel", onBack) {
             IconBtn("calendar", if (finding) "Reading calendar" else "Find in calendar", find, enabled = !finding)
             IconBtn("add", "New trip", { adding = true })
@@ -181,7 +202,7 @@ fun TravelScreen(hub: Hub, onBack: () -> Unit) {
                     })
                     CaptureRow(attach)
                 }
-                else -> Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
+                else -> Column(Modifier.fillMaxSize().verticalScroll(listScroll)) {
                     val day = today()
                     val (active, archived) = splitTrips(data.trips, day)
                     val card = @Composable { t: Trip -> TripCardView(hub, t, tripCard(t, data.receipts.filter { it.tripId == t.id }, day)) { open = t.id } }
@@ -201,6 +222,7 @@ fun TravelScreen(hub: Hub, onBack: () -> Unit) {
                 }
             }
         }
+    }
     }
     if (adding) TripSheet(hub, null, onDismiss = { adding = false; held = emptyList() }, onSaved = saved)
 }
