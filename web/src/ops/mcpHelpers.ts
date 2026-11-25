@@ -173,6 +173,10 @@ export const statusCounts = (groups: [StatusGroup, Row[]][]) => {
   return { connected: n('Connected'), total: groups.reduce((t, [, rs]) => t + rs.length, 0), needsYou: n('Needs login') + n('Failed') };
 };
 
+type McpCounts = { connected: number; total: number; needsYou: number };
+// The More sheet shows the MCP page's section counts once that page has loaded, else the chat's servers.
+export const moreMcpCounts = (page: McpCounts | null, chat: McpCounts) => page ?? chat;
+
 const TONE: Record<BadgeSpec['status'], string> = { done: 'ok', failed: 'bad', waiting: 'warn', skipped: '', sent: 'ok', late: 'bad', new: '', running: 'busy' };
 // Dot tone for a row: connecting and checking rows shimmer, the rest follow their badge status.
 export const dotTone = (r: Row) => (r.status === 'pending' || r.status === 'probing' ? 'wait' : TONE[stateOf(r)[0]]);

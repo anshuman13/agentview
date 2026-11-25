@@ -12,7 +12,8 @@ import { AssistantCounts } from '../lazy';
 import { usePages, type Page } from '../pages';
 import { canNotify, toggleNotify, useNotify } from '../runtime/notify';
 import { THEME_NAMES, type Theme } from '../theme';
-import { mcpDot, useCounts } from './counts';
+import { mcpDot, mcpPageCounts, useCounts } from './counts';
+import { moreMcpCounts } from '../../ops/mcpHelpers';
 
 export type Tab = 'assistant' | 'chat' | 'code' | 'term' | 'browser' | 'repos' | 'agents';
 export type View = 'assistant' | 'explorer' | 'changes' | 'github' | 'chats' | 'sessions';
@@ -81,7 +82,7 @@ type MoreProps = {
 export function MoreSheet({ open, onClose, tab, view, showing, project, theme, toggleTheme, macName, goTab, goSide, openPage, onMacs }: MoreProps) {
   const cwd = useStore((s) => s.session.cwd);
   const notifying = useNotify();
-  const { mcp } = useCounts();
+  const mcp = moreMcpCounts(mcpPageCounts.use(), useCounts().mcp);
   const pages = usePages();
   const hidden = appSettings.use((s) => s.hiddenFeatures);
   if (!open) return null;

@@ -55,8 +55,7 @@ export function McpPage() {
   const hidden = (r: Row) => groups[hideKey({ name: groupKey(r) })] === 'hidden';
   const sections = useMemo(() => statusGroups(rows.filter((r) => !hidden(r))), [rows, groups]);
   const shownCounts = useMemo(() => statusCounts(sections), [sections]);
-  useEffect(() => { mcpPageCounts.set(probed === null ? null : shownCounts); }, [probed, shownCounts]);
-  useEffect(() => () => mcpPageCounts.set(null), []);
+  useEffect(() => { if (probed !== null) mcpPageCounts.set(shownCounts); }, [probed, shownCounts]);
   const hiddenList = useMemo(() => statusGroups(rows.filter(hidden)).flatMap(([, rs]) => rs), [rows, groups]);
   const extra = useSlot('page-mcp-extra');
   const action = useSlot('page-mcp-action');

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'bun:test';
 import type { ChatEvent } from '../../../shared/protocol';
-import { argsOf, dotTone, fieldsOf, initialValues, mcpCalls, merge, rowNote, services, stateOf, toolId } from './mcpHelpers';
+import { argsOf, dotTone, fieldsOf, initialValues, mcpCalls, merge, moreMcpCounts, rowNote, services, stateOf, toolId } from './mcpHelpers';
 
 describe('merge', () => {
   it('drops the probe error once the chat has the server connected', () => {
@@ -91,5 +91,14 @@ describe('row dot and note', () => {
     expect(rowNote({ name: 'a', status: 'disabled' })).toBe('Disabled');
     expect(rowNote({ name: 'a', status: 'connected', scope: 'project' })).toBe('This repo');
     expect(rowNote({ name: 'claude.ai Slack', status: 'connected', type: 'claudeai' })).toBe('Claude.ai connector');
+  });
+});
+
+describe('moreMcpCounts', () => {
+  const chat = { connected: 21, total: 38, needsYou: 3 };
+  it('uses the chat servers before the MCP page has loaded', () => expect(moreMcpCounts(null, chat)).toEqual(chat));
+  it('uses the page section counts once loaded', () => {
+    const page = { connected: 46, total: 103, needsYou: 57 };
+    expect(moreMcpCounts(page, chat)).toEqual(page);
   });
 });
