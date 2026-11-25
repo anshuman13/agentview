@@ -63,6 +63,7 @@ class TokenGenTest {
         assertEquals("val shadowSm = 8.dp", TokenGen.scale("shadow-sm", "0 4px 16px rgba(0, 0, 0, 0.45)"))
         assertEquals("val stateHover = 0.08f", TokenGen.scale("state-hover", "8%"))
         assertEquals("const val dur = 120", TokenGen.scale("dur", "120ms"))
+        assertEquals("val motionEaseIn = CubicBezierEasing(0.2f, 0f, 0f, 1f)", TokenGen.scale("motion-ease-in", "cubic-bezier(0.2, 0, 0, 1)"))
         assertEquals("val lhSnug = 1.4f", TokenGen.scale("lh-snug", "1.4"))
         assertNull(TokenGen.scale("z-sheet", "50"))
         assertNull(TokenGen.scale("safe-top", "0px"))

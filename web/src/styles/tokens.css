@@ -135,6 +135,9 @@
   --dur-fast: 100ms;
   --dur: 120ms;
   --ease: ease-in-out;
+  --motion-duration: 250ms;
+  --motion-ease-in: cubic-bezier(0.2, 0, 0, 1);
+  --motion-ease-out: cubic-bezier(0.3, 0, 1, 1);
   --pulse-fast: 1.2s;
   --pulse: 1.4s;
   --pulse-slow: 2.8s;
