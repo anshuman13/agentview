@@ -37,7 +37,9 @@ import no.pradhan.agentview.nativeapp.app.Hub
 import no.pradhan.agentview.nativeapp.app.command
 import no.pradhan.agentview.nativeapp.app.quietCommand
 import no.pradhan.agentview.nativeapp.app.mcpConnectors
+import no.pradhan.agentview.nativeapp.app.loginMcp
 import no.pradhan.agentview.nativeapp.app.mcpProbe
+import no.pradhan.agentview.nativeapp.app.openConnectors
 import no.pradhan.agentview.nativeapp.app.refreshMcpGroups
 import no.pradhan.agentview.nativeapp.app.saveMcpGroup
 import no.pradhan.agentview.nativeapp.ui.Badge
@@ -177,6 +179,27 @@ private fun McpGroup(rows: List<McpRow>, calls: Map<String, Pair<Int, Int>>, per
     }
 }
 
+// web ClaudeAiLogin and Login: the login page opens in a browser on the Mac; the hint says which and what to do next.
+@Composable
+private fun McpLoginRow(hub: Hub, r: McpRow, kind: McpLogin) {
+    var opened by remember(r.name, r.account) { mutableStateOf(false) }
+    var busy by remember(r.name, r.account) { mutableStateOf(false) }
+    val hint = when {
+        kind == McpLogin.ClaudeAi && opened -> "Opened in ${connectorsBrowser(r.account)} on the Mac. Reconnect once it says Connected."
+        kind == McpLogin.ClaudeAi -> "Opens in ${connectorsBrowser(r.account)} on the Mac."
+        opened -> "Opened in Chrome on the Mac. Reconnect once you finish there."
+        else -> "Opens the login page in Chrome on the Mac."
+    }
+    val label = if (kind == McpLogin.ClaudeAi) "Connect on claude.ai" else if (opened) "Open again" else "Log in"
+    ListRow("Log in", hint, metaLines = 3, trailing = {
+        Button(label, {
+            busy = true
+            if (kind == McpLogin.ClaudeAi) hub.openConnectors(r.account) { busy = false; opened = opened || it }
+            else hub.loginMcp(r.name, r.live) { busy = false; opened = opened || it }
+        }, size = ButtonSize.Sm, enabled = !busy)
+    })
+}
+
 @Composable
 private fun McpDetail(hub: Hub, r: McpRow, calls: Pair<Int, Int>?, groups: Map<String, String>, setGroup: (String, String) -> Unit, onBack: () -> Unit) {
     BackHandler(onBack = onBack)
@@ -207,6 +230,7 @@ private fun McpDetail(hub: Hub, r: McpRow, calls: Pair<Int, Int>?, groups: Map<S
                             else Badge(label, tone)
                         })
                         r.server.error?.takeIf { r.live || r.status != "needs-auth" }?.let { Hairline(); ListRow("Error", it, lines = 3) }
+                        if (canEdit && !hub.readOnly) mcpLogin(r)?.let { kind -> Hairline(); McpLoginRow(hub, r, kind) }
                         r.server.command?.let { Hairline(); ListRow(if (url) "URL" else "Command", it) }
                         r.server.env?.takeIf { it.isNotEmpty() }?.let { Hairline(); ListRow("Env", it.joinToString("  ")) }
                         Hairline(); ListRow("From", scope + if (where.isNotEmpty()) " · $where" else "")

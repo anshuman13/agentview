@@ -10,6 +10,9 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
 import no.pradhan.agentview.nativeapp.chat.ACCOUNT_LABEL
 import no.pradhan.agentview.nativeapp.net.ChatEvent
@@ -265,6 +268,15 @@ fun mcpMeta(r: McpRow, calls: Pair<Int, Int>?, personal: Boolean = false): Strin
 fun mcpReconnectCmd(name: String) = buildJsonObject { put("type", "mcp_reconnect"); put("name", name) }.toString()
 fun mcpToggleCmd(name: String, enabled: Boolean) = buildJsonObject { put("type", "mcp_toggle"); put("name", name); put("enabled", enabled) }.toString()
 fun mcpStatusCmd() = buildJsonObject { put("type", "mcp_status") }.toString()
+
+// web McpDetail: how a Needs login row logs in. claude.ai connectors on claude.ai for their account, a local server through its own OAuth page.
+enum class McpLogin { ClaudeAi, OAuth }
+fun mcpLogin(r: McpRow): McpLogin? = if (r.status != "needs-auth") null else if (r.server.type == "claudeai") McpLogin.ClaudeAi else McpLogin.OAuth
+
+// web openConnectors: the work accounts are signed in to claude.ai in Chrome on the Mac, the personal one in Firefox.
+fun connectorsBrowser(account: String?) = if (account != null && account != "main") "Chrome" else "Firefox"
+fun openConnectorsBody(account: String?) = buildJsonObject { put("url", "https://claude.ai/settings/connectors"); put("browser", connectorsBrowser(account).lowercase()) }.toString()
+fun mcpAuthUrl(body: String): String? = runCatching { protocolJson.parseToJsonElement(body).jsonObject["authUrl"]?.jsonPrimitive?.contentOrNull }.getOrNull()
 
 @Serializable data class McpConnector(val name: String, val status: String = "")
 

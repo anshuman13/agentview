@@ -42,6 +42,10 @@ import no.pradhan.agentview.nativeapp.ops.mcpLoggedInSince
 import no.pradhan.agentview.nativeapp.ops.mcpMeta
 import no.pradhan.agentview.nativeapp.ops.mcpDot
 import no.pradhan.agentview.nativeapp.ops.mcpNote
+import no.pradhan.agentview.nativeapp.ops.McpLogin
+import no.pradhan.agentview.nativeapp.ops.mcpLogin
+import no.pradhan.agentview.nativeapp.ops.mcpAuthUrl
+import no.pradhan.agentview.nativeapp.ops.openConnectorsBody
 import no.pradhan.agentview.nativeapp.ops.mcpToolCount
 import no.pradhan.agentview.nativeapp.ops.mcpSections
 import no.pradhan.agentview.nativeapp.ops.mcpShortName
@@ -252,6 +256,14 @@ class PagesLogicTest {
         assertEquals(listOf(DotState.Bad, DotState.Faint, DotState.Ok, DotState.Busy, DotState.Warn), listOf(rows[0], rows[1], rows[2], McpRow(McpServer("x", "pending")), McpRow(McpServer("x", "needs-auth"), live = true)).map(::mcpDot))
         assertEquals("Linear", mcpShortName("claude.ai Linear"))
         assertEquals("""{"service":"slack","group":"personal"}""", mcpGroupBody("slack", "personal"))
+
+        assertEquals(McpLogin.ClaudeAi, mcpLogin(McpRow(McpServer("claude.ai Slack", "needs-auth", type = "claudeai"), account = "oda")))
+        assertEquals(McpLogin.OAuth, mcpLogin(McpRow(McpServer("grafana", "needs-auth", type = "http"))))
+        assertNull(mcpLogin(rows[2]))
+        assertEquals("""{"url":"https://claude.ai/settings/connectors","browser":"chrome"}""", openConnectorsBody("oda"))
+        assertEquals("""{"url":"https://claude.ai/settings/connectors","browser":"firefox"}""", openConnectorsBody("main"))
+        assertEquals("https://x/auth", mcpAuthUrl("""{"authUrl":"https://x/auth"}"""))
+        assertNull(mcpAuthUrl("{}"))
     }
 
     @Test fun agentsComeFromTheTranscriptWithTheirInfo() {

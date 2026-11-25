@@ -18,7 +18,10 @@ import no.pradhan.agentview.nativeapp.ops.ObserveInfo
 import no.pradhan.agentview.nativeapp.workspace.ReviewFindings
 import no.pradhan.agentview.nativeapp.ops.deployBody
 import no.pradhan.agentview.nativeapp.workspace.dismissBody
+import no.pradhan.agentview.nativeapp.ops.mcpAuthUrl
 import no.pradhan.agentview.nativeapp.ops.mcpGroupBody
+import no.pradhan.agentview.nativeapp.ops.mcpStatusCmd
+import no.pradhan.agentview.nativeapp.ops.openConnectorsBody
 import no.pradhan.agentview.nativeapp.ops.parseConnectors
 import no.pradhan.agentview.nativeapp.ops.parseDeploy
 import no.pradhan.agentview.nativeapp.ops.parseDeployJob
@@ -97,6 +100,20 @@ suspend fun Hub.grafanaPatterns(repo: String): GrafanaPatterns =
 suspend fun Hub.mcpConnectors(refresh: Boolean): Map<String, List<McpConnector>> = parseConnectors(read("/api/mcp/connectors" + if (refresh) "?refresh=1" else ""))
 
 suspend fun Hub.mcpProbe(refresh: Boolean): List<McpServer> = parseMcp(read("/api/mcp/probe" + if (refresh) "?refresh=1" else ""))
+
+// web McpLogin.tsx: both open the login page in a browser on the Mac, where the accounts are signed in.
+fun Hub.openConnectors(account: String?, done: (Boolean) -> Unit) =
+    writes.run("Could not open claude.ai", { api.post("/api/open", openConnectorsBody(account), pageChat) }, done)
+
+// A server not loaded in the chat is added first; `done` gets whether a login page opened.
+fun Hub.loginMcp(name: String, live: Boolean, done: (Boolean) -> Unit) {
+    var opened = false
+    writes.run("Could not start the login", {
+        if (!live) runCatching { api.post("/api/mcp/add?name=${enc(name)}", "", pageChat) }
+        opened = mcpAuthUrl(api.post("/api/mcp/login?name=${enc(name)}", "", pageChat)) != null
+        if (!opened) quietCommand(mcpStatusCmd())
+    }) { ok -> done(ok && opened) }
+}
 
 fun Hub.saveMcpGroup(service: String, group: String, done: (Boolean) -> Unit) =
     write("/api/mcp/groups", mcpGroupBody(service, group), "Could not save the group", done)
