@@ -15,6 +15,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -37,6 +38,7 @@ import no.pradhan.agentview.nativeapp.ui.Chip
 import no.pradhan.agentview.nativeapp.ui.ChipTone
 import no.pradhan.agentview.nativeapp.ui.EmptyState
 import no.pradhan.agentview.nativeapp.ui.Group
+import no.pradhan.agentview.nativeapp.ui.LocalCardGroups
 import no.pradhan.agentview.nativeapp.ui.Hairline
 import no.pradhan.agentview.nativeapp.ui.ListRow
 import no.pradhan.agentview.nativeapp.ui.MenuItem
@@ -65,7 +67,7 @@ internal fun TasksPage(st: CodexState, profile: String?, now: Long, actions: Tas
     LaunchedEffect(chosen.size, picked?.size) { if (picked != null && chosen.size != picked.size) setPicked(chosen.map { it.key }.toSet()) }
     val pick = { r: Row -> if (searching) null else RowPick(picked != null, picked?.contains(r.key) == true) { setPicked(((picked ?: emptySet()).let { if (r.key in it) it - r.key else it + r.key })) } }
     Box(Modifier.fillMaxSize()) {
-    LazyColumn(Modifier.fillMaxSize()) {
+    CompositionLocalProvider(LocalCardGroups provides true) { LazyColumn(Modifier.fillMaxSize()) {
         if (searching) item {
             SearchField(query, setQuery, "Search tasks")
         }
@@ -99,7 +101,7 @@ internal fun TasksPage(st: CodexState, profile: String?, now: Long, actions: Tas
             if (doneOpen) item { Group { s.doneToday.forEachIndexed { i, r -> if (i > 0) Hairline(); TaskRowView(r, now, actions, onOpen = { onOpen(r) }) } } }
         }
         item { androidx.compose.foundation.layout.Spacer(Modifier.padding(bottom = Tokens.fab + Tokens.sp16)) }
-    }
+    } }
     if (picked != null && !searching) SelectionBar(
         chosen.size, { kind -> actions.bulk(chosen, kind); setPicked(null) }, { setPicked(null) }, Modifier.align(Alignment.BottomCenter),
         menu = chosen.singleOrNull()?.let { r -> { close -> TaskMenu(r, { close(); setPicked(null) }, actions) { onOpen(r) } } },

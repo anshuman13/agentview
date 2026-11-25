@@ -100,7 +100,7 @@ fun SectionHeader(label: String, count: String? = null, open: Boolean? = null, o
     }
 }
 
-// True on pages whose Groups use the hairline card shell (web .ov-page), such as the Codex Overview.
+// True on pages whose Groups use the hairline card shell (web .ov-page), such as the Codex Overview and Tasks.
 val LocalCardGroups = staticCompositionLocalOf { false }
 
 // Inset grouped list card (web .ui-group).

@@ -662,7 +662,7 @@ The palette's Keyboard shortcuts command shows the same list.
 
 - Codex lists share design tokens in tokens.css: `--row-h` (40px), `--row-title` and `--row-meta` (md and sm type), `--meta-fg` (muted secondary text) and `--hairline` (1px separators). Task rows, section headers with counts and the Slack Summary page use them.
 - On the web and Android Overview every group (Up next, Needs you, Running chats, Today, Plan your day, Goals, the morning card) is a hairline card: `--hairline` border, `--shape-lg` radius and `--surface` fill, the same shell as the design system Card (Android: `LocalCardGroups` switches `Group` to it).
-- On the web Tasks list each section's rows (Overdue, the days, Review, Done, search hits) sit in the same hairline card, with the section label above it.
+- On the web and Android Tasks lists each section's rows (Overdue, the days, Review, Done, search hits) sit in the same hairline card, with the section label above it.
 
 ## Copy a file path
 
