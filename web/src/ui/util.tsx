@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type KeyboardEvent, type MouseEvent, type RefObject } from 'react';
 import { money } from '../../../shared/cost';
 import { narrow } from '../app/shell/useNarrow';
+import { createStore } from './createStore';
 
 // Enter or Space on a focusable element that is not a button clicks it.
 export const clickOnKey = (e: KeyboardEvent<HTMLElement>) => {
@@ -38,11 +39,19 @@ export function showChat() {
 }
 
 // The element with this id once it is on screen, for a screen that portals its action into a header slot.
-export function useSlot(id: string) {
-  const [el, setEl] = useState<HTMLElement | null>(null);
-  useEffect(() => { const found = document.getElementById(id); setEl((prev) => (prev === found ? prev : found)); });
-  return el;
+// Header slots a screen portals into. The slot registers itself, so a slot that mounts later (a resize to phone width) still gets its content.
+const slots = createStore<Record<string, HTMLElement | undefined>>({});
+const slotRefs = new Map<string, (el: HTMLElement | null) => void>();
+export function slotRef(id: string) {
+  let ref = slotRefs.get(id);
+  if (!ref) {
+    ref = (el) => slots.patch({ [id]: el ?? undefined });
+    slotRefs.set(id, ref);
+  }
+  return ref;
 }
+export const slotOf = (id: string) => slots.get()[id] ?? null;
+export const useSlot = (id: string) => slots.use((s) => s[id] ?? null);
 
 // Relative time: now, 5m, 3h, 2d, 4w; a suffix such as ' ago' where a sentence needs one.
 export function ago(t: number | string, suffix = '') {

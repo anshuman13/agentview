@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { IconButton } from '../../ui/Button';
+import { slotRef } from '../../ui/util';
 import { goBack, useBack } from '../touch/back';
 import { useNarrow } from './useNarrow';
 import '../../styles/features/wiki.css';
@@ -15,7 +16,7 @@ function Header({ title, sub, slot, onBack }: Props) {
         <h1>{title}</h1>
         {sub && <div className="phone-head-sub">{sub}</div>}
       </div>
-      {slot && <span id={slot} className="phone-head-action" />}
+      {slot && <span id={slot} ref={slotRef(slot)} className="phone-head-action" />}
     </header>
   );
 }

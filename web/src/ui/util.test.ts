@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'bun:test';
 import { setSystemTime } from '../../../testing';
-import { ago, escapeHtml, markSegments, matchLabel, spendLines, stepMatch, weekPace } from './util';
+import { ago, escapeHtml, markSegments, matchLabel, slotOf, slotRef, spendLines, stepMatch, weekPace } from './util';
 
 describe('ago', () => {
   afterEach(() => { vi.useRealTimers(); setSystemTime(); });
@@ -98,5 +98,17 @@ describe('stepMatch', () => {
     expect(stepMatch(-1, -1, 3)).toBe(2);
     expect(stepMatch(2, 1, 3)).toBe(0);
     expect(stepMatch(0, -1, 3)).toBe(2);
+  });
+});
+
+describe('slotRef', () => {
+  it('registers a slot when it mounts and drops it when it unmounts', () => {
+    const el = {} as HTMLElement;
+    expect(slotRef('t-slot')).toBe(slotRef('t-slot'));
+    expect(slotOf('t-slot')).toBeNull();
+    slotRef('t-slot')(el);
+    expect(slotOf('t-slot')).toBe(el);
+    slotRef('t-slot')(null);
+    expect(slotOf('t-slot')).toBeNull();
   });
 });
