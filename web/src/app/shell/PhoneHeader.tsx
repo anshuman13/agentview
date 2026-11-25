@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { IconButton } from '../../ui/Button';
-import { useBack } from '../touch/back';
+import { goBack, useBack } from '../touch/back';
 import { useNarrow } from './useNarrow';
 import '../../styles/features/wiki.css';
 
@@ -10,7 +10,7 @@ function Header({ title, sub, slot, onBack }: Props) {
   useBack(onBack);
   return (
     <header className="wk-head phone-head">
-      <IconButton icon="arrow-left" label="Back" onClick={onBack} />
+      <IconButton icon="arrow-left" label="Back" onClick={() => goBack(onBack)} />
       <div className="phone-head-text">
         <h1>{title}</h1>
         {sub && <div className="phone-head-sub">{sub}</div>}

@@ -62,6 +62,12 @@ export function useBack(close: () => void) {
   useEffect(() => pushBack(() => latest.current()), []);
 }
 
+// An on-screen back arrow under other layers (an open sketch or trip) closes the topmost one, like the phone back button.
+export function goBack(fallback: () => void) {
+  if (stack.length && depth() >= stack.length && !booting) history.back();
+  else fallback();
+}
+
 export function Back({ close }: { close: () => void }) {
   useBack(close);
   return null;
