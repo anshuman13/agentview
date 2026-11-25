@@ -20,6 +20,7 @@ import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.EnterExitState
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.core.tween
@@ -28,6 +29,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
@@ -80,6 +82,7 @@ import no.pradhan.agentview.nativeapp.ui.select
 import no.pradhan.agentview.nativeapp.ui.rememberLoad
 import no.pradhan.agentview.nativeapp.ui.agoShort
 import no.pradhan.agentview.nativeapp.ui.motionOff
+import no.pradhan.agentview.nativeapp.ui.av
 
 private const val FOLD = 5
 
@@ -104,19 +107,26 @@ fun SketchesScreen(hub: Hub, onBack: () -> Unit) {
     var query by rememberSaveable(chat) { mutableStateOf("") }
     val still = motionOff()
     val scroll = rememberScrollState()
-    // Zoom in on open and out on back (web: the sk-zoom view transition), instant at animator scale 0.
-    AnimatedContent(file, Modifier.fillMaxSize(), transitionSpec = {
-        if (still) EnterTransition.None togetherWith ExitTransition.None
-        else if (targetState != null) {
-            (scaleIn(tween(Tokens.motionDuration, easing = Tokens.motionEaseIn), 0.92f) + fadeIn(tween(Tokens.motionDuration, easing = Tokens.motionEaseIn))) togetherWith
-                fadeOut(tween(Tokens.motionDuration, easing = Tokens.motionEaseIn))
-        } else {
-            fadeIn(tween(Tokens.motionDuration, easing = Tokens.motionEaseOut)) togetherWith
-                (scaleOut(tween(Tokens.motionDuration, easing = Tokens.motionEaseOut), 0.92f) + fadeOut(tween(Tokens.motionDuration, easing = Tokens.motionEaseOut)))
-        }.apply { targetContentZIndex = if (targetState != null) 1f else -1f }
-    }, label = "sketch") { shown ->
-        if (shown != null) SketchView(hub, shown, onBack = { open = null })
-        else SketchList(hub, sketches, scroll, load.error, reload, all, { all = true }, query, { query = it }, onBack) { open = it }
+    // The list stays composed under the open sketch, so its thumbnail WebViews are not destroyed (which restarted the
+    // renderer and left the sketch blank and headerless for a second). Zoom in on open and out on back (web: the sk-zoom
+    // view transition), instant at animator scale 0.
+    Box(Modifier.fillMaxSize()) {
+        Box(if (file != null) Modifier.fillMaxSize().clearAndSetSemantics {} else Modifier.fillMaxSize()) {
+            SketchList(hub, sketches, scroll, load.error, reload, all, { all = true }, query, { query = it }, onBack) { open = it }
+        }
+        AnimatedContent(file, Modifier.fillMaxSize(), transitionSpec = {
+            if (still) EnterTransition.None togetherWith ExitTransition.None
+            else if (targetState != null) {
+                (scaleIn(tween(Tokens.motionDuration, easing = Tokens.motionEaseIn), 0.92f) + fadeIn(tween(Tokens.motionDuration, easing = Tokens.motionEaseIn))) togetherWith ExitTransition.None
+            } else {
+                EnterTransition.None togetherWith (scaleOut(tween(Tokens.motionDuration, easing = Tokens.motionEaseOut), 0.92f) + fadeOut(tween(Tokens.motionDuration, easing = Tokens.motionEaseOut)))
+            }.apply { targetContentZIndex = if (targetState != null) 1f else -1f }
+        }, label = "sketch") { shown ->
+            if (shown != null) Box(Modifier.fillMaxSize().background(av.bg).clickable(indication = null, interactionSource = null) {}) {
+                // A WebView ignores the Compose fade and scale, so the frame joins once the zoom has settled.
+                SketchView(hub, shown, ready = transition.currentState == EnterExitState.Visible, onBack = { open = null })
+            }
+        }
     }
 }
 
@@ -213,7 +223,7 @@ private fun SketchThumb(hub: Hub, file: SketchFile, onClick: () -> Unit) {
 }
 
 @Composable
-private fun SketchView(hub: Hub, file: SketchFile, onBack: () -> Unit) {
+private fun SketchView(hub: Hub, file: SketchFile, ready: Boolean, onBack: () -> Unit) {
     BackHandler(onBack = onBack)
     val cwd by hub.store.state.select { st -> shownCwd(st).orEmpty() }
     val (load, reload) = rememberLoad(file.path, hub.pageChat) { hub.readFile(file.path) }
@@ -237,6 +247,7 @@ private fun SketchView(hub: Hub, file: SketchFile, onBack: () -> Unit) {
                 f == null && load.error.isEmpty() -> Loading("Loading the sketch…")
                 f == null -> EmptyState("Could not load the sketch", load.error, icon = "paintcan", action = { Button("Retry", reload, size = ButtonSize.Sm) })
                 f.binary || f.error != null -> SketchProblem("It may have moved. Go back to the list")
+                !ready -> Unit
                 else -> SketchPreview(f.content, isDark, desktop)
             }
         }
@@ -274,8 +285,10 @@ internal fun SketchFrame(page: String, desktop: Boolean, modifier: Modifier = Mo
         factory = { ctx ->
             WebView(ctx).apply {
                 lockSketch(settings.asSketch())
+                visibility = android.view.View.INVISIBLE
                 webViewClient = object : WebViewClient() {
                     override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest) = true
+                    override fun onPageFinished(view: WebView, url: String?) { view.visibility = android.view.View.VISIBLE }
                 }
                 // Inside a scrolling sheet a drag scrolls the sketch where the page has room that way, else the sheet.
                 var downX = 0f
