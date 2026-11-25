@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'bun:test';
 import { readFileSync } from 'node:fs';
-import { applyTripSave, cleanChecklist, cleanPlan, fileTrip, groupPlan, KIND_ICONS, mergeTrips, nextItem, parseReceipt, parseTrips, receiptsCsv, sortTrips, splitTrips, totalsText, tripAsk, tripKind, tripState, tripStateText, type PlanItem, type Receipt, type Trip } from './travel';
+import { applyTripSave, cleanChecklist, cleanPlan, fileTrip, groupPlan, KIND_ICONS, mergeTrips, nextItem, parseReceipt, parseTrips, receiptsCsv, sortTrips, splitTrips, totalsText, tripAsk, tripCard, tripKind, tripState, tripStateText, type PlanItem, type Receipt, type Trip } from './travel';
 
 const fx = JSON.parse(readFileSync(new URL('./fixtures/travel.json', import.meta.url), 'utf8'));
 
@@ -20,6 +20,7 @@ describe('travel', () => {
     expect(tripState(c.trip, c.today)).toBe(c.state);
     expect(tripStateText(c.trip, c.today)).toBe(c.text);
   });
+  for (const c of fx.tripCard) it(`tripCard: ${c.name}`, () => expect(tripCard(c.trip, c.receipts as Receipt[], c.today)).toEqual(c.expected));
   for (const c of fx.cleanPlan) it(`cleanPlan: ${c.name}`, () => expect(cleanPlan(c.raw, ids())).toEqual(c.expected));
   for (const c of fx.cleanChecklist) it(`cleanChecklist: ${c.name}`, () => expect(cleanChecklist(c.raw, ids())).toEqual(c.expected));
   for (const c of fx.tripKind) it(`tripKind: ${c.name}`, () => expect(tripKind(c.trip as Trip)).toBe(c.expected));

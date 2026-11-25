@@ -105,6 +105,15 @@ export function tripStateText(t: Pick<Trip, 'from' | 'to'>, today: string) {
   return n === 1 ? 'In 1 day' : `In ${n} days`;
 }
 
+export type TripCard = { cover: string; state: TripState; stateText: string; totals: string; receipts: number };
+
+// What a trip card shows besides name and dates. cover is the id of the first image receipt added, or '' for none.
+export function tripCard(t: Pick<Trip, 'from' | 'to'>, receipts: Receipt[], today: string): TripCard {
+  const images = receipts.filter((r) => r.mime.startsWith('image/') && r.mime !== 'image/heic');
+  const cover = images.reduce<Receipt | null>((a, r) => (!a || r.addedAt < a.addedAt ? r : a), null);
+  return { cover: cover?.id ?? '', state: tripState(t, today), stateText: tripStateText(t, today), totals: totalsText(receipts), receipts: receipts.length };
+}
+
 // Trips with today inside their dates first, then upcoming by start, then past by end, newest first, undated last.
 export function sortTrips(trips: Trip[], today: string) {
   const rank = (t: Trip) => ['now', 'upcoming', 'past', ''].indexOf(tripState(t, today));

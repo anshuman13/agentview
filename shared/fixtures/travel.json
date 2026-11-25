@@ -210,5 +210,18 @@
     {"name": "not an array", "raw": null, "expected": []},
     {"name": "text, done and ids repaired", "raw": [{"id": "a", "text": "  one\nline  ", "done": true}, {"id": "a", "text": "dup id", "done": "yes"}, {"text": "no id"}, {"id": "b", "text": "   "}, {"id": 5, "text": "num id"}], "expected": [{"id": "a", "text": "one line", "done": true}, {"id": "n1", "text": "dup id", "done": false}, {"id": "n2", "text": "no id", "done": false}, {"id": "n3", "text": "num id", "done": false}]},
     {"name": "text cut to 200", "raw": [{"id": "a", "text": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"}], "expected": [{"id": "a", "text": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx", "done": false}]}
+  ],
+  "tripCard": [
+    {"name": "no receipts, no dates", "trip": {"from": "", "to": ""}, "today": "2026-11-24", "receipts": [],
+      "expected": {"cover": "", "state": "", "stateText": "", "totals": "", "receipts": 0}},
+    {"name": "cover is the first image added, heic and pdf skipped", "trip": {"from": "2026-11-24", "to": "2026-11-26"}, "today": "2026-11-25", "receipts": [
+      {"id": "pdf", "mime": "application/pdf", "amount": 100, "currency": "NOK", "addedAt": 1},
+      {"id": "heic", "mime": "image/heic", "amount": null, "currency": "", "addedAt": 2},
+      {"id": "late", "mime": "image/jpeg", "amount": 50, "currency": "NOK", "addedAt": 9},
+      {"id": "early", "mime": "image/png", "amount": 12.5, "currency": "EUR", "addedAt": 5}
+    ], "expected": {"cover": "early", "state": "now", "stateText": "Now", "totals": "150 NOK + 12.50 EUR", "receipts": 4}},
+    {"name": "upcoming, files only", "trip": {"from": "2026-12-01", "to": ""}, "today": "2026-11-24", "receipts": [
+      {"id": "f", "mime": "application/pdf", "amount": null, "currency": "", "addedAt": 1}
+    ], "expected": {"cover": "", "state": "upcoming", "stateText": "In 7 days", "totals": "", "receipts": 1}}
   ]
 }

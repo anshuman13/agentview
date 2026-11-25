@@ -58,6 +58,19 @@ class TravelLogicTest {
         }
     }
 
+    @Test fun tripCardMatchesTheSharedCases() {
+        fx["tripCard"]!!.jsonArray.forEach { c ->
+            val o = c.jsonObject
+            val receipts = o["receipts"]!!.jsonArray.map { r ->
+                val ro = r.jsonObject
+                Receipt(str(ro["id"]), "t", mime = str(ro["mime"]), amount = ro["amount"]!!.jsonPrimitive.doubleOrNull, currency = str(ro["currency"]), addedAt = str(ro["addedAt"]).toLong())
+            }
+            val e = o["expected"]!!.jsonObject
+            val want = TripCard(str(e["cover"]), str(e["state"]), str(e["stateText"]), str(e["totals"]), str(e["receipts"]).toInt())
+            assertEquals(str(o["name"]), want, tripCard(trip(o["trip"]!!), receipts, str(o["today"])))
+        }
+    }
+
     @Test fun planHelpersMatchTheSharedCases() {
         fx["groupPlan"]!!.jsonArray.forEach { c ->
             val o = c.jsonObject

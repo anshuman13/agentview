@@ -97,6 +97,17 @@ fun tripStateText(t: Trip, today: String): String = when (val s = tripState(t, t
     else -> s
 }
 
+data class TripCard(val cover: String, val state: String, val stateText: String, val totals: String, val receipts: Int)
+
+// shared/travel.ts tripCard: what a trip card shows besides name and dates. cover is the id of the first image receipt added, or "".
+fun tripCard(t: Trip, receipts: List<Receipt>, today: String) = TripCard(
+    receipts.filter { isImage(it) }.minByOrNull { it.addedAt }?.id ?: "",
+    tripState(t, today),
+    tripStateText(t, today),
+    totalsText(receipts),
+    receipts.size,
+)
+
 // Trips with today inside their dates first, then upcoming by start, then past by end, newest first, undated last.
 fun sortTrips(trips: List<Trip>, today: String): List<Trip> {
     fun rank(t: Trip) = listOf("now", "upcoming", "past", "").indexOf(tripState(t, today))
