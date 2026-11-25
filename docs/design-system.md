@@ -107,7 +107,7 @@ The ring shows on `:focus-visible` only, never on mouse focus. No primitive hard
 
 ### Motion
 
-- Durations come from `--dur-fast`, `--dur` and the `--pulse*` tokens. Sheets, drawers and pushed views use `--motion-duration` (250ms) with `--motion-ease-in` (enter, cubic-bezier(0.2, 0, 0, 1)) and `--motion-ease-out` (exit, cubic-bezier(0.3, 0, 1, 1)); Tokens.kt has the same as `motionDuration`, `motionEaseIn` and `motionEaseOut`.
+- Durations come from `--dur-fast`, `--dur` and the `--pulse*` tokens. Sheets, drawers and pushed views use `--motion-duration` (250ms) with `--motion-ease-in` (enter, cubic-bezier(0.2, 0, 0, 1)) and `--motion-ease-out` (exit, cubic-bezier(0.3, 0, 1, 1)); Tokens.kt has the same as `motionDuration`, `motionEaseIn` and `motionEaseOut`. A web `Sheet` opts in with the `ui-motion` class (the Travel sheets do): it rises and its scrim fades in with the enter pair, and drag-dismiss and close settle with the exit pair.
 - Every transition and animation is either inside `@media (prefers-reduced-motion: no-preference)` or covered by the global reduce override at the end of base.css, which sets `animation: none` and `transition: none` with `!important` on `*`, `*::before` and `*::after`. Do not weaken it (no `:not()` exceptions).
 - `scroll-behavior: smooth` needs a `no-preference` wrapper.
 - Information is never carried by motion alone: status dots, skeletons and spinners keep a static colour, icon or adjacent text.

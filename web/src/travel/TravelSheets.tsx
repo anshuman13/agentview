@@ -19,7 +19,7 @@ export function TripSheet({ trip, onClose, onSaved }: { trip?: Trip; onClose: ()
     saveTrip({ id: trip?.id, name, from, to: to || from }).then(onSaved, (e) => { notice(errText(e)); setBusy(false); });
   };
   return (
-    <Sheet label={trip ? 'Edit trip' : 'New trip'} onClose={onClose}>
+    <Sheet label={trip ? 'Edit trip' : 'New trip'} onClose={onClose} className="ui-motion">
       <h2 className="tv-sheet-title">{trip ? 'Edit trip' : 'New trip'}</h2>
       <div className="ui-fields">
         <input autoFocus aria-label="Trip name" placeholder="Trip, such as Stockholm offsite" value={name} enterKeyHint="done" onChange={(e) => setName(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && save()} />
@@ -43,7 +43,7 @@ export function HomeSheet({ home, onClose, onSaved }: { home: string; onClose: (
     saveHome(value).then(() => { notice('Home address saved'); onSaved(); }, (e) => { notice(errText(e)); setBusy(false); });
   };
   return (
-    <Sheet label="Home address" onClose={onClose}>
+    <Sheet label="Home address" onClose={onClose} className="ui-motion">
       <h2 className="tv-sheet-title">Home address</h2>
       <div className="ui-fields">
         <input autoFocus aria-label="Home address" placeholder="Street, city" value={value} enterKeyHint="done" onChange={(e) => setValue(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && save()} />
@@ -74,7 +74,7 @@ export function PlanItemSheet({ trip, item, today, onClose, onSaved }: { trip: T
   const save = () => write(item ? plan.map((p) => (p.id === item.id ? { ...p, ...f } : p)) : [...plan, f], onClose);
   const remove = () => write(plan.filter((p) => p.id !== item?.id), () => { notice('Item deleted'); onClose(); });
   return (
-    <Sheet label={item ? 'Edit item' : 'Add item'} onClose={onClose}>
+    <Sheet label={item ? 'Edit item' : 'Add item'} onClose={onClose} className="ui-motion">
       <h2 className="tv-sheet-title">{item ? 'Edit item' : 'Add item'}</h2>
       <div className="ui-fields">
         <div className="tv-chips" role="group" aria-label="Kind">
@@ -106,7 +106,7 @@ export function ReceiptSheet({ receipt: r, onClose, onSaved }: { receipt: Receip
   };
   const remove = () => deleteReceipt(r.id).then(() => { notice('Receipt deleted'); onClose(); void onSaved(); }, (e) => notice(errText(e)));
   return (
-    <Sheet label="Receipt" onClose={onClose} className="tv-receipt">
+    <Sheet label="Receipt" onClose={onClose} className="tv-receipt ui-motion">
       <h2 className="tv-sheet-title">{r.read === 'pending' ? 'Claude is reading this receipt…' : r.merchant || r.name}</h2>
       <a className="tv-preview" href={receiptUrl(r.id)} target="_blank" rel="noreferrer">
         {isImage(r) ? <img src={receiptUrl(r.id)} alt={r.name} /> : <span>Open {r.name}</span>}

@@ -14,6 +14,8 @@
 @media (prefers-reduced-motion: no-preference) {
   .as-sheet-overlay { animation: as-sheet-fade var(--dur) var(--ease); }
   .as-sheet { animation: as-sheet-up 200ms ease-out; }
+  .as-sheet-overlay:has(> .as-sheet.ui-motion) { animation: as-sheet-fade var(--motion-duration) var(--motion-ease-in); }
+  .as-sheet.ui-motion { animation: as-sheet-up var(--motion-duration) var(--motion-ease-in); }
 }
 @keyframes as-sheet-fade { from { background-color: transparent; } }
 @keyframes as-sheet-up { from { transform: translateY(100%); } }
