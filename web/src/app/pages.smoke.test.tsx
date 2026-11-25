@@ -20,7 +20,9 @@ const { GoalsBlock } = await import('../codex/overview/GoalsBlock');
 const { GoalField } = await import('../codex/tasks/Goals');
 const { weekStart } = await import('../codex/data/dates');
 const { PrivacyGroup } = await import('./shell/Settings');
-const { SketchFrame, SketchList, Sketches } = await import('../workspace/Sketches');
+const realSketches = await import('../workspace/useSketches');
+vi.mock('../workspace/useSketches', () => ({ ...realSketches, useSketch: () => ({ html: "<h1>Login</h1><script>fetch('/api/state')</script>", problem: null, reload: () => {} }) }));
+const { SketchFrame, SketchList, Sketches, ThumbFrame } = await import('../workspace/Sketches');
 
 describe('page smoke', () => {
   it('the rail head of a job run waiting for review is its review card', () => {
@@ -68,6 +70,13 @@ describe('page smoke', () => {
     expect(html).not.toContain('allow-');
     expect(html).toContain('Content-Security-Policy');
     expect(html).toContain('data-theme=&quot;dark&quot;');
+  });
+
+  it('the sketch card preview has an empty sandbox with no allow-scripts', () => {
+    const html = renderToStaticMarkup(<ThumbFrame file={{ name: 'login.html', path: '.claude/sketches/login.html', mtime: 1 }} theme="light" scale={0.2} />);
+    expect(html).toContain('<iframe sandbox=""');
+    expect(html).not.toContain('allow-');
+    expect(html).toContain('Content-Security-Policy');
   });
 
   it('Settings shows Privacy with the Feature use row while analytics are on or a feature is hidden', () => {

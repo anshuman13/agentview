@@ -56,7 +56,7 @@ function SketchThumb({ file, theme }: { file: SketchFile; theme: SketchTheme }) 
   return <span className="sk-thumb" ref={box}>{seen && width > 0 && <ThumbFrame file={file} theme={theme} scale={width / SIZE.desktop[0]} />}</span>;
 }
 
-function ThumbFrame({ file, theme, scale }: { file: SketchFile; theme: SketchTheme; scale: number }) {
+export function ThumbFrame({ file, theme, scale }: { file: SketchFile; theme: SketchTheme; scale: number }) {
   const { html, problem } = useSketch(file.path);
   if (html === null || problem) return null;
   const [w, h] = SIZE.desktop;
