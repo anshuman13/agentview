@@ -33,7 +33,7 @@ export function notifyAway(m: ServerMessage, away: () => LiveChat | null, deskto
 }
 
 export function notifyRunEnded(run: ChatRun, repo: string, push: boolean) {
-  const title = `${run.kind === 'tries' ? 'Tries' : 'Job'} ended`;
+  const title = `${run.kind === 'tries' ? 'Tries' : run.kind === 'build' ? 'Build' : 'Job'} ended`;
   post(`${title}${repo ? ` in ${repo}` : ''}`, run.title, run.why, `${APP}/?chat=${run.chatId}`, push);
 }
 

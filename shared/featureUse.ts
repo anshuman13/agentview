@@ -22,7 +22,7 @@ export const FEATURES: Feature[] = [
   ...PALETTE,
   ...make('sheet', [['needsYou', 'Needs you'], ['more', 'More']]),
   ...make('more', [['files', 'Files'], ['browser', 'Browser'], ['terminal', 'Terminal'], ['changes', 'Source Control'], ['github', 'Pull Requests']], () => true),
-  ...make('action', [['approveRun', 'Approve a run'], ['startTask', 'Start a spec task']]),
+  ...make('action', [['approveRun', 'Approve a run'], ['startTask', 'Start a spec task'], ['buildAll', 'Build all tasks of a spec']]),
 ];
 
 export const FEATURE_IDS = new Set(FEATURES.map((f) => f.id));

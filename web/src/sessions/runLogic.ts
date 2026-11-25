@@ -1,14 +1,23 @@
 import type { ChatRun, LiveChat, LiveNow, RoundOutcome } from '../../../shared/protocol';
 import { clock } from '../../../shared/util';
+import { hhmm } from '../../../shared/build';
 import { plural } from '../ui/util';
 import { firstRound, nextRound, roundText } from '../../../shared/runText';
 
-const KIND: Record<ChatRun['kind'], string> = { tries: 'Tries', job: 'Job' };
+const KIND: Record<ChatRun['kind'], string> = { tries: 'Tries', job: 'Job', build: 'Build' };
 
 export function runLine(run: ChatRun) {
   if (run.state === 'paused') return run.why ? `Paused · ${run.why}` : 'Paused';
   if (run.kind === 'tries') return `Tries · ${run.tries?.filter((t) => !t.dropped).length ?? 0} chats`;
+  if (run.kind === 'build') return buildLine(run);
   return `Job · ${run.branch}`;
+}
+
+// "Build · 3 of 7 done · until 06:00", or what it waits for.
+export function buildLine(run: Pick<ChatRun, 'progress' | 'until' | 'phase' | 'why'>) {
+  if (run.why) return `Build · ${run.why}`;
+  const step = run.phase === 'spec' ? 'writing the spec' : run.phase === 'recap' ? 'writing the recap' : run.phase === 'more' ? 'finding more work' : `${run.progress ?? '0 of 0'} done`;
+  return `Build · ${step}${run.until ? ` · until ${hhmm(run.until)}` : ''}`;
 }
 
 export type HeaderState = { text: string; tone: 'running' | 'needs' | 'failed' | 'warn' | 'idle' };

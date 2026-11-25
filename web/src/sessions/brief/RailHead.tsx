@@ -11,6 +11,7 @@ import { agentsOf } from '../agents';
 import { useChatRun } from '../useChatRun';
 import { useCan } from '../../chat/useCan';
 import { billing } from '../../../../shared/providers';
+import { APPROVE } from '../../../../shared/build';
 
 // The rail's title with the run's controls, and the run's state under it.
 export function RailHead({ titled = true, onClose }: { titled?: boolean; onClose?: () => void }) {
@@ -22,7 +23,7 @@ export function RailHead({ titled = true, onClose }: { titled?: boolean; onClose
   const [board, setBoard] = useState(false);
   if (run?.kind === 'job' && run.review === 'pending') return <ReviewCard run={run} />;
   const running = agents.filter((a) => a.status === 'running' && !a.group);
-  // Tries and jobs have no pause or rounds of their own to run now: Stop is their only control.
+  // Tries and jobs have Stop only; a build also pauses after its task and resumes.
   const stop = () => (run ? stopRun(run) : running.forEach((a) => send({ type: 'stop_task', toolUseId: a.id })));
   const now = run && loopNow(run, live?.now);
   const dot = live?.running || running.length > 0 ? 'running' : OUTCOME_DOT[run?.rounds.at(-1)?.outcome ?? 'quiet'];
@@ -31,6 +32,9 @@ export function RailHead({ titled = true, onClose }: { titled?: boolean; onClose
       <div className="rail-h">
         {titled ? <span className="rail-title">Agents</span> : <span className="spacer" />}
         {run?.kind === 'tries' && <IconButton icon="layout" label="Open board" size="sm" onClick={() => setBoard(true)} />}
+        {run?.kind === 'build' && (run.state === 'paused'
+          ? <IconButton icon="debug-continue" label={run.why === APPROVE ? 'Build all' : 'Resume'} size="sm" onClick={() => send({ type: 'run', run: run.id, op: 'resume' })} />
+          : !run.pausing && <IconButton icon="debug-pause" label="Pause after this task" size="sm" onClick={() => send({ type: 'run', run: run.id, op: 'pause' })} />)}
         {(run || (canStop && running.length > 0)) && <IconButton icon="debug-stop" label={run ? 'Stop the run' : 'Stop all agents'} size="sm" onClick={stop} />}
         {onClose && <IconButton icon="close" label="Close the agents" size="sm" onClick={onClose} />}
       </div>

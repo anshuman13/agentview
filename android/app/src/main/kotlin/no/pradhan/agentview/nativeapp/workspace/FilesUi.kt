@@ -195,7 +195,9 @@ fun FileScreen(hub: Hub, path: String, onBack: () -> Unit, diffFirst: Boolean = 
 // The checkbox lines of a spec file: progress and a Start per open task, sent to the chat.
 @Composable
 private fun SpecTasks(hub: Hub, path: String, tasks: List<SpecTask>) {
-    SectionHeader("Tasks", specProgress(tasks))
+    SectionHeader("Tasks", specProgress(tasks), action = if (tasks.any { !it.done }) ({
+        Button("Build all", { hub.track("action:buildAll"); hub.askChat("/build $path") }, variant = ButtonVariant.Plain, size = ButtonSize.Sm, enabled = !hub.readOnly)
+    }) else null)
     Group {
         tasks.forEachIndexed { i, t ->
             if (i > 0) Hairline()

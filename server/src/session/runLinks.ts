@@ -31,11 +31,12 @@ export class RunLinks {
     const { runs, id } = this.s;
     const job = runs.jobFor(id);
     if (job?.review !== 'pending') runs.end(job?.id, 'chat closed');
-    for (const r of runs.list()) if (r.kind === 'tries' && r.chatId === id) runs.end(r.id, 'chat closed');
+    for (const r of runs.list()) if ((r.kind === 'tries' || r.kind === 'build') && r.chatId === id && r.state !== 'done') runs.end(r.id, 'chat closed');
   }
 
   control(run: string, op: RunOp) {
     const { runs } = this.s;
+    if (runs.get(run)?.kind === 'build') return this.s.build.control(op);
     if (op !== 'stop') return;
     if (runs.get(run)?.kind === 'tries') return runs.end(run, STOPPED_BY_YOU);
     if (runs.jobFor(this.s.id)?.id === run) {
@@ -53,6 +54,11 @@ export class RunLinks {
       runs.update(job.id, { chatId: this.s.id });
       runs.addRound(job.id, { n: job.rounds.length + 1, ...result });
       this.s.onJobTurn?.(job.id, turn.lastError);
+    }
+    const build = runs.buildFor(this.s.id);
+    if (build) {
+      if (!build.clearing) runs.addRound(build.id, { n: build.rounds.length + 1, ...result });
+      void this.s.build.record(result.outcome, turn.lastError);
     }
     if (this.compareRun) {
       runs.addRound(this.compareRun, { n: 0, ...result });

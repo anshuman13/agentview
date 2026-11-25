@@ -19,7 +19,7 @@ import no.pradhan.agentview.nativeapp.ui.agoShort
 
 // Tries and jobs (web/src/chat/composerLogic.ts runLine).
 
-private val KIND = mapOf("tries" to "Tries", "job" to "Job")
+private val KIND = mapOf("tries" to "Tries", "job" to "Job", "build" to "Build")
 
 // The run a chat is on, while it is not done.
 fun activeRun(runs: List<ChatRun>, chatId: String?) = runs.lastOrNull { it.chatId == chatId && it.state != "done" }
@@ -30,8 +30,24 @@ fun askLine(run: LiveRun?): String? = run?.line?.takeIf { run.needsYou && (run.o
 fun runLine(run: ChatRun): String = when {
     run.state == "paused" -> if (run.why.isNotEmpty()) "Paused · ${run.why}" else "Paused"
     run.kind == "tries" -> "Tries · ${run.tries.count { !it.dropped }} chats"
+    run.kind == "build" -> buildLine(run)
     else -> "Job · ${run.branch}"
 }
+
+// "Build · 3 of 7 done · until 06:00", or what it waits for (web sessions/runLogic.ts buildLine).
+fun buildLine(run: ChatRun): String {
+    if (run.why.isNotEmpty()) return "Build · ${run.why}"
+    val step = when (run.phase) {
+        "spec" -> "writing the spec"
+        "recap" -> "writing the recap"
+        "more" -> "finding more work"
+        else -> "${run.progress ?: "0 of 0"} done"
+    }
+    return "Build · $step" + (run.until?.let { " · until ${clock(it)}" } ?: "")
+}
+
+// shared/build.ts APPROVE: a build run waiting for Build all.
+const val BUILD_APPROVE = "Approve the spec: Build all"
 
 fun firstRoundText(at: Long?) = "First round" + (at?.let { " ${clock(it)}" } ?: "")
 

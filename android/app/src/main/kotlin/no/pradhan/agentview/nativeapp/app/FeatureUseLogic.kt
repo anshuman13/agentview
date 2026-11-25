@@ -30,7 +30,7 @@ val FEATURES: List<Feature> =
         PALETTE +
         make("sheet", { false }, "needsYou" to "Needs you", "more" to "More") +
         make("more", { true }, "files" to "Files", "browser" to "Browser", "terminal" to "Terminal", "changes" to "Source Control", "github" to "Pull Requests") +
-        make("action", { false }, "approveRun" to "Approve a run", "startTask" to "Start a spec task")
+        make("action", { false }, "approveRun" to "Approve a run", "startTask" to "Start a spec task", "buildAll" to "Build all tasks of a spec")
 
 private val FEATURE_BY_ID = FEATURES.associateBy { it.id }
 

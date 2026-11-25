@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { readJsonSync, writeJsonSync } from '../json.js';
 import { roundOf } from '../../../shared/edits.js';
 import type { ChatRun, Round, RoundOutcome } from '../../../shared/protocol.js';
+import { APPROVE, BLOCKED, FAILED } from '../../../shared/build.js';
 
 export const WAITING = 'waiting for your approval';
 export const READY = 'Ready for review';
@@ -13,7 +14,7 @@ const SAVE_MS = 1000;
 const SHOW_ENDED = 10;
 const SHOW_ENDED_MS = 24 * 3_600_000;
 
-type NewRun = Pick<ChatRun, 'kind' | 'sessionId' | 'chatId' | 'title' | 'what' | 'provider'> & Partial<Pick<ChatRun, 'round' | 'max' | 'nextAt' | 'tries' | 'cwd' | 'jobId' | 'branch' | 'repo' | 'worktree' | 'paseo'>>;
+type NewRun = Pick<ChatRun, 'kind' | 'sessionId' | 'chatId' | 'title' | 'what' | 'provider'> & Partial<Pick<ChatRun, 'round' | 'max' | 'nextAt' | 'tries' | 'cwd' | 'jobId' | 'branch' | 'repo' | 'worktree' | 'paseo' | 'spec' | 'until' | 'auto' | 'phase'>>;
 
 export const firstSentence = (text: string, max = 120) => text.trim().split(/(?<=[.!?])\s|\n/)[0].slice(0, max).trim();
 
@@ -33,7 +34,7 @@ const allReported = (run: ChatRun) => openTries(run).every((t) => run.rounds.som
 
 // A blocked or question round, or a pause for approval, until a later round or a message from the user.
 const mark = (r: ChatRun) => {
-  r.needsYou = r.state !== 'done' && (Boolean(r.asked) || r.review === 'pending' || (r.state === 'paused' && r.why === WAITING));
+  r.needsYou = r.state !== 'done' && (Boolean(r.asked) || r.review === 'pending' || (r.state === 'paused' && (r.why === WAITING || r.why === APPROVE || r.why === BLOCKED || r.why === FAILED)));
 };
 
 // All runs of the host. Active ones and the latest ended ones are saved to file, each with its last rounds.
@@ -45,7 +46,7 @@ export class Runs {
 
   constructor(private file: string | null = null, private onChange: () => void = () => {}, private onEnd: (run: ChatRun) => void = () => {}, private onReported: (run: ChatRun) => void = () => {}) {
     const saved = file ? readJsonSync<unknown>(file, []) : [];
-    this.runs = Array.isArray(saved) ? saved.filter((r): r is ChatRun => typeof r?.id === 'string' && Array.isArray(r.rounds) && (r.kind === 'tries' || r.kind === 'job')) : [];
+    this.runs = Array.isArray(saved) ? saved.filter((r): r is ChatRun => typeof r?.id === 'string' && Array.isArray(r.rounds) && (r.kind === 'tries' || r.kind === 'job' || r.kind === 'build')) : [];
     // A restart drops every open permission card, so no answer can resume a run that waited on one.
     for (const r of this.runs) {
       if (r.state === 'paused' && r.why === WAITING) Object.assign(r, { state: 'running', why: '' });
@@ -93,7 +94,12 @@ export class Runs {
     return run.id;
   }
 
-  update(id: string | undefined, patch: Partial<Pick<ChatRun, 'chatId' | 'sessionId' | 'state' | 'why' | 'round' | 'max' | 'nextAt' | 'review' | 'pr'>>) {
+  // The build run a chat is on, until it ends.
+  buildFor(chatId: string) {
+    return this.runs.find((r) => r.kind === 'build' && r.chatId === chatId && r.state !== 'done');
+  }
+
+  update(id: string | undefined, patch: Partial<Pick<ChatRun, 'chatId' | 'sessionId' | 'state' | 'why' | 'round' | 'max' | 'nextAt' | 'review' | 'pr' | 'spec' | 'phase' | 'clearing' | 'pausing' | 'idle' | 'progress'>>) {
     const run = this.get(id);
     if (!run || run.state === 'done') return;
     Object.assign(run, patch);

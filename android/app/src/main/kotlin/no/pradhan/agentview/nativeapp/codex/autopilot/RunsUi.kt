@@ -56,6 +56,12 @@ fun RunActions(hub: Hub, run: ChatRun) {
     var board by rememberSaveable(run.id) { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     if (run.kind == "tries") IconBtn("layout", "Open board", { board = true })
+    if (run.kind == "build") {
+        val resume = { hub.runControl(run, "resume") }
+        val pause = { hub.runControl(run, "pause") }
+        if (run.state == "paused") IconBtn("debug-continue", if (run.why == BUILD_APPROVE) "Build all" else "Resume", resume, enabled = !hub.readOnly)
+        else if (!run.pausing) IconBtn("debug-pause", "Pause after this task", pause, enabled = !hub.readOnly)
+    }
     IconBtn("debug-stop", "Stop", { hub.runControl(run, "stop") }, enabled = !hub.readOnly)
     if (board) {
         val chats by hub.store.state.select { it.live }

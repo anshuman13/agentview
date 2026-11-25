@@ -8,6 +8,7 @@ import { sendToChat, setUi } from '../app/store';
 import { imageUrl } from '../chat/chatApi';
 import { track } from '../app/featureUse';
 import { Section } from '../ui/Section';
+import { Button } from '../ui/Button';
 import { escapeHtml } from '../ui/util';
 import { DocAsk, BlockEditor, useSelectionAsk } from './DocEdit';
 import { replaceBlock } from '../../../shared/docEdit';
@@ -307,7 +308,7 @@ export function MarkdownDoc({ path, text, onSave }: { path: string; text: string
     <div className="doc-scroll" ref={scroller}>
       {edit && rendered.blocks[edit.i] && createPortal(<BlockEditor raw={rendered.blocks[edit.i].raw} onSave={saveBlock} onCancel={closeEdit} />, edit.host)}
       {ask.at && <DocAsk path={path} at={ask.at} onDone={ask.clear} open={ask.open} />}
-      {tasks.length > 0 && <Section label="Tasks" count={specProgress(tasks)} />}
+      {tasks.length > 0 && <Section label="Tasks" count={specProgress(tasks)} action={tasks.some((t) => !t.done) && <Button size="sm" icon="run-all" onClick={() => { track('action:buildAll'); sendToChat(`/build ${path}`); }}>Build all</Button>} />}
       <div className="doc-layout">
         <article className="doc" ref={body} onClick={onClick} />
         {outline.length >= 3 && (

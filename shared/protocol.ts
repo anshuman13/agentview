@@ -135,7 +135,7 @@ export type Capabilities = { rewind: boolean; mcp: boolean; mcpEdit: boolean; co
 export const BIG_BRO = 'big-bro';
 
 export type RoundOutcome = 'done' | 'progress' | 'blocked' | 'question' | 'quiet' | 'failed';
-export type RunOp = 'stop';
+export type RunOp = 'stop' | 'pause' | 'resume';
 export type Round = { n: number; at: number; outcome: RoundOutcome; line: string; costUsd: number };
 
 // One chat of a /tries run: its Claude session, and the worktree branch it works on. A kept try archives the others.
@@ -144,7 +144,7 @@ export type Try = { n: number; chatId: string; sessionId: string; branch: string
 // One /tries or scheduled coding job: sessionId is the Claude session (stable across restarts), chatId the live chat now running it.
 export type ChatRun = {
   id: string;
-  kind: 'tries' | 'job';
+  kind: 'tries' | 'job' | 'build';
   sessionId: string;
   chatId: string;
   title: string;
@@ -170,6 +170,15 @@ export type ChatRun = {
   paseo?: boolean;
   review?: 'pending';
   pr?: string;
+  // A build run: its spec, the stop time of Keep going, auto (no approval), the step it is on and "3 of 7" tasks done.
+  spec?: string;
+  until?: number | null;
+  auto?: boolean;
+  phase?: 'spec' | 'task' | 'more' | 'recap';
+  clearing?: boolean;
+  pausing?: boolean;
+  idle?: number;
+  progress?: string;
 };
 
 export type McpProp = { type?: string | string[]; description?: string; enum?: unknown[]; default?: unknown; title?: string; maxLength?: number };

@@ -175,6 +175,10 @@ data class ChatRun(
     val review: String? = null,
     val pr: String? = null,
     val cwd: String? = null,
+    val until: Long? = null,
+    val phase: String? = null,
+    val pausing: Boolean = false,
+    val progress: String? = null,
 )
 
 @Serializable

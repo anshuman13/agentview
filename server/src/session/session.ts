@@ -18,6 +18,7 @@ import { PR_URL, createsPr } from './pr.js';
 import { SKETCH_COMMAND, sketchPrompt } from '../../../shared/sketches.js';
 import { SPEC_REVIEW_COMMAND, specReviewPrompt } from '../../../shared/specTasks.js';
 import { RunLinks } from './runLinks.js';
+import { BuildLoop } from './build.js';
 import { SESSION_COMMANDS, withSessionCommands } from './commands.js';
 import { Runs } from './runs.js';
 import { phoneAlarm } from '../host/phoneAlarm.js';
@@ -55,6 +56,7 @@ export class AgentSession implements AgentHost {
   readonly usage = new UsageLimit(this);
   readonly wakeups = new Wakeups(this);
   readonly links = new RunLinks(this);
+  readonly build = new BuildLoop(this);
   readonly compaction = new Compaction(this);
   readonly prompts = new Prompts(this);
   readonly stopper = new Stopper(this);

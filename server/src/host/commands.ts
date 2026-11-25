@@ -2,6 +2,7 @@ import type { ClientMessage } from '../../../shared/protocol.js';
 import { errText } from '../../../shared/util.js';
 import type { AgentSession } from '../session/session.js';
 import { parseTries } from '../workspace/tries.js';
+import { parseBuild } from '../../../shared/build.js';
 import { keepTry, runTries, sendToTries } from './tries.js';
 
 type Msg<T extends ClientMessage['type']> = Extract<ClientMessage, { type: T }>;
@@ -18,11 +19,13 @@ function promptCommand(chat: AgentSession, msg: Msg<'prompt'>) {
   notSent(chat, chat.prompt(msg.text, id, msg.voice === true));
 }
 
-// /tries starts its own chats, however it is sent.
+// /tries starts its own chats and /build its run, however they are sent.
 function triesCommand(chat: AgentSession, text: string, id: string | undefined) {
-  const tries = parseTries(text);
+  const build = parseBuild(text);
+  if (build) chat.build.start(text, build, id);
+  const tries = build ? null : parseTries(text);
   if (tries) runTries(chat, text, tries, id);
-  return Boolean(tries);
+  return Boolean(tries || build);
 }
 
 function queueCommand(chat: AgentSession, msg: Msg<'queue'>) {
