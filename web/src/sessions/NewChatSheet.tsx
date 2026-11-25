@@ -10,7 +10,7 @@ import { Sheet } from '../ui/Sheet';
 import { START_MODES, checkedModel, newestModels } from '../../../shared/providers';
 import type { Provider } from '../../../shared/protocol';
 import { UNTITLED } from '../../../shared/util';
-import { dirChoices, since, useWorkspace } from './folders';
+import { dirChoices, rootLookup, since, useWorkspace } from './folders';
 import { openChat } from './openChat';
 
 // The sheet behind the new chat buttons (Android NewChatSheet): the repo when none is given (the open chat's first), and the model, which starts on the last one used, else the provider's default (its first model, which the chat gets when none is sent).
@@ -28,7 +28,7 @@ export function NewChatSheet({ repo: fixed, onClose }: { repo?: string; onClose:
   const repo = fixed ?? picked ?? dirs[0]?.cwd;
   const models = newestModels(knownModels(provider), model);
   const checked = checkedModel(models, model);
-  const recent = recentInRepo(chats, live.map((c) => c.sessionId), repo);
+  const recent = recentInRepo(chats, live.map((c) => rootLookup(chats)(c.sessionId)), repo);
   const go = () => {
     startChat({ cwd: repo, provider, ...(model && { model }) }, start);
     onClose();

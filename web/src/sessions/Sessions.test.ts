@@ -1,7 +1,7 @@
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'bun:test';
-import { buildFolders, type Folder, type RepoGroup, chatFinder, chatMenuItems, chatState, doneChats, findHere, groupByRepo, groupByKind, groupGlance, holdOrder, newChatGroups, orderGroups, renameTitle, segmentOf, since, staleKeys, unreadCount, waitingChats } from './folders';
+import { buildFolders, type Folder, type RepoGroup, chatFinder, chatMenuItems, chatState, doneChats, findHere, groupByRepo, groupChats, rowsById, groupByKind, groupGlance, holdOrder, newChatGroups, orderGroups, renameTitle, segmentOf, since, staleKeys, unreadCount, waitingChats } from './folders';
 import { RepoRow } from './RepoRow';
 import type { LiveChat, Repo, SavedSession, Worktree } from '../../../shared/protocol';
 import { WORKSPACE } from '../../../shared/workspace';
@@ -150,6 +150,35 @@ describe('groupByRepo', () => {
     const chats = [chat('/w/cafe', 2, 'fix login'), chat('/w/shop', 3, 'other')];
     expect(groupByRepo([], chats, f, 'sho').map((x) => x.name)).toEqual(['shop']);
     expect(groupByRepo([], chats, f, 'LOGIN')[0].recent.map((c) => c.title)).toEqual(['fix login']);
+  });
+});
+
+describe('sub-chats', () => {
+  const live = (id: string, extra: Partial<LiveChat> = {}): LiveChat => ({ id: `live-${id}`, sessionId: id, cwd: '/w/shop', title: 'Build', running: false, pending: 0, status: '', lastActive: 1, ...extra });
+  const saved = groupChats([
+    chat('/w/shop', 10, 'r'),
+    { ...chat('/w/shop', 20, 's1'), parentId: 'r', via: 'build', startedAt: 15 },
+    { ...chat('/w/shop', 30, 's2'), parentId: 'r', via: 'build', startedAt: 25 },
+    chat('/w/shop', 5, 'other'),
+  ]);
+  const f = buildFolders([repo('shop')], [], saved);
+  it('shows one row per chat with the group activity and count label', () => {
+    expect(saved.map((s) => [s.sessionId, s.lastModified, s.subs])).toEqual([['r', 30, '2 tasks'], ['other', 5, undefined]]);
+    expect(f[0].chats.map((c) => c.sessionId)).toEqual(['r', 'other']);
+  });
+  it('counts an open chat on the latest sub-chat as its root row', () => {
+    const g = groupByRepo([live('s2', { running: true })], saved, f);
+    expect(g[0].open.map((c) => c.sessionId)).toEqual(['s2']);
+    expect(g[0].recent.map((c) => c.sessionId)).toEqual(['other']);
+    expect(groupByRepo([live('s2')], saved, f, '', new Set(['r']))[0].open).toEqual([]);
+  });
+  it('reads Done from the root seen time, else a member one', () => {
+    const byId = rowsById(saved);
+    expect(byId.get('s2')?.sessionId).toBe('r');
+    expect(chatState({ saved: saved[0] }, { s1: 25 })).toBe('done');
+    expect(chatState({ saved: saved[0] }, { s1: 40 })).toBe(null);
+    expect(chatState({ saved: saved[0] }, { r: 0, s2: 40 })).toBe('done');
+    expect(doneChats([live('s2')], [], { r: 20 }, byId)).toEqual(['r']);
   });
 });
 

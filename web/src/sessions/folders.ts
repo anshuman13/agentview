@@ -9,8 +9,27 @@ import { profileOfPath } from '../../../shared/workspace';
 import { chatMatches } from '../../../shared/chatSearch';
 import { queryWords } from '../codex/data/ask/match';
 import { newChat } from '../app/newChat';
+import { groupSessions } from '../../../shared/subChats';
 
-export type Folder = { cwd: string; name: string; repo?: Repo; trees: Worktree[]; chats: SavedSession[]; last: number; hit?: boolean };
+export type Folder = { cwd: string; name: string; repo?: Repo; trees: Worktree[]; chats: ChatSession[]; last: number; hit?: boolean };
+
+// A chat row: the root session, with the group's last activity, the sub-chat count label and every member id when it has sub-chats.
+export type ChatSession = SavedSession & { subs?: string; members?: string[] };
+
+export const groupChats = (chats: SavedSession[]): ChatSession[] =>
+  groupSessions(chats).map((r) => (r.count ? { ...r.root, lastModified: r.lastModified, subs: r.label, members: r.members } : r.root));
+
+const roots = new WeakMap<ChatSession[], Map<string, string>>();
+// The row id (root session) of any member id of the listed chats; other ids map to themselves.
+export function rootLookup(chats: ChatSession[]) {
+  let m = roots.get(chats);
+  if (!m) {
+    m = new Map(chats.flatMap((c) => (c.members ?? []).map((id) => [id, c.sessionId] as const)));
+    roots.set(chats, m);
+  }
+  const map = m;
+  return <T extends string | null | undefined>(id: T): T => ((id && map.get(id)) ?? id) as T;
+}
 
 // A failed load resolves to null, so the last list stays on screen.
 export const get = (url: string) => fetch(apiUrl(url)).then((r) => r.json()).then((x) => (Array.isArray(x) ? x : null)).catch(() => null);
@@ -83,10 +102,11 @@ export function useWorkspace(key: unknown) {
       });
     }
   }, [key]);
-  const folders = useMemo(() => buildFolders(repos, trees, chats), [repos, trees, chats]);
+  const grouped = useMemo(() => groupChats(chats), [chats]);
+  const folders = useMemo(() => buildFolders(repos, trees, grouped), [repos, trees, grouped]);
   const edit = <T,>(k: 'trees' | 'chats', set: (f: (l: T[]) => T[]) => void) => (f: (l: T[]) => T[]) =>
     set((l) => ((cached as Record<string, unknown>)[k] = f(l)) as T[]);
-  return { folders, chats, setTrees: edit<Worktree>('trees', setTrees), setChats: edit<SavedSession>('chats', setChats) };
+  return { folders, chats: grouped, setTrees: edit<Worktree>('trees', setTrees), setChats: edit<SavedSession>('chats', setChats) };
 }
 
 export function worktreeRequest(d: Folder, track: (branch: string | null, error?: string) => void): ConfirmRequest {
@@ -215,9 +235,10 @@ const urgency = (c: LiveChat) => (c.pending ? 0 : c.running ? 1 : 2);
 export const byUrgency = (a: LiveChat, b: LiveChat) => urgency(a) - urgency(b) || b.lastActive - a.lastActive;
 
 // The chats waiting on the user that match the search, most urgent first.
-export function waitingChats(live: LiveChat[], chats: SavedSession[], folders: Folder[], filter: string) {
+export function waitingChats(live: LiveChat[], chats: ChatSession[], folders: Folder[], filter: string) {
   const find = chatFinder(filter, chats);
-  return live.filter((c) => c.pending && (!find.active || find.match(c.title, c.sessionId, repoName(folders, c.cwd)))).sort(byUrgency);
+  const root = rootLookup(chats);
+  return live.filter((c) => c.pending && (!find.active || find.match(c.title, root(c.sessionId), repoName(folders, c.cwd)))).sort(byUrgency);
 }
 
 export const PINS_URL = '/api/sessions/pins';
@@ -237,7 +258,7 @@ export function usePins() {
   return { pins, setPin };
 }
 
-export type RepoGroup = { key: string; name: string; open: LiveChat[]; recent: SavedSession[]; last: number; running: number; waiting: number };
+export type RepoGroup = { key: string; name: string; open: LiveChat[]; recent: ChatSession[]; last: number; running: number; waiting: number };
 
 export const repoName = (folders: Folder[], cwd: string) => {
   const key = findHere(folders, cwd).folder?.cwd ?? cwd;
@@ -267,7 +288,8 @@ const holdRows = <T>(rows: T[], id: (row: T) => string, held: readonly string[] 
 const liveKey = (c: LiveChat) => c.sessionId ?? c.id;
 const savedKey = (s: SavedSession) => s.sessionId;
 
-export function groupByRepo(live: LiveChat[], chats: SavedSession[], folders: Folder[], filter = '', pinned: ReadonlySet<string> = new Set(), held: readonly string[] | null = null) {
+// Chats are the grouped rows (groupChats), so an open chat on a sub-chat stands for its root's row and pins hold root ids.
+export function groupByRepo(live: LiveChat[], chats: ChatSession[], folders: Folder[], filter = '', pinned: ReadonlySet<string> = new Set(), held: readonly string[] | null = null) {
   const find = chatFinder(filter, chats);
   const m = new Map<string, RepoGroup>();
   const add = (cwd: string, title: string, sessionId: string | null, last: number) => {
@@ -279,15 +301,17 @@ export function groupByRepo(live: LiveChat[], chats: SavedSession[], folders: Fo
     g.last = Math.max(g.last, last);
     return g;
   };
+  const root = rootLookup(chats);
   for (const c of live) {
-    if (c.sessionId && pinned.has(c.sessionId)) continue;
-    const g = add(c.cwd, c.title, c.sessionId, c.lastActive);
+    const id = root(c.sessionId);
+    if (id && pinned.has(id)) continue;
+    const g = add(c.cwd, c.title, id, c.lastActive);
     if (!g) continue;
     g.open.push(c);
     if (c.running) g.running++;
     if (c.pending) g.waiting++;
   }
-  const ids = new Set(live.map((c) => c.sessionId));
+  const ids = new Set(live.map((c) => root(c.sessionId)));
   for (const s of chats) if (!ids.has(s.sessionId) && !pinned.has(s.sessionId)) add(s.cwd, s.title, s.sessionId, s.lastModified)?.recent.push(s);
   for (const g of m.values()) {
     g.open.sort(byUrgency);
@@ -325,13 +349,16 @@ export function holdOrder(prev: HeldOrder | null, groups: RepoGroup[], loaded: b
 export type ChatState = 'needs' | 'failed' | 'running' | 'done';
 
 // Needs you, Failed and Running come from the live chat; Done is activity newer than the last time the chat was opened.
-export function chatState({ live, saved }: { live?: LiveChat; saved?: SavedSession }, seen: Record<string, number>): ChatState | null {
+// A chat with sub-chats reads its root's seen time, else the latest one kept under a member id.
+export function chatState({ live, saved }: { live?: LiveChat; saved?: ChatSession }, seen: Record<string, number>): ChatState | null {
   if (live?.pending) return 'needs';
   if (live?.failed) return 'failed';
   if (live?.running) return live.stalled ? null : 'running';
-  const id = live?.sessionId ?? saved?.sessionId;
   const at = Math.max(live?.lastActive ?? 0, saved?.lastModified ?? 0);
-  return id && seen[id] !== undefined && at > seen[id] ? 'done' : null;
+  const id = saved?.members ? saved.sessionId : live?.sessionId ?? saved?.sessionId;
+  const marks = [id, live?.sessionId, ...(saved?.members ?? [])].flatMap((x) => (x && seen[x] !== undefined ? [seen[x]] : []));
+  const last = id && seen[id] !== undefined ? seen[id] : marks.length ? Math.max(...marks) : undefined;
+  return last !== undefined && at > last ? 'done' : null;
 }
 
 export function groupGlance(g: RepoGroup, seen: Record<string, number>) {
@@ -346,9 +373,15 @@ export function groupGlance(g: RepoGroup, seen: Record<string, number>) {
   return { ...n, last: g.last };
 }
 
-// The session ids of the listed chats that are Done.
-export const doneChats = (live: LiveChat[], saved: SavedSession[], seen: Record<string, number>, savedById: ReadonlyMap<string, SavedSession>) => [
-  ...live.filter((c) => chatState({ live: c, saved: c.sessionId ? savedById.get(c.sessionId) : undefined }, seen) === 'done').map((c) => c.sessionId),
+// Each chat row by its root id and every member id, so an open chat on a sub-chat finds its row.
+export const rowsById = (chats: ChatSession[]) => new Map(chats.flatMap((s) => (s.members ?? [s.sessionId]).map((id) => [id, s] as const)));
+
+// The row ids of the listed chats that are Done.
+export const doneChats = (live: LiveChat[], saved: ChatSession[], seen: Record<string, number>, savedById: ReadonlyMap<string, ChatSession>) => [
+  ...live.flatMap((c) => {
+    const s = c.sessionId ? savedById.get(c.sessionId) : undefined;
+    return chatState({ live: c, saved: s }, seen) === 'done' ? [s?.sessionId ?? c.sessionId] : [];
+  }),
   ...saved.filter((s) => chatState({ saved: s }, seen) === 'done').map((s) => s.sessionId),
 ].filter((id): id is string => Boolean(id));
 

@@ -9,7 +9,7 @@ import { Confirm, type ConfirmRequest } from '../ui/Confirm';
 import type { LiveChat, SavedSession, Worktree } from '../../../shared/protocol';
 import { inside } from '../../../shared/util';
 import { pressable, save, stored } from '../ui/util';
-import { chatFinder, deleteChat, findHere, flip, groupByKind, invalidateWorkspace, repoName, segmentOf, usePins, useWorkspace, waitingChats, worktreeRequest, type Folder } from './folders';
+import { chatFinder, deleteChat, rootLookup, findHere, flip, groupByKind, invalidateWorkspace, repoName, segmentOf, usePins, useWorkspace, waitingChats, worktreeRequest, type Folder } from './folders';
 import { FilterInput } from './FilterInput';
 import { RepoRow, SessionRow, WorktreeRow } from './RepoRow';
 import { WaitingRows } from './ChatRows';
@@ -69,8 +69,9 @@ export function Sessions() {
     });
   }, [folders, chats, filter]);
 
+  const currentRow = rootLookup(chats)(current);
   const open = (id: string) => {
-    if (id === current) return;
+    if (id === currentRow) return;
     setOpening(id);
     send({ type: 'open_session', sessionId: id });
   };
@@ -87,7 +88,7 @@ export function Sessions() {
     return !!r?.ok;
   };
 
-  const remove = (s: SavedSession) => setAsk(deleteChat(s, () => setChats((l) => l.filter((x) => x.sessionId !== s.sessionId)), setError));
+  const remove = (s: SavedSession) => setAsk(deleteChat(s, () => setChats((l) => l.filter((x) => x.sessionId !== s.sessionId && x.parentId !== s.sessionId)), setError));
 
   const removeTree = (w: Worktree) =>
     setAsk({
@@ -127,7 +128,7 @@ export function Sessions() {
           </div>
         )}
         {isOpen(d) && d.trees.map((w) => <WorktreeRow key={w.id} w={w} removing={removing.has(w.id)} start={() => start(w.cwd)} remove={() => { setError(null); removeTree(w); }} />)}
-        {isOpen(d) && (full.has(d.cwd) || filter ? d.chats : d.chats.slice(0, PAGE)).map((c) => <SessionRow key={c.sessionId} s={c} selected={c.sessionId === current} opening={opening === c.sessionId} open={() => open(c.sessionId)} remove={() => { setError(null); remove(c); }} />)}
+        {isOpen(d) && (full.has(d.cwd) || filter ? d.chats : d.chats.slice(0, PAGE)).map((c) => <SessionRow key={c.sessionId} s={c} selected={c.sessionId === currentRow} opening={opening === c.sessionId} open={() => open(c.sessionId)} remove={() => { setError(null); remove(c); }} />)}
         {isOpen(d) && !filter && d.chats.length > PAGE && (
           <ShowAll count={d.chats.length} open={full.has(d.cwd)} className="more" onClick={() => flip(setFull, d.cwd)} />
         )}
@@ -144,7 +145,7 @@ export function Sessions() {
       </div>
       {error && <div className="hint error" onClick={() => setError(null)}><Icon name="error" small /> {error}</div>}
       <NeedsYou n={waiting.length} filter={filter}>
-        <WaitingRows rows={waiting} folders={folders} viewing={viewing} ask={setAsk} pins={pins} setPin={setPin} setChats={setChats} />
+        <WaitingRows rows={waiting} chats={chats} folders={folders} viewing={viewing} ask={setAsk} pins={pins} setPin={setPin} setChats={setChats} />
       </NeedsYou>
       <div className="side-switch">
         {(['work', 'personal'] as const).map((k) => (

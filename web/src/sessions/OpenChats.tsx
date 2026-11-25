@@ -6,12 +6,12 @@ import { IconButton, ShowAll } from '../ui/Button';
 import { EmptyState } from '../ui/Panel';
 import { Row } from '../ui/Row';
 import { Confirm, type ConfirmRequest } from '../ui/Confirm';
-import type { LiveChat, SavedSession } from '../../../shared/protocol';
+import type { LiveChat } from '../../../shared/protocol';
 import { ago, markSegments, plural, pressable, save, stored } from '../ui/util';
 import { queryWords } from '../codex/data/ask/match';
 import { Bin } from './Bin';
 import { chatOrder, nextUnread, stepChat } from './chatNav';
-import { byUrgency, chatFinder, chatState, doneChats, findHere, flip, groupByRepo, groupGlance, holdOrder, newChatGroups, orderGroups, waitingChats, repoName, usePins, useWorkspace, type Folder, type HeldOrder, type RepoGroup } from './folders';
+import { byUrgency, chatFinder, chatState, doneChats, findHere, flip, groupByRepo, groupGlance, rootLookup, rowsById, holdOrder, newChatGroups, orderGroups, waitingChats, repoName, usePins, useWorkspace, type ChatSession, type Folder, type HeldOrder, type RepoGroup } from './folders';
 import { FilterInput } from './FilterInput';
 import { LiveRow, SavedRow, chatActions, metaLine } from './ChatRows';
 import { searchMessages } from './sessionApi';
@@ -101,7 +101,8 @@ export function OpenChats() {
   const cwd = useStore((s) => s.session.cwd);
   const live = useStore((s) => s.live);
   const { folders, chats, setChats } = useWorkspace(current + cwd);
-  const savedById = useMemo(() => new Map(chats.map((s) => [s.sessionId, s])), [chats]);
+  const savedById = useMemo(() => rowsById(chats), [chats]);
+  const root = useMemo(() => rootLookup(chats), [chats]);
   const [filter, setFilter] = useState('');
   const hits = useMessageSearch(filter);
   const viewing = useStore((s) => s.session.id);
@@ -112,7 +113,7 @@ export function OpenChats() {
   const [newIn, setNewIn] = useState<{ repo?: string } | null>(null);
   const actions = chatActions(setChats, setAsk);
   const { pins, setPin } = usePins();
-  const pinSet = useMemo(() => new Set(pins), [pins]);
+  const pinSet = useMemo(() => new Set(pins.map(root)), [pins, root]);
   const allGroups = useMemo(() => groupByRepo(live, chats, folders, '', pinSet), [live, chats, folders, pinSet]);
   const shown = useShownCount();
   const snapshot = useRef<HeldOrder | null>(null);
@@ -121,19 +122,19 @@ export function OpenChats() {
   const groups = useMemo(() => orderGroups(groupByRepo(live, chats, folders, filter, pinSet, held.chats), held.groups), [live, chats, folders, filter, pinSet, held]);
   const pinnedRows = useMemo(() => {
     const find = chatFinder(filter, chats);
-    return pins.flatMap((id) => {
-      const c = live.find((x) => x.sessionId === id);
+    return [...pinSet].flatMap((id) => {
+      const c = live.find((x) => root(x.sessionId) === id);
       const s = c ? undefined : chats.find((x) => x.sessionId === id);
       const item = c ? { c, title: c.title, repo: repoName(folders, c.cwd) } : s ? { s, title: s.title, repo: repoName(folders, s.cwd) } : null;
       return item && (!find.active || find.match(item.title, id, item.repo)) ? [item] : [];
     });
-  }, [live, chats, folders, filter, pins]);
+  }, [live, chats, folders, filter, pinSet, root]);
   const waiting = live.filter((c) => c.pending).sort(byUrgency);
   const shownWaiting = useMemo(() => waitingChats(live, chats, folders, filter), [live, chats, folders, filter]);
   const order = useMemo(() => {
-    const pinned = pins.flatMap((id) => live.filter((c) => c.sessionId === id));
+    const pinned = [...pinSet].flatMap((id) => live.filter((c) => root(c.sessionId) === id));
     return chatOrder(waiting, pinned, orderGroups(groupByRepo(live, chats, folders, '', pinSet, held.chats), held.groups));
-  }, [live, chats, folders, pins, pinSet, held]);
+  }, [live, chats, folders, root, pinSet, held]);
   const seen = useStore((s) => s.seen);
   const done = useMemo(() => doneChats(
     [...groups.flatMap((g) => g.open), ...pinnedRows.flatMap((p) => (p.c ? [p.c] : []))],
@@ -159,10 +160,10 @@ export function OpenChats() {
     setCollapsed(next);
     save(KEY, next);
   };
-  const row = (c: LiveChat, repo?: string) => <LiveRow key={c.id} c={c} saved={savedById.get(c.sessionId ?? '')} repo={repo} branch={findHere(folders, c.cwd).folder?.repo?.branch} selected={c.id === viewing} actions={actions} ask={setAsk} pinned={pins.includes(c.sessionId ?? '')} onPin={(on) => setPin(c.sessionId!, on)} onBeside={c.id === viewing || embedded ? undefined : () => setUi({ beside: c.id })} />;
+  const row = (c: LiveChat, repo?: string) => <LiveRow key={c.id} c={c} saved={savedById.get(c.sessionId ?? '')} repo={repo} branch={findHere(folders, c.cwd).folder?.repo?.branch} selected={c.id === viewing} actions={actions} ask={setAsk} pinned={pinSet.has(root(c.sessionId) ?? '')} onPin={(on) => setPin(root(c.sessionId)!, on)} onBeside={c.id === viewing || embedded ? undefined : () => setUi({ beside: c.id })} />;
 
-  const savedRow = (s: SavedSession, repo?: string) => (
-    <SavedRow key={s.sessionId} s={s} repo={repo} branch={findHere(folders, s.cwd).folder?.repo?.branch} opening={opening === s.sessionId} pinned={pins.includes(s.sessionId)} onOpen={() => { setOpening(s.sessionId); send({ type: 'open_session', sessionId: s.sessionId }); }} actions={actions} onPin={(on) => setPin(s.sessionId, on)} />
+  const savedRow = (s: ChatSession, repo?: string) => (
+    <SavedRow key={s.sessionId} s={s} repo={repo} branch={findHere(folders, s.cwd).folder?.repo?.branch} opening={opening === s.sessionId} pinned={pinSet.has(s.sessionId)} onOpen={() => { setOpening(s.sessionId); send({ type: 'open_session', sessionId: s.sessionId }); }} actions={actions} onPin={(on) => setPin(s.sessionId, on)} />
   );
 
   const openHit = (h: MessageHit) => {

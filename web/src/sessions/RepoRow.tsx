@@ -2,8 +2,8 @@ import { Icon } from '../ui/Icon';
 import { IconButton } from '../ui/Button';
 import { ago, pressable } from '../ui/util';
 import { providerMark } from '../../../shared/providers';
-import type { SavedSession, Worktree } from '../../../shared/protocol';
-import { isDefault, type Folder } from './folders';
+import type { Worktree } from '../../../shared/protocol';
+import { isDefault, type ChatSession, type Folder } from './folders';
 
 type Props = {
   d: Folder;
@@ -64,11 +64,11 @@ export function WorktreeRow({ w, removing, start, remove }: { w: Worktree; remov
   );
 }
 
-export function SessionRow({ s, selected, opening, open, remove }: { s: SavedSession; selected: boolean; opening: boolean; open: () => void; remove: () => void }) {
+export function SessionRow({ s, selected, opening, open, remove }: { s: ChatSession; selected: boolean; opening: boolean; open: () => void; remove: () => void }) {
   return (
     <div className={`row session ${selected ? 'selected' : ''}`} title={`${s.title}\n${s.cwd}${s.gitBranch ? `\n${s.gitBranch}` : ''}`} onClick={open}>
       <span className="name">{opening ? 'Opening… ' : ''}{s.title}</span>
-      <span className="when">{providerMark(s.provider) && `${providerMark(s.provider)} · `}{ago(s.lastModified)}</span>
+      <span className="when">{s.subs && `${s.subs} · `}{providerMark(s.provider) && `${providerMark(s.provider)} · `}{ago(s.lastModified)}</span>
       <span className="acts">
         <IconButton icon="trash" small label="Delete chat" onClick={(e) => { e.stopPropagation(); remove(); }} />
       </span>

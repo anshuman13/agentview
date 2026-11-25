@@ -9,7 +9,7 @@ import { providerMark, shortModel } from '../../../shared/providers';
 import { save } from '../ui/util';
 import { RenameInput } from './RenameInput';
 import { CheckIcon, prText, usePullRequests } from '../ops/pulls';
-import { archiveChat, chatMenuItems, chatSwipe, chatLine, chatState, closeChat, isDefault, renameChat, repoName, removeRequest, restoreChat, since, type ChatState, type Folder } from './folders';
+import { archiveChat, chatMenuItems, chatSwipe, chatLine, chatState, closeChat, isDefault, renameChat, repoName, removeRequest, restoreChat, rootLookup, rowsById, since, type ChatSession, type ChatState, type Folder } from './folders';
 import { askLine } from './runLogic';
 import { Swipe } from '../codex/gestures/Swipe';
 import { copyText, showSnack } from '../codex/view';
@@ -28,7 +28,7 @@ type Actions = {
 
 export const chatActions = (setChats: SetChats, ask: (r: ConfirmRequest) => void): Actions => {
   const archived = (s: SavedSession, pinned: boolean, pin?: Pin) => () => {
-    setChats((l) => l.filter((x) => x.sessionId !== s.sessionId));
+    setChats((l) => l.filter((x) => x.sessionId !== s.sessionId && x.parentId !== s.sessionId));
     showSnack('Archived', async () => {
       if (!(await restoreChat(s.sessionId))) return notice('Could not restore the chat. It is still in the bin.');
       setChats((l) => [s, ...l]);
@@ -168,18 +168,20 @@ const branchOf = (saved?: string | null, repoBranch?: string) => {
   return isDefault(b) ? undefined : b;
 };
 
-export function SavedRow({ s, repo, branch, opening, pinned, actions, onOpen, onPin }: { s: SavedSession; repo?: string; branch?: string; opening: boolean; pinned: boolean; actions: Actions; onOpen: () => void; onPin: Pin }) {
+export function SavedRow({ s, repo, branch, opening, pinned, actions, onOpen, onPin }: { s: ChatSession; repo?: string; branch?: string; opening: boolean; pinned: boolean; actions: Actions; onOpen: () => void; onPin: Pin }) {
   const seen = useStore((x) => x.seen);
   const draft = draftLine(readDraft(s.sessionId));
-  return <ChatRow sessionId={s.sessionId} title={s.title} cwd={s.cwd} lastModified={s.lastModified} opening={opening} meta={draft ? draftMeta(draft) : s.summary ? metaLine(since(s.lastModified), s.summary) : metaLine(repo, branchOf(s.gitBranch, branch), providerMark(s.provider), since(s.lastModified))} state={chatState({ saved: s }, seen)} pinned={pinned} actions={actions} onOpen={onOpen} onPin={onPin} />;
+  return <ChatRow sessionId={s.sessionId} title={s.title} cwd={s.cwd} lastModified={s.lastModified} opening={opening} meta={draft ? draftMeta(draft) : s.summary ? metaLine(since(s.lastModified), s.subs, s.summary) : metaLine(repo, branchOf(s.gitBranch, branch), s.subs, providerMark(s.provider), since(s.lastModified))} state={chatState({ saved: s }, seen)} pinned={pinned} actions={actions} onOpen={onOpen} onPin={onPin} />;
 }
 
-export function WaitingRows({ rows, folders, viewing, ask, pins, setPin, setChats }: { rows: LiveChat[]; folders: Folder[]; viewing: string; ask: (r: ConfirmRequest) => void; pins: string[]; setPin: (id: string, on: boolean) => Promise<boolean>; setChats: SetChats }) {
+export function WaitingRows({ rows, chats, folders, viewing, ask, pins, setPin, setChats }: { rows: LiveChat[]; chats: ChatSession[]; folders: Folder[]; viewing: string; ask: (r: ConfirmRequest) => void; pins: string[]; setPin: (id: string, on: boolean) => Promise<boolean>; setChats: SetChats }) {
   const actions = chatActions(setChats, ask);
-  return <>{rows.map((c) => <LiveRow key={c.id} c={c} repo={repoName(folders, c.cwd)} selected={c.id === viewing} actions={actions} ask={ask} pinned={pins.includes(c.sessionId ?? '')} onPin={(on) => setPin(c.sessionId!, on)} />)}</>;
+  const root = rootLookup(chats);
+  const byId = rowsById(chats);
+  return <>{rows.map((c) => <LiveRow key={c.id} c={c} saved={c.sessionId ? byId.get(c.sessionId) : undefined} repo={repoName(folders, c.cwd)} selected={c.id === viewing} actions={actions} ask={ask} pinned={pins.some((p) => root(p) === root(c.sessionId))} onPin={(on) => setPin(root(c.sessionId)!, on)} />)}</>;
 }
 
-export function LiveRow({ c, saved, repo, branch, selected, pinned, actions, ask, onPin, onBeside }: { c: LiveChat; saved?: SavedSession; repo?: string; branch?: string; selected: boolean; pinned?: boolean; actions: Actions; ask: (r: ConfirmRequest) => void; onPin?: Pin; onBeside?: () => void }) {
+export function LiveRow({ c, saved, repo, branch, selected, pinned, actions, ask, onPin, onBeside }: { c: LiveChat; saved?: ChatSession; repo?: string; branch?: string; selected: boolean; pinned?: boolean; actions: Actions; ask: (r: ConfirmRequest) => void; onPin?: Pin; onBeside?: () => void }) {
   const events = useStore((s) => (s.session.id === c.id ? s.events : null));
   const seen = useStore((s) => s.seen);
   const line = chatLine(c, events);
@@ -192,7 +194,7 @@ export function LiveRow({ c, saved, repo, branch, selected, pinned, actions, ask
   const draft = selected ? '' : draftLine(readDraft(draftKey(c.id, c.sessionId), c.id));
   const main = draft ? draftMeta(draft) : (
     <>
-      {metaLine(repo, branchOf(saved?.gitBranch, branch), c.model && shortModel(c.model), providerMark(c.provider), when)}
+      {metaLine(repo, branchOf(saved?.gitBranch, branch), saved?.subs, c.model && shortModel(c.model), providerMark(c.provider), when)}
       {c.pr && <> · {pr ? <a className="chat-pr" href={pr.url} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()}>{prText(c.pr, pr)}{checkIcon}</a> : <>#{c.pr}{checkIcon}</>}</>}
       {c.todos && ` · ${c.todos.done}/${c.todos.total}`}
       {line.edits && <> · <span className="chat-add">+{line.edits.add}</span> <span className="chat-del">-{line.edits.del}</span></>}
