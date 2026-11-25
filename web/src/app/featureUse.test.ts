@@ -3,7 +3,7 @@ import { FEATURES } from '../../../shared/featureUse';
 import { stubGlobal } from '../../../testing';
 
 vi.mock('./featureUseApi', () => ({ postFeatureUse: vi.fn(() => Promise.resolve({ recorded: true })) }));
-vi.mock('./store', () => ({ useStore: vi.fn(), api: vi.fn(), getState: () => ({ live: [], session: {}, ui: {} }), notice: vi.fn(), send: vi.fn(), setUi: vi.fn() }));
+vi.mock('./store', () => ({ useStore: vi.fn(), api: vi.fn(), getState: () => ({ live: [], session: {}, ui: {} }), notice: vi.fn(), send: vi.fn(), setUi: vi.fn(), rootOf: (x: string) => x, setRoots: vi.fn() }));
 vi.mock('./newChat', () => ({ newChat: vi.fn(), rememberModel: vi.fn() }));
 vi.mock('./runtime/notify', () => ({ toggleNotify: vi.fn() }));
 vi.mock('../chat/chatActions', () => ({ forkChat: vi.fn() }));

@@ -5,6 +5,7 @@ import { buildFolders, type Folder, type RepoGroup, chatFinder, chatMenuItems, c
 import { RepoRow } from './RepoRow';
 import type { LiveChat, Repo, SavedSession, Worktree } from '../../../shared/protocol';
 import { WORKSPACE } from '../../../shared/workspace';
+import { setRoots } from '../app/store/roots';
 
 const repo = (name: string, lastCommit = 0): Repo => ({ name, root: 'workspace', kind: 'other', cwd: `/w/${name}`, branch: 'main', dirty: 0, lastCommit, paseo: false });
 const chat = (cwd: string, lastModified: number, id = cwd + lastModified): SavedSession => ({ sessionId: id, title: id, cwd, gitBranch: null, lastModified });
@@ -179,6 +180,13 @@ describe('sub-chats', () => {
     expect(chatState({ saved: saved[0] }, { s1: 40 })).toBe(null);
     expect(chatState({ saved: saved[0] }, { r: 0, s2: 40 })).toBe('done');
     expect(doneChats([live('s2')], [], { r: 20 }, byId)).toEqual(['r']);
+  });
+  it('takes the latest member mark unless the root is marked unread', () => {
+    expect(chatState({ saved: saved[0] }, { r: 10, s2: 40 })).toBe(null);
+    setRoots([{ sessionId: 's2', parentId: 'r' }]);
+    expect(chatState({ live: live('s2', { lastActive: 50 }) }, { r: 0, s2: 60 })).toBe('done');
+    expect(chatState({ live: live('s2', { lastActive: 50 }) }, { r: 60 })).toBe(null);
+    setRoots([]);
   });
 });
 

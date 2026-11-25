@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react';
-import { markUnread, notice, send, useStore } from '../app/store';
+import { markUnread, notice, rootOf, send, useStore } from '../app/store';
 import { Icon } from '../ui/Icon';
 import { MenuItem, MenuSeparator } from '../ui/Menu';
 import { Row } from '../ui/Row';
@@ -202,7 +202,7 @@ export function LiveRow({ c, saved, repo, branch, selected, pinned, actions, ask
   );
   return (
     <>
-      <ChatRow sessionId={c.sessionId ?? undefined} title={c.title} cwd={c.cwd} lastModified={saved?.lastModified ?? c.lastActive} live={c} meta={main} state={chatState({ live: c, saved }, seen)} selected={selected} pinned={pinned} actions={actions} onOpen={() => { if (!selected) send({ type: 'view', id: c.id }); }} onPin={onPin} onBeside={onBeside} onClose={() => closeChat(c, ask)} />
+      <ChatRow sessionId={saved?.sessionId ?? rootOf(c.sessionId) ?? undefined} title={c.title} cwd={c.cwd} lastModified={saved?.lastModified ?? c.lastActive} live={c} meta={main} state={chatState({ live: c, saved }, seen)} selected={selected} pinned={pinned} actions={actions} onOpen={() => { if (!selected) send({ type: 'view', id: c.id }); }} onPin={onPin} onBeside={onBeside} onClose={() => closeChat(c, ask)} />
     </>
   );
 }

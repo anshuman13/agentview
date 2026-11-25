@@ -1,5 +1,6 @@
 export { api, embedded, getState, notice, presetChat, setFindings, setUi, subscribe, useStore, type State } from './core';
 export { forgetSeenBefore, markSeen, markUnread, seenBefore } from './seen';
+export { rootOf, setRoots } from './roots';
 export { loadEarlier, setAtLatest } from './view';
 export { cancelUnsent, prompt, queueNext, send, sendToChat, steer } from './send';
 export { queuedFor } from './outboxLogic';

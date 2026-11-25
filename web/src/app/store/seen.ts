@@ -1,6 +1,7 @@
 import { mergeSeen, type SeenMark } from '../../../../shared/seen';
 import { getState, set } from './core';
 import { fetchSeen, postSeen } from './storeApi';
+import { rootOf } from './roots';
 
 // This page's latest mark per chat. One whose POST failed is posted again when the stream opens, and each load keeps it over the server's time.
 const marks: Record<string, SeenMark> = {};
@@ -37,11 +38,18 @@ let seenLoaded = false;
 export const seenBefore = (sessionId: string) => (sessionId in before ? before[sessionId] : seenLoaded ? getState().seen[sessionId] ?? 0 : -1);
 export const forgetSeenBefore = (sessionId: string) => void delete before[sessionId];
 
+// A sub-chat's mark also goes on its root, which its chat row reads.
+const markBoth = (id: string, value: number) => {
+  mark(id, value);
+  const root = rootOf(id);
+  if (root !== id) mark(root, value);
+};
+
 export function markSeen(sessionId: string | null | undefined) {
   if (!sessionId) return;
   if (!(sessionId in before)) before[sessionId] = seenLoaded ? getState().seen[sessionId] ?? 0 : -1;
-  mark(sessionId, Date.now());
+  markBoth(sessionId, Date.now());
 }
 
 // Slack's Mark as unread: the chat shows as Done until it is opened again.
-export const markUnread = (sessionId: string) => mark(sessionId, 0);
+export const markUnread = (sessionId: string) => markBoth(sessionId, 0);

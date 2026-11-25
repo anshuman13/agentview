@@ -1,5 +1,5 @@
 import { Suspense, useEffect, useMemo, useState } from 'react';
-import { useStore } from '../../app/store';
+import { rootOf, useStore } from '../../app/store';
 import { chatTitle as chatTitleOf } from '../../../../shared/util';
 import { REVIEW_LOCAL } from '../../ops/Findings';
 import { Pending } from '../../chat/cards/Pending';
@@ -41,7 +41,7 @@ export function Brief() {
   const sessionId = useStore((s) => s.session.id);
   const live = useStore((s) => s.live.find((c) => c.id === s.session.id));
   const chatTitle = live?.title;
-  const savedId = live?.sessionId;
+  const savedId = rootOf(live?.sessionId);
   const [renaming, setRenaming] = useState(false);
   const pending = useStore((s) => s.pending);
   const waiting = pending.length > 0;

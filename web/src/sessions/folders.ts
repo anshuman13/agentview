@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { apiBase, apiUrl } from '../app/api';
-import { notice, send, useStore } from '../app/store';
+import { notice, rootOf, send, setRoots, useStore } from '../app/store';
 import type { ConfirmRequest } from '../ui/Confirm';
 import { BIN_MS, type ChatEvent, type LiveChat, type Repo, type RepoKind, type SavedSession, type Worktree } from '../../../shared/protocol';
 import { replyLine, sumEdits } from '../../../shared/edits';
@@ -102,7 +102,10 @@ export function useWorkspace(key: unknown) {
       });
     }
   }, [key]);
-  const grouped = useMemo(() => groupChats(chats), [chats]);
+  const grouped = useMemo(() => {
+    setRoots(chats);
+    return groupChats(chats);
+  }, [chats]);
   const folders = useMemo(() => buildFolders(repos, trees, grouped), [repos, trees, grouped]);
   const edit = <T,>(k: 'trees' | 'chats', set: (f: (l: T[]) => T[]) => void) => (f: (l: T[]) => T[]) =>
     set((l) => ((cached as Record<string, unknown>)[k] = f(l)) as T[]);
@@ -349,15 +352,15 @@ export function holdOrder(prev: HeldOrder | null, groups: RepoGroup[], loaded: b
 export type ChatState = 'needs' | 'failed' | 'running' | 'done';
 
 // Needs you, Failed and Running come from the live chat; Done is activity newer than the last time the chat was opened.
-// A chat with sub-chats reads its root's seen time, else the latest one kept under a member id.
+// A chat with sub-chats reads the latest seen time of its root and members; Mark as unread zeroes the root's.
 export function chatState({ live, saved }: { live?: LiveChat; saved?: ChatSession }, seen: Record<string, number>): ChatState | null {
   if (live?.pending) return 'needs';
   if (live?.failed) return 'failed';
   if (live?.running) return live.stalled ? null : 'running';
   const at = Math.max(live?.lastActive ?? 0, saved?.lastModified ?? 0);
-  const id = saved?.members ? saved.sessionId : live?.sessionId ?? saved?.sessionId;
+  const id = saved?.members ? saved.sessionId : rootOf(live?.sessionId ?? saved?.sessionId);
   const marks = [id, live?.sessionId, ...(saved?.members ?? [])].flatMap((x) => (x && seen[x] !== undefined ? [seen[x]] : []));
-  const last = id && seen[id] !== undefined ? seen[id] : marks.length ? Math.max(...marks) : undefined;
+  const last = id && seen[id] === 0 ? 0 : marks.length ? Math.max(...marks) : undefined;
   return last !== undefined && at > last ? 'done' : null;
 }
 

@@ -9,7 +9,7 @@ stubGlobal('window', { addEventListener() {}, location: {} });
 stubGlobal('document', { hidden: false, title: '', visibilityState: 'visible', addEventListener() {} });
 stubGlobal('EventSource', class implements Source { static CLOSED = 2; readyState = 1; onmessage?: Source['onmessage']; constructor() { es.last = this; } addEventListener() {} close() {} });
 
-const { connect, getState, loadEarlier, send, switchedMac } = await import('./store');
+const { connect, getState, loadEarlier, send, setRoots, switchedMac } = await import('./store');
 
 const fetchMock = vi.fn((..._args: unknown[]) => Promise.resolve({ ok: true, json: () => Promise.resolve({}) }));
 stubGlobal('fetch', fetchMock);
@@ -208,6 +208,14 @@ describe('markSeen', () => {
     expect(getState().seen['s-a']).toBeGreaterThan(0);
     expect(seenPosts()).toHaveLength(1);
     expect(seenPosts()[0][1]).toMatchObject({ method: 'POST' });
+  });
+
+  it('marks the root of a sub-chat too', () => {
+    setRoots([{ sessionId: 's-a', parentId: 'root' }]);
+    live('a');
+    view('a');
+    expect(getState().seen.root).toBe(getState().seen['s-a']);
+    setRoots([]);
   });
 
   it('keeps the local time after a failed POST, also when a chat finishes', async () => {
