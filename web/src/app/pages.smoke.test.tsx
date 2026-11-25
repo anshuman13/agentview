@@ -54,10 +54,11 @@ describe('page smoke', () => {
     expect(renderToStaticMarkup(<Sketches shown />)).toContain('skeleton-list');
   });
 
-  it('Sketches folds to 5 rows with Show all', () => {
+  it('Sketches folds to 5 cards with Show all', () => {
     const list = [1, 2, 3, 4, 5, 6].map((n) => ({ name: `s${n}.html`, path: `.claude/sketches/s${n}.html`, mtime: Date.now() }));
     const html = renderToStaticMarkup(<SketchList sketches={list} onOpen={() => {}} />);
-    expect(html.match(/class="ui-row[ "]/g)).toHaveLength(5);
+    expect(html.match(/class="ui-card sk-card"/g)).toHaveLength(5);
+    expect(html).toContain('class="sk-thumb"');
     expect(html).toContain('Show all 6');
   });
 

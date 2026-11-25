@@ -6,7 +6,7 @@ import { Back } from '../app/touch/back';
 import { Button, Chip, IconButton, ShowAll } from '../ui/Button';
 import { Menu, MenuItem } from '../ui/Menu';
 import { EmptyState } from '../ui/Panel';
-import { Row } from '../ui/Row';
+import { Card, CardGrid } from '../ui/Card';
 import { Section } from '../ui/Section';
 import { Skeleton } from '../ui/Skeleton';
 import { ago } from '../ui/util';
@@ -22,16 +22,45 @@ const SIZE: Record<Device, [number, number]> = { desktop: [1280, 800], phone: [3
 
 export function SketchList({ sketches, onOpen }: { sketches: SketchFile[]; onOpen: (name: string) => void }) {
   const [all, setAll] = useState(false);
+  const theme = useThemeName();
   const rows = all ? sketches : sketches.slice(0, FOLD);
   return (
     <>
       <Section label="Sketches" count={sketches.length} />
-      <div className="ui-group">
-        {rows.map((s) => <Row key={s.name} title={sketchTitle(s.name)} meta={ago(s.mtime, ' ago')} onClick={() => onOpen(s.name)} />)}
-      </div>
+      <CardGrid className="sk-grid">
+        {rows.map((s) => <Card key={s.name} className="sk-card" cover={<SketchThumb file={s} theme={theme} />} title={sketchTitle(s.name)} meta={ago(s.mtime, ' ago')} onClick={() => onOpen(s.name)} />)}
+      </CardGrid>
       {rows.length < sketches.length && <ShowAll count={sketches.length} className="ov-more" onClick={() => setAll(true)} />}
     </>
   );
+}
+
+// The card's preview loads only once the card scrolls into view, so a long folder reads one file per visible card.
+function SketchThumb({ file, theme }: { file: SketchFile; theme: SketchTheme }) {
+  const box = useRef<HTMLSpanElement>(null);
+  const [seen, setSeen] = useState(false);
+  const [width, setWidth] = useState(0);
+  useEffect(() => {
+    const el = box.current;
+    if (!el) return;
+    const size = new ResizeObserver(() => setWidth(el.clientWidth));
+    size.observe(el);
+    if (typeof IntersectionObserver === 'undefined') {
+      setSeen(true);
+      return () => size.disconnect();
+    }
+    const view = new IntersectionObserver((e) => { if (e.some((x) => x.isIntersecting)) { setSeen(true); view.disconnect(); } }, { rootMargin: '200px' });
+    view.observe(el);
+    return () => { size.disconnect(); view.disconnect(); };
+  }, []);
+  return <span className="sk-thumb" ref={box}>{seen && width > 0 && <ThumbFrame file={file} theme={theme} scale={width / SIZE.desktop[0]} />}</span>;
+}
+
+function ThumbFrame({ file, theme, scale }: { file: SketchFile; theme: SketchTheme; scale: number }) {
+  const { html, problem } = useSketch(file.path);
+  if (html === null || problem) return null;
+  const [w, h] = SIZE.desktop;
+  return <iframe sandbox="" srcDoc={sketchDoc(html, theme)} title={file.name} tabIndex={-1} aria-hidden="true" style={{ width: w, height: h, transform: `scale(${scale})` }} />;
 }
 
 const newSketch = () => window.dispatchEvent(new CustomEvent('agentview:insert', { detail: { text: '/sketch ' } }));
