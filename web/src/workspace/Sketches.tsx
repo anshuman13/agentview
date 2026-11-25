@@ -10,6 +10,7 @@ import { EmptyState } from '../ui/Panel';
 import { Card, CardGrid } from '../ui/Card';
 import { Section } from '../ui/Section';
 import { Skeleton } from '../ui/Skeleton';
+import { showChat } from '../ui/util';
 import { ago } from '../ui/util';
 import { sketchDoc, sketchOpenable, sketchTitle, type SketchTheme } from '../../../shared/sketches';
 import { CopyPathItems } from './CopyPathItems';
@@ -74,7 +75,10 @@ function zoom(update: () => void) {
   doc.startViewTransition(() => flushSync(update));
 }
 
-const newSketch = () => window.dispatchEvent(new CustomEvent('agentview:insert', { detail: { text: '/sketch ' } }));
+const newSketch = () => {
+  showChat();
+  window.dispatchEvent(new CustomEvent('agentview:insert', { detail: { text: '/sketch ' } }));
+};
 
 // The sketch runs in a frame with no scripts and no access to this origin, scaled down to the pane.
 // `fitWidth` scales to the stage's width only, for a stage that grows with the frame (a sheet that scrolls).
@@ -162,7 +166,7 @@ export function Sketches({ shown }: { shown: boolean }) {
       ) : data?.length ? (
         <SketchList sketches={data} zoomed={zoomed} onOpen={(name) => { flushSync(() => setZoomed(name)); zoom(() => setOpen(name)); }} />
       ) : data ? (
-        <EmptyState icon="paintcan" title="No sketches yet" hint="Mockups the agent writes with /sketch show here" action={<Button size="sm" onClick={newSketch}>New sketch</Button>} />
+        <EmptyState icon="paintcan" title="No sketches yet. Ask for one with /sketch <what>" action={<Button size="sm" onClick={newSketch}>New sketch</Button>} />
       ) : error ? (
         <EmptyState size="sm" icon="paintcan" title="Could not load sketches" hint={error} action={<Button size="sm" onClick={() => void reload()}>Retry</Button>} />
       ) : (
