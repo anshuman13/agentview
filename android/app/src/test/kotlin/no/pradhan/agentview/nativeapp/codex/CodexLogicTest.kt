@@ -88,6 +88,14 @@ class CodexLogicTest {
         assertEquals(8, split(items, null, NOW).let { it.overdue.size + it.today.size + it.later.size + it.review.size + it.doneToday.size })
     }
 
+    @Test fun overviewIsEmptyWithoutOpenTasksInItsProfile() {
+        val items = listOf(item("done", "done"), item("ask", "suggested"), item("gone").copy(deleted = true), item("cal", extra = *arrayOf("source" to "calendar")), item("home", profile = PERSONAL))
+        assertEquals(false, hasOpenTasks(items, WORK))
+        assertEquals(true, hasOpenTasks(items, PERSONAL))
+        assertEquals(true, hasOpenTasks(items, null))
+        assertEquals(true, hasOpenTasks(items + item("later", at = ms(2026, 12, 1)), WORK))
+    }
+
     @Test fun daysGroupByDateWithTodayFirst() {
         val items = listOf(
             item("pm", at = ms(2026, 11, 7, 15)), item("untimed"), item("t1", at = ms(2026, 11, 8, 16)), item("t2", at = ms(2026, 11, 8, 9)),

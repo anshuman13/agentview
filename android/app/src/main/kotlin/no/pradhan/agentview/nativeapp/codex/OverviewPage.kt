@@ -111,7 +111,7 @@ fun AskBar(hub: Hub, st: CodexState, profile: String?) {
 
 private const val TODAY_SHOWN = 5
 
-private class OverviewData(val s: Split, val mt: Meetings, val needs: List<Need>, val needsTotal: Int, val today: Today, val rows: List<Triple<Long, Row?, Row?>>)
+private class OverviewData(val profile: String?, val s: Split, val mt: Meetings, val needs: List<Need>, val needsTotal: Int, val today: Today, val rows: List<Triple<Long, Row?, Row?>>)
 
 @Composable
 private fun rememberOverviewData(hub: Hub, st: CodexState, profile: String?, now: Long): OverviewData {
@@ -125,7 +125,7 @@ private fun rememberOverviewData(hub: Hub, st: CodexState, profile: String?, now
     val rows = remember(today, others) {
         today.late.map { Triple(it.at ?: 0L, null as Row?, it) } + (others.map { Triple(it.startsAt!!, it, null as Row?) } + today.todo.map { Triple(it.at ?: 0L, null as Row?, it) }).sortedBy { it.first }
     }
-    return OverviewData(s, mt, needs, counts.needsYou, today, rows)
+    return OverviewData(profile, s, mt, needs, counts.needsYou, today, rows)
 }
 
 @Composable
@@ -178,7 +178,8 @@ private fun UpNextSection(hub: Hub, st: CodexState, d: OverviewData, now: Long, 
             mt.nextLater != null -> "Nothing today. Next: ${whenText(mt.nextLater.startsAt!!, now)} ${mt.nextLater.title}"
             else -> "Nothing today"
         }
-        EmptyState(title, icon = "pass") { Button("New task", onAdd, variant = ButtonVariant.Filled, size = ButtonSize.Sm) }
+        if (hasOpenTasks(st.items, d.profile)) EmptyState(title, icon = "pass")
+        else EmptyState(title, icon = "pass") { Button("New task", onAdd, variant = ButtonVariant.Filled, size = ButtonSize.Sm) }
     }
     if (d.needsTotal > 0) {
         Group(Modifier.padding(top = Tokens.sp4)) { ListRow("Needs you", onClick = onNeeds, trailing = { Badge("${d.needsTotal}", BadgeTone.Quiet); Chevron() }) }

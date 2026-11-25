@@ -198,7 +198,7 @@ fun CodexScreen(hub: Hub) {
                 PullToRefreshBox(refreshing, { refresh() }, Modifier.weight(1f)) { CodexBody(hub, st, nav, profile, now, actions, ops) }
                 if (nav.page == "overview" && nav.route == null && st.loaded) AskBar(hub, st, profile)
             }
-            if (nav.route == null && nav.picked == null && (nav.page == "overview" || nav.page == "tasks" || nav.page.startsWith("tag:"))) Fab(
+            if (nav.route == null && nav.picked == null && ((nav.page == "overview" && hasOpenTasks(st.items, profile)) || nav.page == "tasks" || nav.page.startsWith("tag:"))) Fab(
                 "add", "Add task", { nav.adding = true },
                 Modifier.align(Alignment.BottomEnd).padding(end = Tokens.sp8, bottom = if (nav.page == "overview") Tokens.fab + Tokens.sp16 else Tokens.sp8),
             )

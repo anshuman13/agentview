@@ -185,9 +185,12 @@ fun TravelScreen(hub: Hub, onBack: () -> Unit) {
     val trip = data?.trips?.firstOrNull { it.id == key }
     if (trip != null) TripView(hub, trip, data.receipts.filter { it.tripId == trip.id }, data.home, onBack = { open = null }, reload = reload)
     else Column(Modifier.fillMaxSize()) {
+        // With no trips the empty state carries Find in calendar and New trip, so the header leaves them out.
         PageHeader("Travel", onBack) {
-            IconBtn("calendar", if (finding) "Reading calendar" else "Find in calendar", find, enabled = !finding)
-            IconBtn("add", "New trip", { adding = true })
+            if (data?.trips?.isEmpty() != true) {
+                IconBtn("calendar", if (finding) "Reading calendar" else "Find in calendar", find, enabled = !finding)
+                IconBtn("add", "New trip", { adding = true })
+            }
         }
         Box(Modifier.fillMaxSize().background(av.groupPage)) {
             when {

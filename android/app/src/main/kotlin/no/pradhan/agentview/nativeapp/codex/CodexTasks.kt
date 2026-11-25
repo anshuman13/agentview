@@ -11,6 +11,9 @@ class Split(
 
 fun matchesProfile(profile: String?, r: Row) = profile == null || r.profile == profile
 
+// An Overview with no open task shows only its New task pill, no + FAB.
+fun hasOpenTasks(items: List<Row>, profile: String?) = items.any { !it.deleted && it.status == "open" && it.source != "calendar" && matchesProfile(profile, it) }
+
 fun split(items: List<Row>, profile: String?, now: Long): Split {
     val today = dayStart(now)
     val open = ArrayList<Row>(); val review = ArrayList<Row>(); val notes = ArrayList<Row>(); val done = ArrayList<Row>()
