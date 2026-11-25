@@ -55,6 +55,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import androidx.lifecycle.viewModelScope
 import no.pradhan.agentview.nativeapp.app.Hub
 import no.pradhan.agentview.nativeapp.app.askCodex
 import no.pradhan.agentview.nativeapp.chat.Attach
@@ -137,14 +138,30 @@ fun TravelScreen(hub: Hub, onBack: () -> Unit) {
     }
     var all by rememberSaveable { mutableStateOf(false) }
     var filing by remember { mutableIntStateOf(0) }
+    // With no trips the server refuses a receipt, so a picked file waits here until New trip is saved.
+    var held by remember { mutableStateOf(emptyList<Triple<String, String, ByteArray>>()) }
+    val post: suspend (String, String, String, ByteArray) -> String? = { tripId, name, mime, bytes ->
+        runCatching { hub.api.postBytes("/api/travel/receipt?${if (tripId.isEmpty()) "" else "trip=${enc(tripId)}&"}name=${enc(name)}", mime, bytes, slow = true) }
+            .onFailure { hub.notice.value = "Receipt not added: ${it.message}" }.getOrNull()
+    }
+    val added = { body: String ->
+        val r = protocolJson.decodeFromString(Receipt.serializer(), body)
+        hub.notice.value = "Added to ${data?.trips?.firstOrNull { it.id == r.tripId }?.name ?: "the trip"}${if (r.read == "failed") ", could not read it" else ""}"
+        reload()
+    }
     val attach = rememberAttach(hub, { filing += it }, send = { name, mime, bytes ->
         if (hub.readOnly) { hub.notice.value = READ_ONLY_SENT; null }
-        else runCatching { hub.api.postBytes("/api/travel/receipt?name=${enc(name)}", mime, bytes, slow = true) }
-            .onFailure { hub.notice.value = "Receipt not added: ${it.message}" }.getOrNull()
-    }, scan = true) { body ->
-        val r = protocolJson.decodeFromString(Receipt.serializer(), body)
-        hub.notice.value = "Added to ${data?.trips?.firstOrNull { it.id == r.tripId }?.name ?: "a trip"}${if (r.read == "failed") ", could not read it" else ""}"
-        reload()
+        else if (data?.trips?.isEmpty() == true) { held = held + Triple(name, mime, bytes); adding = true; null }
+        else post("", name, mime, bytes)
+    }, scan = true, onPath = added)
+    val saved = { id: String ->
+        adding = false; open = id; tick++
+        val files = held
+        held = emptyList()
+        files.forEach { (name, mime, bytes) ->
+            filing++
+            hub.viewModelScope.launch { try { post(id, name, mime, bytes)?.let(added) } finally { filing-- } }
+        }
     }
     Column(Modifier.fillMaxSize()) {
         PageHeader("Travel", onBack) {
@@ -155,7 +172,15 @@ fun TravelScreen(hub: Hub, onBack: () -> Unit) {
             when {
                 data == null && load.error.isNotEmpty() -> EmptyState("Could not load trips", load.error, icon = "briefcase", action = { Button("Retry", reload, size = ButtonSize.Sm) })
                 data == null -> Loading("Loading trips…")
-                data.trips.isEmpty() -> EmptyState("No trips yet", "Find your trips in the calendar, or add one, then its receipts, bookings and notes", icon = "briefcase", action = { Button(if (finding) "Reading calendar…" else "Find in calendar", find, size = ButtonSize.Sm, enabled = !finding) })
+                data.trips.isEmpty() -> Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
+                    EmptyState("No trips yet. Add one, or start with a receipt", icon = "briefcase", action = {
+                        Row(horizontalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
+                            Button(if (finding) "Reading calendar…" else "Find in calendar", find, size = ButtonSize.Sm, enabled = !finding)
+                            Button("New trip", { adding = true }, size = ButtonSize.Sm, icon = "add")
+                        }
+                    })
+                    CaptureRow(attach)
+                }
                 else -> Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
                     val day = today()
                     val (active, archived) = splitTrips(data.trips, day)
@@ -177,7 +202,7 @@ fun TravelScreen(hub: Hub, onBack: () -> Unit) {
             }
         }
     }
-    if (adding) TripSheet(hub, null, onDismiss = { adding = false }) { id -> adding = false; open = id; tick++ }
+    if (adding) TripSheet(hub, null, onDismiss = { adding = false; held = emptyList() }, onSaved = saved)
 }
 
 @Composable
