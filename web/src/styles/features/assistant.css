@@ -18,7 +18,7 @@
 .tasks .codex-head { padding: var(--sp-10) var(--tk-pad) var(--sp-6); }
 .wk .codex-head { max-width: calc(var(--wk-max) + 2 * var(--wk-pad)); margin: 0 auto; padding: var(--sp-10) var(--wk-pad) var(--sp-6); }
 .codex-head [role='heading'] { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--fs-5xl); font-weight: 650; letter-spacing: -0.02em; color: var(--fg); }
-.codex-head .as-greeting { display: inline-flex; align-items: center; gap: var(--sp-4); font-family: var(--font-serif); letter-spacing: 0; }
+.codex-head .as-greeting { display: inline-flex; align-items: center; gap: var(--sp-4); font-family: var(--font-serif); letter-spacing: 0; white-space: normal; }
 .codex-head > .muted { flex: none; }
 .codex-head-end { flex: 1; min-width: 0; display: flex; align-items: center; justify-content: flex-end; gap: var(--sp-3); }
 .codex-head-end .as-search { flex: 1; margin: 0; min-height: 36px; }

@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
@@ -187,6 +188,7 @@ fun CodexScreen(hub: Hub) {
 
     ModalNavigationDrawer(
         drawerContent = { ListsDrawer(hub, st, nav.page, profile, filterKey, go) },
+        modifier = Modifier.clipToBounds(),
         drawerState = drawerState,
         gesturesEnabled = drawerState.isOpen,
     ) {
