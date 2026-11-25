@@ -1,6 +1,15 @@
 package no.pradhan.agentview.nativeapp.ops
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -15,6 +24,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.IntOffset
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import no.pradhan.agentview.nativeapp.chat.can
@@ -45,6 +55,7 @@ import no.pradhan.agentview.nativeapp.ui.MoreButton
 import no.pradhan.agentview.nativeapp.ui.SearchField
 import no.pradhan.agentview.nativeapp.ui.SectionHeader
 import no.pradhan.agentview.nativeapp.ui.Tokens
+import no.pradhan.agentview.nativeapp.ui.motionOff
 import no.pradhan.agentview.nativeapp.workspace.ErrorHint
 import no.pradhan.agentview.nativeapp.workspace.Hint
 import no.pradhan.agentview.nativeapp.workspace.PageBody
@@ -98,11 +109,21 @@ fun McpScreen(hub: Hub, onBack: () -> Unit) {
         hub.saveMcpGroup(service, group) { ok -> if (!ok) hub.mcpGroups.value = before }
     }
 
-    val current = rows.firstOrNull { mcpKey(it) == sel }
-    if (current != null) { McpDetail(hub, current, calls[mcpSlug(current.name)], groups, ::setGroup, onBack = { sel = null }); return }
-
+    val shown = sel?.takeIf { s -> rows.any { mcpKey(it) == s } }
+    val still = motionOff()
     val mcp = counts.mcp
-    Column(Modifier.fillMaxSize()) {
+    AnimatedContent(shown, Modifier.fillMaxSize(), transitionSpec = {
+        val ease = if (targetState != null) Tokens.motionEaseIn else Tokens.motionEaseOut
+        val slide = tween<IntOffset>(Tokens.motionDuration, easing = ease)
+        val fade = tween<Float>(Tokens.motionDuration, easing = ease)
+        (if (still) EnterTransition.None togetherWith ExitTransition.None
+        else if (targetState != null) (slideInHorizontally(slide) { it } + fadeIn(fade)) togetherWith fadeOut(fade)
+        else fadeIn(fade) togetherWith (slideOutHorizontally(slide) { it } + fadeOut(fade)))
+            .apply { targetContentZIndex = if (targetState != null) 1f else -1f }
+    }, label = "mcp") { key ->
+    val current = rows.firstOrNull { mcpKey(it) == key }
+    if (current != null) McpDetail(hub, current, calls[mcpSlug(current.name)], groups, ::setGroup, onBack = { sel = null })
+    else Column(Modifier.fillMaxSize()) {
         WorkspaceHeader(hub, "MCP Servers", onBack, sub = if (probe.data != null) "${mcp.connected} connected of ${mcp.total}" + if (mcp.needsYou > 0) " · ${mcp.needsYou} need you" else "" else null) {
             IconBtn("refresh", "Check", { refresh = true; reprobe() }, enabled = !probe.busy)
         }
@@ -125,6 +146,7 @@ fun McpScreen(hub: Hub, onBack: () -> Unit) {
                 item { Spacer(Modifier.padding(bottom = Tokens.sp16)) }
             }
         }
+    }
     }
 }
 
