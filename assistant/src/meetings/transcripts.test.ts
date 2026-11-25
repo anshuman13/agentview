@@ -156,6 +156,8 @@ describe('transcripts', () => {
     saveTranscripts(db, 'personal', [{ id: 'cal:p', doc: 'd4', text: 'rollout at home' }], now);
     expect(searchTranscripts(db, 'rollout', 'work').map((h) => h.id)).toEqual(['cal:b', 'cal:a']);
     expect(searchTranscripts(db, 'rollout', 'personal').map((h) => h.id)).toEqual(['cal:p']);
+    saveTranscripts(db, 'personal', [{ id: 'cal:p', doc: 'd4', text: '## **Budget** Nov 24\n- [Sara](mailto:sara@x.se) spoke' }], now);
+    expect(searchTranscripts(db, 'budget', 'personal')[0].snippet).toBe('Budget Nov 24 Sara spoke');
     expect(transcriptText(db, 'work', 'cal:b')).toBe('Kim: rollout later');
     expect(transcriptText(db, 'personal', 'cal:b')).toBeNull();
   });

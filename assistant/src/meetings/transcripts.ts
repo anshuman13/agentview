@@ -151,8 +151,11 @@ export function searchTranscripts(db: Database, query: string, profile?: Profile
   const rows = db.prepare(
     `SELECT t.profile, t.id, t.text FROM transcripts t JOIN meetings m ON m.profile = t.profile AND m.id = t.id AND m.deleted = 0 WHERE ${profile ? 't.profile = ? AND ' : ''}${words.map(() => 'instr(t.folded, ?) > 0').join(' AND ')} ORDER BY m.starts_at DESC LIMIT ?`,
   ).all(...(profile ? [profile] : []), ...words, limit) as { profile: Profile; id: string; text: string }[];
-  return rows.map((r) => ({ profile: r.profile, id: r.id, snippet: snippet(words, r.text) }));
+  return rows.map((r) => ({ profile: r.profile, id: r.id, snippet: snippet(words, plain(r.text)) }));
 }
+
+// Transcript markdown as read: links keep their text, and emphasis, heading and list marks go.
+const plain = (text: string) => text.replace(/\[([^\]]*)\]\([^)]*\)/g, '$1').replace(/\*+|^#+\s*|^\s*[-*]\s+/gm, '');
 
 const formatLines = (instructions: string) => (instructions.trim() ? [`Write the summary to this brief: ${instructions.trim().slice(0, 1000)}`] : []);
 
