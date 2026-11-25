@@ -196,6 +196,19 @@ fun mcpSections(rows: List<McpRow>, groups: Map<String, String>): McpSections {
     return McpSections(shown.filterNot(personal), shown.filter(personal), hidden)
 }
 
+val MCP_STATUS_GROUPS = listOf("Connected", "Needs login", "Failed", "Off")
+
+fun mcpStatusGroup(r: McpRow) = when (r.status) {
+    "connected", "pending", "probing" -> "Connected"
+    "needs-auth" -> "Needs login"
+    "failed" -> "Failed"
+    else -> "Off"
+}
+
+// Rows by status group in page order, each sorted by name; empty groups are left out.
+fun mcpStatusGroups(rows: List<McpRow>): List<Pair<String, List<McpRow>>> =
+    MCP_STATUS_GROUPS.map { g -> g to rows.filter { mcpStatusGroup(it) == g }.sortedBy { it.name.lowercase() } }.filter { it.second.isNotEmpty() }
+
 fun mcpGroupBody(service: String, group: String) = buildJsonObject { put("service", service); put("group", group) }.toString()
 
 fun mcpSlug(server: String) = server.replace(Regex("[^A-Za-z0-9_-]"), "_")

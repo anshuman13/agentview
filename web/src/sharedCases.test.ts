@@ -67,7 +67,7 @@ import { sourceLink } from './codex/tasks/taskSource';
 import { taskMetaParts } from './codex/tasks/taskMeta';
 import type { ItemRow } from './codex/data/sync';
 import { agendaMarkdown, draftFor, followUpText, hasContent, linearIssue, personMarkdown, toMarkdown } from './codex/data/meetings/meetingMarkdown';
-import { toggleConnector } from './ops/mcpHelpers';
+import { statusGroups, toggleConnector, type Row as McpRow } from './ops/mcpHelpers';
 import { actionCount, displayName, filterMeetings, groupMeetings, inSeries, isEvent, meetingEmpty, meetingState, sameName, seriesTitle, type MeetingChip, type MeetingState, type Question } from './codex/data/meetings/meetings';
 import { dismissedKeys, mergeDismissed } from '../../shared/dismissed';
 import { isOld } from '../../shared/claimAge';
@@ -527,6 +527,10 @@ describe('cases shared with the Android app', () => {
 
   for (const c of cases<{ name: string; tools: string; id: string; expected: string }>('toggle-connector')) {
     it(`toggleConnector: ${c.name}`, () => expect(toggleConnector(c.tools, c.id)).toBe(c.expected));
+  }
+
+  for (const c of cases<{ name: string; rows: McpRow[]; expected: [string, string[]][] }>('mcp-groups')) {
+    it(`statusGroups: ${c.name}`, () => expect(statusGroups(c.rows).map(([g, rs]) => [g, rs.map((r) => r.name)])).toEqual(c.expected));
   }
 
   type AgendaCase = { name: string; meeting: Record<string, unknown>; points: { people: string | null; title: string }[]; actions: string[]; questions: string[]; markdown: string };

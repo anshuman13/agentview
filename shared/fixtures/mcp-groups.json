@@ -1,0 +1,18 @@
+[
+  {"name": "orders Connected, Needs login, Failed, Off and drops empty groups", "rows": [
+    {"name": "zeta", "status": "disabled", "live": true},
+    {"name": "beta", "status": "failed", "live": true},
+    {"name": "Alpha", "status": "connected", "live": true},
+    {"name": "gamma", "status": "connected"}
+  ], "expected": [["Connected", ["Alpha", "gamma"]], ["Failed", ["beta"]], ["Off", ["zeta"]]]},
+  {"name": "needs-auth and OAuth via Claude go to Needs login", "rows": [
+    {"name": "claude.ai Slack", "status": "needs-auth"},
+    {"name": "linear", "status": "needs-auth", "live": true}
+  ], "expected": [["Needs login", ["claude.ai Slack", "linear"]]]},
+  {"name": "pending and probing count as Connected, unknown as Off", "rows": [
+    {"name": "b", "status": "pending", "live": true},
+    {"name": "a", "status": "probing"},
+    {"name": "c", "status": "weird"}
+  ], "expected": [["Connected", ["a", "b"]], ["Off", ["c"]]]},
+  {"name": "no rows gives no groups", "rows": [], "expected": []}
+]

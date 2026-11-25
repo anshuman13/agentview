@@ -155,3 +155,14 @@ export const accountGroup = (a: string): Group => (a === 'main' ? 'personal' : '
 export const shortName = (name: string) => name.replace(/^claude\.ai /, '');
 export const hideKey = (s: Service) => `hide:${s.name}`;
 export const groupKey = (r: Row) => splitName(r.name)[0];
+
+export type StatusGroup = 'Connected' | 'Needs login' | 'Failed' | 'Off';
+export const STATUS_GROUPS: StatusGroup[] = ['Connected', 'Needs login', 'Failed', 'Off'];
+export const statusGroup = (r: Row): StatusGroup =>
+  r.status === 'connected' || r.status === 'pending' || r.status === 'probing' ? 'Connected'
+  : r.status === 'needs-auth' ? 'Needs login' : r.status === 'failed' ? 'Failed' : 'Off';
+
+// Rows by status group in page order, each sorted by name; empty groups are left out.
+export const statusGroups = (rows: Row[]): [StatusGroup, Row[]][] =>
+  STATUS_GROUPS.map((g): [StatusGroup, Row[]] => [g, rows.filter((r) => statusGroup(r) === g).sort((a, b) => a.name.toLowerCase().localeCompare(b.name.toLowerCase()))])
+    .filter(([, rs]) => rs.length > 0);
