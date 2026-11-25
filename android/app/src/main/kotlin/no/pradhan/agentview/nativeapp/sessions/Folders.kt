@@ -22,7 +22,18 @@ data class SavedSession(
     val parentId: String? = null,
     val via: String? = null,
     val startedAt: Long? = null,
+    val subs: String? = null,
+    val members: List<String>? = null,
 )
+
+// web groupChats: one row per chat, the root session with the group's last activity, the count label and every member id when it has sub-chats.
+fun groupChats(saved: List<SavedSession>) = groupSessions(saved).map { r -> if (r.count > 0) r.root.copy(lastModified = r.lastModified, subs = r.label, members = r.members) else r.root }
+
+// Each chat row by its root id and every member id, so an open chat on a sub-chat finds its row.
+fun rowsById(saved: List<SavedSession>): Map<String, SavedSession> = saved.flatMap { s -> (s.members ?: listOf(s.sessionId)).map { it to s } }.toMap()
+
+// The row id (root session) of any member id; other ids stay as they are.
+fun Map<String, SavedSession>.rowId(id: String?) = id?.let { this[it]?.sessionId ?: it }
 
 @Serializable
 data class Repo(val name: String, val cwd: String, val root: String = "", val kind: String = "other", val branch: String = "", val dirty: Int = 0, val lastCommit: Double = 0.0)
@@ -84,9 +95,11 @@ fun chatState(live: LiveChat?, saved: SavedSession?, seen: Map<String, Long>): C
         if (live.failed) return ChatState.Failed
         if (live.running) return if (live.stalled) null else ChatState.Running
     }
-    val id = live?.sessionId ?: saved?.sessionId ?: return null
+    // A chat with sub-chats reads the latest mark of its root and members; Mark as unread zeroes the root's.
+    val id = if (saved?.members != null) saved.sessionId else live?.sessionId ?: saved?.sessionId ?: return null
     val at = maxOf(live?.lastActive ?: 0, saved?.lastModified ?: 0)
-    val s = seen[id] ?: return null
+    val marks = (listOf(id, live?.sessionId) + saved?.members.orEmpty()).mapNotNull { it?.let(seen::get) }
+    val s = if (seen[id] == 0L) 0L else marks.maxOrNull() ?: return null
     return if (at > s) ChatState.Done else null
 }
 
@@ -166,9 +179,10 @@ fun shownChoices(choices: List<RepoChoice>, picked: String?, all: Boolean, max: 
 fun chatMatches(words: List<String>, title: String, saved: SavedSession?, repo: String?) =
     matchesWords(words, title, saved?.title, saved?.firstPrompt, saved?.summary, saved?.gitBranch, repo)
 
+// ws.saved holds the grouped rows (groupChats), so an open chat on a sub-chat stands for its root's row.
 fun groupByRepo(live: List<LiveChat>, ws: Workspace, filter: String = "", held: HeldOrder? = null): List<RepoGroup> {
     val words = queryWords(filter)
-    val saved = ws.saved.associateBy { it.sessionId }
+    val saved = rowsById(ws.saved)
     val m = LinkedHashMap<String, RepoGroup>()
     fun add(cwd: String, title: String, sessionId: String?, last: Long): RepoGroup? {
         val key = folderKey(cwd, ws.repos, ws.trees)
@@ -186,7 +200,7 @@ fun groupByRepo(live: List<LiveChat>, ws: Workspace, filter: String = "", held: 
         g.open += c
         if (c.pending > 0) g.waiting++
     }
-    val ids = live.mapNotNull { it.sessionId }.toSet()
+    val ids = live.mapNotNull { saved.rowId(it.sessionId) }.toSet()
     for (s in ws.saved) if (s.sessionId !in ids) add(s.cwd, s.title, s.sessionId, s.lastModified)?.recent?.add(s)
     for (r in ws.repos) if (r.cwd !in m && (words.isEmpty() || matchesWords(words, r.name))) m[r.cwd] = RepoGroup(r.cwd, folderName(r.cwd)).apply { last = r.lastCommit.toLong() }
     for (g in m.values) {
@@ -208,7 +222,7 @@ data class ChatItem(val live: LiveChat?, val saved: SavedSession?, val repo: Str
 
 fun recentRows(groups: List<RepoGroup>, filter: String, pins: Set<String> = emptySet(), status: StatusFilter = StatusFilter.All, saved: Map<String, SavedSession> = emptyMap(), seen: Map<String, Long> = emptyMap(), held: HeldOrder? = null): List<ChatItem> {
     val every = status != StatusFilter.All
-    return groups.flatMap { g -> g.open.filter { every || (it.pending == 0 && it.sessionId !in pins) }.map { ChatItem(it, null, g.name) to it.lastActive } + g.recent.filter { every || it.sessionId !in pins }.map { ChatItem(null, it, g.name) to it.lastModified } }
+    return groups.flatMap { g -> g.open.filter { every || (it.pending == 0 && saved.rowId(it.sessionId) !in pins) }.map { ChatItem(it, null, g.name) to it.lastActive } + g.recent.filter { every || it.sessionId !in pins }.map { ChatItem(null, it, g.name) to it.lastModified } }
         .sortedByDescending { it.second }.map { it.first }
         .heldBy(held?.recent) { it.heldKey }
         .filter { status.matches(it.state(saved, seen)) }
@@ -235,12 +249,18 @@ fun RepoGroup.items() = open.map { ChatItem(it, null, name) } + recent.map { Cha
 fun statusCount(groups: List<RepoGroup>, status: StatusFilter, saved: Map<String, SavedSession>, seen: Map<String, Long>) =
     groups.sumOf { g -> g.items().count { status.matches(it.state(saved, seen)) } }
 
+// Mute is kept by row id; a muted row silences every member session.
+fun mutedIds(muted: Set<String>, saved: List<SavedSession>) = muted + saved.filter { it.sessionId in muted }.flatMap { it.members.orEmpty() }
+
+// The pinned row ids: a pin kept under a sub-chat id counts for its root.
+fun rowPins(ws: Workspace, saved: Map<String, SavedSession> = rowsById(ws.saved)) = ws.pins.map { saved.rowId(it)!! }.distinct()
+
 // Pinned chats, live or saved, that match the filter.
 fun pinnedRows(live: List<LiveChat>, ws: Workspace, filter: String): List<ChatItem> {
     val words = queryWords(filter)
-    val saved = ws.saved.associateBy { it.sessionId }
-    return ws.pins.mapNotNull { id ->
-        val c = live.firstOrNull { it.sessionId == id }
+    val saved = rowsById(ws.saved)
+    return rowPins(ws, saved).mapNotNull { id ->
+        val c = live.firstOrNull { saved.rowId(it.sessionId) == id }
         val s = if (c == null) saved[id] else null
         val title = c?.title ?: s?.title ?: return@mapNotNull null
         val cwd = c?.cwd ?: s!!.cwd
@@ -252,7 +272,7 @@ fun pinnedRows(live: List<LiveChat>, ws: Workspace, filter: String): List<ChatIt
 // Chats waiting on the user that match the filter, most urgent first.
 fun waitingRows(live: List<LiveChat>, ws: Workspace, filter: String): List<LiveChat> {
     val words = queryWords(filter)
-    val saved = ws.saved.associateBy { it.sessionId }
+    val saved = rowsById(ws.saved)
     return live.filter { c ->
         val s = saved[c.sessionId]
         c.pending > 0 && (words.isEmpty() || chatMatches(words, c.title, s, folderName(folderKey(c.cwd, ws.repos, ws.trees))))
@@ -278,9 +298,9 @@ fun groupGlance(g: RepoGroup, seen: Map<String, Long>): Glance {
     return Glance(running, needs, unread)
 }
 
-// The session ids of the listed chats that are Done.
+// The row ids of the listed chats that are Done.
 fun doneChats(live: List<LiveChat>, saved: List<SavedSession>, seen: Map<String, Long>, savedById: Map<String, SavedSession>) =
-    live.filter { chatState(it, it.sessionId?.let(savedById::get), seen) == ChatState.Done }.mapNotNull { it.sessionId } +
+    live.mapNotNull { c -> val s = c.sessionId?.let(savedById::get); if (chatState(c, s, seen) == ChatState.Done) s?.sessionId ?: c.sessionId else null } +
         saved.filter { chatState(null, it, seen) == ChatState.Done }.map { it.sessionId }
 
 fun since(t: Long, now: Long = System.currentTimeMillis()): String {

@@ -81,7 +81,7 @@ fun rememberChatRows(hub: Hub, dialogs: SessionDialogs, onOpen: () -> Unit): Cha
     val shownId by hub.store.state.select { it.shownId }
     val ws by hub.workspace.collectAsState()
     val muted by hub.muted.collectAsState()
-    val saved = remember(ws.saved) { ws.saved.associateBy { it.sessionId } }
+    val saved = remember(ws.saved) { rowsById(ws.saved) }
     val shownCwd = live.firstOrNull { it.id == shownId }?.cwd
     val (prLoad) = rememberLoad(shownId, shownCwd) { if (shownCwd == null || live.none { it.pr != null }) emptyList() else hub.pulls(false) }
     val prFor = { c: LiveChat -> c.pr?.let { n -> prChip(n, prLoad.data?.takeIf { c.cwd == shownCwd }?.firstOrNull { it.number == n }, c.prChecks) } }
@@ -89,7 +89,7 @@ fun rememberChatRows(hub: Hub, dialogs: SessionDialogs, onOpen: () -> Unit): Cha
     val clipboard = LocalClipboardManager.current
     val menu = remember { mutableStateOf<String?>(null) }
     val open = rememberUpdatedState(onOpen)
-    return remember(live, ws, saved, muted, shownId, prLoad.data, dialogs) { ChatRows(hub, { open.value() }, live, ws, saved, ws.pins.toSet(), muted, shownId, prFor, dialogs, scope, clipboard, menu) }
+    return remember(live, ws, saved, muted, shownId, prLoad.data, dialogs) { ChatRows(hub, { open.value() }, live, ws, saved, rowPins(ws, saved).toSet(), muted, shownId, prFor, dialogs, scope, clipboard, menu) }
 }
 
 class SessionDialogs {
@@ -160,12 +160,13 @@ class ChatRows(
         val s = c.sessionId?.let { saved[it] }
         val branch = (s?.gitBranch ?: repoBranch(c.cwd)).takeIf { !isDefaultBranch(it) }
         val state = chatState(c, s, seen)
+        val id = saved.rowId(c.sessionId)
         ChatRow(
             title = c.title.ifBlank { "Untitled" },
             meta = liveMeta(c, s, repo, branch, prFor(c)),
             state = state,
             selected = c.id == shownId,
-            actions = actions(c.sessionId, c.title, c, state),
+            actions = actions(id, s?.title?.ifBlank { null } ?: c.title, c, state),
             run = c.run,
             onResume = if (c.stalled) ({ hub.resume(c.id) }) else null,
             onClick = { hub.open(c.id); onOpen() },
@@ -183,7 +184,7 @@ class ChatRows(
             else -> metaLine(since(maxOf(c.lastActive, s?.lastModified ?: 0)), askLine(c.run))
         }
         return buildAnnotatedString {
-            append(metaLine(repo, branch, c.model?.let(::shortModel), providerMark(c.provider), when_, pr?.text, c.todos?.let { "${it.done}/${it.total}" }))
+            append(metaLine(repo, branch, s?.subs, c.model?.let(::shortModel), providerMark(c.provider), when_, pr?.text, c.todos?.let { "${it.done}/${it.total}" }))
             if (line != null) {
                 append(" · ")
                 withStyle(SpanStyle(color = av.ok)) { append("+${line.add}") }
@@ -199,7 +200,7 @@ class ChatRows(
         ChatRow(
             title = (if (opening.value == s.sessionId) "Opening… " else "") + s.title.ifBlank { "Untitled" },
             meta = draftSnippet(hub.draftOfSession(s.sessionId))?.let { draftMeta(it) }
-                ?: AnnotatedString(s.summary?.takeIf { it.isNotBlank() }?.let { metaLine(since(s.lastModified), it) } ?: metaLine(repo, branch, providerMark(s.provider), since(s.lastModified))),
+                ?: AnnotatedString(s.summary?.takeIf { it.isNotBlank() }?.let { metaLine(since(s.lastModified), s.subs, it) } ?: metaLine(repo, branch, s.subs, providerMark(s.provider), since(s.lastModified))),
             state = chatState(null, s, seen),
             selected = false,
             actions = actions(s.sessionId, s.title, null),

@@ -243,7 +243,7 @@ private fun SessionsList(rows: ChatRows, filters: SessionsFilters, groups: List<
     val ws = rows.ws
     val filter = filters.filter
     val (busy, idle) = remember(groups) { groups.partition { it.open.isNotEmpty() || it.recent.isNotEmpty() } }
-    val recentRows = remember(groups, filter, ws.pins, held) { recentRows(groups, filter, ws.pins.toSet(), held = held) }
+    val recentRows = remember(groups, filter, ws.pins, held) { recentRows(groups, filter, rowPins(ws, rows.saved).toSet(), saved = rows.saved, held = held) }
     val bin by rows.hub.bin.collectAsState()
     var binOpen by remember { mutableStateOf(false) }
     var emptying by remember { mutableStateOf(false) }

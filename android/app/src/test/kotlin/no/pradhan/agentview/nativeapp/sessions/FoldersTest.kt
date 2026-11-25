@@ -117,6 +117,27 @@ class FoldersTest {
     }
 
     @Test
+    fun subChatsFoldIntoTheirRootRowEverywhere() {
+        val sub = SavedSession("k2", "task", "/w/agentview", null, 30, parentId = "k1", via = "build")
+        val ws = Workspace(repos, trees, groupChats(listOf(saved("k1", "/w/agentview", 10, "build chat"), sub)), listOf("k2"))
+        assertEquals(listOf("k1"), ws.saved.map { it.sessionId })
+        assertEquals("1 task", ws.saved[0].subs)
+        assertEquals(30L, ws.saved[0].lastModified)
+        val open = live("c", "/w/agentview", sid = "k2", active = 40, pending = 1)
+        val groups = groupByRepo(listOf(open), ws)
+        assertEquals(listOf("c"), groups[0].open.map { it.id })
+        assertEquals(emptyList<String>(), groups[0].recent.map { it.sessionId })
+        assertEquals(listOf("k1"), rowPins(ws))
+        assertEquals("c", pinnedRows(listOf(open), ws, "").single().live?.id)
+        assertEquals(setOf("k1", "k2"), mutedIds(setOf("k1"), ws.saved))
+        val row = ws.saved[0]
+        assertEquals(ChatState.Done, chatState(null, row, mapOf("k2" to 5L)))
+        assertNull(chatState(null, row, mapOf("k1" to 5L, "k2" to 35L)))
+        assertEquals(ChatState.Done, chatState(null, row, mapOf("k1" to 0L, "k2" to 35L)))
+        assertEquals(listOf("k1"), doneChats(listOf(open.copy(pending = 0)), emptyList(), mapOf("k1" to 0L), rowsById(ws.saved)))
+    }
+
+    @Test
     fun doneChatsCountsALiveChatByItsSavedCopy() {
         val quiet = live("h", "/w", active = 1)
         val copy = saved("h", "/w", at = 10)

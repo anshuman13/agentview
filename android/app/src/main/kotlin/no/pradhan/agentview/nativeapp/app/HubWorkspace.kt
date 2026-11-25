@@ -20,6 +20,9 @@ import no.pradhan.agentview.nativeapp.chat.memoryClaimText
 import no.pradhan.agentview.nativeapp.net.ApiError
 import no.pradhan.agentview.nativeapp.sessions.SavedSession
 import no.pradhan.agentview.nativeapp.sessions.Workspace
+import no.pradhan.agentview.nativeapp.sessions.groupChats
+import no.pradhan.agentview.nativeapp.sessions.rowId
+import no.pradhan.agentview.nativeapp.sessions.rowsById
 import no.pradhan.agentview.nativeapp.sessions.withRestored
 import no.pradhan.agentview.nativeapp.ui.plural
 
@@ -53,7 +56,7 @@ fun Hub.refreshWorkspace(force: Boolean = false): Job? {
         runCatching {
             coroutineScope {
                 val was = workspace.value
-                val saved = async { runCatching { api.sessions() }.getOrDefault(was.saved) }
+                val saved = async { runCatching { groupChats(api.sessions()) }.getOrDefault(was.saved) }
                 val repos = async { runCatching { api.repos() }.getOrDefault(was.repos) }
                 val trees = async { runCatching { api.worktrees() }.getOrDefault(was.trees) }
                 val pins = async { runCatching { api.pins() }.getOrDefault(was.pins) }
@@ -76,8 +79,12 @@ fun Hub.refreshMcpGroups() {
     }
 }
 
+// Marks the id and, for a sub-chat, its root row too, so opening it clears Mark as unread on the root.
 internal fun Hub.markSeen(sessionId: String?) {
-    if (sessionId != null) mark(sessionId, System.currentTimeMillis())
+    if (sessionId == null) return
+    val now = System.currentTimeMillis()
+    mark(sessionId, now)
+    rowsById(workspace.value.saved).rowId(sessionId)?.takeIf { it != sessionId }?.let { mark(it, now) }
 }
 
 fun Hub.markRead(sessionIds: List<String>) {

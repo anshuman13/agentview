@@ -74,6 +74,7 @@ import no.pradhan.agentview.nativeapp.workspace.Findings
 import no.pradhan.agentview.nativeapp.workspace.ReviewFindings
 import no.pradhan.agentview.nativeapp.sessions.BinnedSession
 import no.pradhan.agentview.nativeapp.sessions.Workspace
+import no.pradhan.agentview.nativeapp.sessions.mutedIds
 import no.pradhan.agentview.nativeapp.sessions.state
 import no.pradhan.agentview.nativeapp.workspace.appendPrompt
 
@@ -347,7 +348,7 @@ class Hub(internal val app: Application, private val saved: SavedStateHandle) : 
     }
 
     private fun handle(m: ServerMessage) {
-        if (m is ServerMessage.Live && !foreground && notifyOn.value) notices(store.state.value.live, m.chats, muted.value).forEach(::notify)
+        if (m is ServerMessage.Live && !foreground && notifyOn.value) notices(store.state.value.live, m.chats, mutedIds(muted.value, workspace.value.saved)).forEach(::notify)
         if (m is ServerMessage.Error) notice.value = m.text
         if (m is ServerMessage.PhoneAlarm) setPhoneAlarm(m)
         if (m is ServerMessage.Findings) setFindings(m.review.target, m.review)
