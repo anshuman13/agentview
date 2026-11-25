@@ -188,6 +188,7 @@ describe('goals with an end time', () => {
     expect(holdsUntil(g, now)).toBe(true);
     expect(holdsUntil(g, g.endAt! + 1)).toBe(false);
     expect(timedPrompt(g, now)).toContain('runs until 21:00');
+    expect(timedPrompt(g, now)).not.toContain('GOAL MET');
     expect(timedPrompt(g, g.endAt! + 1)).toBe(g.prompt);
     expect(holdsUntil(parseGoal('/goal ship the briefs', now) as Repeat, now)).toBe(false);
   });

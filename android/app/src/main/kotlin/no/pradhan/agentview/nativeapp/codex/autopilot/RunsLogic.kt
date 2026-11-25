@@ -37,7 +37,7 @@ fun runLine(run: ChatRun): String = sendsAt(run)?.let { "Sends at ${clock(it)}" 
     else -> roundLine("Loop", run)
 }
 
-private fun roundLine(word: String, run: ChatRun) = "$word · round ${run.round}" + (if (run.max > 0) " of ${run.max}" else "") + (run.nextAt?.let { " · next ${clock(it)}" } ?: "")
+private fun roundLine(word: String, run: ChatRun) = "$word · round ${run.round}" + (if (run.max > 0) " of ${run.max}" else "") + (run.nextAt?.let { " · next ${clock(it)}" } ?: "") + (run.endAt?.let { " · until ${clock(it)}" } ?: "")
 
 fun finishedLine(why: String, endedAt: Long?, ago: (Long) -> String): String? =
     if (why.isEmpty()) null else why.replaceFirstChar(Char::uppercase) + (endedAt?.let { " · ${ago(it)}" } ?: "")

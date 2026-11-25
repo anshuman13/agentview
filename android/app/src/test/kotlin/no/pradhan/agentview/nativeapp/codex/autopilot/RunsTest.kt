@@ -68,6 +68,8 @@ class RunsTest {
         assertEquals("Loop · round 4 · next 14:20", runLine(run("a").copy(max = 0)))
         assertEquals("Goal · round 4 of 20 · next 14:20", runLine(run("a", kind = "goal")))
         assertEquals("Goal · round 4 · next 14:20", runLine(run("a", kind = "goal", every = 3_600_000L).copy(max = 0)))
+        val end = java.util.Calendar.getInstance().apply { set(2026, 10, 9, 21, 0, 0) }.timeInMillis
+        assertEquals("Goal · round 4 · next 14:20 · until 21:00", runLine(run("a", kind = "goal", every = 600_000L).copy(max = 0, endAt = end)))
         assertEquals("Paused · usage limit until 18:00", runLine(run("a", "paused", why = "usage limit until 18:00")))
         assertEquals("Paused", runLine(run("a", "paused")))
         assertEquals("Loop · round 4 · next 14:20", runLine(run("a", "done").copy(max = 0)))

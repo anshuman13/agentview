@@ -10,6 +10,7 @@ describe('runLine', () => {
     expect(runLine(run({ state: 'paused', why: 'usage limit until 18:00' }))).toBe('Paused · usage limit until 18:00');
     expect(runLine(run({ kind: 'goal', round: 3, max: 20 }))).toBe('Goal · round 3 of 20');
     expect(runLine(run({ kind: 'goal', round: 12, every: 3_600_000, nextAt: new Date(2026, 10, 9, 14, 20).getTime() }))).toBe('Goal · round 12 · next 14:20');
+    expect(runLine(run({ kind: 'goal', round: 3, max: 0, every: 600_000, nextAt: new Date(2026, 10, 9, 14, 20).getTime(), endAt: new Date(2026, 10, 9, 21, 0).getTime() }))).toBe('Goal · round 3 · next 14:20 · until 21:00');
     expect(runLine(run({ kind: 'goal', round: 3, every: 3_600_000 }))).toBe('Goal · round 3');
     expect(runLine(run({ kind: 'job', branch: 'jobs/fix-1105' }))).toBe('Job · jobs/fix-1105');
   });

@@ -37,8 +37,9 @@ export function fiveHourLine(run: { fiveHour?: FiveHour | null; capPct?: number 
 // Why a round was skipped for the 5-hour window.
 export const fiveHourSkip = (limit: FiveHour) => (limit === 'auto' ? 'pacing the 5-hour window' : `5-hour usage over ${limit}%`);
 
-export const runLine = (word: string, { round, max, nextAt }: { round: number; max: number; nextAt: number | null }) =>
-  `${word} · round ${round}${max ? ` of ${max}` : ''}${nextAt ? ` · next ${clock(nextAt)}` : ''}`;
+// A run with an end time says so, since it keeps going until then (Android RunsLogic roundLine).
+export const runLine = (word: string, { round, max, nextAt, endAt }: { round: number; max: number; nextAt: number | null; endAt?: number | null }) =>
+  `${word} · round ${round}${max ? ` of ${max}` : ''}${nextAt ? ` · next ${clock(nextAt)}` : ''}${endAt ? ` · until ${clock(endAt)}` : ''}`;
 
 // The meta of a finished run: why it ended, capitalised, and when. Null when the run has no reason.
 export const finishedLine = ({ why, endedAt }: { why: string; endedAt: number | null }, ago: (t: number) => string) =>

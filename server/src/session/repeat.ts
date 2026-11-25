@@ -100,8 +100,11 @@ export const ROUND_INSTRUCTION = 'Reply with the answer or result first, in plai
 export const goalMet = (text: string) => /(^|[.!?]\s+)GOAL MET[.!]?[ \t]*$/m.test(text);
 // A goal with an end time runs until then: GOAL MET before it does not stop it, and each round says so.
 export const holdsUntil = (r: Repeat | null | undefined, now = Date.now()) => Boolean(r?.goal && r.endAt && now < r.endAt);
+// A goal with an end time has no GOAL MET: it ends only at the time, the usage cap or Stop.
 export const timedPrompt = (r: Repeat, now = Date.now()) =>
-  holdsUntil(r, now) ? `${r.prompt} This goal runs until ${clock(r.endAt!)} even when the condition is met: then find the next most useful work in the same area (verify, polish, fix what you find, ask the advisors what comes next) and keep going. GOAL MET does not end it before ${clock(r.endAt!)}.` : r.prompt;
+  holdsUntil(r, now)
+    ? `Goal until ${clock(r.endAt!)}: ${r.goal}. Read where things stand and do whatever moves it forward without the user. Do not do anything irreversible or outward-facing (push, deploy, delete, send a message to someone): ask it as a question instead. When it is done, take the next most useful work in the same area (verify, polish, fix what you find, ask the advisors what comes next). It runs until ${clock(r.endAt!)}; there is no early finish. ${SEEN}`
+    : r.prompt;
 
 const offCommand = (r: Repeat) => (r.goal ? '/goal off' : '/loop off');
 
