@@ -217,8 +217,8 @@ The visible text is the status word in sentence case, or "N word" with `count` (
 - One Badge per Row, trailing, never beside a second state badge. Counts such as "N to confirm" and filter labels are plain muted text.
 
 ### EmptyState (EuiEmptyPrompt)
-`<EmptyState icon title hint action size>`; `.ui-empty`. Centred: icon in a 48px `--hover`
-circle (40px at sm) in `--on-surface-muted`, title role, hint in body `--on-surface-muted`,
+`<EmptyState icon title hint action size>`; `.ui-empty`. Centred and quiet (Claude and Muse empty states): a bare
+`--icon-xl` icon (`--icon-lg` at sm) in `--on-surface-faint`, the title as one body line in `--on-surface-muted`, an optional hint in subheadline `--on-surface-faint`,
 then at most one action (a setup state names what is missing and its action is "Set up with <provider>", which asks the chat on screen). md for a whole view, sm inside a panel or report. The icon stays grey;
 the accent is for the action.
 Copy (Status language): the title is a sentence-case noun phrase with no trailing period ("No past meetings yet"), the hint is one short line with no period, and the one action is a Button sm directly under `.ui-empty`.

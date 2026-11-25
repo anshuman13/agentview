@@ -24,7 +24,6 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.selection.toggleable
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
@@ -238,7 +237,7 @@ fun Loading(text: String) {
     }
 }
 
-// Empty state (web EmptyState): optional round icon, title, muted hint and an action.
+// Empty state (web EmptyState): optional faint icon, one grey line, a fainter hint and at most one action.
 @Composable
 fun EmptyState(title: String, hint: String? = null, icon: String? = null, small: Boolean = true, action: (@Composable () -> Unit)? = null) {
     Column(
@@ -246,12 +245,10 @@ fun EmptyState(title: String, hint: String? = null, icon: String? = null, small:
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(Tokens.sp2),
     ) {
-        if (icon != null) Box(Modifier.padding(bottom = Tokens.sp2).size(if (small) Tokens.sp20 else Tokens.sp24).clip(CircleShape).background(av.hover), contentAlignment = Alignment.Center) {
-            AvIcon(icon, null, if (small) Tokens.iconLg else Tokens.iconXl, tint = av.onSurfaceMuted)
-        }
-        Text(title, style = Type.headline, color = av.onSurface, textAlign = TextAlign.Center)
-        if (hint != null) Text(hint, Modifier.widthIn(max = Tokens.emptyHint), style = Type.body, color = av.onSurfaceMuted, textAlign = TextAlign.Center)
-        if (action != null) { Spacer(Modifier.height(Tokens.sp6)); action() }
+        if (icon != null) AvIcon(icon, null, if (small) Tokens.iconLg else Tokens.iconXl, Modifier.padding(bottom = Tokens.sp2), av.onSurfaceFaint)
+        Text(title, Modifier.widthIn(max = Tokens.emptyHint), style = Type.body, color = av.onSurfaceMuted, textAlign = TextAlign.Center)
+        if (hint != null) Text(hint, Modifier.widthIn(max = Tokens.emptyHint), style = Type.subheadline, color = av.onSurfaceFaint, textAlign = TextAlign.Center)
+        if (action != null) { Spacer(Modifier.height(Tokens.sp4)); action() }
     }
 }
 
