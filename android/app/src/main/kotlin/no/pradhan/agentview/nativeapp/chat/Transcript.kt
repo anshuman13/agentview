@@ -59,6 +59,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
@@ -73,7 +74,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.Dp
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 import no.pradhan.agentview.nativeapp.app.DeepLink
 import no.pradhan.agentview.nativeapp.app.Hub
 import no.pradhan.agentview.nativeapp.app.claimRoute
@@ -214,8 +217,9 @@ private fun rememberEarlierDue(hub: Hub, chatId: String, replies: Int, loading: 
 }
 
 @Composable
-fun Transcript(hub: Hub, view: ChatView, earlier: Int, settled: Boolean, chatId: String, cwd: String, running: Boolean, finding: Boolean, onOpenAgent: (String) -> Unit, onOpenWork: (String) -> Unit, modifier: Modifier = Modifier, queued: List<Queued> = emptyList(), failed: String? = null, sessionId: String? = null) {
+fun Transcript(hub: Hub, view: ChatView, earlier: Int, settled: Boolean, chatId: String, cwd: String, running: Boolean, finding: Boolean, onOpenAgent: (String) -> Unit, onOpenWork: (String) -> Unit, modifier: Modifier = Modifier, queued: List<Queued> = emptyList(), failed: String? = null, sessionId: String? = null, subFind: FindRequest? = null) {
     val subChats = rememberSubChats(hub, sessionId, chatId)
+    SeekSubChat(hub, subChats, subFind)
     val items = view.items
     val rows = view.rows
     val noEvents by hub.store.state.select { it.events.isEmpty() }
@@ -245,6 +249,19 @@ fun Transcript(hub: Hub, view: ChatView, earlier: Int, settled: Boolean, chatId:
     val open = remember(items, newId, newKey) { if (openAtNew(items, newId) != null) newKey else null }
     val pin = remember(chatId) { mutableStateOf(false) }
     FollowNewest(hub, view, list, listState, stick, pin, atBottom, chatId, open, queued.size + if (failed != null) 1 else 0)
+    val margin = with(LocalDensity.current) { Tokens.touch.roundToPx() }
+    LaunchedEffect(subChats.hit) {
+        if (subChats.hit == null) return@LaunchedEffect
+        stick.value = false
+        pin.value = false
+        val index = queued.size + (if (failed != null) 1 else 0) + list.size + (if (earlier > 0) 1 else 0)
+        listState.scrollToItem(index)
+        val y = withTimeoutOrNull(2000) { snapshotFlow { subChats.hitY }.first { it != null } }
+        subChats.hit = null
+        val size = listState.layoutInfo.visibleItemsInfo.firstOrNull { it.index == index }?.size ?: return@LaunchedEffect
+        val info = listState.layoutInfo
+        listState.scrollToItem(index, size - (y?.toInt() ?: 0) - (info.viewportSize.height - info.beforeContentPadding - info.afterContentPadding) + margin)
+    }
 
     Box(modifier) {
         LazyColumn(

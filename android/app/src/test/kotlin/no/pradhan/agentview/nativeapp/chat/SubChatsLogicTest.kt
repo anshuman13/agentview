@@ -1,10 +1,13 @@
 package no.pradhan.agentview.nativeapp.chat
 
+import no.pradhan.agentview.nativeapp.net.ChatEvent
 import no.pradhan.agentview.nativeapp.net.Round
 import no.pradhan.agentview.nativeapp.net.SubChat
 import no.pradhan.agentview.nativeapp.net.SubChatCommit
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 // Mirrors web chat/transcript/subChatsLogic.test.ts.
@@ -42,5 +45,15 @@ class SubChatsLogicTest {
         assertEquals(Folded(listOf(3, 4, 5, 6, 7), 2), foldRows(rows, false))
         assertEquals(Folded(rows, 0), foldRows(rows, true))
         assertEquals(Folded(listOf(1, 2), 0), foldRows(listOf(1, 2), false))
+    }
+
+    // web chat/transcript/window.test.ts hitBeforeLoaded
+    @Test fun hitBeforeLoadedComparesTheFirstEventTime() {
+        val events = listOf(ChatEvent("u1", "user", "phone install", at = 100), ChatEvent("a1", "assistant", "done", at = 110))
+        assertTrue(hitBeforeLoaded(events, "phone", 50))
+        assertFalse(hitBeforeLoaded(events, "phone", 100))
+        assertTrue(hitBeforeLoaded(emptyList(), "phone", 100))
+        assertFalse(hitBeforeLoaded(events, "phone", null))
+        assertTrue(hitBeforeLoaded(events, "deploy", null))
     }
 }

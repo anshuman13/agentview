@@ -44,6 +44,8 @@ import no.pradhan.agentview.nativeapp.codex.autopilot.activeRun
 import no.pradhan.agentview.nativeapp.app.Hub
 import no.pradhan.agentview.nativeapp.app.loadEarlier
 import no.pradhan.agentview.nativeapp.ops.Agent
+import no.pradhan.agentview.nativeapp.sessions.rowId
+import no.pradhan.agentview.nativeapp.sessions.rowsById
 import no.pradhan.agentview.nativeapp.net.LiveChat
 import no.pradhan.agentview.nativeapp.net.SessionInfo
 import no.pradhan.agentview.nativeapp.app.archive
@@ -146,7 +148,11 @@ fun ChatScreen(hub: Hub, onOpenAgent: (String) -> Unit, onOpenWork: (String) -> 
         return
     }
     val panels = remember { ChatPanels() }
-    val findRequest = hub.findRequest.collectAsState().value?.takeIf { settled && view.events.isNotEmpty() && it.sessionId == live.sessionId }
+    val ws by hub.workspace.collectAsState()
+    val root = remember(ws.saved, live.sessionId) { rowsById(ws.saved).rowId(live.sessionId) }
+    val request = hub.findRequest.collectAsState().value?.takeIf { settled && view.events.isNotEmpty() && (it.sessionId == live.sessionId || it.sessionId == root) }
+    val subFind = request?.takeIf { it.sub != null && it.sub != live.sessionId }
+    val findRequest = request?.takeIf { subFind == null }
     LaunchedEffect(findRequest) { if (findRequest != null) panels.find = true }
     val running = session?.running ?: live.running
     val cwd = session?.cwd ?: live.cwd
@@ -183,7 +189,7 @@ fun ChatScreen(hub: Hub, onOpenAgent: (String) -> Unit, onOpenWork: (String) -> 
             val runCommand = remember(hub) { if (hub.readOnly) null else { cmd: String -> hub.runInTerminal(cmd, enter = false); Unit } }
             CompositionLocalProvider(LocalOpenFile provides openFile, LocalRunCommand provides runCommand) {
                 val failed = if (live.failed && !running && !hub.readOnly) failedLine(view.events, providerLabel(live.provider)) else null
-                Transcript(hub, view, earlier, settled, live.id, cwd, running, panels.find, onOpenAgent, onOpenWork, Modifier.fillMaxSize(), remember(queued, live.id) { queued.filter { it.chat == live.id } }, failed, live.sessionId)
+                Transcript(hub, view, earlier, settled, live.id, cwd, running, panels.find, onOpenAgent, onOpenWork, Modifier.fillMaxSize(), remember(queued, live.id) { queued.filter { it.chat == live.id } }, failed, live.sessionId, subFind)
             }
         }
         PendingList(pending, session?.permissionMode ?: "default", hub)

@@ -46,7 +46,12 @@ fun findInChat(events: List<ChatEvent>, query: String, at: Long? = null): List<S
 }
 
 // A sidebar message hit waiting for its chat: the find bar opens on it once that chat shows. `at` is the hit's time, null when unknown.
-class FindRequest(val sessionId: String, val query: String, val at: Long?)
+// `sessionId` is the chat's root; `sub` the sub-chat the hit is in, which opens among the earlier sub-chats unless it is the live one.
+class FindRequest(val sessionId: String, val query: String, val at: Long?, val sub: String? = null)
+
+// web chat/transcript/window.ts: whether the hit lies before the loaded events, older than the first one, or with no time, not found in them.
+fun hitBeforeLoaded(events: List<ChatEvent>, query: String, at: Long?): Boolean =
+    if (at == null) findInChat(events, query).isEmpty() else events.isEmpty() || events[0].at > at
 
 // web shared/findInChat.ts: the index in hits of the hit whose event time is nearest `at`, the earliest on a tie; the last hit when `at` or every hit's time is missing.
 fun findStart(events: List<ChatEvent>, hits: List<String>, at: Long?): Int {

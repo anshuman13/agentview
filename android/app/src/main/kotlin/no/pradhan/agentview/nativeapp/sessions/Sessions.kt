@@ -301,10 +301,14 @@ private fun LazyListScope.binRows(rows: ChatRows, bin: List<BinnedSession>, open
     }
 }
 
+// One row per chat; a hit in a sub-chat opens its parent with that sub-chat expanded at the hit.
 private fun LazyListScope.messageHits(rows: ChatRows, hits: List<MessageHit>, filter: String) {
-    item(key = "msg-head") { SectionHeader("Messages", hits.size.toString()) }
+    val chats = searchHitRows(hits)
+    item(key = "msg-head") { SectionHeader("Messages", chats.size.toString()) }
     val now = System.currentTimeMillis()
-    lazyGroup(hits, { "msg-${it.sessionId}-${it.role}-${it.at}" }) { h ->
-        ListRow(boldMatches(h.text, filter), messageMeta(h, now), onClick = { rows.openSaved(h.sessionId, FindRequest(h.sessionId, filter.trim(), isoMillis(h.at).takeIf { it > 0 })) })
+    lazyGroup(chats, { "msg-${it.session}" }) { r ->
+        val h = r.hit
+        val meta = messageMeta(h.copy(title = rows.saved[r.session]?.title?.ifBlank { null } ?: h.title), now)
+        ListRow(boldMatches(h.text, filter), meta, onClick = { rows.openSaved(r.session, FindRequest(r.session, filter.trim(), isoMillis(h.at).takeIf { it > 0 }, r.sub)) })
     }
 }
