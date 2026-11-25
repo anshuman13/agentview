@@ -162,11 +162,11 @@ fun tripDates(t: Trip): String = when {
     else -> "${short(t.from)} to ${short(t.to)}"
 }
 
-fun tripMeta(t: Trip, receipts: List<Receipt>, today: String): String = listOf(
+// Trip card caption; the state shows as a chip below it.
+fun tripMeta(t: Trip, card: TripCard): String = listOf(
     tripDates(t),
-    tripStateText(t, today),
-    if (receipts.isEmpty()) "" else "${receipts.size} receipt${if (receipts.size == 1) "" else "s"}",
-    totalsText(receipts),
+    if (card.receipts == 0) "" else "${card.receipts} receipt${if (card.receipts == 1) "" else "s"}",
+    card.totals,
     if (t.calendar) "From calendar" else "",
 ).filter { it.isNotEmpty() }.joinToString(" · ")
 

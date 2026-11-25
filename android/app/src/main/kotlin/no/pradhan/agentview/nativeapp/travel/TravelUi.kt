@@ -6,6 +6,7 @@ import android.net.Uri
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -65,6 +66,8 @@ import no.pradhan.agentview.nativeapp.ui.AvIcon
 import no.pradhan.agentview.nativeapp.ui.Button
 import no.pradhan.agentview.nativeapp.ui.ButtonSize
 import no.pradhan.agentview.nativeapp.ui.ButtonVariant
+import no.pradhan.agentview.nativeapp.ui.Card
+import no.pradhan.agentview.nativeapp.ui.CardGrid
 import no.pradhan.agentview.nativeapp.ui.ConfirmDialog
 import no.pradhan.agentview.nativeapp.ui.EmptyState
 import no.pradhan.agentview.nativeapp.ui.Group
@@ -156,28 +159,18 @@ fun TravelScreen(hub: Hub, onBack: () -> Unit) {
                 else -> Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
                     val day = today()
                     val (active, archived) = splitTrips(data.trips, day)
-                    val row = @Composable { t: Trip -> ListRow(t.name, tripMeta(t, data.receipts.filter { it.tripId == t.id }, day), leading = { AvIcon("briefcase") }, onClick = { open = t.id }) }
+                    val card = @Composable { t: Trip -> TripCardView(hub, t, tripCard(t, data.receipts.filter { it.tripId == t.id }, day)) { open = t.id } }
                     CaptureRow(attach)
                     if (filing > 0) Group { ListRow("Adding ${plural(filing, "receipt")}…", leading = { AvIcon("loading") }) }
                     SectionHeader("Trips", active.size.takeIf { it > 0 }?.toString())
                     if (active.isEmpty()) EmptyState("No upcoming trips", "Find in calendar or New trip adds one", icon = "briefcase")
                     else {
-                        Group {
-                            active.take(if (all) active.size else FOLD).forEachIndexed { i, t ->
-                                if (i > 0) Hairline(lead = true)
-                                row(t)
-                            }
-                        }
+                        CardGrid(active.take(if (all) active.size else FOLD), Modifier.padding(horizontal = Tokens.listPad), card = card)
                         if (!all && active.size > FOLD) Button("Show all ${active.size}", { all = true }, Modifier.padding(horizontal = Tokens.listPad), variant = ButtonVariant.Plain, size = ButtonSize.Sm)
                     }
                     if (archived.isNotEmpty()) {
                         SectionHeader("Archived", archived.size.toString(), archivedOpen, { archivedOpen = !archivedOpen })
-                        if (archivedOpen) Group {
-                            archived.forEachIndexed { i, t ->
-                                if (i > 0) Hairline(lead = true)
-                                row(t)
-                            }
-                        }
+                        if (archivedOpen) CardGrid(archived, Modifier.padding(horizontal = Tokens.listPad), card = card)
                     }
                     Spacer(Modifier.padding(bottom = Tokens.sp16))
                 }
@@ -327,6 +320,25 @@ private fun Notes(hub: Hub, trip: Trip, reload: () -> Unit) {
 }
 
 // A small picture of a photo receipt, or a file icon for a PDF.
+// A trip as a hairline card (web .tv-card): first image receipt as cover, else a briefcase strip; state as a chip.
+@Composable
+private fun TripCardView(hub: Hub, t: Trip, c: TripCard, onClick: () -> Unit) {
+    Card(t.name, meta = tripMeta(t, c), onClick = onClick, cover = {
+        val img by produceState<ImageBitmap?>(null, c.cover) { value = if (c.cover.isEmpty()) null else receiptImage(hub, c.cover, 720) }
+        img?.let { Image(it, null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop) }
+            ?: Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { AvIcon("briefcase", tint = av.fgMuted, size = 28.dp) }
+    }) {
+        if (c.stateText.isNotEmpty()) {
+            val now = c.state == "now"
+            val shape = RoundedCornerShape(50)
+            Text(c.stateText, style = Type.meta, color = if (now) av.accent else av.fgMuted,
+                modifier = Modifier.padding(top = Tokens.sp2).clip(shape)
+                    .then(if (now) Modifier.background(av.accent.copy(alpha = 0.14f)) else Modifier.border(Tokens.hairline, av.border, shape))
+                    .padding(horizontal = Tokens.sp4, vertical = 1.dp))
+        }
+    }
+}
+
 @Composable
 private fun Thumb(hub: Hub, r: Receipt) {
     val mod = Modifier.size(40.dp).clip(RoundedCornerShape(Tokens.sp2)).background(av.sunken)
