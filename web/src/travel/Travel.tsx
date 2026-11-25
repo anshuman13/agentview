@@ -45,16 +45,20 @@ function useCapture(onPick: (list: FileList | null) => void) {
 
 type Capture = ReturnType<typeof useCapture>;
 
+function CaptureTile({ icon, label, onClick }: { icon: string; label: string; onClick: () => void }) {
+  return <button type="button" className="tv-tile" onClick={onClick}><span className="tv-tile-icon"><Icon name={icon} /></span>{label}</button>;
+}
+
 function CaptureRow({ cap, narrow }: { cap: Capture; narrow: boolean }) {
   return (
     <div className="tv-add">
-      <Button variant="filled" icon="device-camera" onClick={cap.takePhoto}>Take photo</Button>
+      <CaptureTile icon="device-camera" label="Take photo" onClick={cap.takePhoto} />
       {narrow ? (
         <>
-          <Button icon="file-media" onClick={cap.addPhotos}>Photo</Button>
-          <Button icon="file" onClick={cap.addFiles}>PDF / file</Button>
+          <CaptureTile icon="file-media" label="Photo" onClick={cap.addPhotos} />
+          <CaptureTile icon="file" label="PDF / file" onClick={cap.addFiles} />
         </>
-      ) : <Button icon="add" onClick={cap.addFiles}>Add files</Button>}
+      ) : <CaptureTile icon="add" label="Add files" onClick={cap.addFiles} />}
     </div>
   );
 }

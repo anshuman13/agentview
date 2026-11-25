@@ -16,6 +16,7 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -49,6 +50,7 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
@@ -108,15 +110,26 @@ internal suspend fun Hub.travelWrite(failure: String? = null, block: suspend Hub
 
 private fun today() = LocalDate.now().toString()
 
-// The capture buttons of the Travel list and of a trip: Take photo across the width, Photo and PDF / file below it.
+// The capture actions of the Travel list and of a trip: a row of tiles, icon in a grey circle over the label.
 @Composable
 private fun CaptureRow(attach: Attach) {
-    Column(Modifier.fillMaxWidth().padding(horizontal = Tokens.listPad, vertical = Tokens.sp4), verticalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
-        Button("Take photo", attach.takePhoto, Modifier.fillMaxWidth(), variant = ButtonVariant.Filled, icon = "device-camera", fill = true)
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
-            Button("Photo", attach.choosePhoto, Modifier.weight(1f), icon = "file-media", fill = true)
-            Button("PDF / file", attach.chooseFile, Modifier.weight(1f), icon = "file", fill = true)
-        }
+    Row(Modifier.fillMaxWidth().padding(horizontal = Tokens.listPad, vertical = Tokens.sp4), horizontalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
+        CaptureTile("Take photo", "device-camera", attach.takePhoto, Modifier.weight(1f))
+        CaptureTile("Photo", "file-media", attach.choosePhoto, Modifier.weight(1f))
+        CaptureTile("PDF / file", "file", attach.chooseFile, Modifier.weight(1f))
+    }
+}
+
+@Composable
+private fun CaptureTile(label: String, icon: String, onClick: () -> Unit, modifier: Modifier) {
+    val shape = RoundedCornerShape(Tokens.shapeLg)
+    Column(
+        modifier.clip(shape).background(av.surface).border(Tokens.hairline, av.border, shape).clickable(role = Role.Button, onClick = onClick).padding(vertical = Tokens.sp6),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(Tokens.sp3),
+    ) {
+        Box(Modifier.size(Tokens.controlMd).clip(CircleShape).background(av.sunken), contentAlignment = Alignment.Center) { AvIcon(icon, null, Tokens.icon, tint = av.accentText) }
+        Text(label, style = Type.callout, color = av.onSurface, maxLines = 1)
     }
 }
 
