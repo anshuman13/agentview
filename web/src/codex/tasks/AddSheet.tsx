@@ -15,13 +15,13 @@ import { Sheet } from '../../ui/Sheet';
 import { FILTER_LABEL, type Filter } from '../view';
 import { ProfileDot } from '../ProfileDot';
 import { Voice, useDictation } from '../../chat/composer/Voice';
-import { EVENING, MORNING, hasTime, when } from './time';
+import { hasTime, when } from './time';
+import { REMINDS, REPEATS, composeDue, monthCells, quickDays, remindLabel, repeatLabel } from '../data/tasks/dateSheet';
 
 type Pick = { at: number | null; cadence: Cadence; remind?: number | null };
 
 export const PRIORITIES: [number, string][] = [[3, 'High'], [2, 'Medium'], [1, 'Low'], [0, 'No']];
-export const REMINDS: [number | null, string][] = [[null, 'On time'], [5, '5 min early'], [30, '30 min early'], [60, '1 hour early'], [1440, '1 day early'], [-1, 'None']];
-const remindLabel = (r: number | null | undefined) => REMINDS.find(([v]) => v === (r ?? null))?.[1] ?? `${r} min early`;
+export { REMINDS };
 export const tagList = (tags: string | null | undefined) => (tags ?? '').split(/\s+/).filter(Boolean);
 
 // A flag coloured by priority, like TickTick's.
@@ -39,13 +39,6 @@ export const ParsedChips = ({ chips }: { chips: [string, string][] }) => <>{chip
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 const startOf = (t: number) => new Date(t).setHours(0, 0, 0, 0);
 
-// A day and an optional time make a due time: today without a time is no due time, a later day without one is 09:00.
-const compose = (day: number, time: string | null) => {
-  if (time) { const [h, m] = time.split(':').map(Number); return new Date(day).setHours(h, m, 0, 0); }
-  return day === startOf(Date.now()) ? null : new Date(day).setHours(MORNING, 0, 0, 0);
-};
-
-const REPEATS: [Cadence, string][] = [['never', 'None'], ['daily', 'Daily'], ['weekdays', 'Weekdays'], ['weekly', 'Weekly'], ['monthly', 'Monthly']];
 
 // TickTick's date sheet: quick days, a month, then time and repeat rows.
 export function DateSheet({ value, cadence, reminder, onDone, onClose }: { value: Pick; cadence?: boolean; reminder?: boolean; onDone: (p: Pick) => void; onClose: () => void }) {
@@ -56,19 +49,10 @@ export function DateSheet({ value, cadence, reminder, onDone, onClose }: { value
   const [remind, setRemind] = useState(value.remind ?? null);
   const [month, setMonth] = useState(() => { const d = new Date(day); return new Date(d.getFullYear(), d.getMonth(), 1).getTime(); });
   const timeInput = useRef<HTMLInputElement>(null);
-  const done = (d = day, t = time) => { haptic('tap'); onDone({ at: compose(d, t), cadence: repeat, remind }); onClose(); };
+  const done = (d = day, t = time) => { haptic('tap'); onDone({ at: composeDue(d, t), cadence: repeat, remind }); onClose(); };
   const now = new Date();
-  const monday = new Date(today).setDate(now.getDate() + (((8 - now.getDay()) % 7) || 7));
-  const quick: [string, string, () => void][] = [
-    ['calendar', 'Today', () => done(today)],
-    ['arrow-right', 'Tomorrow', () => done(new Date(today).setDate(now.getDate() + 1))],
-    ['arrow-circle-right', 'Next Monday', () => done(monday)],
-    ...(now.getHours() < EVENING ? [['color-mode', 'This evening', () => done(today, `${EVENING}:00`)] as [string, string, () => void]] : []),
-  ];
   const m = new Date(month);
-  const lead = (m.getDay() + 6) % 7;
-  const count = new Date(m.getFullYear(), m.getMonth() + 1, 0).getDate();
-  const cells = [...Array(lead).fill(null), ...Array.from({ length: count }, (_, i) => new Date(m.getFullYear(), m.getMonth(), i + 1).getTime())];
+  const cells = monthCells(month);
   const shift = (n: number) => setMonth(new Date(m.getFullYear(), m.getMonth() + n, 1).getTime());
   return (
     <Sheet label="Date" onClose={onClose} className="as-date">
@@ -78,7 +62,7 @@ export function DateSheet({ value, cadence, reminder, onDone, onClose }: { value
         <IconButton icon="check" label="Done" className="as-date-ok" onClick={() => done()} />
       </div>
       <div className="as-date-quick">
-        {quick.map(([icon, label, f]) => <button key={label} onClick={f}><Icon name={icon} /><span>{label}</span></button>)}
+        {quickDays(now).map((q) => <button key={q.label} onClick={() => done(q.day, q.time ?? time)}><Icon name={q.icon} /><span>{q.label}</span></button>)}
       </div>
       <div className="as-date-month">
         <span>{m.toLocaleDateString([], { month: 'long', year: m.getFullYear() === now.getFullYear() ? undefined : 'numeric' })}</span>
@@ -110,7 +94,7 @@ export function DateSheet({ value, cadence, reminder, onDone, onClose }: { value
         {cadence && (
           <label className="as-date-row">
             <Icon name="sync" /><span>Repeat</span>
-            <em>{REPEATS.find(([c]) => c === repeat)?.[1] ?? 'Custom'}</em><Icon name="chevron-right" small />
+            <em>{repeatLabel(repeat)}</em><Icon name="chevron-right" small />
             <select value={repeat} aria-label="Repeat" onChange={(e) => setRepeat(e.target.value as Cadence)}>
               {REPEATS.map(([c, l]) => <option key={c} value={c}>{l}</option>)}
             </select>

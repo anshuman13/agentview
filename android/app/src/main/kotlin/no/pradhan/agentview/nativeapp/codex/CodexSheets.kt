@@ -76,8 +76,6 @@ import no.pradhan.agentview.nativeapp.ui.Tokens
 import no.pradhan.agentview.nativeapp.ui.Type
 import no.pradhan.agentview.nativeapp.ui.av
 import no.pradhan.agentview.nativeapp.ui.agoShort
-import no.pradhan.agentview.nativeapp.ui.DateDialog
-import no.pradhan.agentview.nativeapp.ui.TimeDialog
 import no.pradhan.agentview.nativeapp.ui.plural
 
 private val PRIORITIES = listOf(0 to "None", 1 to "Low", 2 to "Medium", 3 to "High")
@@ -86,22 +84,6 @@ private fun dueLabel(at: Long?, now: Long): String {
     if (at == null) return "No due"
     val time = if (hourOf(at) != 0 || minuteOf(at) != 0) " ${clock(at)}" else ""
     return when (daysFrom(at, now)) { 0L -> "Today$time"; 1L -> "Tomorrow$time"; else -> dayHeading(at, now) + time }
-}
-
-// A day, then a time; Skip keeps the day without a time (09:00 on a later day, no due time today).
-@Composable
-fun DueDialog(initial: Long?, now: Long, onPick: (Long?) -> Unit, onDismiss: () -> Unit) {
-    var day by remember { mutableStateOf<java.time.LocalDate?>(null) }
-    val chosen = day
-    if (chosen == null) {
-        DateDialog(Instant.ofEpochMilli(initial ?: now).atZone(codexZone).toLocalDate(), "Next", "No due", { it?.let { d -> day = d } }, { onPick(null); onDismiss() }, onDismiss)
-        return
-    }
-    TimeDialog(dayLabel(atHour(chosen, 12)), initial?.let(::hourOf) ?: MORNING, initial?.let(::minuteOf) ?: 0, "Set", "No time", { h, m -> onPick(atHour(chosen, h, m)); onDismiss() }, {
-        val t = atHour(chosen, MORNING)
-        onPick(if (dayStart(t) == dayStart(now)) null else t)
-        onDismiss()
-    }, onDismiss)
 }
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
@@ -144,7 +126,7 @@ fun EditorSheet(hub: Hub, row: Row, items: List<Row>, meetings: List<Row>, now: 
             FieldLabel("Due")
             FlowRow(horizontalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
                 val late = (row.at ?: Long.MAX_VALUE) < now && row.status == "open"
-                Chip(dueLabel(row.at, now), { pickDue = true }, icon = if (late) "warning" else "calendar", on = row.at != null, late = late, quiet = row.at == null)
+                Chip(dueLabel(row.at, now) + (if (row.at != null && row.remind != null) " · ${remindLabel(row.remind)}" else ""), { pickDue = true }, icon = if (late) "warning" else "calendar", on = row.at != null, late = late, quiet = row.at == null)
                 if (row.at != null) Chip("Clear", { actions.due(row, null) })
                 val skipAt = if (row.status == "open" && row.at != null && !hub.readOnly) skipTarget(row, now) else null
                 if (skipAt != null) Chip("Skip · ${whenText(skipAt, now, true)}", { actions.change(row, mapOf("at" to skipAt) + unrollFor(skipAt, now), "Skipped · next ${whenText(skipAt, now)}") })
@@ -261,7 +243,11 @@ fun EditorSheet(hub: Hub, row: Row, items: List<Row>, meetings: List<Row>, now: 
             }
         }
     }
-    if (pickDue) DueDialog(row.at, now, { actions.due(row, it) }, { pickDue = false })
+    if (pickDue) DateSheet(DuePick(row.at, remind = row.remind), now, cadence = false, reminder = true, { p ->
+        val at = p?.at
+        if (at != row.at) actions.due(row, at)
+        if (p != null && p.remind != row.remind) actions.edit(row, mapOf("remind" to p.remind))
+    }, { pickDue = false })
 }
 
 // The http(s) links in the notes as typed (web Links in TaskDraft.tsx): the page title, else the domain; a tap opens the browser.
@@ -311,8 +297,9 @@ private fun Checklist(text: String, canAdd: Boolean, onText: (String) -> Unit) {
 fun AddSheet(hub: Hub, profile: String?, items: List<Row>, goal: String?, now: Long, onDismiss: () -> Unit, onAdded: (String) -> Unit) {
     var title by remember { mutableStateOf("") }
     var notes by remember { mutableStateOf("") }
-    var due by remember { mutableStateOf<Long?>(null) }
-    var picked by remember { mutableStateOf(false) }
+    var pick by remember { mutableStateOf<DuePick?>(null) }
+    val due = pick?.at
+    val picked = pick != null
     var priority by remember { mutableStateOf(0) }
     var target by remember { mutableStateOf(profile ?: hub.codexProfile) }
     var goalId by remember { mutableStateOf(goal) }
@@ -324,12 +311,13 @@ fun AddSheet(hub: Hub, profile: String?, items: List<Row>, goal: String?, now: L
     val add = {
         val c = parsed
         if (c.title.isNotEmpty()) {
-            val body = if (c.repeat != null) withRule(notes.trim(), c.repeat) else notes.trim()
-            val extra = buildMap<String, Any?> { if (priority > 0) put("priority", priority); if (c.tags.isNotEmpty()) put("tags", c.tags.joinToString(" ")); if (linked != null) put("goal", linked.id) }
+            val rule = pick?.cadence?.takeIf { it != "never" && it != "custom" }?.let { cadenceLine(it, c.at, now) }
+            val body = (c.repeat ?: rule)?.let { withRule(notes.trim(), it) } ?: notes.trim()
+            val extra = buildMap<String, Any?> { if (priority > 0) put("priority", priority); if (c.tags.isNotEmpty()) put("tags", c.tags.joinToString(" ")); pick?.remind?.let { put("remind", it) }; if (linked != null) put("goal", linked.id) }
             if (hub.codex.capture(if (body.isNotEmpty()) "${c.title}\n$body" else c.title, "open", linked?.profile ?: target, c.at, extra) != null) {
                 if (profile == null && linked == null) hub.codexProfile = target
                 onAdded(c.title + (c.at?.let { " · ${whenText(it, now)}" } ?: ""))
-                title = ""; notes = ""; due = null; picked = false; priority = 0
+                title = ""; notes = ""; pick = null; priority = 0
             }
         }
     }
@@ -340,7 +328,8 @@ fun AddSheet(hub: Hub, profile: String?, items: List<Row>, goal: String?, now: L
             val hint = listOfNotNull(parsed.at?.let { "Due ${whenText(it, now)}" }, parsed.repeat?.substringAfter("Repeats: "), parsed.tags.takeIf { it.isNotEmpty() }?.joinToString(" ") { "#$it" }).joinToString(" · ")
             if (hint.isNotEmpty()) Text(hint, style = Type.subheadline, color = av.fgMuted)
             FlowRow(horizontalArrangement = Arrangement.spacedBy(Tokens.sp4), verticalArrangement = Arrangement.spacedBy(Tokens.sp2)) {
-                Chip(if (picked) dueLabel(due, now) else "Date", { pickDue = true }, icon = "calendar", on = picked, quiet = !picked)
+                val p = pick
+                Chip(if (p == null) "Date" else listOfNotNull(if (p.at == null) "Today" else dueLabel(p.at, now), repeatLabel(p.cadence).takeIf { p.cadence != "never" }, p.remind?.let(::remindLabel)).joinToString(" · "), { pickDue = true }, icon = "calendar", on = picked, quiet = !picked)
                 Chip("Priority: ${priorityLabel(priority)}", { priority = (priority + 3) % 4 }, on = priority > 0)
                 if (linked != null) Chip("Goal: ${linked.title}", { goalId = null }, icon = "target", on = true, trailingIcon = "close", trailingLabel = "Remove goal")
                 else if (profile == null) Chip(profileLabel(target), { target = if (target == WORK) PERSONAL else WORK }, tone = if (target == WORK) ChipTone.Work else ChipTone.Personal)
@@ -350,7 +339,7 @@ fun AddSheet(hub: Hub, profile: String?, items: List<Row>, goal: String?, now: L
             }
         }
     }
-    if (pickDue) DueDialog(due, now, { due = it; picked = true }, { pickDue = false })
+    if (pickDue) DateSheet(pick ?: DuePick(null), now, cadence = true, reminder = true, { pick = it }, { pickDue = false })
 }
 
 class Capture(val title: String, val at: Long?, val tags: List<String>, val repeat: String?)

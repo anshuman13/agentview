@@ -44,6 +44,7 @@ import { tryColumn } from './sessions/triesLogic';
 import { parseWhen, stripWhen } from './codex/data/tasks/when';
 import { cadenceLine, cadenceOf } from './codex/data/tasks/recur';
 import { parseCapture } from './codex/data/tasks/quickAdd';
+import { composeDue, monthCells, quickDays, remindLabel, repeatLabel } from './codex/data/tasks/dateSheet';
 import { needsYou } from './codex/summary/needsYou';
 import { ignoredToday } from './codex/data/tasks/review';
 import { HubError, hubRetry } from './codex/data/hubFetch';
@@ -925,4 +926,27 @@ describe('cases shared with the Android app', () => {
       expect(r.used.map((u) => [u.id, u.n7, u.n30, u.last])).toEqual(c.used);
     });
   }
+});
+
+describe('date sheet cases shared with the Android app', () => {
+  const c = JSON.parse(readFileSync(new URL('../../shared/fixtures/date-sheet.json', import.meta.url), 'utf8'));
+  const local = (s: string) => new Date(s).getTime();
+  const ymd = (t: number) => { const d = new Date(t); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
+  for (const k of c.compose) it(`compose: ${k.name}`, () => {
+    expect(composeDue(local(`${k.day}T00:00`), k.time, local(k.now))).toBe(k.expected == null ? null : local(k.expected));
+  });
+  for (const k of c.quick) it(`quick: ${k.name}`, () => {
+    expect(quickDays(new Date(local(k.now))).map((q) => [q.label, ymd(q.day), q.time ?? null])).toEqual(k.expected);
+  });
+  it('month cells', () => {
+    for (const k of c.month) {
+      const cells = monthCells(local(`${k.month}-01T00:00`));
+      expect([cells.filter((x) => x == null).length, cells.length - k.lead]).toEqual([k.lead, k.count]);
+      expect(ymd(cells[k.lead]!)).toBe(`${k.month}-01`);
+    }
+  });
+  it('labels', () => {
+    for (const [r, l] of c.remind) expect(remindLabel(r)).toBe(l);
+    for (const [r, l] of c.repeat) expect(repeatLabel(r)).toBe(l);
+  });
 });

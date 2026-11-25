@@ -1021,6 +1021,21 @@ class SharedCasesTest {
         for (r in c.getValue("reads").jsonArray.map { it.jsonObject }) assertEquals(r.str("name"), r.str("expected"), cadenceOf(r.nullable("text")?.jsonPrimitive?.content, time(r, "at"), 0L))
     }
 
+    @Test fun dateSheet() {
+        val c = Json.parseToJsonElement(File("../../shared/fixtures/date-sheet.json").readText()).jsonObject
+        fun local(s: String) = java.time.LocalDateTime.parse(s).atZone(codexZone).toInstant().toEpochMilli()
+        fun text(e: JsonElement) = (e as? JsonPrimitive)?.contentOrNull
+        for (k in c.getValue("compose").jsonArray.map { it.jsonObject }) assertEquals(k.str("name"), k.nullable("expected")?.jsonPrimitive?.content?.let(::local), composeDue(java.time.LocalDate.parse(k.str("day")), k.nullable("time")?.jsonPrimitive?.content, local(k.str("now"))))
+        for (k in c.getValue("quick").jsonArray.map { it.jsonObject }) assertEquals(k.str("name"), k.getValue("expected").jsonArray.map { e -> e.jsonArray.map(::text) }, quickDays(local(k.str("now"))).map { listOf(it.label, it.day.toString(), it.time) })
+        for (k in c.getValue("month").jsonArray.map { it.jsonObject }) {
+            val cells = monthCells(java.time.YearMonth.parse(k.str("month")))
+            val lead = k.getValue("lead").jsonPrimitive.int
+            assertEquals(k.str("month"), listOf(lead, k.getValue("count").jsonPrimitive.int, 1), listOf(cells.count { it == null }, cells.size - lead, cells[lead]!!.dayOfMonth))
+        }
+        for (r in c.getValue("remind").jsonArray) assertEquals(text(r.jsonArray[1]), remindLabel(text(r.jsonArray[0])?.toInt()))
+        for (r in c.getValue("repeat").jsonArray) assertEquals(text(r.jsonArray[1]), repeatLabel(text(r.jsonArray[0])!!))
+    }
+
     @Test fun staleClaims() {
         val c = Json.parseToJsonElement(File("../../shared/fixtures/stale-claims.json").readText()).jsonObject
         val now = c.getValue("now").jsonPrimitive.long

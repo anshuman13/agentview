@@ -5,9 +5,10 @@ import { Menu, MenuItem } from '../../ui/Menu';
 import { dayLabel, pad, ymd } from '../data/dates';
 import { clock } from '../../../../shared/util';
 
+import { EVENING, MORNING } from '../data/tasks/dateSheet';
+
 // Times are picked as a part of the day, not a minute.
-export const MORNING = 9;
-export const EVENING = 19;
+export { EVENING, MORNING };
 // True when a due time has a time of day; 09:00 sharp is how a date-only due is stored.
 export const hasTime = (at: number | null) => at != null && (new Date(at).getHours() !== MORNING || new Date(at).getMinutes() !== 0);
 const slot = (now: Date, days: number, hour: number) => new Date(now.getFullYear(), now.getMonth(), now.getDate() + days, hour).getTime();
