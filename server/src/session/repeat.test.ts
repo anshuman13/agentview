@@ -192,3 +192,13 @@ describe('goals with an end time', () => {
     expect(holdsUntil(parseGoal('/goal ship the briefs', now) as Repeat, now)).toBe(false);
   });
 });
+
+describe('goalMet', () => {
+  it('counts GOAL MET only as its own sentence at the end of a line', async () => {
+    const { goalMet } = await import('./repeat.js');
+    expect(goalMet('All green. GOAL MET')).toBe(true);
+    expect(goalMet('Done.\nGOAL MET\nROUND: done x')).toBe(true);
+    expect(goalMet('It keeps running even if I reply GOAL MET, so it cannot stop early.')).toBe(false);
+    expect(goalMet('Never reply GOAL MET today')).toBe(false);
+  });
+});

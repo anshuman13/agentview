@@ -24,9 +24,9 @@ const GATE_RETRY_MS = 30 * 60_000;
 
 const SEEN = 'You are the only one who sees the reply and the ROUND line.';
 
-const goalPrompt = (goal: string) => `Check whether this goal is met: ${goal}. Reply GOAL MET when it is, otherwise keep working on it. Do not do anything irreversible or outward-facing (push, deploy, delete, send a message to someone): ask it as a question instead. ${SEEN}`;
+const goalPrompt = (goal: string) => `Check whether this goal is met: ${goal}. Reply GOAL MET on its own line when it is, otherwise keep working on it. Do not do anything irreversible or outward-facing (push, deploy, delete, send a message to someone): ask it as a question instead. ${SEEN}`;
 
-const standingPrompt = (goal: string) => `Standing goal: ${goal}. Read where things stand. Do whatever moves the goal forward without the user. Do not do anything irreversible or outward-facing (push, deploy, delete, send a message to someone): ask it as a question instead. Reply GOAL MET when the goal is met. ${SEEN}`;
+const standingPrompt = (goal: string) => `Standing goal: ${goal}. Read where things stand. Do whatever moves the goal forward without the user. Do not do anything irreversible or outward-facing (push, deploy, delete, send a message to someone): ask it as a question instead. Reply GOAL MET on its own line when the goal is met. ${SEEN}`;
 
 const reportPrompt = (goal: string) => `Standing goal: ${goal}. Write a short weekly report: what moved, what is blocked, what is next, in at most 8 lines, the first line being the headline. Do not change anything this round.`;
 
@@ -96,7 +96,8 @@ export const costGate = (r: Repeat, spent: number) => (r.capUsd && spent >= r.ca
 
 export const ROUND_INSTRUCTION = 'Reply with the answer or result first, in plain sentences, with no narration of what you did. Then finish with one last line: ROUND: <done|progress|blocked|question|nothing> <one sentence>. The line is shown on the chat row and the loop card and its first sentence is the push text, so name what changed, in at most 100 characters; use nothing when there was nothing to do.';
 
-export const goalMet = (text: string) => /\bGOAL MET\b/.test(text);
+// GOAL MET counts only as its own sentence ending a line, not when a reply mentions the words.
+export const goalMet = (text: string) => /(^|[.!?]\s+)GOAL MET[.!]?[ \t]*$/m.test(text);
 // A goal with an end time runs until then: GOAL MET before it does not stop it, and each round says so.
 export const holdsUntil = (r: Repeat | null | undefined, now = Date.now()) => Boolean(r?.goal && r.endAt && now < r.endAt);
 export const timedPrompt = (r: Repeat, now = Date.now()) =>
