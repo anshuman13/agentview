@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { flushSync } from 'react-dom';
 import { setUi, useStore } from '../app/store';
 import { useNarrow } from '../app/shell/useNarrow';
 import { useThemeName } from '../app/theme';
@@ -20,7 +21,7 @@ export type Device = 'desktop' | 'phone';
 const FOLD = 5;
 const SIZE: Record<Device, [number, number]> = { desktop: [1280, 800], phone: [390, 844] };
 
-export function SketchList({ sketches, onOpen }: { sketches: SketchFile[]; onOpen: (name: string) => void }) {
+export function SketchList({ sketches, onOpen, zoomed }: { sketches: SketchFile[]; onOpen: (name: string) => void; zoomed?: string | null }) {
   const [all, setAll] = useState(false);
   const theme = useThemeName();
   const rows = all ? sketches : sketches.slice(0, FOLD);
@@ -28,7 +29,7 @@ export function SketchList({ sketches, onOpen }: { sketches: SketchFile[]; onOpe
     <>
       <Section label="Sketches" count={sketches.length} />
       <CardGrid className="sk-grid">
-        {rows.map((s) => <Card key={s.name} className="sk-card" cover={<SketchThumb file={s} theme={theme} />} title={sketchTitle(s.name)} meta={ago(s.mtime, ' ago')} onClick={() => onOpen(s.name)} />)}
+        {rows.map((s) => <Card key={s.name} className="sk-card" cover={<SketchThumb file={s} theme={theme} />} title={sketchTitle(s.name)} meta={ago(s.mtime, ' ago')} style={s.name === zoomed ? { viewTransitionName: ZOOM } : undefined} onClick={() => onOpen(s.name)} />)}
       </CardGrid>
       {rows.length < sketches.length && <ShowAll count={sketches.length} className="ov-more" onClick={() => setAll(true)} />}
     </>
@@ -61,6 +62,16 @@ export function ThumbFrame({ file, theme, scale }: { file: SketchFile; theme: Sk
   if (html === null || problem) return null;
   const [w, h] = SIZE.desktop;
   return <iframe sandbox="" srcDoc={sketchDoc(html, theme)} title={file.name} tabIndex={-1} aria-hidden="true" style={{ width: w, height: h, transform: `scale(${scale})` }} />;
+}
+
+const ZOOM = 'sk-zoom';
+
+// The opened card and the sketch view share one view-transition name, so the card zooms into the view and back out.
+// Without the View Transitions API, or with reduced motion, the switch is instant.
+function zoom(update: () => void) {
+  const doc = document as Document & { startViewTransition?: (cb: () => void) => unknown };
+  if (!doc.startViewTransition || matchMedia('(prefers-reduced-motion: reduce)').matches) return update();
+  doc.startViewTransition(() => flushSync(update));
 }
 
 const newSketch = () => window.dispatchEvent(new CustomEvent('agentview:insert', { detail: { text: '/sketch ' } }));
@@ -97,7 +108,7 @@ function SketchView({ file, device, theme, onDevice, onTheme, onBack }: { file: 
   const more = useRef<HTMLButtonElement>(null);
   const narrow = useNarrow();
   return (
-    <div className="sk-view">
+    <div className="sk-view" style={{ viewTransitionName: ZOOM }}>
       <div className="bd-head sk-head">
         <Back close={onBack} />
         {!narrow && <IconButton icon="arrow-left" label="Back" onClick={onBack} />}
@@ -132,6 +143,7 @@ function SketchView({ file, device, theme, onDevice, onTheme, onBack }: { file: 
 export function Sketches({ shown }: { shown: boolean }) {
   const { data, error, reload } = useSketches(shown);
   const [open, setOpen] = useState<string | null>(null);
+  const [zoomed, setZoomed] = useState<string | null>(null);
   const [device, setDevice] = useState<Device>(useNarrow() ? 'phone' : 'desktop');
   const [theme, setTheme] = useState<SketchTheme>(useThemeName());
   const chat = useStore((s) => s.session.id);
@@ -146,9 +158,9 @@ export function Sketches({ shown }: { shown: boolean }) {
   return (
     <div className="wk"><div className="wk-scroll"><div className={file ? 'mt-page sk-page' : 'mt-page'}>
       {file ? (
-        <SketchView file={file} device={device} theme={theme} onDevice={setDevice} onTheme={setTheme} onBack={() => setOpen(null)} />
+        <SketchView file={file} device={device} theme={theme} onDevice={setDevice} onTheme={setTheme} onBack={() => zoom(() => setOpen(null))} />
       ) : data?.length ? (
-        <SketchList sketches={data} onOpen={setOpen} />
+        <SketchList sketches={data} zoomed={zoomed} onOpen={(name) => { flushSync(() => setZoomed(name)); zoom(() => setOpen(name)); }} />
       ) : data ? (
         <EmptyState icon="paintcan" title="No sketches yet" hint="Mockups the agent writes with /sketch show here" action={<Button size="sm" onClick={newSketch}>New sketch</Button>} />
       ) : error ? (

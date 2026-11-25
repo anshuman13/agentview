@@ -26,4 +26,7 @@
 .sk-device.sk-phone { border-radius: var(--radius-sheet); box-shadow: var(--elev-2); }
 .sk-device iframe { display: block; border: 0; transform-origin: top left; }
 .sk-thumb { display: block; width: 100%; height: 100%; overflow: hidden; background: var(--bg); pointer-events: none; }
+@media (prefers-reduced-motion: no-preference) {
+  ::view-transition-group(sk-zoom) { animation-duration: var(--motion-duration); animation-timing-function: var(--motion-ease-in); }
+}
 .sk-thumb iframe { display: block; border: 0; transform-origin: top left; }
