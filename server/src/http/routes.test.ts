@@ -16,6 +16,8 @@ const mocks = {
   listBin: vi.fn(),
   listTerminals: vi.fn(),
   listLinks: vi.fn(async () => ({})),
+  groupOf: vi.fn(async (id: string) => [id]),
+  restoreSession: vi.fn(),
   searchMessages: vi.fn(),
 };
 
@@ -23,8 +25,8 @@ vi.mock('../integrations/focus.js', () => ({ scheduleFocus: mocks.scheduleFocus,
 vi.mock('../workspace/worktrees.js', () => ({ listRepos: mocks.listRepos, isWorkspaceRepo: mocks.isWorkspaceRepo, listWorktrees: vi.fn(), createWorktree: mocks.createWorktree, createFolder: vi.fn(), removeWorktree: vi.fn(), removeRunWorktree: vi.fn(), worktreeBase: async () => { throw new Error('paseo is not installed'); } }));
 vi.mock('../agent/claude/sessions.js', () => ({ listSessions: mocks.listSessions, savedSession: (x: unknown) => x, renameRoute: vi.fn() }));
 vi.mock('../agent/claude/pins.js', () => ({ removeChat: mocks.removeChat, pinsRoute: vi.fn() }));
-vi.mock('../agent/claude/bin.js', () => ({ listBin: mocks.listBin, emptyBin: vi.fn(), restoreSession: vi.fn() }));
-vi.mock('../session/subChats.js', () => ({ listLinks: mocks.listLinks }));
+vi.mock('../agent/claude/bin.js', () => ({ listBin: mocks.listBin, emptyBin: vi.fn(), restoreSession: mocks.restoreSession }));
+vi.mock('../session/subChats.js', () => ({ listLinks: mocks.listLinks, groupOf: mocks.groupOf }));
 vi.mock('../agent/claude/search.js', () => ({ searchMessages: mocks.searchMessages }));
 vi.mock('../workspace/terminal.js', () => ({ listTerminals: mocks.listTerminals, createTerminal: vi.fn(), closeTerminal: vi.fn() }));
 
@@ -42,7 +44,10 @@ async function call(method: string, path: string, body?: string, deps: Partial<R
   return { code: res.status, text, serveWeb, json: text ? JSON.parse(text) : undefined };
 }
 
-beforeEach(() => vi.clearAllMocks());
+beforeEach(() => {
+  vi.clearAllMocks();
+  mocks.groupOf.mockImplementation(async (id: string) => [id]);
+});
 
 describe('routes', () => {
   it('picks the method key before the ANY key', async () => {
@@ -53,6 +58,19 @@ describe('routes', () => {
     expect((await call('GET', '/api/sessions')).json).toEqual([{ sessionId: 's' }]);
     mocks.listTerminals.mockReturnValue(['t']);
     expect((await call('PUT', '/api/terms')).json).toEqual(['t']);
+  });
+
+  it('archives and restores every session of a sub-chat group', async () => {
+    mocks.groupOf.mockResolvedValue(['root', 'kid']);
+    mocks.removeChat.mockResolvedValue({ purged: false });
+    const closeByUser = vi.fn();
+    const live = { id: 'k' } as LiveChat;
+    const bySession = (id: string) => (id === 'kid' ? live : undefined);
+    expect((await call('DELETE', '/api/sessions?id=kid&archive', undefined, { bySession, closeByUser } as Partial<RouteDeps>)).json).toEqual({ purged: false });
+    expect(mocks.removeChat.mock.calls).toEqual([['root', false, true], ['kid', false, true]]);
+    expect(closeByUser).toHaveBeenCalledWith(live);
+    await call('POST', '/api/sessions/restore?id=root');
+    expect(mocks.restoreSession.mock.calls).toEqual([['root'], ['kid']]);
   });
 
   it('returns sub-chat links with saved sessions and search hits', async () => {

@@ -12,7 +12,7 @@ import { openRouterView, saveOpenRouter } from '../agent/claude/openrouter.js';
 import { resolvedRoute } from '../agent/claude/resolved.js';
 import { searchMessages } from '../agent/claude/search.js';
 import { seenRoute } from '../agent/claude/seen.js';
-import { listLinks } from '../session/subChats.js';
+import { groupOf, listLinks } from '../session/subChats.js';
 import { readSummaries } from '../agent/claude/summaryStore.js';
 import { assistantRoute } from '../integrations/assistant.js';
 import { linkTitleRoute } from '../integrations/linkTitle.js';
@@ -33,10 +33,13 @@ export function sessionRoutes(d: RouteDeps): Record<string, Entry<Ctx>> {
   return {
     'ANY /api/runs': entry(() => d.runs()),
     'DELETE /api/sessions': entry(async ({ url }) => {
-      const id = url.searchParams.get('id') ?? '';
-      const opened = d.bySession(id);
-      if (opened) await d.closeByUser(opened);
-      return removeChat(id, url.searchParams.has('purge'), url.searchParams.has('archive'));
+      const results = [];
+      for (const id of await groupOf(url.searchParams.get('id') ?? '')) {
+        const opened = d.bySession(id);
+        if (opened) await d.closeByUser(opened);
+        results.push(await removeChat(id, url.searchParams.has('purge'), url.searchParams.has('archive')));
+      }
+      return results[0];
     }),
     'POST /api/sessions/rename': entry(async ({ url, body }) => {
       const id = url.searchParams.get('id');
@@ -53,7 +56,7 @@ export function sessionRoutes(d: RouteDeps): Record<string, Entry<Ctx>> {
     }),
     'ANY /api/sessions/bin': entry(() => listBin()),
     'POST /api/sessions/restore': entry(async ({ url }) => {
-      await restoreSession(url.searchParams.get('id') ?? '');
+      for (const id of await groupOf(url.searchParams.get('id') ?? '')) await restoreSession(id);
       return { ok: true };
     }),
     'ANY /api/sessions': entry(async () => {

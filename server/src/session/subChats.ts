@@ -31,3 +31,9 @@ export const linkSubChats = (add: { child: string; parent: string; via: SubVia; 
   });
 
 export const linkSubChat = (child: string, parent: string, via: SubVia, at = Date.now()) => linkSubChats([{ child, parent, via, at }]);
+
+// Every session of id's chat: the root first, then its sub-chats oldest first.
+export const groupOf = async (id: string) => {
+  const root = await rootOf(id);
+  return [root, ...(await childrenOf(root))];
+};

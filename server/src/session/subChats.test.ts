@@ -31,6 +31,8 @@ describe('sub-chat links', () => {
     expect(await sub.listLinks()).toEqual({ b: { parent: 'a', via: 'clear', at: 1 }, c: { parent: 'a', via: 'build', at: 2 } });
     expect(await sub.rootOf('c')).toBe('a');
     expect(await sub.childrenOf('a')).toEqual(['b', 'c']);
+    expect(await sub.groupOf('c')).toEqual(['a', 'b', 'c']);
+    expect(await sub.groupOf('z')).toEqual(['z']);
   });
 
   it('keeps the first parent and never links a root to itself', async () => {
