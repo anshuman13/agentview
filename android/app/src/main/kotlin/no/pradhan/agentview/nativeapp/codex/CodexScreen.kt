@@ -16,7 +16,11 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Text
+import androidx.compose.animation.core.tween
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.SnackbarHostState
@@ -70,6 +74,8 @@ import no.pradhan.agentview.nativeapp.ui.PageHeader
 import no.pradhan.agentview.nativeapp.ui.SnackHost
 import no.pradhan.agentview.nativeapp.ui.rememberShowSnack
 import no.pradhan.agentview.nativeapp.ui.Tokens
+import no.pradhan.agentview.nativeapp.ui.Type
+import no.pradhan.agentview.nativeapp.ui.ReadingFont
 import no.pradhan.agentview.nativeapp.ui.WhileStarted
 import no.pradhan.agentview.nativeapp.ui.av
 import no.pradhan.agentview.nativeapp.codex.wiki.ReviewOps
@@ -177,7 +183,7 @@ fun CodexScreen(hub: Hub) {
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     BackHandler(enabled = drawerState.isOpen) { scope.launch { drawerState.close() } }
     val refresh = { scope.launch { refreshing = true; hub.codex.sync(); refreshing = false }; Unit }
-    val go = { p: String -> if (p != nav.page) hub.track("list:$p"); nav.go(p); scope.launch { drawerState.close() }; Unit }
+    val go = { p: String -> if (p != nav.page) hub.track("list:$p"); nav.go(p); scope.launch { drawerState.animateTo(DrawerValue.Closed, tween(Tokens.motionDuration, easing = Tokens.motionEaseOut)) }; Unit }
 
     ModalNavigationDrawer(
         drawerContent = { ListsDrawer(hub, st, nav.page, profile, filterKey, go) },
@@ -186,7 +192,7 @@ fun CodexScreen(hub: Hub) {
     ) {
         Box(Modifier.fillMaxSize().background(av.groupPage)) {
             Column(Modifier.align(Alignment.TopCenter).widthIn(max = Tokens.pageMax).fillMaxSize()) {
-                CodexHeader(hub, st, nav, profile, filterKey, now) { scope.launch { drawerState.open() } }
+                CodexHeader(hub, st, nav, profile, filterKey, now) { scope.launch { drawerState.animateTo(DrawerValue.Open, tween(Tokens.motionDuration, easing = Tokens.motionEaseIn)) } }
                 if (st.reconnecting) Group { ListRow("Reconnecting to the hub…", syncedAt(st.lastSync, now), muted = true) }
                 else st.error?.let { error -> Group { ListRow(error, syncedAt(st.lastSync, now), trailing = { Button("Retry", { refresh() }, size = ButtonSize.Sm) }) } }
                 PullToRefreshBox(refreshing, { refresh() }, Modifier.weight(1f)) { CodexBody(hub, st, nav, profile, now, actions, ops) }
@@ -240,11 +246,12 @@ private val DRAWER_ROWS = listOf(
 private fun ListsDrawer(hub: Hub, st: CodexState, page: String, profile: String?, filterKey: String, go: (String) -> Unit) {
     val claims = remember(st.facts, profile) { proposals(st.facts.filter { matchesProfile(profile, it) }).size }
     ModalDrawerSheet(Modifier.widthIn(max = 300.dp), drawerContainerColor = av.groupPage) {
-        Column(Modifier.fillMaxSize().padding(vertical = Tokens.sp8)) {
+        Column(Modifier.fillMaxSize().padding(vertical = Tokens.sp8), verticalArrangement = Arrangement.spacedBy(Tokens.sp1)) {
+            Text("Codex", style = Type.title.copy(fontFamily = ReadingFont, fontWeight = FontWeight.Normal), color = av.fg, modifier = Modifier.padding(horizontal = Tokens.sp10, vertical = Tokens.sp4))
             DRAWER_ROWS.forEach { (id, label, icon) ->
-                if (id == "goals") HorizontalDivider(Modifier.padding(horizontal = Tokens.listPad, vertical = Tokens.sp3), color = av.border, thickness = Tokens.hairline)
+                if (id == "goals") Text("Planning", style = Type.label, color = av.fgMuted, modifier = Modifier.padding(start = Tokens.sp4 + Tokens.listPad, top = Tokens.sp8, bottom = Tokens.sp2))
                 ListRow(
-                    label,
+                    if (page == id) AnnotatedString(label, SpanStyle(fontWeight = FontWeight.Medium)) else label,
                     leading = { AvIcon(icon) },
                     trailing = if (id == "wiki" && claims > 0) { { Badge(claims.toString(), BadgeTone.Quiet) } } else null,
                     compact = true,
