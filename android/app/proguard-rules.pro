@@ -8,3 +8,6 @@
 -dontwarn org.conscrypt.**
 -dontwarn org.openjsse.**
 -keep class * extends androidx.room.RoomDatabase { <init>(); }
+# ML Kit finds its components by reflection; without these the document scanner crashes on open.
+-keep class com.google.mlkit.** { *; }
+-keep class com.google.android.gms.internal.mlkit_vision_document_scanner.** { *; }

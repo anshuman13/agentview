@@ -149,16 +149,18 @@ fun rememberAttach(
     val takePhoto = {
         val act = ctx.activity()
         if (!scan || act == null) camShot()
-        else GmsDocumentScanning.getClient(
-            GmsDocumentScannerOptions.Builder()
-                .setScannerMode(GmsDocumentScannerOptions.SCANNER_MODE_FULL)
-                .setResultFormats(GmsDocumentScannerOptions.RESULT_FORMAT_JPEG)
-                .setPageLimit(1)
-                .setGalleryImportAllowed(true)
-                .build(),
-        ).getStartScanIntent(act)
-            .addOnSuccessListener { scanner.launch(IntentSenderRequest.Builder(it).build()) }
-            .addOnFailureListener { camShot() }
+        else runCatching {
+            GmsDocumentScanning.getClient(
+                GmsDocumentScannerOptions.Builder()
+                    .setScannerMode(GmsDocumentScannerOptions.SCANNER_MODE_FULL)
+                    .setResultFormats(GmsDocumentScannerOptions.RESULT_FORMAT_JPEG)
+                    .setPageLimit(1)
+                    .setGalleryImportAllowed(true)
+                    .build(),
+            ).getStartScanIntent(act)
+                .addOnSuccessListener { scanner.launch(IntentSenderRequest.Builder(it).build()) }
+                .addOnFailureListener { camShot() }
+        }.onFailure { camShot() }
         Unit
     }
 
