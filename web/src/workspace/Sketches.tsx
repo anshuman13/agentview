@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { flushSync } from 'react-dom';
 import { setUi, useStore } from '../app/store';
 import { useNarrow } from '../app/shell/useNarrow';
@@ -159,12 +159,21 @@ export function Sketches({ shown }: { shown: boolean }) {
     void reload().then((list) => setOpen(list && sketchOpenable(want, list.map((s) => s.name)) ? want : null));
   }, [want, reload]);
   const file = data?.find((s) => s.name === open);
+  const scroller = useRef<HTMLDivElement>(null);
+  const listTop = useRef(0);
+  useLayoutEffect(() => {
+    if (scroller.current) scroller.current.scrollTop = file ? 0 : listTop.current;
+  }, [!!file]);
+  const openSketch = (name: string) => {
+    listTop.current = scroller.current?.scrollTop ?? 0;
+    flushSync(() => setZoomed(name));
+    zoom(() => setOpen(name));
+  };
   return (
-    <div className="wk"><div className="wk-scroll"><div className={file ? 'mt-page sk-page' : 'mt-page'}>
-      {file ? (
-        <SketchView file={file} device={device} theme={theme} onDevice={setDevice} onTheme={setTheme} onBack={() => zoom(() => setOpen(null))} />
-      ) : data?.length ? (
-        <SketchList sketches={data} zoomed={zoomed} onOpen={(name) => { flushSync(() => setZoomed(name)); zoom(() => setOpen(name)); }} />
+    <div className="wk"><div className="wk-scroll" ref={scroller}><div className={file ? 'mt-page sk-page' : 'mt-page'}>
+      {file && <SketchView file={file} device={device} theme={theme} onDevice={setDevice} onTheme={setTheme} onBack={() => zoom(() => setOpen(null))} />}
+      {data?.length ? (
+        <div style={{ display: file ? 'none' : 'contents' }}><SketchList sketches={data} zoomed={zoomed} onOpen={openSketch} /></div>
       ) : data ? (
         <EmptyState icon="paintcan" title="No sketches yet. Ask for one with /sketch <what>" action={<Button size="sm" onClick={newSketch}>New sketch</Button>} />
       ) : error ? (

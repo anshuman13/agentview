@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { createPortal } from 'react-dom';
+import { createPortal, flushSync } from 'react-dom';
 import { getState, useStore } from '../app/store';
 import { Button, IconButton, ShowAll } from '../ui/Button';
 import { Icon } from '../ui/Icon';
@@ -95,7 +95,7 @@ export function McpPage() {
           </section>
         )}
       </div></div></div>
-      {current && <Detail row={current} usage={usageOf(current)} group={groupOf(current)} onGroup={(to) => setGroup(groupKey(current), to)} onClose={() => { document.querySelector<HTMLElement>(`[data-row="${CSS.escape(rowKey(current))}"]`)?.focus(); setSel(null); }} />}
+      {current && <Detail row={current} usage={usageOf(current)} group={groupOf(current)} onGroup={(to) => setGroup(groupKey(current), to)} onClose={() => { const row = document.querySelector<HTMLElement>(`[data-row="${CSS.escape(rowKey(current))}"]`); flushSync(() => setSel(null)); row?.scrollIntoView({ block: 'nearest' }); row?.focus({ preventScroll: true }); }} />}
     </div>
   );
 }
