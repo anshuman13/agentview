@@ -11,7 +11,8 @@ const realRegistry = { ...registry };
 vi.mock('./listing.js', () => ({ runs: mocks.runs, broadcastLive: vi.fn(), learning: { later: vi.fn(), forget: vi.fn() }, seenRunning: () => false, summaryOf: vi.fn() }));
 vi.mock('../agent/claude/pins.js', () => ({ removeChat: vi.fn() }));
 const linkSubChat = vi.fn(async () => ({}));
-vi.mock('../session/subChats.js', () => ({ linkSubChat }));
+const latest: Record<string, string> = {};
+vi.mock('../session/subChats.js', () => ({ linkSubChat, latestOf: async (id: string) => latest[id] ?? id, rootOf: async (id: string) => id }));
 vi.mock('./watchFiles.js', () => ({ watchFiles: () => ({ close() {} }) }));
 vi.mock('../agent/registry.js', () => {
   const real = realRegistry;
@@ -23,7 +24,7 @@ const { removeChat } = await import('../agent/claude/pins.js');
 const { markLimited } = await import('../agent/claude/accounts.js');
 const { UNATTENDED_INSTRUCTION } = await import('../session/prompts.js');
 const { jobRepo } = await import('../workspace/testRepo.js');
-const { createChat, endRun, jobChat, reviewJob } = await import('./chats.js');
+const { createChat, endRun, jobChat, openSaved, reviewJob } = await import('./chats.js');
 const { AgentSession } = await import('../session/session.js');
 const { live } = await import('./state.js');
 
@@ -32,6 +33,14 @@ const unattended = (chat: { driver: unknown }) => (chat.driver as { unattended: 
 beforeEach(() => {
   vi.spyOn(ClaudeDriver.prototype, 'start').mockImplementation(() => {});
   for (const r of mocks.runs.list().slice()) mocks.runs.end(r.id, 'test');
+});
+
+describe('openSaved', () => {
+  it('opens the live latest sub-chat for any session of its chat', async () => {
+    const chat = await createChat('/tmp', 'sub-2');
+    latest['root-1'] = 'sub-2';
+    expect(await openSaved('root-1')).toBe(chat);
+  });
 });
 
 describe('jobChat', () => {

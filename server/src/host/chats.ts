@@ -1,14 +1,14 @@
 import path from 'node:path';
 import { stat } from 'node:fs/promises';
 import type { Account, Provider, ServerMessage } from '../../../shared/protocol.js';
-import { getSessionInfo } from '../agent/claude/sessions.js';
+import { getSessionInfo, savedSession } from '../agent/claude/sessions.js';
 import { rememberAccount } from '../agent/claude/accounts.js';
 import { isProvider, provider, providerOf, providerOptions, rememberProvider, transcriptPath } from '../agent/registry.js';
 import { codexThread } from '../agent/codex/threads.js';
 import { removeChat } from '../agent/claude/pins.js';
 import { AgentSession } from '../session/session.js';
 import { READY } from '../session/runs.js';
-import { linkSubChat } from '../session/subChats.js';
+import { latestOf, linkSubChat, rootOf } from '../session/subChats.js';
 import { UNATTENDED_INSTRUCTION } from '../session/prompts.js';
 import { hasWork } from '../workspace/git.js';
 import { runWorktree } from '../workspace/review.js';
@@ -68,7 +68,7 @@ export async function createChat(cwd: string, resume?: string, title = '', fork 
   const chat = new AgentSession(cwd, p.driver(cwd, resume, fork, unattended, account), resume ?? null);
   chat.runs = runs;
   chat.transcriptPath = transcriptPath;
-  chat.onSubChat = (child, parent, via) => void linkSubChat(child, parent, via).catch(() => {});
+  chat.onSubChat = (child, parent, via) => void linkSubChat(child, parent, via).then(async () => { chat.title ||= (await rootTitle(child)) ?? ''; }).catch(() => {});
   chat.resumeLine = (id, dir, sessionId, account) => provider(id).resume(dir, sessionId, account);
   chat.title = title;
   chat.onIdle = () => learning.later(chat);
@@ -110,9 +110,11 @@ const isDir = (dir: string) => stat(dir).then((s) => s.isDirectory()).catch(() =
 
 // Two opens of one session at once (phone and desktop) share one chat.
 const opening = new Map<string, Promise<AgentSession>>();
-export function openSaved(sessionId: string) {
+// Any session of a chat split by /clear opens its latest sub-chat.
+export async function openSaved(asked: string) {
+  const sessionId = await latestOf(asked);
   const open = bySession(sessionId);
-  if (open) return Promise.resolve(open);
+  if (open) return open;
   const pending = opening.get(sessionId) ?? resumeSaved(sessionId).finally(() => opening.delete(sessionId));
   opening.set(sessionId, pending);
   return pending;
@@ -125,7 +127,17 @@ async function resumeSaved(sessionId: string) {
   if (!(await isDir(info.cwd))) throw new Error(`Folder no longer exists: ${info.cwd}`);
   const dir = path.resolve(info.cwd);
   if (dir !== PROJECT && !allowedFolder(dir)) throw new Error(`Not a workspace folder: ${info.cwd}`);
-  return createChat(dir, sessionId, info.summary);
+  return createChat(dir, sessionId, (await rootTitle(sessionId)) ?? info.summary);
+}
+
+// A sub-chat shows its chat's title: the root session's.
+async function rootTitle(sessionId: string) {
+  const root = await rootOf(sessionId);
+  if (root === sessionId) return null;
+  const codex = await codexThread(root);
+  if (codex) return codex.summary;
+  const info = await getSessionInfo(root);
+  return info ? savedSession(info).title : null;
 }
 
 export async function newChat(cwd: string, from: AgentSession | undefined, fork?: string, choice?: Provider) {

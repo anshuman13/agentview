@@ -16,6 +16,7 @@ import { devScript } from '../workspace/devScript.js';
 import type { ClientMessage } from '../../../shared/protocol.js';
 import { readBody, failed } from '../json.js';
 import { isPhone } from '../presence.js';
+import { latestOf } from '../session/subChats.js';
 import { currentChat, entry, type ChatCtx, type Ctx, type Entry, type Prefix, type RouteDeps } from './routeTypes.js';
 
 const MAX_FILE_BODY = 5_000_000;
@@ -26,8 +27,11 @@ const refused = (err: unknown) => failed(400, err instanceof Error ? err.message
 export function streamRoutes(d: RouteDeps): Record<string, Entry<Ctx>> {
   const current = (url: URL) => currentChat(d, url);
   return {
-    'ANY /api/events': entry(({ req, url }) => {
-      const asked = (url.searchParams.has('session') && d.bySession(url.searchParams.get('session'))) || (d.chats().has(url.searchParams.get('chat') ?? '') ? url.searchParams.get('chat')! : undefined);
+    'ANY /api/events': entry(async ({ req, url }) => {
+      // Any session of a chat split by /clear stands for its latest sub-chat.
+      const session = url.searchParams.get('session');
+      if (session) url.searchParams.set('session', await latestOf(session));
+      const asked = (session && d.bySession(url.searchParams.get('session'))) || (d.chats().has(url.searchParams.get('chat') ?? '') ? url.searchParams.get('chat')! : undefined);
       return d.openEvents(req, url, asked ?? current(url)?.id ?? '', Boolean(asked));
     }),
     'POST /api/cmd': entry(({ req, url, body }) => {

@@ -29,7 +29,7 @@ vi.mock('../agent/claude/sessions.js', () => ({ listSessions: mocks.listSessions
 vi.mock('../agent/claude/pins.js', () => ({ removeChat: mocks.removeChat, pinsRoute: vi.fn() }));
 vi.mock('../agent/claude/bin.js', () => ({ listBin: mocks.listBin, emptyBin: vi.fn(), restoreSession: mocks.restoreSession }));
 const realSub = await import('../session/subChats.js');
-vi.mock('../session/subChats.js', () => ({ listLinks: mocks.listLinks, groupOf: mocks.groupOf, roundOf: realSub.roundOf }));
+vi.mock('../session/subChats.js', () => ({ listLinks: mocks.listLinks, groupOf: mocks.groupOf, latestOf: async (id: string) => (await mocks.groupOf(id)).at(-1), roundOf: realSub.roundOf }));
 vi.mock('../agent/claude/savedChat.js', () => ({ savedEvents: mocks.savedEvents, firstCommit: mocks.firstCommit }));
 vi.mock('../agent/claude/search.js', () => ({ searchMessages: mocks.searchMessages }));
 vi.mock('../workspace/terminal.js', () => ({ listTerminals: mocks.listTerminals, createTerminal: vi.fn(), closeTerminal: vi.fn() }));
@@ -62,6 +62,15 @@ describe('routes', () => {
     expect((await call('GET', '/api/sessions')).json).toEqual([{ sessionId: 's' }]);
     mocks.listTerminals.mockReturnValue(['t']);
     expect((await call('PUT', '/api/terms')).json).toEqual(['t']);
+  });
+
+  it('streams the chat of the latest sub-chat for any session of its group', async () => {
+    mocks.groupOf.mockResolvedValue(['root', 'kid']);
+    const openEvents = vi.fn(() => new Response(''));
+    const bySession = (id: string) => (id === 'kid' ? 'c2' : undefined);
+    await call('GET', '/api/events?session=root', undefined, { bySession, openEvents } as Partial<RouteDeps>);
+    const [, url, id, found] = openEvents.mock.calls[0] as unknown as [Request, URL, string, boolean];
+    expect([url.searchParams.get('session'), id, found]).toEqual(['kid', 'c2', true]);
   });
 
   it('archives and restores every session of a sub-chat group', async () => {

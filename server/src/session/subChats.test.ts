@@ -33,6 +33,9 @@ describe('sub-chat links', () => {
     expect(await sub.childrenOf('a')).toEqual(['b', 'c']);
     expect(await sub.groupOf('c')).toEqual(['a', 'b', 'c']);
     expect(await sub.groupOf('z')).toEqual(['z']);
+    expect(await sub.latestOf('a')).toBe('c');
+    expect(await sub.latestOf('b')).toBe('c');
+    expect(await sub.latestOf('z')).toBe('z');
   });
 
   it('keeps the first parent and never links a root to itself', async () => {

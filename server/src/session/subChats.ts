@@ -38,6 +38,9 @@ export const groupOf = async (id: string) => {
   return [root, ...(await childrenOf(root))];
 };
 
+// The live end of id's chat: its latest sub-chat, else id itself.
+export const latestOf = async (id: string) => (await groupOf(id)).at(-1)!;
+
 // The round a sub-chat ran: the one recorded with its session id, else the last round that ended in its time span
 // (from its start to the next sub-chat's), for rounds from before rounds kept their session id.
 export function roundOf<R extends { at: number; sessionId?: string }>(id: string, members: { sessionId: string; startedAt: number }[], rounds: R[]) {
