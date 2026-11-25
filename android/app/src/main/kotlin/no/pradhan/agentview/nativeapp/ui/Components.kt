@@ -39,6 +39,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -99,10 +100,15 @@ fun SectionHeader(label: String, count: String? = null, open: Boolean? = null, o
     }
 }
 
+// True on pages whose Groups use the hairline card shell (web .ov-page), such as the Codex Overview.
+val LocalCardGroups = staticCompositionLocalOf { false }
+
 // Inset grouped list card (web .ui-group).
 @Composable
 fun Group(modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> Unit) {
-    Column(modifier.padding(start = Tokens.listPad, end = Tokens.listPad, bottom = Tokens.sp8).fillMaxWidth().clip(RoundedCornerShape(Tokens.shapeLg)).background(av.groupCard), content = content)
+    val shape = RoundedCornerShape(Tokens.shapeLg)
+    val card = if (LocalCardGroups.current) Modifier.background(av.surface).border(Tokens.hairline, av.border, shape) else Modifier.background(av.groupCard)
+    Column(modifier.padding(start = Tokens.listPad, end = Tokens.listPad, bottom = Tokens.sp8).fillMaxWidth().clip(shape).then(card), content = content)
 }
 
 // One lazy item's part of a Group card: the top corners on the first, the bottom corners and gap on the last.

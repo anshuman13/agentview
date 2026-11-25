@@ -20,6 +20,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -62,6 +63,7 @@ import no.pradhan.agentview.nativeapp.ui.Chip
 import no.pradhan.agentview.nativeapp.ui.ChipTone
 import no.pradhan.agentview.nativeapp.ui.EmptyState
 import no.pradhan.agentview.nativeapp.ui.Group
+import no.pradhan.agentview.nativeapp.ui.LocalCardGroups
 import no.pradhan.agentview.nativeapp.ui.Hairline
 import no.pradhan.agentview.nativeapp.ui.IconBtn
 import no.pradhan.agentview.nativeapp.ui.ListRow
@@ -139,7 +141,7 @@ fun OverviewPage(hub: Hub, st: CodexState, profile: String?, now: Long, actions:
     val groups = remember(live, seen, shown) { agentGroups(live, seen, shown) }
     val done = remember(live, groups, shown, now / 60_000) { activity(live, groups.flatMap { g -> g.second.map { it.id } }.toSet() + listOfNotNull(shown), dayStart(now)) }
     val failedCalendars = remember(st.scans) { failedCalendars(st.scans) }
-    LazyColumn(Modifier.fillMaxSize()) {
+    CompositionLocalProvider(LocalCardGroups provides true) { LazyColumn(Modifier.fillMaxSize()) {
         if (failedCalendars.isNotEmpty()) item(key = "failed-calendars") {
             Group { failedCalendars.forEachIndexed { i, h -> if (i > 0) Hairline(); ListRow(calendarFailText(h, failedCalendars.size), h.ok?.let { "Last synced ${clock(it)}" } ?: "Never synced") } }
         }
@@ -152,7 +154,7 @@ fun OverviewPage(hub: Hub, st: CodexState, profile: String?, now: Long, actions:
         planDaySection(d, plan, { plan = it }, now, actions)
         if (goals.isNotEmpty()) goalsSection(st, profile, goals, free, onGoals)
         item(key = "end") { androidx.compose.foundation.layout.Spacer(Modifier.padding(bottom = Tokens.fab + Tokens.sp20)) }
-    }
+    } }
 }
 
 @Composable
