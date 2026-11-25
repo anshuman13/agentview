@@ -47,3 +47,8 @@ export async function shrink(f: File): Promise<{ blob: Blob; name: string }> {
     return { blob: f, name: f.name };
   }
 }
+
+// Dropped files Travel keeps as receipts: images and PDFs, the same kinds Add files offers.
+export const receiptFiles = (files: File[]) => files.filter((f) => /^image\/|^application\/pdf$/.test(f.type) || /\.(pdf|heic)$/i.test(f.name));
+
+export const dragsFiles = (types: ArrayLike<string> | undefined) => Array.from(types ?? []).includes('Files');

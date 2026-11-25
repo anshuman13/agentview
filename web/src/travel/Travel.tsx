@@ -18,6 +18,7 @@ import { groupPlan, KIND_ICONS, nextItem, scanText, splitTrips, totalsText, trip
 import { deleteTrip, exportUrl, receiptUrl, saveTrip, scanCalendar, setCheck, uploadReceipt } from './travelApi';
 import { dayLabel, isImage, itemMeta, localNow, receiptMeta, shrink, tripDates, tripMeta } from './travelLogic';
 import { HomeSheet, PlanItemSheet, ReceiptSheet, TripSheet } from './TravelSheets';
+import { useFileDrop } from './useFileDrop';
 import { useTravel } from './useTravel';
 import '../styles/features/wiki.css';
 import '../styles/features/meetings.css';
@@ -65,19 +66,24 @@ function CaptureRow({ cap, narrow }: { cap: Capture; narrow: boolean }) {
 
 const ZOOM = 'tv-zoom';
 
-function TripList({ trips, receipts, filing, cap, narrow, zoomed, archivedOpen, onArchived, onOpen, onNew, find }: { trips: Trip[]; receipts: Receipt[]; filing: number; cap: Capture; narrow: boolean; zoomed: string | null; archivedOpen: boolean; onArchived: () => void; onOpen: (id: string) => void; onNew: () => void; find: ReactNode }) {
+const DropHint = () => <div className="tv-drop-hint" role="status"><Icon name="cloud-upload" />Drop images or PDFs to add receipts</div>;
+
+function TripCard({ trip, receipts, day, zoomed, onOpen, onDrop }: { trip: Trip; receipts: Receipt[]; day: string; zoomed: boolean; onOpen: () => void; onDrop: (files: File[]) => void }) {
+  const drop = useFileDrop(onDrop);
+  const c = tripCard(trip, receipts, day);
+  return (
+    <Card className={cx('tv-card', drop.over && 'tv-drop')} cover={c.cover ? <img src={receiptUrl(c.cover)} alt="" loading="lazy" /> : <span className="tv-strip"><Icon name="briefcase" /></span>} title={trip.name} meta={tripMeta(trip, c)} style={zoomed ? { viewTransitionName: ZOOM } : undefined} onClick={onOpen} {...drop.props}>
+      {c.stateText && <span className={cx('tv-state', c.state)}>{c.stateText}</span>}
+    </Card>
+  );
+}
+
+function TripList({ trips, receipts, filing, cap, narrow, zoomed, archivedOpen, onArchived, onOpen, onDrop, onNew, find }: { trips: Trip[]; receipts: Receipt[]; filing: number; cap: Capture; narrow: boolean; zoomed: string | null; archivedOpen: boolean; onArchived: () => void; onOpen: (id: string) => void; onDrop: (files: File[], tripId: string) => void; onNew: () => void; find: ReactNode }) {
   const [all, setAll] = useState(false);
   const day = today();
   const { active, archived } = splitTrips(trips, day);
   const rows = all ? active : active.slice(0, FOLD);
-  const row = (t: Trip) => {
-    const c = tripCard(t, receipts.filter((r) => r.tripId === t.id), day);
-    return (
-      <Card key={t.id} className="tv-card" cover={c.cover ? <img src={receiptUrl(c.cover)} alt="" loading="lazy" /> : <span className="tv-strip"><Icon name="briefcase" /></span>} title={t.name} meta={tripMeta(t, c)} style={t.id === zoomed ? { viewTransitionName: ZOOM } : undefined} onClick={() => onOpen(t.id)}>
-        {c.stateText && <span className={cx('tv-state', c.state)}>{c.stateText}</span>}
-      </Card>
-    );
-  };
+  const row = (t: Trip) => <TripCard key={t.id} trip={t} receipts={receipts.filter((r) => r.tripId === t.id)} day={day} zoomed={t.id === zoomed} onOpen={() => onOpen(t.id)} onDrop={(files) => onDrop(files, t.id)} />;
   const capture = !narrow && <><Button size="sm" icon="device-camera" onClick={cap.takePhoto}>Take photo</Button><Button size="sm" icon="add" onClick={cap.addFiles}>Add files</Button></>;
   return (
     <div className="tv-trip">
@@ -186,7 +192,7 @@ function TripView({ trip, receipts, home, onBack, reload }: { trip: Trip; receip
   const rows = all ? sorted : sorted.slice(0, FOLD);
   const receipt = receipts.find((r) => r.id === open);
 
-  const add = async (list: FileList | null) => {
+  const add = async (list: FileList | File[] | null) => {
     const picked = [...(list ?? [])];
     if (!picked.length) return;
     setUploading((n) => n + picked.length);
@@ -203,10 +209,12 @@ function TripView({ trip, receipts, home, onBack, reload }: { trip: Trip; receip
     void reload();
   };
   const cap = useCapture((list) => void add(list));
+  const drop = useFileDrop((files) => void add(files));
   const summary = () => [`${trip.name} (${tripDates(trip)})`, ...sorted.map((r) => `- ${receiptMeta(r)} ${r.merchant}`.trim()), `Total: ${totalsText(receipts) || 'none'}`].join('\n');
 
   return (
-    <div className="tv-trip" style={{ viewTransitionName: ZOOM }}>
+    <div className={cx('tv-trip', drop.over && 'tv-drop')} style={{ viewTransitionName: ZOOM }} {...drop.props}>
+      {drop.over && <DropHint />}
       <div className="tv-head">
         <Back close={onBack} />
         {!narrow && <IconButton icon="arrow-left" label="Back" onClick={onBack} />}
@@ -292,7 +300,7 @@ export function Travel({ shown }: { shown: boolean }) {
       }
     })).then(reload);
   };
-  const fileFromList = (list: FileList | null) => {
+  const fileFromList = (list: FileList | File[] | null) => {
     const picked = [...(list ?? [])];
     if (!picked.length) return;
     if (trips.current.length) return fileFiles(picked, '');
@@ -312,6 +320,7 @@ export function Travel({ shown }: { shown: boolean }) {
   };
   const find = <Button size="sm" icon="calendar" disabled={finding} onClick={findTrips}>{finding ? 'Reading calendar…' : 'Find in calendar'}</Button>;
   const trip = data?.trips.find((t) => t.id === open);
+  const drop = useFileDrop(fileFromList, !!data && !trip);
   const scroller = useRef<HTMLDivElement>(null);
   const listTop = useRef(0);
   useLayoutEffect(() => {
@@ -328,7 +337,7 @@ export function Travel({ shown }: { shown: boolean }) {
   };
   const list = data?.trips.length ? (
     <div style={{ display: trip ? 'none' : 'contents' }}>
-      <TripList trips={data.trips} receipts={data.receipts} filing={filing} cap={cap} narrow={narrow} zoomed={zoomed} archivedOpen={archivedOpen} onArchived={() => setArchivedOpen(!archivedOpen)} onOpen={openTrip} onNew={() => setAdding(true)} find={find} />
+      <TripList trips={data.trips} receipts={data.receipts} filing={filing} cap={cap} narrow={narrow} zoomed={zoomed} archivedOpen={archivedOpen} onArchived={() => setArchivedOpen(!archivedOpen)} onOpen={openTrip} onDrop={fileFiles} onNew={() => setAdding(true)} find={find} />
     </div>
   ) : null;
   const body = trip ? (
@@ -348,7 +357,8 @@ export function Travel({ shown }: { shown: boolean }) {
     <Skeleton />
   );
   return (
-    <div className="wk"><div className="wk-scroll" ref={scroller}><div className="mt-page tv-page">
+    <div className="wk"><div className="wk-scroll" ref={scroller}><div className={cx('mt-page tv-page', drop.over && 'tv-drop')} {...drop.props}>
+      {drop.over && <DropHint />}
       {body}
       {adding && <TripSheet onClose={() => { setAdding(false); setHeld([]); }} onSaved={saved} />}
     </div></div></div>
