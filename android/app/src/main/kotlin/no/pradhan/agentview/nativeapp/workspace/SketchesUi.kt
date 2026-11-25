@@ -113,7 +113,7 @@ private fun SketchList(hub: Hub, sketches: List<SketchFile>?, error: String, rel
             when {
                 sketches == null && error.isNotEmpty() -> EmptyState("Could not load sketches", error, icon = "paintcan", action = { Button("Retry", reload, size = ButtonSize.Sm) })
                 sketches == null -> Loading("Loading sketches…")
-                sketches.isEmpty() -> EmptyState("No sketches yet", "Mockups the agent writes with /sketch show here", icon = "paintcan", action = { Button("New sketch", { newSketch(hub) }, size = ButtonSize.Sm) })
+                sketches.isEmpty() -> EmptyState("No sketches yet. Ask for one with /sketch <what>", icon = "paintcan", action = { Button("New sketch", { newSketch(hub) }, size = ButtonSize.Sm) })
                 else -> Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
                     SectionHeader("Sketches", sketches.size.toString())
                     CardGrid(sketches.take(if (all) sketches.size else FOLD), Modifier.padding(horizontal = Tokens.listPad)) { s ->
