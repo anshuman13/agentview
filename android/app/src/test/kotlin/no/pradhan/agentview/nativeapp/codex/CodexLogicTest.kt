@@ -342,6 +342,15 @@ class CodexLogicTest {
         assertEquals(3, transcriptHits(meetings, said, null).size)
     }
 
+    @Test fun transcriptHitOpensTheMeetingSearchedForTheQuery() {
+        val r = saidRoute("work:cal:1", " budget plan ")
+        assertEquals("meeting:work:cal:1#said=budget plan", r)
+        assertEquals("budget plan", saidOf(r))
+        assertEquals("meeting:work:cal:1", saidRoute("work:cal:1", "  "))
+        assertEquals(null, saidOf("meeting:work:cal:1#notes"))
+        assertEquals(null, saidOf("meeting:work:cal:1"))
+    }
+
     @Test fun newPageIsALiveDirtyPageInItsSection() {
         val p = newPage("  Roadmap ", "Pages", 3, PERSONAL, NOW)!!
         assertEquals("Roadmap", p.title)

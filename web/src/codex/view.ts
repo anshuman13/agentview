@@ -128,6 +128,14 @@ export const openMeetingNotes = (m: MeetingRef) => {
 };
 export const notesFocusFor = (key: string) => notesFor === key;
 export const clearNotesFocus = () => { notesFor = null; };
+// A transcript search hit opens its meeting with the transcript unfolded and searched for the query; the page takes it once.
+let transcriptAt: { key: string; query: string } | null = null;
+export const openMeetingAt = (m: MeetingRef, query: string) => {
+  transcriptAt = query.trim() ? { key: rowKey(m), query: query.trim() } : null;
+  openMeeting(m);
+};
+export const transcriptQueryFor = (key: string) => (transcriptAt?.key === key ? transcriptAt.query : '');
+export const clearTranscriptQuery = () => { transcriptAt = null; };
 export const openTask = (t: MeetingRef) => setView({ list: 'tasks', open: rowKey(t), person: null, series: null, tag: null });
 export const openSeries = (m: Meeting) => setView({ list: 'meetings', series: seriesKey(m.profile, seriesTitleOf(m)), person: null, tag: null });
 export const useView = () => useSyncExternalStore((f) => (subs.add(f), () => subs.delete(f)), () => view);

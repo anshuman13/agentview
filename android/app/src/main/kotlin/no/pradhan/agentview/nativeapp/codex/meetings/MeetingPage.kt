@@ -101,19 +101,20 @@ private class PrepData(val prior: List<Prior>, val brief: Brief, val points: Lis
 
 private class MeetingCtx(val hub: Hub, val st: CodexState, val m: Row, val now: Long, val actions: TaskActions, val ops: CodexOps, val onMeeting: (Row) -> Unit, val onPerson: (String) -> Unit, val onSeries: (String) -> Unit, val onTask: (Row) -> Unit)
 
-private class MeetingFolds(val pinning: MutableState<Boolean>, val more: MutableState<Boolean>, val unassigned: MutableState<Boolean>, val notMine: MutableState<Boolean>, val transcriptOpen: MutableState<Boolean>, val newAction: MutableState<String>, val context: MutableState<Boolean>, val transcriptQuery: MutableState<String>, val transcriptCur: MutableState<Int>)
+private class MeetingFolds(val pinning: MutableState<Boolean>, val more: MutableState<Boolean>, val unassigned: MutableState<Boolean>, val notMine: MutableState<Boolean>, val transcriptOpen: MutableState<Boolean>, val newAction: MutableState<String>, val context: MutableState<Boolean>, val transcriptQuery: MutableState<String>, val transcriptCur: MutableState<Int>, val jump: MutableState<Boolean>)
 
 @Composable
-private fun rememberMeetingFolds(key: String) = MeetingFolds(
+private fun rememberMeetingFolds(key: String, said: String?) = MeetingFolds(
+    rememberSaveable(key) { mutableStateOf(false) },
+    rememberSaveable(key) { mutableStateOf(said != null) },
     rememberSaveable(key) { mutableStateOf(false) },
     rememberSaveable(key) { mutableStateOf(false) },
-    rememberSaveable(key) { mutableStateOf(false) },
-    rememberSaveable(key) { mutableStateOf(false) },
-    rememberSaveable(key) { mutableStateOf(false) },
+    rememberSaveable(key) { mutableStateOf(said != null) },
     rememberSaveable(key) { mutableStateOf("") },
     rememberSaveable(key) { mutableStateOf(false) },
-    rememberSaveable(key) { mutableStateOf("") },
+    rememberSaveable(key) { mutableStateOf(said.orEmpty()) },
     rememberSaveable(key) { mutableStateOf(-1) },
+    rememberSaveable(key) { mutableStateOf(said != null) },
 )
 
 @Composable
@@ -143,12 +144,12 @@ private fun rememberTranscript(hub: Hub, m: Row, done: Boolean): Pair<Result<Str
 }
 
 @Composable
-fun MeetingPage(hub: Hub, st: CodexState, m: Row, now: Long, actions: TaskActions, ops: CodexOps, onMeeting: (Row) -> Unit, onPerson: (String) -> Unit, onSeries: (String) -> Unit, onTask: (Row) -> Unit, onFocusNotes: (() -> Unit)?) {
+fun MeetingPage(hub: Hub, st: CodexState, m: Row, now: Long, actions: TaskActions, ops: CodexOps, onMeeting: (Row) -> Unit, onPerson: (String) -> Unit, onSeries: (String) -> Unit, onTask: (Row) -> Unit, onFocusNotes: (() -> Unit)?, said: String? = null) {
     val c = MeetingCtx(hub, st, m, now, actions, ops, onMeeting, onPerson, onSeries, onTask)
     val state = meetingState(m, now)
     val all = remember(st.items, m.key) { actionsOf(st.items, m) }
     val prep = rememberPrep(c, state)
-    val folds = rememberMeetingFolds(m.key)
+    val folds = rememberMeetingFolds(m.key, said)
     val notesEmptyAtOpen = remember(m.key) { m.str("notes").isNullOrEmpty() }
     val (transcript, reloadTranscript) = rememberTranscript(hub, m, state == MState.Done)
     val talk = remember(transcript) { transcript?.getOrNull()?.let(::talkTime).orEmpty() }
@@ -163,6 +164,17 @@ fun MeetingPage(hub: Hub, st: CodexState, m: Row, now: Long, actions: TaskAction
             snapshotFlow { list.layoutInfo.totalItemsCount }.first { it > 0 }
             toNotes()
         }
+    }
+    // Opened from a transcript search hit: once the transcript is in, mark the first match and scroll to its line.
+    LaunchedEffect(transcript) {
+        val text = transcript?.getOrNull()?.takeIf { it.isNotEmpty() } ?: return@LaunchedEffect
+        if (!folds.jump.value) return@LaunchedEffect
+        folds.jump.value = false
+        val (segments, starts) = markedTranscript(text, queryWords(folds.transcriptQuery.value))
+        if (starts.last() == 0) return@LaunchedEffect
+        folds.transcriptCur.value = 0
+        snapshotFlow { list.layoutInfo.totalItemsCount }.first { it > segments.size }
+        scrollFromEnd(segments.size - starts.indexOfLast { it <= 0 } + if (hub.readOnly) 0 else 1)
     }
     LazyColumn(Modifier.fillMaxWidth(), list) {
         meetingHeader(c, state, all, toNotes)

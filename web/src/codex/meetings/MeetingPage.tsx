@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useAssistantStore, useAssistantData, useCodex } from '../data';
 import { rowKey } from '../data/sync';
 import { linksOf, listOf, othersOf, type Meeting } from '../data/wiki/wiki';
@@ -12,7 +12,7 @@ import { Section, sectionCount } from '../../ui/Section';
 import { Icon } from '../../ui/Icon';
 import { EmptyState } from '../../ui/Panel';
 import { safeHref } from '../../ui/util';
-import { notesFocusFor, setView, showSnack, useEscapeBack } from '../view';
+import { clearTranscriptQuery, notesFocusFor, setView, showSnack, transcriptQueryFor, useEscapeBack } from '../view';
 import { ActionRow, confirmAll } from './ActionRow';
 import { PinList, PinnableSummary } from './Pins';
 import { Prep } from './Prep';
@@ -50,7 +50,8 @@ export function MeetingPage({ m }: { m: Meeting }) {
   const back = () => setView({ open: null });
   useEscapeBack(back);
   const [editing, setEditing] = useState(() => notesFocusFor(rowKey(m)));
-  const [moreOpen, setMoreOpen] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(() => !!transcriptQueryFor(rowKey(m)));
+  useEffect(clearTranscriptQuery, []);
   const notesBox = useRef<HTMLElement>(null);
   const link = m.calendar_url ? safeHref(m.calendar_url) : '';
   const takeNotes = () => {

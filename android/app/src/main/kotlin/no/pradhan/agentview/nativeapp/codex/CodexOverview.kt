@@ -239,6 +239,10 @@ fun moveBlock(items: List<Row>, goal: Row, now: Long): String? {
 class Hit(val row: Row, val title: String, val snippet: String, val route: String? = null)
 class Hits(val tasks: List<Hit>, val meetings: List<Hit>, val wiki: List<Hit> = emptyList(), val jobs: List<Hit> = emptyList()) { val total get() = tasks.size + meetings.size + wiki.size + jobs.size }
 
+// A transcript search hit opens its meeting with the transcript unfolded and searched for the query.
+fun saidRoute(key: String, query: String): String = "meeting:$key" + query.replace('\u0001', ' ').trim().let { if (it.isEmpty()) "" else "#said=$it" }
+fun saidOf(route: String): String? = route.substringAfter('#', "").takeIf { it.startsWith("said=") }?.removePrefix("said=")
+
 // A meeting whose stored transcript matches the query, as the hub's transcripts/search answers it.
 class TranscriptHit(val profile: String, val id: String, val snippet: String)
 

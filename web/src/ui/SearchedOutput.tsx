@@ -4,7 +4,7 @@ import { Icon } from './Icon';
 import { IconButton } from './Button';
 import { markSegments, matchLabel, stepMatch } from './util';
 
-export function SearchedOutput({ text, query, setQuery, label, className, children }: { text: string; query: string; setQuery: (q: string) => void; label: string; className: string; children?: ReactNode }) {
+export function SearchedOutput({ text, query, setQuery, label, className, jump, children }: { text: string; query: string; setQuery: (q: string) => void; label: string; className: string; jump?: boolean; children?: ReactNode }) {
   const [cur, setCur] = useState(-1);
   const box = useRef<HTMLDivElement>(null);
   const segs = useMemo(() => markSegments(text, queryWords(query)), [text, query]);
@@ -17,6 +17,9 @@ export function SearchedOutput({ text, query, setQuery, label, className, childr
     setCur(n);
     box.current?.querySelectorAll('mark')[n]?.scrollIntoView({ block: 'center' });
   };
+  useEffect(() => {
+    if (jump && count) step(1);
+  }, [jump]);
   let k = -1;
   return (
     <>

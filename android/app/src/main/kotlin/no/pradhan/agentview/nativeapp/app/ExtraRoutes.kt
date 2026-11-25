@@ -6,6 +6,7 @@ import kotlinx.coroutines.launch
 import no.pradhan.agentview.nativeapp.codex.CodexOps
 import no.pradhan.agentview.nativeapp.codex.CodexState
 import no.pradhan.agentview.nativeapp.codex.PERSONAL
+import no.pradhan.agentview.nativeapp.codex.saidOf
 import no.pradhan.agentview.nativeapp.codex.matchesProfile
 import no.pradhan.agentview.nativeapp.codex.wiki.MEMORY
 import no.pradhan.agentview.nativeapp.codex.wiki.ReviewListPage
@@ -32,7 +33,7 @@ import no.pradhan.agentview.nativeapp.ui.EmptyState
 import no.pradhan.agentview.nativeapp.ui.MenuItem
 
 // The pages the Codex tab shows beyond Overview, Tasks and Goals: Meetings, Wiki and Jobs with the pages under them.
-// Meetings, Wiki and Jobs are tab roots, passed as the page value. A pushed route is "meeting:<key>" (ending in #notes to focus My notes),"person:<name>", "wiki:<key>" (ending in #<claim id> to open a claim), "job:<key>", "jobnew:<key>" (a job just added, its Edit sheet open), "series:<key>", "series-value", "review" or "autopilot".
+// Meetings, Wiki and Jobs are tab roots, passed as the page value. A pushed route is "meeting:<key>" (ending in #notes to focus My notes, or #said=<query> to open the transcript searched for it), "person:<name>", "wiki:<key>" (ending in #<claim id> to open a claim), "job:<key>", "jobnew:<key>" (a job just added, its Edit sheet open), "series:<key>", "series-value", "review" or "autopilot".
 val EXTRA_ROOTS = setOf("meetings", "jobs", "wiki")
 const val ROUTE_SEP = '\u0001'
 
@@ -73,7 +74,7 @@ fun ExtraContent(
         route == "meetings" -> MeetingsListPage(hub, st, profile, now, chips, decisions, onChip, { push("meeting:${it.key}#notes") }, openMeeting)
         route.startsWith("meeting:") -> {
             val m = st.meetings.firstOrNull { it.key == keyOf(wikiRoute) && !it.deleted }
-            if (m == null) EmptyState("This meeting is gone", icon = "calendar", small = false, action = { Button("Back", pop, size = ButtonSize.Sm) }) else MeetingPage(hub, st, m, now, actions, ops, openMeeting, { push("person:$it") }, { push("series:$it") }, onTask, if (anchor == "notes") ({ pop(); push(wikiRoute) }) else null)
+            if (m == null) EmptyState("This meeting is gone", icon = "calendar", small = false, action = { Button("Back", pop, size = ButtonSize.Sm) }) else MeetingPage(hub, st, m, now, actions, ops, openMeeting, { push("person:$it") }, { push("series:$it") }, onTask, if (anchor == "notes") ({ pop(); push(wikiRoute) }) else null, saidOf(route))
         }
         route.startsWith("series:") -> SeriesPage(hub, st, key, now, actions, openMeeting)
         route == "series-value" -> SeriesValuePage(st, profile, now, openMeeting)

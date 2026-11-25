@@ -42,3 +42,15 @@ describe('wiki back', () => {
     expect(current()).toMatchObject({ list: 'wiki', open: null });
   });
 });
+
+describe('transcript hit', () => {
+  it('opens the meeting with the query once for that meeting only', async () => {
+    const { openMeetingAt, transcriptQueryFor, clearTranscriptQuery } = await import('./view');
+    openMeetingAt({ profile: 'work', id: 'm2' }, ' budget ');
+    expect(current()).toMatchObject({ list: 'meetings', open: 'work:m2' });
+    expect(transcriptQueryFor('work:m2')).toBe('budget');
+    expect(transcriptQueryFor('work:m3')).toBe('');
+    clearTranscriptQuery();
+    expect(transcriptQueryFor('work:m2')).toBe('');
+  });
+});

@@ -12,7 +12,7 @@ import { Loading } from '../../ui/Skeleton';
 import { SearchedOutput } from '../../ui/SearchedOutput';
 import { markSegments, matchLabel, plural } from '../../ui/util';
 import { queryWords } from '../data/ask/match';
-import { showSnack } from '../view';
+import { showSnack, transcriptQueryFor } from '../view';
 import { rowKey } from '../data/sync';
 import { useSnackTask } from '../tasks/useSnackTask';
 
@@ -59,14 +59,15 @@ export function TalkTime({ text, actions, decisions }: { text: string; actions: 
   );
 }
 
-export function Transcript({ got }: { got: { text: string | null; error?: string; reload: () => void } | undefined }) {
-  const [open, setOpen] = useState(false);
-  const [query, setQuery] = useState('');
+export function Transcript({ at, got }: { at: string; got: { text: string | null; error?: string; reload: () => void } | undefined }) {
+  const [jump] = useState(() => transcriptQueryFor(at));
+  const [open, setOpen] = useState(!!jump);
+  const [query, setQuery] = useState(jump);
   const count = useMemo(() => got?.text && query.trim() ? markSegments(got.text, queryWords(query)).filter((s) => s.hit).length : -1, [got?.text, query]);
   return (
     <section className="mt-sec mt-fold">
       <Section label="Transcript" count={!open && count >= 0 ? matchLabel(count) : undefined} open={open} onToggle={() => setOpen((v) => !v)} />
-      {open && (!got ? <Loading /> : got.error ? <EmptyState size="sm" title="Could not load the transcript" hint={got.error} action={<Button size="sm" onClick={got.reload}>Retry</Button>} /> : got.text ? <SearchedOutput text={got.text} query={query} setQuery={setQuery} label="Search transcript" className="mt-transcript" /> : <EmptyState size="sm" title="No transcript kept for this meeting" />)}
+      {open && (!got ? <Loading /> : got.error ? <EmptyState size="sm" title="Could not load the transcript" hint={got.error} action={<Button size="sm" onClick={got.reload}>Retry</Button>} /> : got.text ? <SearchedOutput text={got.text} query={query} setQuery={setQuery} label="Search transcript" className="mt-transcript" jump={!!jump} /> : <EmptyState size="sm" title="No transcript kept for this meeting" />)}
     </section>
   );
 }

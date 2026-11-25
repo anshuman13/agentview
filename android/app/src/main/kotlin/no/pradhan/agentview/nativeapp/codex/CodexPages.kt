@@ -245,7 +245,7 @@ internal fun SearchPage(st: CodexState, profile: String?, query: String, onQuery
         }
         section("Tasks and notes", hits.tasks) { onOpen(it.row) }
         section("Meetings", hits.meetings) { onMeeting(it.row) }
-        section("Transcripts", transcripts) { onMeeting(it.row) }
+        section("Transcripts", transcripts) { onRoute(saidRoute(it.row.key, settled)) }
         section("Wiki", hits.wiki) { h -> h.route?.let(onRoute) }
         section("Jobs", hits.jobs) { h -> h.route?.let(onRoute) }
         if (query.isNotBlank() && hits.total == 0 && transcripts.isEmpty()) item { EmptyState("No matches", icon = "search") }

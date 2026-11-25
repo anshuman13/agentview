@@ -5,7 +5,7 @@ import { ShowAll } from '../ui/Button';
 import { EmptyState } from '../ui/Panel';
 import { Row } from '../ui/Row';
 import { Section } from '../ui/Section';
-import { openMeeting, openTask, setView, takeSearchQuery, useView } from './view';
+import { openMeeting, openMeetingAt, openTask, setView, takeSearchQuery, useView } from './view';
 import { useScrolledHeader } from './gestures/usePullRefresh';
 import { CodexHead } from './CodexHead';
 import { useTranscriptHits } from './meetings/list/useTranscriptHits';
@@ -61,7 +61,7 @@ export function Search({ onMenu }: { onMenu: () => void }) {
           <input autoFocus type="search" enterKeyHint="search" value={query} placeholder="Search tasks, meetings, transcripts, wiki and jobs" aria-label="Search" onChange={(e) => setQuery(e.target.value)} />
           <Hits label="Tasks and notes" group={r.tasks} onAll={more('tasks')} open={(h) => (h.page ? openMeeting({ profile: h.profile, id: h.page }) : openTask(h))} />
           <Hits label="Meetings" group={r.meetings} onAll={more('meetings')} open={openMeeting} />
-          <Hits label="Transcripts" group={transcripts} said onAll={more('transcripts')} open={openMeeting} />
+          <Hits label="Transcripts" group={transcripts} said onAll={more('transcripts')} open={(h) => openMeetingAt(h, query)} />
           <Hits label="Wiki" group={r.wiki} onAll={more('wiki')} open={(h) => setView({ list: 'wiki', open: h.page ?? null, anchor: null })} />
           <Hits label="Jobs" group={r.jobs} onAll={more('jobs')} open={(h) => setView({ list: 'jobs', open: key(h) })} />
           {query.trim() && !r.total && !transcripts.total && <EmptyState size="sm" icon="search" title="No matches" />}

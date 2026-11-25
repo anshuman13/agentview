@@ -164,7 +164,7 @@ export function MeetingMore({ m, all, state, prior, family, people, decisions, o
       <Fold id="meeting-not-mine" remember={false} title="Not mine" count={count.dismissed}>
         <div className="mt-tasks">{by('dismissed').map((r) => <ActionRow key={r.profile + r.id} row={r} meeting={m} />)}</div>
       </Fold>
-      {state === 'done' && <Transcript key={rowKey(m)} got={transcript} />}
+      {state === 'done' && <Transcript key={rowKey(m)} at={rowKey(m)} got={transcript} />}
       <AskBar placeholder="Ask about this meeting" onAsk={(q) => ask(meetingAskText(q, m, all), m.profile)} />
     </>
   );
