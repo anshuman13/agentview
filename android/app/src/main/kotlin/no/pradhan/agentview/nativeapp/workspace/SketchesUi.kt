@@ -115,7 +115,7 @@ private fun SketchList(hub: Hub, sketches: List<SketchFile>?, scroll: ScrollStat
             when {
                 sketches == null && error.isNotEmpty() -> EmptyState("Could not load sketches", error, icon = "paintcan", action = { Button("Retry", reload, size = ButtonSize.Sm) })
                 sketches == null -> Loading("Loading sketches…")
-                sketches.isEmpty() -> EmptyState("No sketches yet. Ask for one with /sketch <what>", icon = "paintcan", action = { Button("New sketch", { newSketch(hub) }, size = ButtonSize.Sm) })
+                sketches.isEmpty() -> EmptyState("No sketches yet. Ask for one with /\u2060sketch <what>", icon = "paintcan", action = { Button("New sketch", { newSketch(hub) }, size = ButtonSize.Sm) })
                 else -> Column(Modifier.fillMaxSize().verticalScroll(scroll)) {
                     SectionHeader("Sketches", sketches.size.toString())
                     CardGrid(sketches.take(if (all) sketches.size else FOLD), Modifier.padding(horizontal = Tokens.listPad)) { s ->
