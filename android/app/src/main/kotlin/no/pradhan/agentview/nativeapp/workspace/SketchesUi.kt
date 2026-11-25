@@ -6,6 +6,7 @@ import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -27,6 +28,9 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.boundsInWindow
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.viewinterop.AndroidView
 import kotlin.math.abs
 import kotlinx.serialization.builtins.ListSerializer
@@ -41,10 +45,9 @@ import no.pradhan.agentview.nativeapp.ui.ButtonSize
 import no.pradhan.agentview.nativeapp.ui.ButtonVariant
 import no.pradhan.agentview.nativeapp.ui.Chip
 import no.pradhan.agentview.nativeapp.ui.EmptyState
-import no.pradhan.agentview.nativeapp.ui.Group
-import no.pradhan.agentview.nativeapp.ui.Hairline
+import no.pradhan.agentview.nativeapp.ui.Card
+import no.pradhan.agentview.nativeapp.ui.CardGrid
 import no.pradhan.agentview.nativeapp.ui.IconBtn
-import no.pradhan.agentview.nativeapp.ui.ListRow
 import no.pradhan.agentview.nativeapp.ui.Loading
 import no.pradhan.agentview.nativeapp.ui.MenuItem
 import no.pradhan.agentview.nativeapp.ui.MoreButton
@@ -85,11 +88,8 @@ fun SketchesScreen(hub: Hub, onBack: () -> Unit) {
                 sketches.isEmpty() -> EmptyState("No sketches yet", "Mockups the agent writes with /sketch show here", icon = "paintcan", action = { Button("New sketch", { newSketch(hub) }, size = ButtonSize.Sm) })
                 else -> Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
                     SectionHeader("Sketches", sketches.size.toString())
-                    Group {
-                        sketches.take(if (all) sketches.size else FOLD).forEachIndexed { i, s ->
-                            if (i > 0) Hairline()
-                            ListRow(sketchTitle(s.name), agoShort(s.mtime.toLong(), now, " ago"), onClick = { open = s.name })
-                        }
+                    CardGrid(sketches.take(if (all) sketches.size else FOLD), Modifier.padding(horizontal = Tokens.listPad)) { s ->
+                        Card(sketchTitle(s.name), meta = agoShort(s.mtime.toLong(), now, " ago"), onClick = { open = s.name }, cover = { SketchThumb(hub, s) { open = s.name } })
                     }
                     if (!all && sketches.size > FOLD) Button("Show all ${sketches.size}", { all = true }, Modifier.padding(horizontal = Tokens.listPad), variant = ButtonVariant.Plain, size = ButtonSize.Sm)
                     Spacer(Modifier.padding(bottom = Tokens.sp16))
@@ -103,6 +103,23 @@ private fun newSketch(hub: Hub) {
     if (hub.readOnly) { hub.notice.value = READ_ONLY_SENT; return }
     hub.setDraft(hub.pageChat, "/sketch ")
     hub.link.value = DeepLink(chat = hub.pageChat)
+}
+
+// The card cover: the sketch at desktop width in a script-free WebView, created once the card is on screen. The overlay takes the taps.
+@Composable
+private fun SketchThumb(hub: Hub, file: SketchFile, onClick: () -> Unit) {
+    var seen by remember { mutableStateOf(false) }
+    Box(Modifier.fillMaxSize().onGloballyPositioned { if (!seen && it.boundsInWindow().height > 0f) seen = true }) {
+        if (seen) {
+            val (load) = rememberLoad(file.path, file.mtime) { hub.readFile(file.path) }
+            val f = load.data
+            val dark = when (hub.theme.collectAsState().value) { "dark" -> true; "light" -> false; else -> isSystemInDarkTheme() }
+            if (f != null && !f.binary && f.error == null && f.content.length <= MAX_SKETCH) {
+                SketchFrame(remember(f.content, dark) { sketchPage(f.content, if (dark) "dark" else "light", true) }, true, Modifier.fillMaxSize())
+            }
+        }
+        Box(Modifier.matchParentSize().clearAndSetSemantics {}.clickable(indication = null, interactionSource = null, onClick = onClick))
+    }
 }
 
 @Composable
