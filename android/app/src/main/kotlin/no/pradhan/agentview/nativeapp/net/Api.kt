@@ -9,6 +9,7 @@ import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.builtins.MapSerializer
 import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.contentOrNull
@@ -18,6 +19,7 @@ import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
 import no.pradhan.agentview.nativeapp.chat.ROW_WINDOW
 import no.pradhan.agentview.nativeapp.codex.AssistantRemote
+import no.pradhan.agentview.nativeapp.codex.TranscriptHit
 import no.pradhan.agentview.nativeapp.sessions.BinnedSession
 import no.pradhan.agentview.nativeapp.sessions.Repo
 import no.pradhan.agentview.nativeapp.sessions.SavedSession
@@ -114,6 +116,16 @@ class Api(private val origin: () -> String, private val http: OkHttpClient = sha
         protocolJson.parseToJsonElement(call(url("/api/assistant/transcript?profile=${enc(profile)}&id=${enc(id)}")).decodeToString()).jsonObject["text"]?.jsonPrimitive?.contentOrNull
     } catch (e: ApiError) {
         if (e.code == 404) null else throw e
+    }
+
+    // Meetings of the profile, or of both when null, whose stored transcript holds the query, with a snippet of the match.
+    suspend fun searchTranscripts(query: String, profile: String?): List<TranscriptHit> {
+        val hits = protocolJson.parseToJsonElement(call(url("/api/assistant/transcripts/search?q=${enc(query)}${profile?.let { "&profile=${enc(it)}" } ?: ""}")).decodeToString()).jsonObject["hits"] as? JsonArray ?: return emptyList()
+        return hits.mapNotNull { h ->
+            val o = h as? JsonObject ?: return@mapNotNull null
+            fun s(k: String) = (o[k] as? JsonPrimitive)?.contentOrNull
+            TranscriptHit(s("profile") ?: return@mapNotNull null, s("id") ?: return@mapNotNull null, s("snippet").orEmpty())
+        }
     }
 
     suspend fun readTranscript(profile: String, id: String, instructions: String? = null): Int {

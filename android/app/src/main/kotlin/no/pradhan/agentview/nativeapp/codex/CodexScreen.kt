@@ -281,7 +281,7 @@ private fun CodexBody(hub: Hub, st: CodexState, nav: CodexNav, profile: String?,
         page == "overview" -> OverviewPage(hub, st, profile, now, actions, nav::openRow, openNeeds, { nav.page = "goals" }, { nav.adding = true }, meeting) { nav.push("meeting:${it.key}#notes") }
         page == "tasks" -> TasksPage(st, profile, now, actions, nav.searching, nav.query, { nav.query = it }, nav::openRow, { nav.page = "tag:$it" }, nav.picked, { nav.picked = it }, meeting)
         page == "goals" -> GoalsPage(st, profile, now, actions, ops.goals, nav::openRow) { nav.addingGoal = it.id; nav.adding = true }
-        page == "search" -> SearchPage(st, profile, searchQuery, { searchQuery = it; searchOpened = emptySet() }, searchOpened, { searchOpened = it }, nav::openRow, meeting, nav::push)
+        page == "search" -> SearchPage(st, profile, searchQuery, { searchQuery = it; searchOpened = emptySet() }, searchOpened, { searchOpened = it }, nav::openRow, meeting, nav::push, hub.api::searchTranscripts)
         else -> TagPage(st, page.removePrefix("tag:"), now, actions, nav::openRow)
     }
 }

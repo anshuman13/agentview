@@ -329,6 +329,19 @@ class CodexLogicTest {
         assertEquals(4, hits.total)
     }
 
+    @Test fun transcriptHitsKeepLiveMeetingsOfTheProfileInHubOrder() {
+        fun meeting(id: String, profile: String, vararg v: Pair<String, Any?>) =
+            Row("meetings", id, profile, f = SYNCED_FIELDS.getValue("meetings").associateWith { JsonNull as kotlinx.serialization.json.JsonElement } + v.map { (k, x) -> k to toJson(x) })
+        val meetings = listOf(meeting("m1", WORK, "title" to "Standup", "starts_at" to NOW), meeting("m2", WORK), meeting("m3", PERSONAL, "title" to "Dentist"), meeting("m4", WORK, "title" to "Gone").copy(deleted = true))
+        val said = listOf(TranscriptHit(WORK, "m2", "…the budget"), TranscriptHit(WORK, "m1", "budget talk"), TranscriptHit(PERSONAL, "m3", "budget"), TranscriptHit(WORK, "m4", "budget"), TranscriptHit(WORK, "nope", "budget"))
+        val hits = transcriptHits(meetings, said, WORK)
+        assertEquals(listOf("m2", "m1"), hits.map { it.row.id })
+        assertEquals(listOf("Meeting", "Standup"), hits.map { it.title })
+        assertEquals("…the budget", hits[0].snippet)
+        assertEquals("${dayLabel(NOW)} · budget talk", hits[1].snippet)
+        assertEquals(3, transcriptHits(meetings, said, null).size)
+    }
+
     @Test fun newPageIsALiveDirtyPageInItsSection() {
         val p = newPage("  Roadmap ", "Pages", 3, PERSONAL, NOW)!!
         assertEquals("Roadmap", p.title)

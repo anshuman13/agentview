@@ -19,6 +19,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -225,11 +226,16 @@ internal fun GoalsPage(st: CodexState, profile: String?, now: Long, actions: Tas
 }
 
 @Composable
-internal fun SearchPage(st: CodexState, profile: String?, query: String, onQuery: (String) -> Unit, opened: Set<String>, onOpened: (Set<String>) -> Unit, onOpen: (Row) -> Unit, onMeeting: (Row) -> Unit, onRoute: (String) -> Unit) {
+internal fun SearchPage(st: CodexState, profile: String?, query: String, onQuery: (String) -> Unit, opened: Set<String>, onOpened: (Set<String>) -> Unit, onOpen: (Row) -> Unit, onMeeting: (Row) -> Unit, onRoute: (String) -> Unit, findSaid: suspend (String, String?) -> List<TranscriptHit>) {
     val settled = rememberSettled(query)
     val hits = remember(st.items, st.meetings, st.pages, st.facts, st.jobs, profile, settled) { searchAll(st, settled, profile) }
+    val said by produceState(emptyList<TranscriptHit>(), settled, profile) {
+        value = emptyList()
+        if (settled.isNotBlank()) value = runCatching { findSaid(settled.trim(), profile) }.getOrDefault(emptyList())
+    }
+    val transcripts = remember(st.meetings, said, profile) { transcriptHits(st.meetings, said, profile) }
     LazyColumn(Modifier.fillMaxSize()) {
-        item { SearchField(query, onQuery, "Search tasks, meetings, wiki and jobs") }
+        item { SearchField(query, onQuery, "Search tasks, meetings, transcripts, wiki and jobs") }
         fun section(label: String, list: List<Hit>, open: (Hit) -> Unit) {
             if (list.isEmpty()) return
             val all = label in opened
@@ -239,8 +245,9 @@ internal fun SearchPage(st: CodexState, profile: String?, query: String, onQuery
         }
         section("Tasks and notes", hits.tasks) { onOpen(it.row) }
         section("Meetings", hits.meetings) { onMeeting(it.row) }
+        section("Transcripts", transcripts) { onMeeting(it.row) }
         section("Wiki", hits.wiki) { h -> h.route?.let(onRoute) }
         section("Jobs", hits.jobs) { h -> h.route?.let(onRoute) }
-        if (query.isNotBlank() && hits.total == 0) item { EmptyState("No matches", icon = "search") }
+        if (query.isNotBlank() && hits.total == 0 && transcripts.isEmpty()) item { EmptyState("No matches", icon = "search") }
     }
 }

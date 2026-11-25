@@ -239,6 +239,15 @@ fun moveBlock(items: List<Row>, goal: Row, now: Long): String? {
 class Hit(val row: Row, val title: String, val snippet: String, val route: String? = null)
 class Hits(val tasks: List<Hit>, val meetings: List<Hit>, val wiki: List<Hit> = emptyList(), val jobs: List<Hit> = emptyList()) { val total get() = tasks.size + meetings.size + wiki.size + jobs.size }
 
+// A meeting whose stored transcript matches the query, as the hub's transcripts/search answers it.
+class TranscriptHit(val profile: String, val id: String, val snippet: String)
+
+// The hub's transcript hits as meeting hits, in the hub's order, for live meetings of the profile only (web Search.tsx).
+fun transcriptHits(meetings: List<Row>, said: List<TranscriptHit>, profile: String?): List<Hit> {
+    val byKey = liveRows(meetings).filter { matchesProfile(profile, it) }.associateBy { "${it.profile}:${it.id}" }
+    return said.mapNotNull { h -> byKey["${h.profile}:${h.id}"]?.let { m -> Hit(m, m.title ?: "Meeting", listOfNotNull(m.startsAt?.let(::dayLabel), h.snippet).joinToString(" · ")) } }
+}
+
 fun snippet(words: List<String>, vararg texts: String?): String {
     for (t in texts) {
         if (t.isNullOrBlank()) continue
