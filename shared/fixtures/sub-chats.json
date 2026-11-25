@@ -136,6 +136,28 @@
       "expected": {}
     },
     {
+      "name": "the chat that sent the /clear settles a tie",
+      "sessions": [
+        { "sessionId": "a", "cwd": "/r", "branch": "main", "account": "p", "lastAt": 1000, "clearedAt": 1058 },
+        { "sessionId": "b", "cwd": "/r", "branch": "main", "account": "p", "lastAt": 1010 },
+        { "sessionId": "c1", "cwd": "/r", "branch": "main", "account": "p", "lastAt": 5000, "clearAt": 1060 }
+      ],
+      "links": {},
+      "runs": [],
+      "expected": { "c1": { "parent": "a", "via": "clear", "at": 1060 } }
+    },
+    {
+      "name": "a chat resumed after it sent the /clear is still its parent",
+      "sessions": [
+        { "sessionId": "a", "cwd": "/r", "branch": "main", "account": "p", "lastAt": 9000, "clearedAt": 1058 },
+        { "sessionId": "b", "cwd": "/r", "branch": "main", "account": "p", "lastAt": 1010 },
+        { "sessionId": "c1", "cwd": "/r", "branch": "main", "account": "p", "lastAt": 5000, "clearAt": 1060 }
+      ],
+      "links": {},
+      "runs": [],
+      "expected": { "c1": { "parent": "a", "via": "clear", "at": 1060 } }
+    },
+    {
       "name": "a build run settles a tie",
       "sessions": [
         { "sessionId": "a", "cwd": "/r", "branch": "main", "account": "p", "lastAt": 1000 },

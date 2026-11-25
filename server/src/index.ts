@@ -15,6 +15,7 @@ import { forgetPrs, gh, onPrsChanged, useAutoMerge } from './integrations/github
 import { onAttention, startAttention } from './integrations/attention.js';
 import { startSummaries } from './agent/claude/summaries.js';
 import { startAutoArchive } from './agent/claude/autoArchive.js';
+import { startSubChatScan } from './agent/claude/subChatScan.js';
 import { startBackupPull } from './integrations/backupPull.js';
 import { thisMac } from './http/macs.js';
 import type { AttentionItem, ClientMessage, ServerMessage } from '../../shared/protocol.js';
@@ -140,6 +141,7 @@ startAutoArchive(
   () => new Set([...live.chats.values()].filter((c) => (c.running || c.pending > 0) && c.sessionId).map((c) => c.sessionId!)),
   async (sessionId) => { const id = bySession(sessionId); if (id) await closeByUser(id); },
 );
+startSubChatScan();
 startSummaries(() =>new Set([...live.chats.values()].filter((c) => c.running && c.sessionId).map((c) => c.sessionId!)));
 onPrsChanged((cwd) => host.notify({ op: 'prs_changed', cwd }));
 const autoMerge = createAutoMerge({ gh, post, file: path.join(os.homedir(), '.agentview/automerge.json'), changed: forgetPrs, shipped: ({ cwd, ...pr }) => hubShipped({ ...pr, profile: profileOf(cwd) }).catch((err) => console.error('hub shipped:', errText(err))) });

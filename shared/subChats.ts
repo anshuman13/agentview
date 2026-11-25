@@ -12,6 +12,7 @@ export type OpenSession = { sessionId: string | null; parentId?: string; lastAct
 export type ParentRow<T extends GroupSession> = { root: T; latest: string; count: number; label: string; lastModified: number; members: string[] };
 
 export const SUB_GAP_MS = 2 * 60 * 1000;
+const SENT_MS = 5000;
 
 // The first session of the chain the id belongs to; the id itself when it is not a sub-chat.
 export function rootOf(links: SubLinks, id: string): string {
@@ -69,12 +70,13 @@ export function searchHitRows<H extends SubHit>(hits: H[]): (H & { session: stri
 }
 
 // Older chats split by /clear before links were recorded.
-export type ScanSession = { sessionId: string; cwd: string; branch: string | null; account: string; lastAt: number; clearAt?: number };
+export type ScanSession = { sessionId: string; cwd: string; branch: string | null; account: string; lastAt: number; clearAt?: number; clearedAt?: number };
 export type ScanRun = { sessionId: string; cwd: string; kind: string; startedAt: number; endedAt: number | null };
 
 // Links each session that starts with /clear (clearAt) to the session in the same cwd, branch and account whose last
-// entry is at most 2 minutes before the /clear. A session already followed by a /clear is used up. When several are
-// left, a build run of that chat and cwd settles it; otherwise nothing is linked.
+// entry is at most 2 minutes before the /clear, or to the one session that queued that /clear (clearedAt, within 5
+// seconds), even when it was resumed later. A session already followed by a /clear is used up. When several are left,
+// a build run of that chat and cwd settles it; otherwise nothing is linked.
 export function linkOlder(sessions: ScanSession[], links: SubLinks, runs: ScanRun[] = []): SubLinks {
   const out: SubLinks = {};
   const all: SubLinks = { ...links };
@@ -93,7 +95,9 @@ export function linkOlder(sessions: ScanSession[], links: SubLinks, runs: ScanRu
   const clears = sessions.filter((s) => s.clearAt != null && !links[s.sessionId]).sort((a, b) => a.clearAt! - b.clearAt!);
   for (const c of clears) {
     const at = c.clearAt!;
-    let cands = sessions.filter((s) => s.sessionId !== c.sessionId && !used.has(s.sessionId) && s.cwd === c.cwd && s.branch === c.branch && s.account === c.account && s.lastAt <= at && at - s.lastAt <= SUB_GAP_MS);
+    const same = sessions.filter((s) => s.sessionId !== c.sessionId && !used.has(s.sessionId) && s.cwd === c.cwd && s.branch === c.branch && s.account === c.account);
+    const sent = same.filter((s) => s.clearedAt != null && Math.abs(s.clearedAt - at) <= SENT_MS);
+    let cands = sent.length === 1 ? sent : same.filter((s) => s.lastAt <= at && at - s.lastAt <= SUB_GAP_MS);
     if (cands.length > 1) {
       const chatRuns = runs.filter((r) => r.kind === 'build' && r.cwd === c.cwd);
       cands = cands.filter((s) => chatRuns.some((r) => r.sessionId === s.sessionId || r.sessionId === rootOf(all, s.sessionId)));
