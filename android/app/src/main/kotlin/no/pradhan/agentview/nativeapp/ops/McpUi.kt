@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -91,7 +92,6 @@ fun McpScreen(hub: Hub, onBack: () -> Unit) {
         }
     }
     val groups by hub.mcpGroups.collectAsState()
-    val counts by hub.counts.collectAsState()
     LaunchedEffect(Unit) { hub.refreshMcpGroups() }
     var sel by rememberSaveable(chat) { mutableStateOf<String?>(null) }
     var showHidden by rememberSaveable { mutableStateOf(false) }
@@ -112,7 +112,8 @@ fun McpScreen(hub: Hub, onBack: () -> Unit) {
 
     val shown = sel?.takeIf { s -> rows.any { mcpKey(it) == s } }
     val still = motionOff()
-    val mcp = counts.mcp
+    val mcp = remember(byStatus) { mcpStatusCounts(byStatus) }
+    val listState = rememberLazyListState()
     AnimatedContent(shown, Modifier.fillMaxSize(), transitionSpec = {
         val ease = if (targetState != null) Tokens.motionEaseIn else Tokens.motionEaseOut
         val slide = tween<IntOffset>(Tokens.motionDuration, easing = ease)
@@ -129,7 +130,7 @@ fun McpScreen(hub: Hub, onBack: () -> Unit) {
             IconBtn("refresh", "Check", { refresh = true; reprobe() }, enabled = !probe.busy)
         }
         PageBody {
-            LazyColumn(Modifier.fillMaxSize()) {
+            LazyColumn(Modifier.fillMaxSize(), listState) {
                 item { ErrorHint(probe.error) }
                 if (probe.data == null && probe.error.isEmpty()) item { Loading("Checking the servers…") }
                 if (probe.data != null && rows.isEmpty()) item { EmptyState("No MCP servers yet", "Servers you add show here", action = { SetupButton(hub, "mcp", mcpCommand = if (connectors) "claude mcp add" else "codex mcp add") }, icon = "plug") }

@@ -211,6 +211,14 @@ fun mcpStatusGroup(r: McpRow) = when (r.status) {
 fun mcpStatusGroups(rows: List<McpRow>): List<Pair<String, List<McpRow>>> =
     MCP_STATUS_GROUPS.map { g -> g to rows.filter { mcpStatusGroup(it) == g }.sortedBy { it.name.lowercase() } }.filter { it.second.isNotEmpty() }
 
+// The page subtitle counts the same rows as the sections under it (web statusCounts).
+data class McpCounts(val connected: Int, val total: Int, val needsYou: Int)
+
+fun mcpStatusCounts(groups: List<Pair<String, List<McpRow>>>): McpCounts {
+    fun n(g: String) = groups.firstOrNull { it.first == g }?.second?.size ?: 0
+    return McpCounts(n("Connected"), groups.sumOf { it.second.size }, n("Needs login") + n("Failed"))
+}
+
 fun mcpGroupBody(service: String, group: String) = buildJsonObject { put("service", service); put("group", group) }.toString()
 
 fun mcpSlug(server: String) = server.replace(Regex("[^A-Za-z0-9_-]"), "_")

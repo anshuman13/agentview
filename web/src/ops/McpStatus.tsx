@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { getState, useStore } from '../app/store';
 import { Button, IconButton, ShowAll } from '../ui/Button';
@@ -7,9 +7,9 @@ import { EmptyState } from '../ui/Panel';
 import { Section } from '../ui/Section';
 import { useCan } from '../chat/useCan';
 import { ago, useSlot, useTick } from '../ui/util';
-import { accountGroup, groupKey, hideKey, mcpCalls, rowKey, slug, statusGroups, type Group, type Row, type StatusGroup } from './mcpHelpers';
+import { accountGroup, groupKey, hideKey, mcpCalls, rowKey, slug, statusCounts, statusGroups, type Group, type Row, type StatusGroup } from './mcpHelpers';
 import { mcpRows } from './mcpRows';
-import { useCounts } from '../app/shell/counts';
+import { mcpPageCounts } from '../app/shell/counts';
 import { useMcpGroups, useMcpProbe } from './useMcpPage';
 import { Detail } from './McpDetail';
 import { SetupButton } from './SetupButton';
@@ -45,7 +45,6 @@ export function McpPage() {
   const [sel, setSel] = useState<string | null>(null);
   const [showHidden, setShowHidden] = useState(false);
   const [expanded, setExpanded] = useState<StatusGroup[]>([]);
-  const { mcp: health } = useCounts();
   useTick(15000);
 
   const rows = useMemo(() => mcpRows(probed, mcp, account, accounts, connectors), [probed, mcp, account, accounts, connectors]);
@@ -55,6 +54,9 @@ export function McpPage() {
   const groupOf = (r: Row): Group => (r.account ? accountGroup(r.account) : groups[groupKey(r)] === 'personal' ? 'personal' : 'work');
   const hidden = (r: Row) => groups[hideKey({ name: groupKey(r) })] === 'hidden';
   const sections = useMemo(() => statusGroups(rows.filter((r) => !hidden(r))), [rows, groups]);
+  const shownCounts = useMemo(() => statusCounts(sections), [sections]);
+  useEffect(() => { mcpPageCounts.set(probed === null ? null : shownCounts); }, [probed, shownCounts]);
+  useEffect(() => () => mcpPageCounts.set(null), []);
   const hiddenList = useMemo(() => statusGroups(rows.filter(hidden)).flatMap(([, rs]) => rs), [rows, groups]);
   const extra = document.getElementById('page-mcp-extra');
   const action = useSlot('page-mcp-action');
@@ -67,7 +69,7 @@ export function McpPage() {
     <div className={`mcp-page ${current ? 'with-detail' : ''}`}>
       <div className="mcp-main wk"><div className="wk-scroll"><div className="mt-page">
         {action && createPortal(<IconButton icon="refresh" label="Check" size="sm" spin={busy} disabled={busy} onClick={() => load(true)} />, action)}
-        {extra && createPortal(<McpStats probed={probed !== null} busy={busy} at={at} ok={health.connected} total={health.total} attention={health.needsYou} onCheck={() => load(true)} />, extra)}
+        {extra && createPortal(<McpStats probed={probed !== null} busy={busy} at={at} ok={shownCounts.connected} total={shownCounts.total} attention={shownCounts.needsYou} onCheck={() => load(true)} />, extra)}
         {error && <div className="mcp-error" role="alert"><Icon name="error" small /> {error}</div>}
         {probed === null && !error && (
           <div className="skeleton-list">{[0, 1, 2, 3, 4, 5].map((i) => <div key={i} className="skeleton mcp-skeleton" style={{ animationDelay: `${i * 80}ms` }} />)}</div>

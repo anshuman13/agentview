@@ -25,6 +25,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
@@ -88,6 +89,7 @@ fun SketchesScreen(hub: Hub, onBack: () -> Unit) {
     val file = sketches?.firstOrNull { it.name == open }
     var all by rememberSaveable(chat) { mutableStateOf(false) }
     val still = motionOff()
+    val scroll = rememberScrollState()
     // Zoom in on open and out on back (web: the sk-zoom view transition), instant at animator scale 0.
     AnimatedContent(file, Modifier.fillMaxSize(), transitionSpec = {
         if (still) EnterTransition.None togetherWith ExitTransition.None
@@ -100,12 +102,12 @@ fun SketchesScreen(hub: Hub, onBack: () -> Unit) {
         }.apply { targetContentZIndex = if (targetState != null) 1f else -1f }
     }, label = "sketch") { shown ->
         if (shown != null) SketchView(hub, shown, onBack = { open = null })
-        else SketchList(hub, sketches, load.error, reload, all, { all = true }, onBack) { open = it }
+        else SketchList(hub, sketches, scroll, load.error, reload, all, { all = true }, onBack) { open = it }
     }
 }
 
 @Composable
-private fun SketchList(hub: Hub, sketches: List<SketchFile>?, error: String, reload: () -> Unit, all: Boolean, showAll: () -> Unit, onBack: () -> Unit, onOpen: (String) -> Unit) {
+private fun SketchList(hub: Hub, sketches: List<SketchFile>?, scroll: ScrollState, error: String, reload: () -> Unit, all: Boolean, showAll: () -> Unit, onBack: () -> Unit, onOpen: (String) -> Unit) {
     val now = System.currentTimeMillis()
     Column(Modifier.fillMaxSize()) {
         WorkspaceHeader(hub, "Sketches", onBack) { IconBtn("refresh", "Refresh", reload) }
@@ -114,7 +116,7 @@ private fun SketchList(hub: Hub, sketches: List<SketchFile>?, error: String, rel
                 sketches == null && error.isNotEmpty() -> EmptyState("Could not load sketches", error, icon = "paintcan", action = { Button("Retry", reload, size = ButtonSize.Sm) })
                 sketches == null -> Loading("Loading sketches…")
                 sketches.isEmpty() -> EmptyState("No sketches yet. Ask for one with /sketch <what>", icon = "paintcan", action = { Button("New sketch", { newSketch(hub) }, size = ButtonSize.Sm) })
-                else -> Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
+                else -> Column(Modifier.fillMaxSize().verticalScroll(scroll)) {
                     SectionHeader("Sketches", sketches.size.toString())
                     CardGrid(sketches.take(if (all) sketches.size else FOLD), Modifier.padding(horizontal = Tokens.listPad)) { s ->
                         Card(sketchTitle(s.name), meta = agoShort(s.mtime.toLong(), now, " ago"), onClick = { onOpen(s.name) }, cover = { SketchThumb(hub, s) { onOpen(s.name) } })

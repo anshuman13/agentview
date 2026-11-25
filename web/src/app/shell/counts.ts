@@ -9,6 +9,8 @@ import { useStore } from '../store';
 
 // The Codex chunk fills this from its Needs you and Reply queue rows; the counts only add them.
 export const rowCounts = createStore({ needsYouRows: 0, replyRows: 0 });
+// The MCP page fills this from its sections so the phone header subtitle matches them.
+export const mcpPageCounts = createStore<{ connected: number; total: number; needsYou: number } | null>(null);
 
 export const countChat = (c: LiveChat, seen: Record<string, number>): CountChat => ({
   id: c.id,

@@ -206,6 +206,8 @@ import no.pradhan.agentview.nativeapp.codex.meetings.sameName
 import no.pradhan.agentview.nativeapp.codex.meetings.seriesTitle
 import no.pradhan.agentview.nativeapp.ops.McpServer
 import no.pradhan.agentview.nativeapp.ops.McpRow
+import no.pradhan.agentview.nativeapp.ops.McpCounts
+import no.pradhan.agentview.nativeapp.ops.mcpStatusCounts
 import no.pradhan.agentview.nativeapp.ops.mcpStatusGroups
 import no.pradhan.agentview.nativeapp.ops.setupPrompt
 import no.pradhan.agentview.nativeapp.workspace.Finding
@@ -1209,6 +1211,10 @@ class SharedCasesTest {
             }
             val expected = c.getValue("expected").jsonArray.map { g -> g.jsonArray[0].jsonPrimitive.content to g.jsonArray[1].jsonArray.map { it.jsonPrimitive.content } }
             assertEquals(c.str("name"), expected, mcpStatusGroups(rows).map { (g, rs) -> g to rs.map { it.name } })
+            c["counts"]?.jsonObject?.let { n ->
+                fun i(k: String) = n.getValue(k).jsonPrimitive.content.toInt()
+                assertEquals(c.str("name"), McpCounts(i("connected"), i("total"), i("needsYou")), mcpStatusCounts(mcpStatusGroups(rows)))
+            }
         }
     }
 

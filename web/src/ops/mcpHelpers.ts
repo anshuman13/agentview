@@ -167,6 +167,12 @@ export const statusGroups = (rows: Row[]): [StatusGroup, Row[]][] =>
   STATUS_GROUPS.map((g): [StatusGroup, Row[]] => [g, rows.filter((r) => statusGroup(r) === g).sort((a, b) => a.name.toLowerCase().localeCompare(b.name.toLowerCase()))])
     .filter(([, rs]) => rs.length > 0);
 
+// The page subtitle counts the same rows as the sections under it.
+export const statusCounts = (groups: [StatusGroup, Row[]][]) => {
+  const n = (g: StatusGroup) => groups.find(([k]) => k === g)?.[1].length ?? 0;
+  return { connected: n('Connected'), total: groups.reduce((t, [, rs]) => t + rs.length, 0), needsYou: n('Needs login') + n('Failed') };
+};
+
 const TONE: Record<BadgeSpec['status'], string> = { done: 'ok', failed: 'bad', waiting: 'warn', skipped: '', sent: 'ok', late: 'bad', new: '', running: 'busy' };
 // Dot tone for a row: connecting and checking rows shimmer, the rest follow their badge status.
 export const dotTone = (r: Row) => (r.status === 'pending' || r.status === 'probing' ? 'wait' : TONE[stateOf(r)[0]]);
