@@ -75,6 +75,8 @@ import no.pradhan.agentview.nativeapp.workspace.ReviewFindings
 import no.pradhan.agentview.nativeapp.sessions.BinnedSession
 import no.pradhan.agentview.nativeapp.sessions.Workspace
 import no.pradhan.agentview.nativeapp.sessions.mutedIds
+import no.pradhan.agentview.nativeapp.sessions.rowId
+import no.pradhan.agentview.nativeapp.sessions.rowsById
 import no.pradhan.agentview.nativeapp.sessions.state
 import no.pradhan.agentview.nativeapp.workspace.appendPrompt
 
@@ -438,10 +440,12 @@ class Hub(internal val app: Application, private val saved: SavedStateHandle) : 
 
     // Opens a saved session; true once its chat is shown.
     suspend fun openSaved(sessionId: String): Boolean {
+        val live = store.state.value.live
+        val rows = rowsById(workspace.value.saved)
+        val chat = live.firstOrNull { it.sessionId == sessionId } ?: live.firstOrNull { rows.rowId(it.sessionId) == sessionId }
+        if (chat != null) { open(chat.id); return true }
         if (readOnly) { notice.value = READ_ONLY_OPEN; return false }
         markSeen(sessionId)
-        val chat = store.state.value.live.firstOrNull { it.sessionId == sessionId }
-        if (chat != null) { open(chat.id); return true }
         return switchTo(openSessionCmd(sessionId)) != null
     }
 
