@@ -1,4 +1,4 @@
-import type { ChatEvent, McpSchema, McpServer } from '../../../shared/protocol';
+import { ACCOUNT_LABEL, type Account, type ChatEvent, type McpSchema, type McpServer } from '../../../shared/protocol';
 import type { BadgeSpec } from '../ui/Badge';
 import { plural } from '../ui/util';
 
@@ -188,3 +188,9 @@ export const rowNote = (r: Row) => {
   if (status !== 'done') return reason;
   return r.type === 'claudeai' ? 'Claude.ai connector' : r.scope ? scopeInfo(r.scope)[1] : undefined;
 };
+
+// A row matches when every word of the query is in its name, its account or the line under its name.
+export function mcpMatches(r: Row, query: string) {
+  const text = [r.name, r.account, r.account && ACCOUNT_LABEL[r.account as Account], rowNote(r)].filter(Boolean).join(' ').toLowerCase();
+  return query.toLowerCase().split(/\s+/).filter(Boolean).every((w) => text.includes(w));
+}

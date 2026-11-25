@@ -208,6 +208,7 @@ import no.pradhan.agentview.nativeapp.ops.McpServer
 import no.pradhan.agentview.nativeapp.ops.McpRow
 import no.pradhan.agentview.nativeapp.ops.McpCounts
 import no.pradhan.agentview.nativeapp.ops.mcpStatusCounts
+import no.pradhan.agentview.nativeapp.ops.mcpMatches
 import no.pradhan.agentview.nativeapp.ops.mcpStatusGroups
 import no.pradhan.agentview.nativeapp.ops.setupPrompt
 import no.pradhan.agentview.nativeapp.workspace.Finding
@@ -1217,8 +1218,8 @@ class SharedCasesTest {
     @Test fun mcpGroups() {
         for (c in cases("mcp-groups")) {
             val rows = c.getValue("rows").jsonArray.map { it.jsonObject }.map { r ->
-                McpRow(McpServer(r.str("name"), r.str("status")), live = r["live"]?.jsonPrimitive?.boolean == true)
-            }
+                McpRow(McpServer(r.str("name"), r.str("status"), scope = r.prim("scope")?.contentOrNull, type = r.prim("type")?.contentOrNull, error = r.prim("error")?.contentOrNull), live = r["live"]?.jsonPrimitive?.boolean == true, account = r.prim("account")?.contentOrNull)
+            }.filter { mcpMatches(it, c.prim("query")?.contentOrNull ?: "") }
             val expected = c.getValue("expected").jsonArray.map { g -> g.jsonArray[0].jsonPrimitive.content to g.jsonArray[1].jsonArray.map { it.jsonPrimitive.content } }
             assertEquals(c.str("name"), expected, mcpStatusGroups(rows).map { (g, rs) -> g to rs.map { it.name } })
             c["counts"]?.jsonObject?.let { n ->

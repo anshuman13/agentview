@@ -3,11 +3,11 @@ import { createPortal, flushSync } from 'react-dom';
 import { getState, useStore } from '../app/store';
 import { Button, IconButton, ShowAll } from '../ui/Button';
 import { Icon } from '../ui/Icon';
-import { EmptyState } from '../ui/Panel';
+import { EmptyState, SearchBox } from '../ui/Panel';
 import { Section } from '../ui/Section';
 import { useCan } from '../chat/useCan';
 import { ago, useSlot, useTick } from '../ui/util';
-import { accountGroup, groupKey, hideKey, mcpCalls, rowKey, slug, statusCounts, statusGroups, type Group, type Row, type StatusGroup } from './mcpHelpers';
+import { accountGroup, groupKey, hideKey, mcpCalls, mcpMatches, rowKey, slug, statusCounts, statusGroups, type Group, type Row, type StatusGroup } from './mcpHelpers';
 import { mcpRows } from './mcpRows';
 import { mcpPageCounts } from '../app/shell/counts';
 import { useMcpGroups, useMcpProbe } from './useMcpPage';
@@ -45,6 +45,7 @@ export function McpPage() {
   const [sel, setSel] = useState<string | null>(null);
   const [showHidden, setShowHidden] = useState(false);
   const [expanded, setExpanded] = useState<StatusGroup[]>([]);
+  const [query, setQuery] = useState('');
   useTick(15000);
 
   const rows = useMemo(() => mcpRows(probed, mcp, account, accounts, connectors), [probed, mcp, account, accounts, connectors]);
@@ -57,6 +58,8 @@ export function McpPage() {
   const shownCounts = useMemo(() => statusCounts(sections), [sections]);
   useEffect(() => { if (probed !== null) mcpPageCounts.set(shownCounts); }, [probed, shownCounts]);
   const hiddenList = useMemo(() => statusGroups(rows.filter(hidden)).flatMap(([, rs]) => rs), [rows, groups]);
+  const matched = useMemo(() => (query.trim() ? statusGroups(rows.filter((r) => !hidden(r) && mcpMatches(r, query))) : sections), [sections, query]);
+  const hiddenMatched = useMemo(() => hiddenList.filter((r) => mcpMatches(r, query)), [hiddenList, query]);
   const extra = useSlot('page-mcp-extra');
   const action = useSlot('page-mcp-action');
   const pick = (name: string) => setSel((s) => (s === name ? null : name));
@@ -77,8 +80,12 @@ export function McpPage() {
           <EmptyState size="sm" icon="plug" title="No MCP servers yet" hint="Servers you add show here" action={<SetupButton kind="mcp" mcpCommand={connectors ? 'claude mcp add' : 'codex mcp add'} />} />
         )}
         {!connectors && <div className="muted">claude.ai connectors load in Claude chats only</div>}
-        {sections.map(([g, rs]) => {
-          const folded = !expanded.includes(g) && rs.length > FOLD;
+        {probed !== null && rows.length > 0 && <SearchBox value={query} onChange={setQuery} label="Filter servers" />}
+        {query.trim() && !matched.length && !hiddenMatched.length && (
+          <EmptyState size="sm" icon="search" title="No servers match" action={<Button size="sm" onClick={() => setQuery('')}>Clear filter</Button>} />
+        )}
+        {matched.map(([g, rs]) => {
+          const folded = !query.trim() && !expanded.includes(g) && rs.length > FOLD;
           return (
             <section key={g}>
               <Section label={g} count={rs.length} />
@@ -87,10 +94,10 @@ export function McpPage() {
             </section>
           );
         })}
-        {hiddenList.length > 0 && (
+        {hiddenMatched.length > 0 && (
           <section>
-            <Section label="Hidden" count={hiddenList.length} open={showHidden} onToggle={() => setShowHidden((v) => !v)} />
-            {showHidden && <div className="as-group mcp-group">{hiddenList.map((r) => renderRow(r, true))}</div>}
+            <Section label="Hidden" count={hiddenMatched.length} open={showHidden} onToggle={() => setShowHidden((v) => !v)} />
+            {showHidden && <div className="as-group mcp-group">{hiddenMatched.map((r) => renderRow(r, true))}</div>}
           </section>
         )}
       </div></div></div>

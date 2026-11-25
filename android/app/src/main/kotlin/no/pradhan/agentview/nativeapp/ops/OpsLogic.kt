@@ -247,6 +247,12 @@ fun mcpNote(r: McpRow): String? = when {
     else -> r.server.scope?.let { mcpScope(it).first }
 }
 
+// A row matches when every word of the query is in its name, its account or the line under its name (web mcpMatches).
+fun mcpMatches(r: McpRow, query: String): Boolean {
+    val text = listOfNotNull(r.name, r.account, r.account?.let { ACCOUNT_LABEL[it] }, mcpNote(r)).joinToString(" ").lowercase()
+    return query.lowercase().split(Regex("\\s+")).filter { it.isNotEmpty() }.all { text.contains(it) }
+}
+
 fun mcpToolCount(r: McpRow): String? = r.server.tools?.let { if (it.isEmpty()) "No tools" else plural(it.size, "tool") }
 
 fun mcpMeta(r: McpRow, calls: Pair<Int, Int>?, personal: Boolean = false): String = listOfNotNull(

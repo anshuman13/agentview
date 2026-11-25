@@ -6,9 +6,8 @@ import { useThemeName } from '../app/theme';
 import { Back } from '../app/touch/back';
 import { Button, Chip, IconButton, ShowAll } from '../ui/Button';
 import { Menu, MenuItem } from '../ui/Menu';
-import { EmptyState } from '../ui/Panel';
+import { EmptyState, SearchBox } from '../ui/Panel';
 import { Confirm, type ConfirmRequest } from '../ui/Confirm';
-import { Icon } from '../ui/Icon';
 import { Card, CardGrid } from '../ui/Card';
 import { Section } from '../ui/Section';
 import { Skeleton } from '../ui/Skeleton';
@@ -49,10 +48,7 @@ export function SketchList({ sketches, onOpen, onChanged, zoomed }: { sketches: 
     <>
       <Section label="Sketches" count={query ? `${shown.length} of ${sketches.length}` : sketches.length} />
       {sketches.length > SKETCH_SEARCH_MIN && (
-        <label className="sk-search">
-          <Icon name="search" small />
-          <input type="search" enterKeyHint="search" value={query} placeholder="Search sketches" aria-label="Search sketches" onChange={(e) => setQuery(e.target.value)} onKeyDown={(e) => e.key === 'Escape' && setQuery('')} />
-        </label>
+        <SearchBox value={query} onChange={setQuery} label="Search sketches" />
       )}
       {shown.length ? (
         <CardGrid className="sk-grid">

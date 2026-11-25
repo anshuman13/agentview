@@ -14,5 +14,26 @@
     {"name": "a", "status": "probing"},
     {"name": "c", "status": "weird"}
   ], "expected": [["Connected", ["a", "b"]], ["Off", ["c"]]]},
-  {"name": "no rows gives no groups", "rows": [], "expected": [], "counts": {"connected": 0, "total": 0, "needsYou": 0}}
+  {"name": "no rows gives no groups", "rows": [], "expected": [], "counts": {"connected": 0, "total": 0, "needsYou": 0}},
+  {"name": "query filters by name and keeps the counts of what matches", "query": "lin", "rows": [
+    {"name": "linear", "status": "needs-auth", "live": true},
+    {"name": "Alpha", "status": "connected", "live": true},
+    {"name": "Linkup", "status": "connected", "scope": "user"}
+  ], "expected": [["Connected", ["Linkup"]], ["Needs login", ["linear"]]], "counts": {"connected": 1, "total": 2, "needsYou": 1}},
+  {"name": "query matches the account id and label", "query": "account 2", "rows": [
+    {"name": "claude.ai Gmail", "status": "connected", "type": "claudeai", "account": "alt"},
+    {"name": "claude.ai Drive", "status": "connected", "type": "claudeai", "account": "main"}
+  ], "expected": [["Connected", ["claude.ai Gmail"]]]},
+  {"name": "query matches the line under the name, every word", "query": "ENOENT spawn", "rows": [
+    {"name": "beta", "status": "failed", "live": true, "error": "spawn npx ENOENT"},
+    {"name": "gamma", "status": "connected", "scope": "user"},
+    {"name": "delta", "status": "failed", "live": true, "error": "timeout"}
+  ], "expected": [["Failed", ["beta"]]]},
+  {"name": "query matches the scope label", "query": "your servers", "rows": [
+    {"name": "gamma", "status": "connected", "scope": "user"},
+    {"name": "omega", "status": "connected", "scope": "project"}
+  ], "expected": [["Connected", ["gamma"]]]},
+  {"name": "no match gives no groups", "query": "zzz", "rows": [
+    {"name": "gamma", "status": "connected"}
+  ], "expected": [], "counts": {"connected": 0, "total": 0, "needsYou": 0}}
 ]

@@ -96,6 +96,7 @@ fun McpScreen(hub: Hub, onBack: () -> Unit) {
     var sel by rememberSaveable(chat) { mutableStateOf<String?>(null) }
     var showHidden by rememberSaveable { mutableStateOf(false) }
     var expanded by rememberSaveable { mutableStateOf(listOf<String>()) }
+    var query by rememberSaveable { mutableStateOf("") }
     val live = session?.mcp ?: emptyList()
     val account = session?.account
     val rows = remember(probe.data, live, account, accounts, connectors) { mergeMcp(probe.data ?: emptyList(), live).let { if (connectors) mcpWithAccounts(it, account, accounts) else it } }
@@ -103,6 +104,9 @@ fun McpScreen(hub: Hub, onBack: () -> Unit) {
     val sections = remember(rows, groups) { mcpSections(rows, groups) }
     val byStatus = remember(sections) { mcpStatusGroups(sections.work + sections.personal) }
     val personal = remember(sections) { sections.personal.map(::mcpKey).toSet() }
+    val filtering = query.isNotBlank()
+    val matched = remember(byStatus, query) { if (filtering) byStatus.map { (g, rs) -> g to rs.filter { mcpMatches(it, query) } }.filter { it.second.isNotEmpty() } else byStatus }
+    val hiddenMatched = remember(sections, query) { mcpStatusGroups(sections.hidden).flatMap { it.second }.filter { mcpMatches(it, query) } }
 
     fun setGroup(service: String, group: String) {
         val before = groups
@@ -135,15 +139,17 @@ fun McpScreen(hub: Hub, onBack: () -> Unit) {
                 if (probe.data == null && probe.error.isEmpty()) item { Loading("Checking the servers…") }
                 if (probe.data != null && rows.isEmpty()) item { EmptyState("No MCP servers yet", "Servers you add show here", action = { SetupButton(hub, "mcp", mcpCommand = if (connectors) "claude mcp add" else "codex mcp add") }, icon = "plug") }
                 if (!connectors) item { Hint("claude.ai connectors load in Claude chats only") }
-                byStatus.forEach { (label, list) ->
-                    val folded = label !in expanded && list.size > FOLD
+                if (probe.data != null && rows.isNotEmpty()) item { SearchField(query, { query = it }, "Filter servers") }
+                if (filtering && matched.isEmpty() && hiddenMatched.isEmpty()) item { EmptyState("No servers match", icon = "search", action = { Button("Clear filter", { query = "" }, size = ButtonSize.Sm) }) }
+                matched.forEach { (label, list) ->
+                    val folded = !filtering && label !in expanded && list.size > FOLD
                     item { SectionHeader(label, list.size.toString()) }
                     item { McpGroup(if (folded) list.take(FOLD) else list, calls, personal) { sel = mcpKey(it) } }
                     if (folded) item { Button("Show all ${list.size}", { expanded = expanded + label }, Modifier.padding(start = Tokens.listPad), variant = ButtonVariant.Plain, size = ButtonSize.Sm) }
                 }
-                if (sections.hidden.isNotEmpty()) {
-                    item { SectionHeader("Hidden", sections.hidden.size.toString(), open = showHidden, onToggle = { showHidden = !showHidden }) }
-                    if (showHidden) item { McpGroup(mcpStatusGroups(sections.hidden).flatMap { it.second }, calls, personal) { sel = mcpKey(it) } }
+                if (hiddenMatched.isNotEmpty()) {
+                    item { SectionHeader("Hidden", hiddenMatched.size.toString(), open = showHidden, onToggle = { showHidden = !showHidden }) }
+                    if (showHidden) item { McpGroup(hiddenMatched, calls, personal) { sel = mcpKey(it) } }
                 }
                 item { Spacer(Modifier.padding(bottom = Tokens.sp16)) }
             }

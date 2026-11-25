@@ -67,7 +67,7 @@ import { sourceLink } from './codex/tasks/taskSource';
 import { taskMetaParts } from './codex/tasks/taskMeta';
 import type { ItemRow } from './codex/data/sync';
 import { agendaMarkdown, draftFor, followUpText, hasContent, linearIssue, personMarkdown, toMarkdown } from './codex/data/meetings/meetingMarkdown';
-import { statusCounts, statusGroups, toggleConnector, type Row as McpRow } from './ops/mcpHelpers';
+import { mcpMatches, statusCounts, statusGroups, toggleConnector, type Row as McpRow } from './ops/mcpHelpers';
 import { actionCount, displayName, filterMeetings, groupMeetings, inSeries, isEvent, meetingEmpty, meetingState, sameName, seriesTitle, type MeetingChip, type MeetingState, type Question } from './codex/data/meetings/meetings';
 import { dismissedKeys, mergeDismissed } from '../../shared/dismissed';
 import { isOld } from '../../shared/claimAge';
@@ -537,9 +537,10 @@ describe('cases shared with the Android app', () => {
     it(`toggleConnector: ${c.name}`, () => expect(toggleConnector(c.tools, c.id)).toBe(c.expected));
   }
 
-  for (const c of cases<{ name: string; rows: McpRow[]; expected: [string, string[]][]; counts?: object }>('mcp-groups')) {
-    it(`statusGroups: ${c.name}`, () => expect(statusGroups(c.rows).map(([g, rs]) => [g, rs.map((r) => r.name)])).toEqual(c.expected));
-    if (c.counts) it(`statusCounts: ${c.name}`, () => expect(statusCounts(statusGroups(c.rows))).toEqual(c.counts));
+  for (const c of cases<{ name: string; rows: McpRow[]; query?: string; expected: [string, string[]][]; counts?: object }>('mcp-groups')) {
+    const rows = c.rows.filter((r) => mcpMatches(r, c.query ?? ''));
+    it(`statusGroups: ${c.name}`, () => expect(statusGroups(rows).map(([g, rs]) => [g, rs.map((r) => r.name)])).toEqual(c.expected));
+    if (c.counts) it(`statusCounts: ${c.name}`, () => expect(statusCounts(statusGroups(rows))).toEqual(c.counts));
   }
 
   type AgendaCase = { name: string; meeting: Record<string, unknown>; points: { people: string | null; title: string }[]; actions: string[]; questions: string[]; markdown: string };

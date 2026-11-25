@@ -37,3 +37,13 @@ export function EmptyState({ icon, title, hint, action, size = 'md' }: {
     </div>
   );
 }
+
+// A pill search box above a list; Escape clears it.
+export function SearchBox({ value, onChange, label }: { value: string; onChange: (v: string) => void; label: string }) {
+  return (
+    <label className="page-search">
+      <Icon name="search" small />
+      <input type="search" enterKeyHint="search" value={value} placeholder={label} aria-label={label} onChange={(e) => onChange(e.target.value)} onKeyDown={(e) => e.key === 'Escape' && onChange('')} />
+    </label>
+  );
+}
