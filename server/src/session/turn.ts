@@ -155,7 +155,7 @@ export class Turn {
     // Closing the chat also ends the CLI; a job run stays open so its review or a reopened chat can take it back.
     const job = s.closed ? undefined : s.runs.jobFor(s.id);
     if (job && job.review !== 'pending') {
-      s.runs.addRound(job.id, { n: 1, outcome: 'failed', line: `${providerLabel(s.driver.provider)} exited`, costUsd: 0 });
+      s.runs.addRound(job.id, { n: 1, outcome: 'failed', line: `${providerLabel(s.driver.provider)} exited`, costUsd: 0, sessionId: s.state.session.sessionId ?? undefined });
       s.runs.end(job.id, 'exited');
     }
     // Queued messages are not lost with the process; the first one starts a fresh CLI.

@@ -1103,6 +1103,14 @@ describe('job runs', () => {
     expect(runs.get(id)).toMatchObject({ state: 'done', why: 'you stopped it' });
   });
 
+  it('records the session id the round ran in', () => {
+    const { s, runs, id, result } = jobSession();
+    s.state.session.sessionId = 'sess-r';
+    s.sendPrompt('go');
+    result('r1');
+    expect(runs.get(id)?.rounds[0].sessionId).toBe('sess-r');
+  });
+
   it('adds a round and hands the run to the host when the turn ends', () => {
     const { s, runs, id, result } = jobSession();
     s.onJobTurn = vi.fn();
