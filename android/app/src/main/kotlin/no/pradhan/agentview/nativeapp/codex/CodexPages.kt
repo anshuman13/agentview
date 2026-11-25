@@ -94,7 +94,7 @@ internal fun TasksPage(st: CodexState, profile: String?, now: Long, actions: Tas
         days.drop(1).filter { it.rows.isNotEmpty() }.forEach { d -> daySection(d, now, actions, pick, onOpen) }
         if (s.overdue.isEmpty() && days.all { it.rows.isEmpty() } && review.isEmpty()) item {
             val next = meetingsOf(st.meetings, profile, now).nextLater
-            EmptyState("All clear", next?.let { "Next: ${whenText(it.startsAt!!, now)} ${it.title}" } ?: "Add a task with the + button, like “call the bank tomorrow 9”", icon = "pass", small = false)
+            EmptyState(next?.let { "All clear. Next: ${whenText(it.startsAt!!, now)} ${it.title}" } ?: "All clear", icon = "pass", small = false)
         }
         if (s.doneToday.isNotEmpty()) {
             item { SectionHeader("Done", s.doneToday.size.toString(), open = doneOpen, onToggle = { doneOpen = !doneOpen }, action = if (doneOpen) ({ Button("Clear", { actions.clear(s.doneToday) }, variant = ButtonVariant.Plain, size = ButtonSize.Sm) }) else null) }

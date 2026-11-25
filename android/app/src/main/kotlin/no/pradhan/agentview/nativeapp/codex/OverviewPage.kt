@@ -173,12 +173,12 @@ private fun UpNextSection(hub: Hub, st: CodexState, d: OverviewData, now: Long, 
         }
     } else {
         val later = d.s.later.filter { it.at != null }.minByOrNull { it.at!! }
-        val hint = when {
-            later != null && (mt.nextLater == null || later.at!! < mt.nextLater.startsAt!!) -> "Next: ${whenText(later.at!!, now)} ${later.title}"
-            mt.nextLater != null -> "Next: ${whenText(mt.nextLater.startsAt!!, now)} ${mt.nextLater.title}"
-            else -> "Nothing planned. Add a task to start the day."
+        val title = when {
+            later != null && (mt.nextLater == null || later.at!! < mt.nextLater.startsAt!!) -> "Nothing today. Next: ${whenText(later.at!!, now)} ${later.title}"
+            mt.nextLater != null -> "Nothing today. Next: ${whenText(mt.nextLater.startsAt!!, now)} ${mt.nextLater.title}"
+            else -> "Nothing today"
         }
-        EmptyState("Nothing today", hint, icon = "pass") { Button("New task", onAdd, variant = ButtonVariant.Filled, size = ButtonSize.Sm) }
+        EmptyState(title, icon = "pass") { Button("New task", onAdd, variant = ButtonVariant.Filled, size = ButtonSize.Sm) }
     }
     if (d.needsTotal > 0) {
         Group(Modifier.padding(top = Tokens.sp4)) { ListRow("Needs you", onClick = onNeeds, trailing = { Badge("${d.needsTotal}", BadgeTone.Quiet); Chevron() }) }
