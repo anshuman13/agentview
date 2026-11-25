@@ -1,7 +1,9 @@
 // Sub-chats: a chat that sends /clear goes on in a new session, linked to the chat's first (root) session.
 // shared/fixtures/sub-chats.json holds the cases; android sessions/SubChats.kt runs the same ones.
 
-export type SubVia = 'clear' | 'build';
+import type { SubVia } from './protocol';
+
+export type { SubVia };
 export type SubLink = { parent: string; via: SubVia; at: number };
 export type SubLinks = Record<string, SubLink>;
 

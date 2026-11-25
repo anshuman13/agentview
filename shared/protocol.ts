@@ -136,7 +136,7 @@ export const BIG_BRO = 'big-bro';
 
 export type RoundOutcome = 'done' | 'progress' | 'blocked' | 'question' | 'quiet' | 'failed';
 export type RunOp = 'stop' | 'pause' | 'resume';
-export type Round = { n: number; at: number; outcome: RoundOutcome; line: string; costUsd: number };
+export type Round = { n: number; at: number; outcome: RoundOutcome; line: string; costUsd: number; sessionId?: string };
 
 // One chat of a /tries run: its Claude session, and the worktree branch it works on. A kept try archives the others.
 export type Try = { n: number; chatId: string; sessionId: string; branch: string; dropped?: boolean };
@@ -318,7 +318,13 @@ export type SavedSession = {
   firstPrompt?: string;
   summary?: string;
   provider?: Provider;
+  parentId?: string;
+  via?: SubVia;
+  startedAt?: number;
 };
+
+// How a sub-chat started: a /clear typed in the chat, or one sent by the chat's build run.
+export type SubVia = 'clear' | 'build';
 
 export const COMPACT_AT = 200_000;
 
