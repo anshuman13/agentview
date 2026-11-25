@@ -142,7 +142,7 @@ Fri    Ask preset "Draft my weekly update"
 Suggestions are grouped by meeting. Older than a day collapse into "N older to review"; after 7 days they leave
 Today for the meeting's Unassigned.
 
-Empty Today: "All clear · next: Tue 09:00 Standup".
+Empty Today: "All clear. Next: Tue 09:00 Standup" on one line.
 
 ### Meeting page
 

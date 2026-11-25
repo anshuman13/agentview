@@ -61,8 +61,8 @@ export function Overview({ s, dueToday, onPrep, onAsk }: { s: Split; dueToday: I
   const nextHint = () => {
     const later = s.later.filter((r) => atTime(r.at) != null).sort((a, b) => atTime(a.at)! - atTime(b.at)!)[0];
     const meeting = s.nextLater;
-    if (later && (!meeting || atTime(later.at)! < meeting.starts_at!)) return `Next: ${when(atTime(later.at)!)} ${later.title}`;
-    return meeting ? `Next: ${when(meeting.starts_at!)} ${meeting.title}` : 'Nothing planned. Add a task to start the day.';
+    if (later && (!meeting || atTime(later.at)! < meeting.starts_at!)) return `Nothing today. Next: ${when(atTime(later.at)!)} ${later.title}`;
+    return meeting ? `Nothing today. Next: ${when(meeting.starts_at!)} ${meeting.title}` : 'Nothing today';
   };
   return (
     <>
@@ -71,7 +71,7 @@ export function Overview({ s, dueToday, onPrep, onAsk }: { s: Split; dueToday: I
       {s.next || task ? (
         <UpNext meeting={s.next} task={task} now={now} onPrep={onPrep} />
       ) : (
-        <EmptyState size="md" icon="pass" title="Nothing today" hint={nextHint()} action={<Button variant="primary" size="sm" onClick={() => setAdding(true)}>New task</Button>} />
+        <EmptyState size="md" icon="pass" title={nextHint()} action={<Button variant="primary" size="sm" onClick={() => setAdding(true)}>New task</Button>} />
       )}
       {count > 0 && (
         <div className="as-group" ref={needsRow}>

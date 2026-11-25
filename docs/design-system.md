@@ -311,9 +311,8 @@ me, what is left today. After the Skeleton while loading, a block with nothing i
    meeting today that has not ended: title, one meta line (time, room, N people), one More
    IconButton sm (Menu: Prep, Open calendar, Notes) and no Prep Button; the whole Row opens the meeting. (b) With no meeting left, the first
    open task due today by due time (overdue tasks do not count): title, due time as meta, a Done Button sm; the
-   title opens the task. (c) With neither, one EmptyState md (icon pass, "Nothing today"): the hint names the
-   next day with a meeting or a task ("Next: <when> <title>", or "Nothing planned. Add a task to start the day.")
-   and one primary New task Button sm opens the add sheet.
+   title opens the task. (c) With neither, one EmptyState md (icon pass) with one line, no hint: "Nothing today. Next: <when> <title>"
+   naming the next meeting or dated task, or just "Nothing today", and one primary New task Button sm opens the add sheet.
 2. **Needs you**: shown only when the count is above zero. One button Row (Row density) titled "Needs you" with a
    quiet count Badge and a chevron, no actions. The count is the Needs you list plus the Reply queue. It opens a
    sheet (`as-sheet-overlay`, `Back`, `useSheetDrag`, role dialog) with a Needs you Section header carrying the total,
