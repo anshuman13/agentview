@@ -1,10 +1,10 @@
 import { describe, expect, it, vi } from 'bun:test';
 import type { HookInput } from '@anthropic-ai/claude-agent-sdk';
-import { BUILD_FLOW_ON, SUBAGENT_STEPS, ToolHooks } from './toolHooks';
+import { SUBAGENT_STEPS, ToolHooks } from './toolHooks';
 import { STATUS_RULES, statusTool } from '../tools/status';
 
-const hooks = (buildFlow = false) => new ToolHooks({ state: { session: { buildFlow } } } as never);
-const ctx = (setStatus = vi.fn()) => ({ cwd: '/w', chatId: 'c', provider: 'claude' as const, host: { setStatus, goal: vi.fn(), startChat: vi.fn() } });
+const hooks = () => new ToolHooks({ state: { session: {} } } as never);
+const ctx = (setStatus = vi.fn()) => ({ cwd: '/w', chatId: 'c', provider: 'claude' as const, host: { setStatus, phoneAlarm: vi.fn() } });
 const context = (o: unknown) => (o as { hookSpecificOutput?: { additionalContext?: string } }).hookSpecificOutput?.additionalContext;
 
 describe('step reporting', () => {
@@ -24,16 +24,9 @@ describe('step reporting', () => {
     expect((hooks().beforeStatus(pre('a1')) as { hookSpecificOutput: { updatedInput: unknown } }).hookSpecificOutput.updatedInput).toEqual({ text: 't', agent: 'a1' });
   });
 
-  it('asks subagents for steps except Fable and the approval gate', () => {
+  it('asks subagents for steps except Fable', () => {
     const start = (agent_type: string) => ({ hook_event_name: 'SubagentStart', agent_id: 'a', agent_type }) as unknown as HookInput;
     expect(context(hooks().onSubagentStart(start('general-purpose')))).toBe(SUBAGENT_STEPS);
     expect(hooks().onSubagentStart(start('big-bro'))).toEqual({});
-    expect(hooks().onSubagentStart(start('agentview:approval-gate'))).toEqual({});
-  });
-
-  it('adds the build flow note to prompts only when the option is on', () => {
-    const prompt = { hook_event_name: 'UserPromptSubmit', prompt: 'build it' } as unknown as HookInput;
-    expect(hooks().onPrompt(prompt)).toEqual({});
-    expect(context(hooks(true).onPrompt(prompt))).toBe(BUILD_FLOW_ON);
   });
 });

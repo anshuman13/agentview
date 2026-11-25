@@ -73,7 +73,6 @@ import kotlinx.coroutines.launch
 import no.pradhan.agentview.nativeapp.chat.ChatScreen
 import no.pradhan.agentview.nativeapp.chat.VoiceHost
 import no.pradhan.agentview.nativeapp.codex.CodexScreen
-import no.pradhan.agentview.nativeapp.codex.autopilot.GoalSheets
 
 import no.pradhan.agentview.nativeapp.net.OFFLINE_DELAY_MS
 import no.pradhan.agentview.nativeapp.net.OfflineEvent
@@ -112,7 +111,6 @@ import no.pradhan.agentview.nativeapp.workspace.ChangesScreen
 import no.pradhan.agentview.nativeapp.workspace.FilesScreen
 import no.pradhan.agentview.nativeapp.workspace.SketchesScreen
 import no.pradhan.agentview.nativeapp.travel.TravelScreen
-import no.pradhan.agentview.nativeapp.sessions.AdvisorsScreen
 import no.pradhan.agentview.nativeapp.workspace.TerminalScreen
 
 private const val ORIGIN_ROUTE = "origin"
@@ -177,7 +175,6 @@ private fun AppEffects(hub: Hub, nav: NavHostController, snack: SnackbarHostStat
         val l = link ?: return@LaunchedEffect
         l.chat?.let { hub.open(it) }
         if (l.page == "sketches") l.slug?.let { hub.sketchSlug.value = it }
-        else if (l.chat != null && l.slug != null) hub.showSpec(l.slug)
         l.term?.let { hub.termId.value = it }
         if (l.action == Shortcut.NEW_CHAT) hub.newChat()
         if (l.action == Shortcut.ADD_TASK) hub.shell.addTask.value = true
@@ -261,7 +258,7 @@ private fun AppNavHost(hub: Hub, nav: NavHostController, twoPane: Boolean, modif
         }
         (MORE_TOOLS + MORE_PAGES).forEach { m ->
             composable("more/${m.route}") {
-                ReadingWidth(m.route) { MorePage(m, hub, onBack = { nav.popBackStack() }, onTab = nav::goTab, onOrigin = { nav.navigate(ORIGIN_ROUTE) { launchSingleTop = true } }) }
+                ReadingWidth(m.route) { MorePage(m, hub, onBack = { nav.popBackStack() }, onOrigin = { nav.navigate(ORIGIN_ROUTE) { launchSingleTop = true } }) }
             }
         }
         composable(ORIGIN_ROUTE) { Column(Modifier.fillMaxSize()) { OriginScreen(hub, onDone = { nav.popBackStack() }) } }
@@ -340,7 +337,6 @@ fun App(hub: Hub) {
     }
 
     shared?.let { ShareSheet(hub, it) }
-    GoalSheets(hub)
     if (more) MoreSheet(hub.deploy.collectAsState().value, hub.hiddenFeatures.collectAsState().value, { more = false }) { r ->
         more = false
         val id = r.removePrefix("more/")
@@ -368,7 +364,7 @@ private fun OfflineBanner(onRetry: () -> Unit) {
 }
 
 @Composable
-private fun MorePage(m: MoreItem, hub: Hub, onBack: () -> Unit, onTab: (String) -> Unit, onOrigin: () -> Unit) = when (m.route) {
+private fun MorePage(m: MoreItem, hub: Hub, onBack: () -> Unit, onOrigin: () -> Unit) = when (m.route) {
     "files" -> FilesScreen(hub, onBack)
     "changes" -> ChangesScreen(hub, onBack)
     "github" -> PullsScreen(hub, onBack)
@@ -379,6 +375,5 @@ private fun MorePage(m: MoreItem, hub: Hub, onBack: () -> Unit, onTab: (String) 
     "mcp" -> McpScreen(hub, onBack)
     "sketches" -> SketchesScreen(hub, onBack)
     "travel" -> TravelScreen(hub, onBack)
-    "advisors" -> AdvisorsScreen(hub, onBack) { onTab(Tab.Chat.route) }
     else -> SettingsScreen(hub, onBack, onOrigin)
 }

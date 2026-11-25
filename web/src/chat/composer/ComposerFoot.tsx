@@ -5,7 +5,6 @@ import { Icon } from '../../ui/Icon';
 import { plural } from '../../ui/util';
 import { useChatSettings, type Pick } from '../ChatSettings';
 import { useCan } from '../useCan';
-import { SendAt } from './SendAt';
 import { Voice, type useDictation } from './Voice';
 import type { Use } from './composerLogic';
 import { keyText } from '../../app/shell/keys';
@@ -64,9 +63,9 @@ export function SendButton({ typed, shell, submit }: { typed: boolean; shell: bo
   );
 }
 
-type FootProps = { uses: Use[]; uploading: number; typed: boolean; shell: boolean; setPick: (p: Pick) => void; attach: (list: File[]) => Promise<void>; dictate: ReturnType<typeof useDictation>; submit: (stop?: boolean) => void; sendLater: (time: string) => void };
+type FootProps = { uses: Use[]; uploading: number; typed: boolean; shell: boolean; setPick: (p: Pick) => void; attach: (list: File[]) => Promise<void>; dictate: ReturnType<typeof useDictation>; submit: (stop?: boolean) => void };
 
-export function ComposerFoot({ uses, uploading, typed, shell, setPick, attach, dictate, submit, sendLater }: FootProps) {
+export function ComposerFoot({ uses, uploading, typed, shell, setPick, attach, dictate, submit }: FootProps) {
   const canMcp = useCan('mcp');
   const connected = useStore((s) => s.session.mcp).some((m) => m.status === 'connected');
   const hasServers = canMcp && connected;
@@ -81,7 +80,6 @@ export function ComposerFoot({ uses, uploading, typed, shell, setPick, attach, d
       <AttachButton attach={attach} />
       {uploading > 0 && <span className="cp-hint"><Icon name="loading" small spin /> Uploading {plural(uploading, 'file')}…</span>}
       <Voice onText={dictate} />
-      <SendAt typed={typed} shell={shell} sendLater={sendLater} />
       <SendButton typed={typed} shell={shell} submit={submit} />
     </div>
   );

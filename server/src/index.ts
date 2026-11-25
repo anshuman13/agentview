@@ -5,7 +5,7 @@ import { existsSync, mkdirSync } from 'node:fs';
 import { randomUUID } from 'node:crypto';
 import { attachTerminal, closeTerminals } from './workspace/terminal.js';
 import { connect as connectChrome, openChrome, ownProfile } from './chrome/chrome.js';
-import { ADVISORS_ELSEWHERE, STARTED_ON_HUB, advisorsMac, askAdvisorsMac, hubShipped } from './integrations/assistant.js';
+import { hubShipped } from './integrations/assistant.js';
 import { profileOf } from './agent/claude/accounts.js';
 import { errText } from '../../shared/util.js';
 import { ntfyTopic, post } from './integrations/notify.js';
@@ -26,7 +26,7 @@ import { OPEN, Peer, type SocketData } from './http/peer.js';
 import { allowedPeer, allowedRequest, appOrigin, requester } from './http/access.js';
 import { Host } from './host/client.js';
 import { migrateSettings } from './migrateSettings.js';
-import { applyAccountLabels, expandHome, homeRelative } from './settings.js';
+import { applyAccountLabels, expandHome } from './settings.js';
 import { createPresence, isPhone } from './presence.js';
 import type { Hello } from './host/protocol.js';
 import { protocolHash } from './http/protocolHash.js';
@@ -299,17 +299,7 @@ function handleCommand(client: Client, msg: ClientMessage, target?: string) {
     case 'open_session':
       host.req<string>({ op: 'open', sessionId: msg.sessionId }).then((c) => view(client, c), fail);
       break;
-    case 'open_advisor':
-      // Advisors live on the hub Mac: a prompt goes there, opening one is only possible there.
-      if (advisorsMac() && msg.text) void askAdvisorsMac('/api/cmd', { method: 'POST', body: msg }).then((r) => fail(new Error(r.status === 200 ? STARTED_ON_HUB : String((r.body as { error?: string }).error))));
-      else if (advisorsMac()) fail(new Error(ADVISORS_ELSEWHERE));
-      else host.req<string>({ op: 'advisor', id: msg.id, fresh: Boolean(msg.fresh), ...(typeof msg.text === 'string' && msg.text && { text: msg.text }) }).then((c) => view(client, c), fail);
-      break;
     case 'new_session':
-      if (msg.hub && advisorsMac() && msg.cwd) {
-        void askAdvisorsMac('/api/cmd', { method: 'POST', body: { ...msg, cwd: homeRelative(msg.cwd), hub: false } }).then((r) => fail(new Error(r.status === 200 ? STARTED_ON_HUB : String((r.body as { error?: string }).error))));
-        break;
-      }
       if (msg.profile === 'work') mkdirSync(CODEX_WORK, { recursive: true });
       host.req<string>({ op: 'new', cwd: msg.profile === 'work' ? CODEX_WORK : msg.profile === 'personal' ? PROJECT : (msg.cwd && expandHome(msg.cwd)) ?? live.chats.get(client.view)?.cwd ?? PROJECT, from: client.view, ...(typeof msg.fork === 'string' && { fork: msg.fork }), ...(typeof msg.model === 'string' && { model: msg.model }), ...(typeof msg.provider === 'string' && { provider: msg.provider }), ...(typeof msg.text === 'string' && msg.text && { text: msg.text }) }).then((c) => view(client, c), fail);
       break;

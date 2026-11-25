@@ -1,8 +1,8 @@
 [
-  { "name": "Claude chat shows everything", "capabilities": { "rewind": true, "mcp": true, "effort": true, "build": true, "stopTask": true }, "can": { "rewind": true, "mcp": true, "effort": true, "build": true, "stopTask": true } },
-  { "name": "no capabilities means everything", "capabilities": null, "can": { "rewind": true, "mcp": true, "effort": true, "build": true, "stopTask": true } },
-  { "name": "a driver without build and effort", "capabilities": { "rewind": true, "mcp": true, "effort": false, "build": false, "stopTask": true }, "can": { "rewind": true, "mcp": true, "effort": false, "build": false, "stopTask": true } },
-  { "name": "a driver with only the basics", "capabilities": { "rewind": false, "mcp": false, "effort": false, "build": false, "stopTask": false }, "can": { "rewind": false, "mcp": false, "effort": false, "build": false, "stopTask": false } },
-  { "name": "a driver without subagents", "capabilities": { "rewind": true, "mcp": true, "effort": true, "build": false, "stopTask": false, "subagents": false }, "can": { "subagents": false, "rewind": true } },
-  { "name": "a missing subagents field means supported", "capabilities": { "rewind": true, "mcp": true, "effort": true, "build": true, "stopTask": true }, "can": { "subagents": true } }
+  { "name": "Claude chat shows everything", "capabilities": { "rewind": true, "mcp": true, "effort": true, "stopTask": true }, "can": { "rewind": true, "mcp": true, "effort": true, "stopTask": true } },
+  { "name": "no capabilities means everything", "capabilities": null, "can": { "rewind": true, "mcp": true, "effort": true, "stopTask": true } },
+  { "name": "a driver without effort", "capabilities": { "rewind": true, "mcp": true, "effort": false, "stopTask": true }, "can": { "rewind": true, "mcp": true, "effort": false, "stopTask": true } },
+  { "name": "a driver with only the basics", "capabilities": { "rewind": false, "mcp": false, "effort": false, "stopTask": false }, "can": { "rewind": false, "mcp": false, "effort": false, "stopTask": false } },
+  { "name": "a driver without subagents", "capabilities": { "rewind": true, "mcp": true, "effort": true, "stopTask": false, "subagents": false }, "can": { "subagents": false, "rewind": true } },
+  { "name": "a missing subagents field means supported", "capabilities": { "rewind": true, "mcp": true, "effort": true, "stopTask": true }, "can": { "subagents": true } }
 ]

@@ -1,21 +1,14 @@
 import type { ChatRun, LiveChat, LiveNow, RoundOutcome } from '../../../shared/protocol';
 import { clock } from '../../../shared/util';
 import { plural } from '../ui/util';
-import { firstRound, nextRound, roundText, runLine as roundLine } from '../../../shared/goalText';
+import { firstRound, nextRound, roundText } from '../../../shared/runText';
 
-const KIND: Record<ChatRun['kind'], string> = { loop: 'Loop', goal: 'Goal', tries: 'Tries', job: 'Job' };
-
-// A prompt queued with Send at: a one-shot loop that has not fired yet.
-export const sendsAt = (run: ChatRun) => (run.kind === 'loop' && run.once && run.state === 'running' && run.round === 0 ? run.nextAt : null);
+const KIND: Record<ChatRun['kind'], string> = { tries: 'Tries', job: 'Job' };
 
 export function runLine(run: ChatRun) {
-  const at = sendsAt(run);
-  if (at) return `Sends at ${clock(at)}`;
   if (run.state === 'paused') return run.why ? `Paused · ${run.why}` : 'Paused';
-  if (run.kind === 'goal') return roundLine(KIND.goal, run);
   if (run.kind === 'tries') return `Tries · ${run.tries?.filter((t) => !t.dropped).length ?? 0} chats`;
-  if (run.kind === 'job') return `Job · ${run.branch}`;
-  return roundLine(KIND.loop, run);
+  return `Job · ${run.branch}`;
 }
 
 export type HeaderState = { text: string; tone: 'running' | 'needs' | 'failed' | 'warn' | 'idle' };
@@ -39,7 +32,7 @@ export const agentChipCount = (all: number, running: number) => running || all;
 
 export type LoopNow ={ title: string; at: number | null; source: 'status' | 'round' | 'none'; next?: string; stepsLeft?: number };
 
-// What the loop card's first row shows: the agent's status or the last round, whichever is newer. A status from before the run started is ignored.
+// What the run card's first row shows: the agent's status or the last round, whichever is newer. A status from before the run started is ignored.
 export function loopNow(run: ChatRun, now?: LiveNow): LoopNow {
   const last = run.rounds.at(-1);
   if (now && now.at >= run.startedAt && (!last || now.at >= last.at)) {
@@ -49,15 +42,15 @@ export function loopNow(run: ChatRun, now?: LiveNow): LoopNow {
   return { title: firstRound(run.nextAt), at: null, source: 'none' };
 }
 
-// The meta line of the Now row: the status time, the next step, the steps left and the build limit.
-export const nowMeta = (now: Pick<LoopNow, 'at' | 'next' | 'stepsLeft'>, builds: string) =>
-  [now.at && clock(now.at), now.next && `Next: ${now.next}`, now.stepsLeft && `${plural(now.stepsLeft, 'step')} left`, builds].filter(Boolean).join(' · ');
+// The meta line of the Now row: the status time, the next step and the steps left.
+export const nowMeta = (now: Pick<LoopNow, 'at' | 'next' | 'stepsLeft'>) =>
+  [now.at && clock(now.at), now.next && `Next: ${now.next}`, now.stepsLeft && `${plural(now.stepsLeft, 'step')} left`].filter(Boolean).join(' · ');
 
-export const stoppedText = (run: ChatRun, running: boolean) => `${KIND[run.kind]} stopped${running && run.round > 0 && (run.kind === 'goal' || run.kind === 'loop') ? ` · round ${run.round} was running` : ''}`;
+export const stoppedText = (run: Pick<ChatRun, 'kind'>) => `${KIND[run.kind]} stopped`;
 
 export const OUTCOME_DOT: Record<RoundOutcome, string> = { blocked: 'warn', question: 'warn', failed: 'bad', done: 'ok', quiet: '', progress: '' };
 
 
-// What a waiting loop or goal asked in its last round: the row's meta line carries it after the age.
+// What a waiting run asked in its last round: the row's meta line carries it after the age.
 export const askLine = (run: LiveChat['run']) => (run?.needsYou && (run.outcome === 'question' || run.outcome === 'blocked') ? run.line : undefined);
 

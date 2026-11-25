@@ -18,19 +18,19 @@ private val PALETTE = make(
     "tab:chat" to "Tab: Chat", "tab:code" to "Tab: Files", "tab:term" to "Tab: Terminal", "tab:browser" to "Tab: Browser", "tab:agents" to "Tab: Agents",
     "codex:today" to "Codex: Overview", "codex:tasks" to "Codex: Tasks", "codex:meetings" to "Codex: Meetings", "codex:jobs" to "Codex: Jobs", "codex:wiki" to "Codex: Wiki", "codex:summary" to "Codex: Slack summary", "codex:goals" to "Codex: All goals", "codex:search" to "Codex: Search", "codex:newtask" to "Codex: New task",
     "terminal" to "Toggle Terminal", "switchEditor" to "Switch File and Browser", "toggleSidebar" to "Toggle Left Sidebar", "toggleChat" to "Toggle Chat", "file" to "Go to File", "repo" to "Open Repository",
-    "forkChat" to "Fork Chat", "compact" to "Compact Context", "review" to "Toggle Review Changes", "goal" to "New goal", "goalFile" to "Run file as goal", "spec" to "Start with a spec", "stop" to "Stop the Agent",
+    "forkChat" to "Fork Chat", "compact" to "Compact Context", "review" to "Toggle Review Changes", "spec" to "Start with a spec", "stop" to "Stop the Agent",
     "theme" to "Toggle Theme", "notify" to "Toggle Notifications", "shortcuts" to "Keyboard shortcuts", "phone" to "Open on Phone", "restart" to "Restart Server When Agents Are Idle",
     "model" to "Pick a model", "effort" to "Pick an effort", "mode" to "Pick a permission mode", "newChat" to "New chat", "open" to "Open a chat, task, meeting or wiki page",
 )
 
 val FEATURES: List<Feature> =
-    make("page", { it != "settings" }, "advisors" to "Advisors", "observe" to "Observe", "deploy" to "Deploy", "mcp" to "MCP Servers", "sketches" to "Sketches", "travel" to "Travel", "settings" to "Settings") +
+    make("page", { it != "settings" }, "observe" to "Observe", "deploy" to "Deploy", "mcp" to "MCP Servers", "sketches" to "Sketches", "travel" to "Travel", "settings" to "Settings") +
         make("tab", { false }, "codex" to "Codex", "chat" to "Chat", "sessions" to "Sessions") +
         make("list", { false }, "overview" to "Overview", "tasks" to "Tasks", "meetings" to "Meetings", "jobs" to "Jobs", "wiki" to "Wiki") +
         PALETTE +
-        make("sheet", { false }, "goal" to "Goal sheet", "needsYou" to "Needs you", "more" to "More") +
+        make("sheet", { false }, "needsYou" to "Needs you", "more" to "More") +
         make("more", { true }, "files" to "Files", "browser" to "Browser", "terminal" to "Terminal", "changes" to "Source Control", "github" to "Pull Requests") +
-        make("action", { it == "runAll" || it == "runAsGoal" }, "startGoal" to "Start a goal", "approveRun" to "Approve a run", "approveSpec" to "Approve a spec phase", "runAll" to "Run all spec tasks", "runAsGoal" to "Run a spec as a goal", "startTask" to "Start a spec task")
+        make("action", { false }, "approveRun" to "Approve a run", "startTask" to "Start a spec task")
 
 private val FEATURE_BY_ID = FEATURES.associateBy { it.id }
 

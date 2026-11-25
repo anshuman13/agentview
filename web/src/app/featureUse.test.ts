@@ -8,8 +8,6 @@ vi.mock('./newChat', () => ({ newChat: vi.fn(), rememberModel: vi.fn() }));
 vi.mock('./runtime/notify', () => ({ toggleNotify: vi.fn() }));
 vi.mock('../chat/chatActions', () => ({ forkChat: vi.fn() }));
 vi.mock('../codex/view', () => ({ openMeeting: vi.fn(), openTask: vi.fn(), setView: vi.fn() }));
-vi.mock('../sessions/goalLogic', () => ({ openGoal: vi.fn(), startGoal: vi.fn() }));
-vi.mock('../sessions/advisorChat', () => ({ askAdvisor: vi.fn(), go: vi.fn() }));
 vi.mock('../ui/util', () => ({ cx: vi.fn(), plural: vi.fn(), useReturnFocus: vi.fn(), listKeys: vi.fn(), Hl: vi.fn(), ago: vi.fn(), command: vi.fn() }));
 vi.mock('../codex/tasks/time', () => ({ clock: vi.fn() }));
 

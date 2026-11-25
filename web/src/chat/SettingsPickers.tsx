@@ -12,11 +12,6 @@ import { effortsFor } from './capabilitiesLogic';
 import { useChatSettings, type Pick } from './ChatSettings';
 import { rememberModel } from '../app/newChat';
 
-const BUILD_ITEMS = [
-  { value: 'off', label: 'Off', detail: 'Prompts run as usual' },
-  { value: 'flow', label: 'Spec flow', detail: 'Spec, sketch and your approval before building' },
-];
-
 const OLDER = '\0older';
 
 type Props = { pick: Pick; close: () => void; back: () => void };
@@ -93,24 +88,6 @@ export function AccountPick({ pick, close, back }: Props) {
       current={account}
       items={accounts.map((a) => ({ value: a, label: ACCOUNT_LABEL[a], detail: ACCOUNT_NOTE[a] }))}
       onPick={(v) => { send({ type: 'set_account', account: v }); close(); }}
-      onClose={close}
-    />
-  );
-}
-
-export function BuildPick({ pick, close, back }: Props) {
-  const flow = useStore((s) => Boolean(s.session.buildFlow));
-  return (
-    <ChoicePick
-      back={back}
-      anchor={pick.at}
-      title="Build"
-      current={flow ? 'flow' : 'off'}
-      items={BUILD_ITEMS}
-      onPick={(v) => {
-        if ((v === 'flow') !== flow) send({ type: 'set_build_flow', on: v === 'flow' });
-        close();
-      }}
       onClose={close}
     />
   );

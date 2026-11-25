@@ -1,6 +1,5 @@
 package no.pradhan.agentview.nativeapp.net
 
-import no.pradhan.agentview.nativeapp.app.build
 import kotlinx.coroutines.runBlocking
 import no.pradhan.agentview.nativeapp.chat.ChatStore
 import no.pradhan.agentview.nativeapp.chat.RecentChats

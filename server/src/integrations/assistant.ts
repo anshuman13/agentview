@@ -4,24 +4,8 @@ import path from 'node:path';
 import type { ChatEvent } from '../../../shared/protocol.js';
 import { errText } from '../../../shared/util.js';
 import { loadSettings } from '../settings.js';
-import { failed } from '../json.js';
 
 export const HUB = process.env.ASSISTANT_HUB ?? (existsSync(path.join(os.homedir(), '.agentview/assistant/assistant.db')) ? 'http://localhost:7790' : loadSettings().hubUrl || 'http://localhost:7790');
-
-// Advisors keep their memory and audits on the Mac that runs the hub. Elsewhere this is that Mac's AgentView, else null.
-export const advisorsMac = (hub = HUB): string | null => (/^https?:\/\/(localhost|127\.0\.0\.1)(:|\/|$)/.test(hub) ? null : hub.replace(/:\d+\/?$/, ':7777'));
-export const ADVISORS_ELSEWHERE = 'Advisors run on the Mac with the hub. Switch to that Mac to use them.';
-export const STARTED_ON_HUB = 'Started on the Mac with the hub. Switch to that Mac to follow the chat.';
-
-
-export async function askAdvisorsMac(pathAndQuery: string, init: { method?: string; body?: unknown } = {}) {
-  try {
-    const r = await fetch(`${advisorsMac()}${pathAndQuery}`, { method: init.method ?? 'GET', headers: { 'content-type': 'application/json' }, body: init.body === undefined ? undefined : JSON.stringify(init.body), signal: AbortSignal.timeout(15_000) });
-    return { status: r.status, body: await r.json().catch(() => ({ error: `The hub Mac answered HTTP ${r.status}` })) };
-  } catch {
-    return failed(502, 'The hub Mac is not reachable');
-  }
-}
 
 type Param = { name: string; mode: 'always'; fallback: string } | { name: string; mode: 'flag' | 'positive' };
 type Route = { timeout: number; body?: boolean; params?: Param[] | 'all' };

@@ -1,8 +1,5 @@
 import { api } from '../app/store';
 import { apiUrl, fetchJson, SLOW_READ_MS } from '../app/api';
-import type { AdvisorInfo, Audit, BacklogItem } from '../../../shared/advisors';
-import type { ChatRun, GitCommit } from '../../../shared/protocol';
-import type { BuildDetail, ReviewPhase, SpecHomeItem } from '../../../shared/builds';
 
 export const deleteRequest = (url: string) => fetch(apiUrl(url), { method: 'DELETE' }).catch(() => null);
 
@@ -10,40 +7,7 @@ export const createFolder = (root: string, name: string) => fetch(apiUrl('/api/f
 
 export const searchMessages = (q: string) => fetch(api(`/api/sessions/search?q=${encodeURIComponent(q)}`)).then((r) => r.json());
 
-// Null when the request fails.
-const orNull = <T>(url: string, init?: RequestInit) => fetchJson<T>(url, init).catch(() => null);
-// Null when the thing does not exist (404); other failures reject.
-async function or404<T>(url: string): Promise<T | null> {
-  const r = await fetch(url);
-  if (r.status === 404) return null;
-  const body = await r.json().catch(() => null);
-  if (!r.ok || body?.error) throw new Error(body?.error ?? `Request failed (${r.status})`);
-  return body;
-}
-const rootUrl = (path: string, root: string) => api(`${path}?root=${encodeURIComponent(root)}`);
-
-export const fetchAdvisors = () => orNull<AdvisorInfo[]>(api('/api/advisors'));
-
-export const fetchBacklog = (root: string) => orNull<BacklogItem[]>(rootUrl('/api/advisors/backlog', root));
-
-export const fetchSpecs = (root: string) => orNull<SpecHomeItem[]>(rootUrl('/api/advisors/specs', root));
-
-export const moveBacklogItem = (root: string, slug: string, dir: 'up' | 'down') => orNull<BacklogItem[]>(rootUrl('/api/advisors/backlog/move', root), { method: 'POST', body: JSON.stringify({ slug, dir }) });
-
-// Resolves null when there is no audit and rejects when the request fails.
-export const fetchAudit = (root: string) => fetchJson<Audit | null>(rootUrl('/api/advisors/audit', root));
-
 export const attentionPost = (path: string, id: string) => fetch(api(path), { method: 'POST', body: JSON.stringify({ id }) }).then((r) => r.json());
-
-
-// Resolves null when the build does not exist (404).
-export const fetchBuild = (slug: string) => or404<BuildDetail>(api(`/api/builds/one?slug=${encodeURIComponent(slug)}`));
-
-const postReview = (body: object) => fetchJson<{ ok: true }>(api('/api/builds/review'), { method: 'POST', body: JSON.stringify(body) });
-
-export const postBuildReview = (slug: string, phase: ReviewPhase | 'code', decision: 'approve' | 'changes', note: string) => postReview({ slug, phase, decision, note });
-
-export const postBuildHold = (slug: string, decision: 'hold' | 'release') => postReview({ slug, decision });
 
 export type RunDiff = { branch?: string; base: string; files: { path: string; additions: number; deletions: number }[]; diff: string };
 
@@ -57,5 +21,3 @@ export const postRunRevise = (run: string, text: string) => fetchJson<{ ok: true
 
 export const postRunDiscard = (run: string) => fetchJson<{ ok: true }>(runUrl('discard', run), { method: 'POST' });
 
-// Commits in the run's chat folder since the run started, newest first.
-export const fetchRunCommits = (run: ChatRun) => fetchJson<{ commits: GitCommit[] }>(apiUrl(`/api/git/log?since=${run.startedAt}&chat=${encodeURIComponent(run.chatId)}`)).then((r) => r.commits);

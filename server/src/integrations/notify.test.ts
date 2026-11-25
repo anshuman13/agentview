@@ -13,7 +13,7 @@ vi.mock('node:fs/promises', () => ({
   writeFile: vi.fn(async (_p: string, data: string) => void (files.tmp = data)),
   rename: vi.fn(async () => void (files.observe = files.tmp)),
 }));
-const { notifyAway, notifyRunEnded, pushNtfy, stallWatch } = await import('./notify.js');
+const { notifyAway, pushNtfy, stallWatch } = await import('./notify.js');
 
 describe('pushNtfy', () => {
   const sent = vi.fn(async () => new Response(''));
@@ -125,49 +125,6 @@ describe('notifyAway', () => {
     notifyAway({ type: 'pending', request: { id: 'p1', kind: 'permission', title: 'Allow?' } } as any, away);
     await advanceTimersByTimeAsync(0);
     expect(sent).toHaveBeenCalledTimes(2);
-  });
-
-  it('pushes a loop round only for done, blocked, question or failed, and other turns as before', async () => {
-    const done = (text: string) => ({ type: 'event', event: { kind: 'result', text } }) as any;
-    const chat = (id: string) => ({ id, cwd: '/x/repo', title: 'T' }) as any;
-    notifyAway(done('Nothing new.\nROUND: nothing'), () => chat('q'), () => false, { outcome: 'quiet', line: '' });
-    notifyAway(done('Fixed a test.\nROUND: progress fixed'), () => chat('p'), () => false, { outcome: 'progress', line: 'fixed' });
-    await advanceTimersByTimeAsync(0);
-    expect(sent).not.toHaveBeenCalled();
-    notifyAway(done('Needs a token.\nROUND: blocked needs a token'), () => chat('b'), () => false, { outcome: 'blocked', line: 'needs a token' });
-    await advanceTimersByTimeAsync(0);
-    expect(sent).toHaveBeenCalledTimes(1);
-    const [, init] = sent.mock.calls[0] as unknown as [string, RequestInit];
-    expect((init.headers as Record<string, string>).Title).toBe('Loop in repo: blocked');
-    expect(init.body).toBe('T\nneeds a token');
-    notifyAway(done('GOAL MET'), () => chat('e'), () => false, { outcome: 'done', line: 'Goal met', ends: true });
-    await advanceTimersByTimeAsync(0);
-    expect(sent).toHaveBeenCalledTimes(1);
-    notifyAway(done('Plain reply.\nROUND: done x'), () => chat('n'));
-    await advanceTimersByTimeAsync(0);
-    const [, plain] = sent.mock.calls[1] as unknown as [string, RequestInit];
-    expect((plain.headers as Record<string, string>).Title).toBe('Claude finished in repo');
-    expect(plain.body).toBe('T\nPlain reply.');
-  });
-
-  it('titles a goal round "Goal in" with the first sentence of the ROUND line, and a goal end by how it ended', async () => {
-    const done = (text: string) => ({ type: 'event', event: { kind: 'result', text } }) as any;
-    const chat = { id: 'g', cwd: '/x/repo', title: 'T' } as any;
-    notifyAway(done('Merged.\nROUND: blocked needs a token. Ask Sam.'), () => chat, () => false, { outcome: 'blocked', line: 'needs a token. Ask Sam.', goal: true });
-    await advanceTimersByTimeAsync(0);
-    const [, init] = sent.mock.calls[0] as unknown as [string, RequestInit];
-    expect((init.headers as Record<string, string>).Title).toBe('Goal in repo: blocked');
-    expect(init.body).toBe('T\nneeds a token.');
-    const ended = async (why: string) => {
-      sent.mockClear();
-      notifyRunEnded({ kind: 'goal', title: 'T', why } as any, 'repo', true);
-      await advanceTimersByTimeAsync(0);
-      const [, i] = sent.mock.calls[0] as unknown as [string, RequestInit];
-      return [(i.headers as Record<string, string>).Title, i.body];
-    };
-    expect(await ended('Goal met after 2 rounds')).toEqual(['Goal met in repo', 'T\nGoal met after 2 rounds']);
-    expect(await ended('Stopped at 09:00 · 4 rounds')).toEqual(['Goal stopped in repo', 'T\nStopped at 09:00 · 4 rounds']);
-    expect(await ended('Not met after 20 rounds')).toEqual(['Goal not met in repo', 'T\nNot met after 20 rounds']);
   });
 
   it('skips the ntfy push while a desktop client is active', async () => {

@@ -1,10 +1,7 @@
 import { useSyncExternalStore } from 'react';
 import { type AttentionItem, type ChatRun, type LiveChat, type ReviewFindings, type ServerState } from '../../../../shared/protocol';
 import { apiUrl } from '../api';
-import { track } from '../featureUse';
 import { parseOutbox, type Queued } from './outboxLogic';
-
-export type GoalSheetState = { mode: 'start'; plan?: string; here?: boolean; from?: ChatRun } | { mode: 'detail'; run: string };
 
 type UiState = {
   connected: boolean;
@@ -17,8 +14,6 @@ type UiState = {
   repoPicker: boolean;
   beside: string | null;
   sketch: string | null;
-  spec: string | null;
-  goalSheet?: GoalSheetState | null;
 };
 
 // A side chat column is this app in an iframe; it shows one chat and nothing else.
@@ -34,7 +29,7 @@ if (typeof window !== 'undefined') window.addEventListener?.('storage', (e) => {
 export type State =ServerState & { live: LiveChat[]; runs: ChatRun[]; attention: AttentionItem[]; findings: Record<string, ReviewFindings>; seen: Record<string, number>; outbox: Queued[]; ui: UiState };
 
 // The server's session fills these in; a field a server of another version leaves out keeps its default here.
-export const EMPTY_SESSION: State['session'] = { id: '', sessionId: null, model: null, effort: null, cwd: '', running: false, permissionMode: null, apiKeySource: null, models: [], commands: [], cache: null, context: null, compacting: false, stopping: false, mcp: [], repeat: null, pr: null, account: 'main', accounts: [] };
+export const EMPTY_SESSION: State['session'] = { id: '', sessionId: null, model: null, effort: null, cwd: '', running: false, permissionMode: null, apiKeySource: null, models: [], commands: [], cache: null, context: null, compacting: false, stopping: false, mcp: [], pr: null, account: 'main', accounts: [] };
 
 let state: State = {
   session: EMPTY_SESSION,
@@ -48,7 +43,7 @@ let state: State = {
   findings: {},
   seen: {},
   outbox: storedOutbox(),
-  ui: { connected: false, openFile: null, follow: false, switcherOpen: false, repoPicker: false, beside: storedBeside(), sketch: null, spec: null },
+  ui: { connected: false, openFile: null, follow: false, switcherOpen: false, repoPicker: false, beside: storedBeside(), sketch: null },
 };
 
 const listeners = new Set<() => void>();
@@ -87,7 +82,6 @@ export function notice(text: string) {
 }
 
 export function setUi(patch: Partial<UiState>) {
-  if (patch.goalSheet) track('sheet:goal');
   set((s) => ({ ui: { ...s.ui, ...patch } }));
 }
 

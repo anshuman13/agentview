@@ -1,8 +1,6 @@
 import { useEffect, useRef, type Dispatch, type SetStateAction } from 'react';
 import { api, notice, prompt, queueNext, steer, useStore } from '../../app/store';
 import { save } from '../../ui/util';
-import { loopAt } from '../../../../shared/util';
-import { buildPrompt } from '../../../../shared/specTasks';
 import { remember, STORED_KEY, withUses, type Use } from './composerLogic';
 import { runInTerminal } from '../chatApi';
 
@@ -55,33 +53,9 @@ export function useSubmit(i: Input) {
     i.clear();
   };
 
-  const sendBuild = () => {
-    const brief = i.text.trim();
-    if (!brief) return notice('Type the brief in the composer first');
-    if (i.uploading > 0) return notice('Wait for the upload to finish');
-    const lost = record(brief);
-    const used = buildPrompt(withUses(brief, i.uses));
-    if (running) queueNext(used, lost);
-    else prompt(used, lost);
-    i.setUses([]);
-    i.clearHistoryStep();
-    i.clear();
-  };
-
-  const sendLater = (time: string) => {
-    const t = i.text.trim();
-    if (!t) return;
-    if (i.uploading > 0) return notice('Wait for the upload to finish');
-    const lost = record(t);
-    prompt(loopAt(time, withUses(t, i.uses)), lost);
-    i.setUses([]);
-    i.clearHistoryStep();
-    i.clear();
-  };
-
   useEffect(() => {
     if (i.uploading === 0 && sendAfter.current !== null) submit(sendAfter.current);
   }, [i.uploading]);
 
-  return { submit, sendBuild, sendLater };
+  return { submit };
 }

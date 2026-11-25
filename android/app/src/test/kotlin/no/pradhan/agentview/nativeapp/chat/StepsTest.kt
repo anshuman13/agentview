@@ -1,12 +1,7 @@
 package no.pradhan.agentview.nativeapp.chat
 
-import java.io.File
-import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
-import kotlinx.serialization.json.jsonArray
-import kotlinx.serialization.json.jsonObject
-import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
 import no.pradhan.agentview.nativeapp.net.ChatEvent
 import no.pradhan.agentview.nativeapp.ops.Agent
@@ -23,45 +18,10 @@ class StepsTest {
     private fun res(id: String, of: String, text: String = "", err: Boolean = false, at: Long = 0) = ChatEvent(id, "tool_result", toolUseId = of, text = text, isError = err, at = at)
 
     @Test
-    fun specCardsGoToTheLatestItemPerSlug() {
-        val cases = Json.parseToJsonElement(File("../../shared/fixtures/spec-cards.json").readText()).jsonArray.map { it.jsonObject }
-        for (c in cases) {
-            val items = c.getValue("items").jsonArray.map { it.jsonObject }.map { i ->
-                fun str(k: String) = i[k]?.jsonPrimitive?.content ?: ""
-                when (str("kind")) {
-                    "user" -> Item.User(str("id"), "", 0, false, false)
-                    "file" -> Item.File(str("id"), str("path"), 0, 0, emptyList(), null, false)
-                    else -> Item.Agent(str("id"), use(str("id"), "Agent", obj("subagent_type" to str("subagentType"), "prompt" to str("prompt"))), null, false, null, emptyList())
-                }
-            }
-            assertEquals(c.getValue("name").jsonPrimitive.content, c.getValue("expected").jsonArray.map { it.jsonPrimitive.content }.toSet(), specCardIds(items))
-        }
-    }
-
-    @Test
-    fun specBumpsChangeWhenABuildAgentStartsAndEnds() {
-        fun agent(id: String, label: String, ended: Boolean) = listOfNotNull(use(id, "Agent", obj("description" to label)), res("r$id", id).takeIf { ended })
-        val none = buildTranscript(listOf(use("t", "Bash")))
-        val started = buildTranscript(agent("a1", "impl:x#1", false))
-        val ended = buildTranscript(agent("a1", "impl:x#1", true))
-        val second = buildTranscript(agent("a1", "impl:x#1", true) + agent("a2", "test:x#1", false) + agent("a3", "pm:y", true))
-        assertEquals(emptyMap<String, Int>(), specBumps(none))
-        assertEquals(mapOf("x" to 2), specBumps(started))
-        assertEquals(mapOf("x" to 1), specBumps(ended))
-        assertEquals(mapOf("x" to 3, "y" to 1), specBumps(second))
-    }
-
-    @Test
     fun pairsToolUseWithItsResult() {
         val items = buildTranscript(listOf(ChatEvent("u", "user", text = "go"), use("t1", "Bash", obj("command" to "ls")), res("r1", "t1", "a.txt", at = 3000), ChatEvent("a", "assistant", text = "done")))
         assertEquals(listOf("User", "Step", "Assistant"), items.map { it::class.simpleName })
         assertEquals("a.txt", (items[1] as Item.Step).result?.text)
-    }
-
-    @Test
-    fun showsLoopRoundsAndGoalChecksAsCompactLines() {
-        val items = buildTranscript(listOf(ChatEvent("l", "user", text = "check it\nthen report", auto = "loop", round = 3), ChatEvent("g", "user", text = "goal prompt", auto = "goal", round = 2)))
-        assertEquals(listOf("Loop round 3 \u00B7 check it", "Goal round 2"), items.map { (it as Item.System).text })
     }
 
     @Test

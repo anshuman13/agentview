@@ -139,7 +139,7 @@ function onAttention(m: Extract<ServerMessage, { type: 'attention' }>) {
   set({ attention: m.items });
 }
 
-// Model lists are kept per provider for the new chat and goal sheets, which open before any chat of that provider is on screen.
+// Model lists are kept per provider for the new chat sheet, which opens before any chat of that provider is on screen.
 function keepModels() {
   const { session } = getState();
   rememberModels(session.provider, session.models);

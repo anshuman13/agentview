@@ -1,17 +1,13 @@
 import { appSettings } from '../appSettings';
 import { track } from '../featureUse';
 import { getState, notice, send, setUi } from '../store';
-import { openGoal, startGoal } from '../../sessions/goalLogic';
 import { toggleNotify } from '../runtime/notify';
 import { openMeeting, openTask, setView, type List } from '../../codex/view';
 import { clock } from '../../codex/tasks/time';
 import { ago, command } from '../../ui/util';
-import { askAdvisor } from '../../sessions/advisorChat';
-import { repoRootOf } from '../../sessions/folders';
 import { forkChat } from '../../chat/chatActions';
 import { specPrompt } from '../../../../shared/specTasks';
 import { startModeFor } from '../../../../shared/providers';
-import { advisorOf, auditPrompt, type AdvisorId } from '../../../../shared/advisors';
 import { paletteFeature } from '../../../../shared/featureUse';
 import type { PaletteItem } from './paletteLogic';
 import { newChat, rememberModel } from '../newChat';
@@ -46,8 +42,7 @@ export function perform(id: string) {
   if (kind === 'pin') {
     const chat = getState().live.find((c) => c.sessionId === arg);
     send(chat ? { type: 'view', id: chat.id } : { type: 'open_session', sessionId: arg });
-  } else if (kind === 'advisor') send({ type: 'open_advisor', id: arg as AdvisorId });
-  else if (kind === 'model') {
+  } else if (kind === 'model') {
     rememberModel(getState().session.provider, arg);
     send({ type: 'set_model', model: arg });
   }
@@ -59,17 +54,9 @@ export function perform(id: string) {
     if (p?.enabled) newChat({ provider: p.id });
     else notice(p?.note ?? 'That provider is not available');
   }
-  else if (id === 'audit') {
-    const { cwd } = getState().session;
-    const root = cwd && !advisorOf(cwd) ? repoRootOf(cwd) : undefined;
-    if (root) askAdvisor('designer', auditPrompt(root));
-    else notice('Open a project chat to audit it');
-  }
   else if (id === 'forkChat') forkChat();
   else if (id === 'compact') send({ type: 'prompt', text: '/compact' });
   else if (id === 'review') send({ type: 'set_review', on: !getState().session.review });
-  else if (id === 'goal') openGoal();
-  else if (id === 'goalFile') startGoal({ plan: getState().ui.openFile ?? undefined });
   else if (id === 'spec') {
     send({ type: 'set_permission_mode', mode: startModeFor('plan', getState().session.provider)! });
     window.dispatchEvent(new CustomEvent('agentview:insert', { detail: { text: specPrompt('') } }));

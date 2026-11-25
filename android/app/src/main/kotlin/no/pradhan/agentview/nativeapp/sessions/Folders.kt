@@ -146,18 +146,6 @@ fun matchesWords(words: List<String>, vararg texts: String?): Boolean {
     return words.all { hay.contains(it) }
 }
 
-// The long-lived advisor chats, one folder each under ~/.agentview/advisors; mirrors shared/advisors.ts.
-data class Advisor(val id: String, val name: String, val hint: String, val model: String)
-
-val ADVISORS = listOf(
-    Advisor("pm", "PM", "What to build next and why", "sonnet"),
-    Advisor("architect", "Architect", "How it fits the code, cost and risk", "opus"),
-    Advisor("designer", "Designer", "Sketches screens before they are built", "sonnet"),
-)
-
-
-fun advisorOf(cwd: String) = ADVISORS.firstOrNull { cwd.trimEnd('/').endsWith("/.agentview/advisors/${it.id}") }
-
 // The repos the New chat sheet offers, the open chat's repo first, and that repo's key.
 fun newChatChoices(groups: List<RepoGroup>, ws: Workspace, sessionCwd: String?): Pair<String?, List<RepoChoice>> {
     val here = sessionCwd?.ifEmpty { null }?.let { c -> folderKey(c, ws.repos, ws.trees) }?.takeIf { k -> groups.any { g -> g.key == k } }
@@ -177,8 +165,6 @@ fun groupByRepo(live: List<LiveChat>, ws: Workspace, filter: String = "", held: 
     val saved = ws.saved.associateBy { it.sessionId }
     val m = LinkedHashMap<String, RepoGroup>()
     fun add(cwd: String, title: String, sessionId: String?, last: Long): RepoGroup? {
-        // Advisor chats show on the Advisors page; a search still finds them here.
-        if (words.isEmpty() && advisorOf(cwd) != null) return null
         val key = folderKey(cwd, ws.repos, ws.trees)
         val name = folderName(key)
         if (words.isNotEmpty()) {

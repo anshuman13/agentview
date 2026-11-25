@@ -1,11 +1,9 @@
 import { randomUUID } from 'node:crypto';
 import path from 'node:path';
-import type { Account, Provider, ChatEvent, Repeat, RoundOutcome, RunEdit, RunOp, ServerMessage, ServerState, SessionInfo, LiveNow } from '../../../shared/protocol.js';
+import type { Account, Provider, ChatEvent, RunOp, ServerMessage, ServerState, SessionInfo } from '../../../shared/protocol.js';
 import type { AgentDriver, AgentHost, AskOptions, Cron, DriverFactory, History, TurnResult } from '../agent/types.js';
 import { resumePrompt, type Stopped } from './resume.js';
 import { Approvals } from './approvals.js';
-import { buildStageOf } from '../../../shared/builds.js';
-import { recordBuild, recordHistory } from './builds.js';
 import { EventLog } from './eventLog.js';
 import { Hooks } from './hooks.js';
 import { blockedRule } from './events.js';
@@ -17,7 +15,6 @@ import { parseFindings, reviewTarget, saveFindings } from './findings.js';
 import { Review } from './review.js';
 import { Prompts } from './prompts.js';
 import { PR_URL, createsPr } from './pr.js';
-import { parseGoal, RepeatController, ROUND_INSTRUCTION } from './repeat.js';
 import { SKETCH_COMMAND, sketchPrompt } from '../../../shared/sketches.js';
 import { SPEC_REVIEW_COMMAND, specReviewPrompt } from '../../../shared/specTasks.js';
 import { RunLinks } from './runLinks.js';
@@ -41,7 +38,6 @@ export class AgentSession implements AgentHost {
   title = '';
   onIdle: (() => void) | null = null;
   onJobTurn: ((runId: string, failed: boolean) => void) | null = null;
-  startChat?: (cwd: string, text: string) => Promise<string>;
   created = Date.now();
   state: ServerState;
   failed = false;
@@ -50,8 +46,6 @@ export class AgentSession implements AgentHost {
   // The host sets the provider registry's lookups, which a session must not import.
   transcriptPath: (id: string) => string | null = () => null;
   resumeLine: (provider: Provider, cwd: string, sessionId: string, account: Account) => string | null = () => null;
-  // ends: the run ends with this round, so its own end push is the only one.
-  roundNote: { outcome: RoundOutcome; line: string; goal: boolean; ends: boolean } | null = null;
   readonly approvals: Approvals;
   readonly log: EventLog;
   readonly waiting = new MessageQueue(this);
@@ -66,7 +60,6 @@ export class AgentSession implements AgentHost {
   readonly stopper = new Stopper(this);
   readonly hooks = new Hooks(this);
   readonly review = new Review(this);
-  readonly repeater = new RepeatController(this.links.repeatHost());
   private listeners = new Set<(m: ServerMessage) => void>();
   // PR number or "local" of the last /code-review, so a ReportFindings call knows what it reviewed.
   private reviewTarget: string | null = null;
@@ -74,7 +67,7 @@ export class AgentSession implements AgentHost {
   private sent: Pick<SessionInfo, 'commands' | 'mcp'> | null = null;
   constructor(public cwd: string, driver: DriverFactory, sessionId: string | null = null) {
     this.state = {
-      session: { id: this.id, sessionId, model: null, effort: 'medium', cwd, running: false, permissionMode: 'auto', apiKeySource: null, models: [], commands: SESSION_COMMANDS, cache: null, context: null, compacting: false, stopping: false, mcp: [], repeat: null, pr: null, account: 'main', accounts: [] },
+      session: { id: this.id, sessionId, model: null, effort: 'medium', cwd, running: false, permissionMode: 'auto', apiKeySource: null, models: [], commands: SESSION_COMMANDS, cache: null, context: null, compacting: false, stopping: false, mcp: [], pr: null, account: 'main', accounts: [] },
       status: 'Idle',
       events: [],
       pending: [],
@@ -109,24 +102,12 @@ export class AgentSession implements AgentHost {
   emit(m: ServerMessage) {
     if (m.type === 'pending') this.links.waitingOnUser(true);
     else if (m.type === 'resolved' && !this.state.pending.length) this.links.waitingOnUser(false);
-    if (m.type === 'event') {
-      recordBuild(this, m.event);
-      this.countBuild(m.event);
-    }
     for (const l of this.listeners) l(m);
-  }
-
-  // The first live running event of an implementer counts its slug toward the loop's build limit; a replayed or restored one is older than a minute.
-  private countBuild(ev: ChatEvent) {
-    if (ev.kind !== 'agent' || ev.status !== 'running' || Date.now() - ev.startedAt > 60_000) return;
-    const target = buildStageOf(ev.subagentType, ev.description, ev.prompt);
-    if (target?.stage !== 'implement') return;
-    this.repeater.noteBuild(target.slug);
   }
 
   pushEvent(ev: ChatEvent, opts?: { release?: boolean }) {
     this.log.add(ev);
-    if (ev.kind === 'user' && !ev.auto) this.runs.answer(this.id);
+    if (ev.kind === 'user') this.runs.answer(this.id);
     this.emit({ type: 'event', event: ev });
     this.noteTool(ev);
     if (ev.kind === 'tool_result' && !ev.parent && opts?.release !== false) this.waiting.release();
@@ -161,11 +142,6 @@ export class AgentSession implements AgentHost {
     this.emit({ type: 'status', text });
     const at = Date.now();
     this.pushEvent({ id: randomUUID(), kind: 'status', text, at, ...(done && { done }), ...(next && { next }) });
-  }
-
-  goal(line: string) {
-    const parsed = parseGoal(line);
-    return parsed !== null && parsed !== 'usage' && this.repeater.command(line, () => undefined);
   }
 
   phoneAlarm = phoneAlarm;
@@ -210,7 +186,6 @@ export class AgentSession implements AgentHost {
 
   replaceHistory(h: History) {
     this.log.replace(h);
-    recordHistory(this, h.unshown);
   }
 
   async loadHistory() {
@@ -220,14 +195,12 @@ export class AgentSession implements AgentHost {
       this.log.append(h);
       this.log.orphanRunning();
     }
-    recordHistory(this, h?.unshown);
   }
 
   close() {
     this.closed = true;
     this.stopper.close();
     this.links.endAll();
-    this.repeater.stop();
     this.wakeups.close();
     this.listeners.clear();
     this.approvals.denyAll();
@@ -262,10 +235,6 @@ export class AgentSession implements AgentHost {
     this.settings.setReview(on);
   }
 
-  setBuildFlow(on: boolean) {
-    this.settings.setBuildFlow(on);
-  }
-
   canUseTool(toolName: string, input: Record<string, unknown>, opts: AskOptions) {
     if (toolName.endsWith('__set_status')) return Promise.resolve({ behavior: 'allow' as const, updatedInput: input });
     return this.approvals.ask(toolName, input, opts);
@@ -297,17 +266,17 @@ export class AgentSession implements AgentHost {
     if (ev?.kind !== 'blocked' || ev.allowed) return;
     const added = await this.driver.allow(ev.rule);
     this.log.allow(ev.rule);
-    if (added) void this.prompt(`I allowed ${ev.rule} for this chat. Retry it.`);
+    // Mid-turn the note reaches Claude at its next step, so nothing waits for Send now.
+    if (added) void this.prompts.queueNext(`I allowed ${ev.rule} for this chat. Retry it.`);
   }
 
   private reportFindings(input: unknown) {
     void saveFindings(this.cwd, this.reviewTarget ?? 'local', parseFindings(input)).then((review) => this.emit({ type: 'findings', review }), () => {});
   }
 
-  sendPrompt(text: string, id: string = randomUUID(), mark?: { auto: 'loop' | 'goal'; round: number }, voice = false) {
-    this.pushEvent({ id, kind: 'user', text, at: Date.now(), ...mark, ...(voice && { voice }) });
-    if (mark) this.turn.roundTurn = true;
-    this.enqueue(mark ? `${text}\n\n${ROUND_INSTRUCTION}` : text, id);
+  sendPrompt(text: string, id: string = randomUUID(), voice = false) {
+    this.pushEvent({ id, kind: 'user', text, at: Date.now(), ...(voice && { voice }) });
+    this.enqueue(text, id);
   }
 
   enqueue(text: string, id?: string) {
@@ -385,16 +354,8 @@ export class AgentSession implements AgentHost {
     this.links.control(run, op);
   }
 
-  runEdit(run: string, edit: RunEdit) {
-    this.links.edit(run, edit);
-  }
-
   steer(text: string, id?: string) {
     return this.prompts.steer(text, id);
-  }
-
-  resumeRepeat(r: Repeat) {
-    this.repeater.resume(r);
   }
 
   changePlan(next: string[]) {

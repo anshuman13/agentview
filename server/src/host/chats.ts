@@ -1,13 +1,11 @@
 import path from 'node:path';
 import { stat } from 'node:fs/promises';
 import type { Account, Provider, ServerMessage } from '../../../shared/protocol.js';
-import type { AdvisorId } from '../../../shared/advisors.js';
-import { getSessionInfo, listSessions } from '../agent/claude/sessions.js';
+import { getSessionInfo } from '../agent/claude/sessions.js';
 import { rememberAccount } from '../agent/claude/accounts.js';
 import { isProvider, provider, providerOf, providerOptions, rememberProvider, transcriptPath } from '../agent/registry.js';
 import { codexThread } from '../agent/codex/threads.js';
 import { removeChat } from '../agent/claude/pins.js';
-import { advisor, prepareAdvisor } from '../session/advisors.js';
 import { AgentSession } from '../session/session.js';
 import { READY } from '../session/runs.js';
 import { UNATTENDED_INSTRUCTION } from '../session/prompts.js';
@@ -19,26 +17,24 @@ import { loadSettings } from '../settings.js';
 import { desktopActive } from '../presence.js';
 import { notifyAway } from '../integrations/notify.js';
 import { allowedFolder } from '../workspace/files.js';
-import { announceApproval } from './approval.js';
 import { applyInitialModel } from './initialModel.js';
 import { watchFiles } from './watchFiles.js';
 import { lastActive } from './summary.js';
 import { broadcastLive, learning, runs, seenRunning, summaryOf } from './listing.js';
-import { remember, saveSoon, saveWhenLoopChanged } from './persist.js';
+import { remember, saveSoon, saveWhenNew } from './persist.js';
 import type { HostRequest } from './protocol.js';
 import { PROJECT, broadcast, bySession, get, hub, live, push, viewers } from './state.js';
 
 function onChatMessage(chat: AgentSession, m: ServerMessage) {
   broadcast(m, chat);
   const away = () => (viewers(chat) ? null : summaryOf(chat));
-  notifyAway(m, away, () => desktopActive(hub.desktopAt), chat.roundNote);
-  if (m.type === 'event' && m.event.kind === 'agent') void announceApproval(chat, m.event, away, (a) => broadcast(a, chat));
+  notifyAway(m, away, () => desktopActive(hub.desktopAt));
   if (m.type === 'session' && chat.state.session.sessionId) {
     rememberAccount(chat.state.session.sessionId, chat.state.session.account);
     rememberProvider(chat.state.session.sessionId, chat.driver.provider);
   }
   if (m.type === 'session' && chat === hub.lastViewed) remember(chat);
-  if (m.type === 'session') saveWhenLoopChanged(chat);
+  if (m.type === 'session') saveWhenNew(chat);
   const woke = seenRunning(chat, chat.state.session.running);
   const listed = m.type === 'event' ? m.event.kind === 'user' : m.type === 'session' ? listedChanged(chat) : m.type !== 'append';
   if (woke || listed) broadcastLive();
@@ -76,7 +72,6 @@ export async function createChat(cwd: string, resume?: string, title = '', fork 
   const job = runs.jobOfSession(resume);
   if (job) runs.update(job.id, { chatId: chat.id });
   chat.onJobTurn = (id, failed) => void reviewJob(chat, id, failed);
-  chat.startChat = (dir, text) => prompt(dir, text, undefined, true);
   await chat.loadHistory();
   await chat.hooks.load();
   chat.onMessage((m) => onChatMessage(chat, m));
@@ -127,30 +122,6 @@ async function resumeSaved(sessionId: string) {
   const dir = path.resolve(info.cwd);
   if (dir !== PROJECT && !allowedFolder(dir)) throw new Error(`Not a workspace folder: ${info.cwd}`);
   return createChat(dir, sessionId, info.summary);
-}
-
-// One live chat per advisor: its open chat, else its latest saved one, else a new one on its model. Fresh replaces an idle
-// open chat with a new one; two opens at once share one chat.
-const advisorOpening = new Map<AdvisorId, Promise<AgentSession>>();
-export function openAdvisor(id: AdvisorId, fresh: boolean) {
-  const pending = advisorOpening.get(id) ?? startAdvisor(id, fresh).finally(() => advisorOpening.delete(id));
-  advisorOpening.set(id, pending);
-  return pending;
-}
-
-async function startAdvisor(id: AdvisorId, fresh: boolean) {
-  const a = advisor(id);
-  if (!a) throw new Error(`Unknown advisor: ${id}`);
-  const dir = await prepareAdvisor(a);
-  const open = [...live.values()].map((l) => l.chat).find((c) => c.cwd === dir);
-  if (open && !fresh) return open;
-  if (open && (open.state.session.running || open.state.pending.length)) throw new Error(`${a.name} is still working; stop it first or wait`);
-  const last = fresh ? undefined : (await listSessions({ dir, limit: 1 }))[0];
-  if (last) return openSaved(last.sessionId);
-  const chat = await createChat(dir, undefined, '', false, 'claude');
-  applyInitialModel(chat, a.model);
-  if (open) closeChat(open);
-  return chat;
 }
 
 export async function newChat(cwd: string, from: AgentSession | undefined, fork?: string, choice?: Provider) {

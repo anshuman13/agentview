@@ -26,7 +26,6 @@ private const val ALARM_ID = "alarm"
 const val RUNNING_TIMEOUT_MS = 30 * 60_000L
 const val EXTRA_CHAT = "chat"
 const val EXTRA_NOTICE_ID = "noticeId"
-const val EXTRA_SLUG = "slug"
 const val EXTRA_REQUEST = "request"
 const val EXTRA_CHANNEL = "channel"
 const val EXTRA_READONLY = "readonly"
@@ -54,9 +53,9 @@ class Notifier(private val app: Application) {
         return PendingIntent.getActivity(app, code, intent, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
     }
 
-    private fun action(op: String, chat: String, id: Int, channel: String, label: String, requestId: String = "", reply: Boolean = false, slug: String = "", answer: String = ""): NotificationCompat.Action {
+    private fun action(op: String, chat: String, id: Int, channel: String, label: String, requestId: String = "", reply: Boolean = false, answer: String = ""): NotificationCompat.Action {
         val intent = Intent(op).setClass(app, NoticeReceiver::class.java)
-            .putExtra(EXTRA_ANSWER, answer).putExtra(EXTRA_CHAT, chat).putExtra(EXTRA_NOTICE_ID, id).putExtra(EXTRA_CHANNEL, channel).putExtra(EXTRA_REQUEST, requestId).putExtra(EXTRA_SLUG, slug).putExtra(EXTRA_READONLY, AppState.readOnly)
+            .putExtra(EXTRA_ANSWER, answer).putExtra(EXTRA_CHAT, chat).putExtra(EXTRA_NOTICE_ID, id).putExtra(EXTRA_CHANNEL, channel).putExtra(EXTRA_REQUEST, requestId).putExtra(EXTRA_READONLY, AppState.readOnly)
         val flags = PendingIntent.FLAG_UPDATE_CURRENT or if (reply) PendingIntent.FLAG_MUTABLE else PendingIntent.FLAG_IMMUTABLE
         val builder = NotificationCompat.Action.Builder(0, label, PendingIntent.getBroadcast(app, (op + id + answer).hashCode(), intent, flags))
         if (reply) builder.addRemoteInput(RemoteInput.Builder(KEY_REPLY).setLabel("Reply").build())
@@ -71,7 +70,7 @@ class Notifier(private val app: Application) {
             .setSmallIcon(R.drawable.ic_notify)
             .setContentTitle(n.title)
             .setContentText(n.body)
-            .setContentIntent(open(chatLink(n.chatId, n.slug), id))
+            .setContentIntent(open(chatLink(n.chatId), id))
             .setAutoCancel(true)
             .setCategory(NotificationCompat.CATEGORY_MESSAGE)
         if (silent) builder.setSilent(true).setPriority(NotificationCompat.PRIORITY_LOW)
@@ -84,7 +83,6 @@ class Notifier(private val app: Application) {
         }
         if (n.options.size == 2) n.options.forEach { builder.addAction(action(NoticeOp.ANSWER, n.chatId, id, n.kind.channel, it.take(ANSWER_LABEL_MAX), n.questionId, answer = it)) }
         if (replies) builder.addAction(action(NoticeOp.REPLY, n.chatId, id, n.kind.channel, "Reply", reply = true))
-        if (n.slug.isNotEmpty() && !AppState.readOnly) builder.addAction(action(NoticeOp.APPROVE, n.chatId, id, n.kind.channel, "Approve", slug = n.slug))
         manager.notify(id, builder.build())
     }
 

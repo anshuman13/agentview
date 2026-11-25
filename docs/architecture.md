@@ -24,11 +24,10 @@ host owns every chat and its Claude CLI process and listens on `~/.agentview/hos
   forces it.
 - Background tasks (workflow runs, background agents, `run_in_background` shell commands) hold the restart like
   running turns do, and a long-running one holds it to the 10-minute limit.
-- Before exiting, the host writes `~/.agentview/restore.json` (open chats, loops, crons, and any stopped work: the
+- Before exiting, the host writes `~/.agentview/restore.json` (open chats, crons, queued messages and any stopped work: the
   tasks that were running and whether a turn was in progress); the next host reopens them from there and asks
   each chat with stopped work to resume it.
-- Loops, goals, tries and jobs are runs (`session/runs.ts`) in `~/.agentview/runs.json`; a loop's `runId` in
-  `restore.json` links the restarted chat back to its run. The host broadcasts them as `runs` messages, the API
+- Tries and jobs are runs (`session/runs.ts`) in `~/.agentview/runs.json`. The host broadcasts them as `runs` messages, the API
   server caches them like the chats and sends them to clients (last 10 rounds each).
 - With no API server for five minutes and nothing running, the host saves and exits.
 
@@ -37,7 +36,7 @@ host owns every chat and its Claude CLI process and listens on `~/.agentview/hos
 | Folder | Contents |
 | --- | --- |
 | `agent/` | `AgentDriver` interface (`types.ts`), the provider registry (`registry.ts`: driver factory and limit check per provider, and the provider each chat last ran on), the Claude driver (`claude/`, also OpenRouter through the SDK's base URL): SDK query, message handling, history, MCP, and the Codex driver (`codex/`): JSON-RPC to `codex app-server`, event mapping, approvals, plan usage. The `agentview` tools (status, wiki, data, chat search, report findings, run code) are one registry in `tools/`, served in process to Claude and over stdio to Codex. Run code (`runCode.ts`, Claude chats only, through the permission mode like Bash) runs a Bun script whose `callMCPTool`, `listMCPTools` and `listMCPServers` reach the folder's MCP servers (`codeRunner.ts`), so large results are filtered before the model sees them; servers that need an OAuth login are not reachable |
-| `session/` | Provider-neutral chat session: send queue, turns, `/loop` and `/goal` (`repeat.ts`), approvals, findings, pull request parsing |
+| `session/` | Provider-neutral chat session: send queue, turns, runs (`runs.ts`, tries and jobs), approvals, findings, pull request parsing |
 | `host/` | Agent host process, socket protocol and the API server's client for it |
 | `http/` | Access control, request bodies, SSE ring buffer, static serving, Mac discovery |
 | `workspace/` | Files, git, worktrees, terminals |
@@ -127,7 +126,7 @@ them uses one mechanism, the first that fits; clients never branch on the provid
    `instructionFiles`. The registry (`agent/registry.ts`) is the per-provider table on the server: driver, transcript,
    memory files, resume line, MCP servers.
 6. The session owns what is provider neutral (`session/`): `@chat` expansion, PR and findings pick-up, limits arrive as
-   `host.limit`, every driver calls `host.compacted`, and the command router owns `/loop`, `/goal`, `/tries`, `/compact`
+   `host.limit`, every driver calls `host.compacted`, and the command router owns `/tries`, `/compact`
    and `/code-review`. Drivers only report raw facts.
 7. AgentView tools live once in `agent/tools/`. Claude and OpenRouter get them through the in-process adapter, Codex
    through a stdio MCP server (`agent/tools/stdio.ts`) the host starts, named `agentview` so steps render the same.

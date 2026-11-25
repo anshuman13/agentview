@@ -16,8 +16,7 @@ export type Cron = { schedule: string; prompt: string; recurring: boolean };
 
 export type RunningTask = { toolUseId: string; tool: string; description: string };
 
-// unshown: agent events kept out of the transcript (a workflow run whose call is before a compaction), still used for build records.
-export type History = { events: ChatEvent[]; context: number | null; cache: CacheInfo | null; unshown?: ChatEvent[] };
+export type History = { events: ChatEvent[]; context: number | null; cache: CacheInfo | null };
 
 export type TurnResult = { id: string; ok: boolean; text: string; costUsd: number; isError: boolean };
 
@@ -89,10 +88,6 @@ export interface AgentHost {
   agentOf(toolUseId: string): AgentEvent | undefined;
   system(text: string, error?: boolean): void;
   setStatus(text: string, detail?: { done?: string; next?: string[] }): void;
-  // Runs a /goal line from a tool call; false when the line is not a valid goal.
-  goal(line: string): boolean;
-  // Starts a chat in another folder with a first prompt, for a tool call; returns the new chat's id.
-  startChat?: (cwd: string, text: string) => Promise<string>;
   // Sets an alarm on the phone and returns what the tool tells Claude.
   phoneAlarm(a: { time: string; day?: string; label?: string }): Promise<string>;
   setSession(patch: Partial<SessionInfo>): void;

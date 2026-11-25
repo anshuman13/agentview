@@ -5,7 +5,6 @@ import type { ConfirmRequest } from '../ui/Confirm';
 import { BIN_MS, type ChatEvent, type LiveChat, type Repo, type RepoKind, type SavedSession, type Worktree } from '../../../shared/protocol';
 import { replyLine, sumEdits } from '../../../shared/edits';
 import { heldOrder, inside } from '../../../shared/util';
-import { advisorOf } from '../../../shared/advisors';
 import { profileOfPath } from '../../../shared/workspace';
 import { chatMatches } from '../../../shared/chatSearch';
 import { queryWords } from '../codex/data/ask/match';
@@ -46,9 +45,6 @@ let cachedFor = apiBase();
 
 export const staleKeys = (at: Record<WorkspaceKey, number>, now: number, minAge = WORKSPACE_MIN_AGE) =>
   (Object.keys(at) as WorkspaceKey[]).filter((k) => now - at[k] >= minAge);
-
-// The repo a folder belongs to, from the cached repos and worktrees.
-export const repoRootOf = (cwd: string) => cached.trees.find((w) => inside(cwd, w.cwd))?.repo || cached.repos.find((r) => inside(cwd, r.cwd))?.cwd;
 
 export const invalidateWorkspace = () => {
   fetchedAt.repos = fetchedAt.chats = fetchedAt.trees = 0;
@@ -275,8 +271,6 @@ export function groupByRepo(live: LiveChat[], chats: SavedSession[], folders: Fo
   const find = chatFinder(filter, chats);
   const m = new Map<string, RepoGroup>();
   const add = (cwd: string, title: string, sessionId: string | null, last: number) => {
-    // Advisor chats show on the Advisors page; a search still finds them here.
-    if (!find.active && advisorOf(cwd)) return null;
     const key = findHere(folders, cwd).folder?.cwd ?? cwd;
     const name = repoName(folders, cwd);
     if (find.active && !find.match(title, sessionId, name)) return null;

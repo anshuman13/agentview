@@ -9,8 +9,6 @@ export function heldOrder(held: readonly string[] | null, keys: readonly string[
 export const blockId = (itemId: string) => `block:${itemId}`;
 export const isBlock = (meetingId: string) => meetingId.startsWith('block:');
 export const errText = (err: unknown) => (err instanceof Error ? err.message : String(err));
-// The prompt that /loop at runs once at HH:MM.
-export const loopAt = (time: string, text: string) => `/loop at ${time} ${text}`;
 
 export function nextClock(hours: number, minutes: number, now: number) {
   const d = new Date(now);

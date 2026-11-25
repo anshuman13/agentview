@@ -39,17 +39,15 @@ class ProtocolTest {
         assertTrue(e.event.streaming)
         val a = parseMessage("""{"type":"append","id":"e","offset":1,"text":"bc"}""") as ServerMessage.Append
         assertEquals(1, a.offset)
-        val p = parseMessage("""{"type":"approval","chat":"c1","slug":"foo","title":"Foo"}""") as ServerMessage.Approval
-        assertEquals(ServerMessage.Approval("c1", "foo", "Foo"), p)
         assertEquals("attention", (parseMessage("""{"type":"attention","items":[]}""") as ServerMessage.Other).type)
     }
 
     @Test
     fun parsesRunsAndTheRunOnALiveChat() {
-        val m = parseMessage("""{"type":"runs","runs":[{"id":"r","kind":"goal","chatId":"c","state":"paused","why":"usage limit until 18:00","nextAt":null,"extra":1,"rounds":[{"n":1,"at":5,"outcome":"quiet","line":"ok","costUsd":0.5}]}]}""") as ServerMessage.Runs
+        val m = parseMessage("""{"type":"runs","runs":[{"id":"r","kind":"job","chatId":"c","state":"paused","why":"usage limit until 18:00","nextAt":null,"extra":1,"rounds":[{"n":1,"at":5,"outcome":"quiet","line":"ok","costUsd":0.5}]}]}""") as ServerMessage.Runs
         assertEquals("paused", m.runs[0].state)
         assertEquals("ok", m.runs[0].rounds[0].line)
-        val live = parseMessage("""{"type":"live","chats":[{"id":"a","run":{"id":"r","kind":"loop","state":"running","nextAt":9,"round":2,"outcome":"blocked"}}]}""") as ServerMessage.Live
+        val live = parseMessage("""{"type":"live","chats":[{"id":"a","run":{"id":"r","kind":"job","state":"running","nextAt":9,"round":2,"outcome":"blocked"}}]}""") as ServerMessage.Live
         assertEquals("blocked", live.chats[0].run?.outcome)
         assertEquals("""{"type":"run","run":"r","op":"stop"}""", runCmd("r", "stop"))
     }

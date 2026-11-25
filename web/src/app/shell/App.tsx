@@ -15,7 +15,7 @@ import { Unreachable } from './Unreachable';
 import { SwitchedBanner, useMacName } from './macName';
 import { Guard } from './Guard';
 import { isPage, PageView } from '../pages';
-import { Brief, AgentsPane, WorkPane, FileSwitcher, Palette, GoalSheets, Shortcuts, RepoPicker, Assistant, FocusBar, Explorer, CodePane, BrowserPane, ConnectPopover, MacsPopover, Loading } from '../lazy';
+import { Brief, AgentsPane, WorkPane, FileSwitcher, Palette, Shortcuts, RepoPicker, Assistant, FocusBar, Explorer, CodePane, BrowserPane, ConnectPopover, MacsPopover, Loading } from '../lazy';
 import { Offline, Restarting } from './StatusItems';
 import { StatusBar } from './StatusBar';
 import { MoreSheet, TabBar } from './TabBar';
@@ -115,7 +115,6 @@ export function App() {
       <Suspense fallback={null}>
         <FileSwitcher />
         <Palette />
-        <GoalSheets />
         <Shortcuts />
       </Suspense>
       {repoPicker && <Suspense fallback={null}><RepoPicker /></Suspense>}

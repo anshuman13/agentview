@@ -63,13 +63,7 @@ import no.pradhan.agentview.nativeapp.app.BarEvent
 import no.pradhan.agentview.nativeapp.app.BarState
 import no.pradhan.agentview.nativeapp.app.barHidden
 import no.pradhan.agentview.nativeapp.app.barState
-import no.pradhan.agentview.nativeapp.codex.autopilot.GoalSheet
-import no.pradhan.agentview.nativeapp.codex.autopilot.endedRun
-import no.pradhan.agentview.nativeapp.codex.autopilot.finishedLine
-import no.pradhan.agentview.nativeapp.codex.autopilot.runDetail
-import no.pradhan.agentview.nativeapp.codex.autopilot.runLine
 import no.pradhan.agentview.nativeapp.net.Capabilities
-import no.pradhan.agentview.nativeapp.net.ChatRun
 import no.pradhan.agentview.nativeapp.app.Hub
 import no.pradhan.agentview.nativeapp.net.SessionInfo
 import no.pradhan.agentview.nativeapp.app.chatFiles
@@ -79,7 +73,6 @@ import no.pradhan.agentview.nativeapp.net.modeSteps
 import no.pradhan.agentview.nativeapp.net.newestModels
 import no.pradhan.agentview.nativeapp.net.providerLabel
 import no.pradhan.agentview.nativeapp.sessions.chatPlace
-import no.pradhan.agentview.nativeapp.sessions.since
 import no.pradhan.agentview.nativeapp.app.refreshUsage
 import no.pradhan.agentview.nativeapp.app.refreshWorkspace
 import no.pradhan.agentview.nativeapp.app.runInTerminal
@@ -88,7 +81,6 @@ import no.pradhan.agentview.nativeapp.app.setEffort
 import no.pradhan.agentview.nativeapp.app.setMode
 import no.pradhan.agentview.nativeapp.app.setModel
 import no.pradhan.agentview.nativeapp.app.setReview
-import no.pradhan.agentview.nativeapp.app.setBuildFlow
 import no.pradhan.agentview.nativeapp.app.submit
 import no.pradhan.agentview.nativeapp.ui.AvIcon
 import no.pradhan.agentview.nativeapp.ui.Button
@@ -103,13 +95,9 @@ import no.pradhan.agentview.nativeapp.ui.ChoiceRow
 import no.pradhan.agentview.nativeapp.ui.ListRow
 import no.pradhan.agentview.nativeapp.ui.SectionHeader
 import no.pradhan.agentview.nativeapp.ui.Sheet
-import no.pradhan.agentview.nativeapp.ui.TimeDialog
 import no.pradhan.agentview.nativeapp.ui.Tokens
-import java.time.ZonedDateTime
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
-import no.pradhan.agentview.nativeapp.codex.codexZone
-import no.pradhan.agentview.nativeapp.app.sendAt
 import no.pradhan.agentview.nativeapp.ui.Type
 import no.pradhan.agentview.nativeapp.ui.WhileStarted
 import no.pradhan.agentview.nativeapp.ui.WordClamp
@@ -120,10 +108,7 @@ import no.pradhan.agentview.nativeapp.ui.well
 
 private class Choice(val value: String, val label: String, val detail: String = "")
 
-private val BUILD_CHOICES = listOf(Choice("off", "Off", "Prompts run as usual")) +
-    Choice("flow", "Spec flow", "Spec, sketch and your approval before building")
-
-private enum class Picker { Add, Settings, Effort, Account, Build, SendAt, Mcp, McpTools }
+private enum class Picker { Add, Settings, Effort, Account, Mcp, McpTools }
 
 private class ComposerState(val hub: Hub, val chatId: String) {
     private val draft = splitMarks(hub.draft(chatId))
@@ -175,26 +160,6 @@ private class ComposerState(val hub: Hub, val chatId: String) {
         return sent to picked
     }
 
-    fun build(uploading: Int) {
-        when (val step = buildStep(full, uploading, hub.readOnly)) {
-            is BuildStep.Notice -> hub.notice.value = step.text
-            is BuildStep.Send -> {
-                val (sent, picked) = takeUses(step.brief)
-                clear()
-                hub.submit(buildPrompt(sent), false, buildPrompt(step.brief)) { restore(step.brief, picked) }
-            }
-        }
-    }
-
-    fun sendAt(time: String, uploading: Int) {
-        val t = full
-        if (t.isBlank()) return
-        if (uploading > 0) { hub.notice.value = "Wait for the upload to finish"; return }
-        val (sent, picked) = takeUses(t)
-        clear()
-        hub.sendAt(time, sent) { restore(t, picked) }
-    }
-
     fun submit(steer: Boolean, uploading: Int, voice: Boolean = false) {
         val t = full
         if (t.isBlank() || uploading > 0) return
@@ -207,7 +172,7 @@ private class ComposerState(val hub: Hub, val chatId: String) {
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun Composer(hub: Hub, chatId: String, sessionId: String?, session: SessionInfo?, running: Boolean, waiting: Boolean, run: ChatRun?) {
+fun Composer(hub: Hub, chatId: String, sessionId: String?, session: SessionInfo?, running: Boolean, waiting: Boolean) {
     val s = remember(chatId) { ComposerState(hub, chatId) }
     LaunchedEffect(chatId, sessionId) { if (sessionId != null) hub.setDraft(chatId, s.full) }
     val dictation = remember(chatId) { Dictation() }
@@ -271,7 +236,7 @@ fun Composer(hub: Hub, chatId: String, sessionId: String?, session: SessionInfo?
             }
         }
     }
-    ComposerSheets(hub, s, uploading, session, run, sheet, attach) { sheet = it }
+    ComposerSheets(hub, s, uploading, session, sheet, attach) { sheet = it }
 }
 
 // "No update for Ns" once the event stream has been quiet for 30 s; its own composable so the 5 s tick recomposes only it.
@@ -393,23 +358,12 @@ private fun ComposerActions(hub: Hub, s: ComposerState, running: Boolean, upload
 }
 
 @Composable
-private fun ComposerSheets(hub: Hub, s: ComposerState, uploading: Int, session: SessionInfo?, run: ChatRun?, sheet: Picker?, attach: Attach, onSheet: (Picker?) -> Unit) {
+private fun ComposerSheets(hub: Hub, s: ComposerState, uploading: Int, session: SessionInfo?, sheet: Picker?, attach: Attach, onSheet: (Picker?) -> Unit) {
     when (sheet) {
         Picker.Add -> AddSheet(s, uploading, session, attach, onSheet)
-        Picker.Settings -> ChatSettingsSheet(hub, session, run, onSheet)
+        Picker.Settings -> ChatSettingsSheet(hub, session, onSheet)
         Picker.Effort -> PickerSheet("Select effort", effortsFor(session?.models.orEmpty(), session?.model).map { Choice(it, EFFORT_LABEL[it] ?: it) }, session?.effort, { hub.setEffort(it) }) { onSheet(null) }
-        Picker.Build -> {
-            val flow = session?.buildFlow == true
-            PickerSheet("Build", BUILD_CHOICES, if (flow) "flow" else "off", { v ->
-                if ((v == "flow") != flow) hub.setBuildFlow(v == "flow")
-            }) { onSheet(null) }
-        }
         Picker.Account -> PickerSheet("Select Claude account", (session?.accounts?.ifEmpty { null } ?: listOf(session?.account ?: "main")).map { Choice(it, ACCOUNT_LABEL[it] ?: it, listOfNotNull(ACCOUNT_NOTE[it], usageText(session?.usage).ifEmpty { null }?.takeIf { _ -> it == (session?.account ?: "main") }).joinToString(" · ")) }, session?.account ?: "main", { hub.setAccount(it) }) { onSheet(null) }
-        Picker.SendAt -> {
-            val replaced = run?.kind?.takeIf { it == "goal" || it == "loop" }
-            val ahead = ZonedDateTime.now(codexZone).plusHours(1)
-            TimeDialog("Send at ${laterDay(ahead.hour, 0)}" + (replaced?.let { " · Replaces the running $it" } ?: ""), ahead.hour, 0, "Send", "Cancel", { h, m -> onSheet(null); s.sendAt("%02d:%02d".format(h, m), uploading) }, { onSheet(null) }, { onSheet(null) })
-        }
         Picker.Mcp -> Sheet({ onSheet(null) }, "Use an MCP server", padded = false, full = false) {
             Group {
                 connectedServers(session).forEachIndexed { i, m ->
@@ -456,14 +410,6 @@ private fun AddSheet(s: ComposerState, uploading: Int, session: SessionInfo?, at
             }
             Hairline(lead = true)
             ListRow("Chat settings", settings, leading = icon("settings-gear"), onClick = { onSheet(Picker.Settings) }, trailing = { Chevron() })
-            if (session?.capabilities?.build == true) {
-                Hairline(lead = true)
-                ListRow("Build the brief", "Spec, review, build and test the text in the composer", leading = icon("tools"), onClick = { onSheet(null); s.build(uploading) })
-            }
-            if (s.text.text.isNotBlank()) {
-                Hairline(lead = true)
-                ListRow("Send at", "Send this message at a time today or tomorrow", leading = icon("clock"), onClick = { onSheet(Picker.SendAt) })
-            }
             if (pct != null && pct >= 50) {
                 val compacting = session?.compacting == true
                 val running = session?.running == true
@@ -482,7 +428,7 @@ private fun AddSheet(s: ComposerState, uploading: Int, session: SessionInfo?, at
 }
 
 @Composable
-private fun ChatSettingsSheet(hub: Hub, session: SessionInfo?, run: ChatRun?, onSheet: (Picker?) -> Unit) {
+private fun ChatSettingsSheet(hub: Hub, session: SessionInfo?, onSheet: (Picker?) -> Unit) {
     val c = av
     Sheet({ onSheet(null) }, "Chat settings", padded = false, full = false) {
         val account = session?.account ?: "main"
@@ -522,26 +468,6 @@ private fun ChatSettingsSheet(hub: Hub, session: SessionInfo?, run: ChatRun?, on
         if (showAccount || effort != null) Group {
             effort?.let { ListRow("Effort", EFFORT_LABEL[it] ?: it, onClick = { onSheet(Picker.Effort) }, trailing = { Chevron() }) }
             if (showAccount) { if (effort != null) Hairline(); ListRow("Account", ACCOUNT_LABEL[account] ?: account, onClick = { hub.refreshUsage(); onSheet(Picker.Account) }, trailing = { Chevron() }) }
-        }
-        SectionHeader("Goal")
-        Group {
-            // Tries and jobs have their controls on the loop card only.
-            val ended by hub.store.state.select { st -> endedRun(st.runs, st.shownId) }
-            val opens = run == null || runDetail(run).opens
-            val open = { sheet: GoalSheet -> hub.shell.goalSheet.value = sheet; onSheet(null) }
-            ListRow(
-                "Goal",
-                run?.let { runLine(it) } ?: ended?.let { finishedLine(it.why, it.endedAt, ::since) ?: "Ended" } ?: "Off",
-                onClick = if (opens) ({ open(run?.let { GoalSheet.Detail(it.id) } ?: ended?.let { GoalSheet.Detail(it.id) } ?: GoalSheet.Start(here = true)) }) else null,
-                trailing = { if (opens) Chevron() },
-            )
-            ended?.let { e ->
-                Hairline()
-                if (e.kind == "goal") ListRow("Run again…", firstLine(e.what), onClick = { open(GoalSheet.Start(here = true, from = e)) }, trailing = { Chevron() })
-                else ListRow("New goal…", "Start a goal in this chat", onClick = { open(GoalSheet.Start(here = true)) }, trailing = { Chevron() })
-            }
-            Hairline()
-            ListRow("Build", if (session?.buildFlow == true) "Spec flow" else "Off", onClick = { onSheet(Picker.Build) }, trailing = { Chevron() })
         }
     }
 }

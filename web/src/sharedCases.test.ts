@@ -5,25 +5,19 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'bun:test';
 import { barHidden, barIdle, barState, type BarEvent } from '../../shared/bottomBar';
 import { reviewLabel, usageMenuLabel } from '../../shared/chatMenu';
 import { chatNotices, type ChatNotice } from '../../shared/notices';
-import { advisorBoard, advisorLoopLine, advisorLoopOf, auditCountLine, defaultAdvisorRoot, specItemPrompt, type BacklogItem } from '../../shared/advisors';
-import { specRowParts, type SpecHomeItem } from '../../shared/builds';
 import { appCounts } from '../../shared/counts';
 import { TABLES } from '../../shared/tables';
 import { editCount, stripRound } from '../../shared/edits';
-import { limitResume } from '../../shared/limitResume';
-import { buildsLine, endedRun, finishedLine, fiveHourLabel, fiveHourLine, goalEnd, mergeQuiet, roundsMarkdown, roundsSummary, runDetail } from '../../shared/goalText';
 import { exploreLabelOf, exploreRunsOf, type ExploreRow } from '../../shared/explore';
 import { FEATURES, featureRows, paletteFeature, shownFeature, type UseDays } from '../../shared/featureUse';
-import type { Capabilities, ChatEvent, Finding, ChatRun, FiveHour, LiveChat, Provider, Round, SavedSession, Try } from '../../shared/protocol';
+import type { Capabilities, ChatEvent, Finding, ChatRun, LiveChat, Provider, SavedSession, Try } from '../../shared/protocol';
 import { START_MODES, billing, checkedModel, menuModes, modeSteps, newestModels, providerLabel, providerMark, providerModes, shortModel, startModeFor, startTexts, type Billing } from '../../shared/providers';
 import { recentInRepo } from './app/newChat';
 import { binLeft, buildFolders, chatPlace, since } from './sessions/folders';
 import { findingFixPrompt, findingsFixPrompt } from '../../shared/reviewPrompt';
 import { setupPrompt, type SetupKind } from '../../shared/setupPrompt';
 import { appendRule } from '../../shared/steering';
-import { addPreset, parsePresets, removePreset, type GoalPreset } from '../../shared/goalPresets';
-import { goalCommand, parseEvery, parseFiveHour, planOf, rerunForm, type GoalForm } from '../../shared/goalForm';
-import { buildPrompt, isSpecPath, planCondition, runAllPrompt, specProgress, specPrompt, specSlug, specTasks, startTaskPrompt, withoutOpenTasks, type SpecTask } from '../../shared/specTasks';
+import { isSpecPath, specProgress, specPrompt, specSlug, specTasks, startTaskPrompt, withoutOpenTasks, type SpecTask } from '../../shared/specTasks';
 import { pathCopies } from './workspace/copyPathLogic';
 import { isSketchPath, sketchDoc, type SketchTheme } from '../../shared/sketches';
 import { taskChatPrompt } from '../../shared/taskChat';
@@ -46,7 +40,6 @@ import { can } from './chat/capabilitiesLogic';
 import { addUse, buildHistory, chatImages, chatMarkdown, draftKey, failedLine, ghostFor, handoffText, joinMarks, lastReply, markChip, remember, splitMarks, turnEnd, userParts, withUses, type Use } from './chat/composer/composerLogic';
 import { composerPlaceholder, quoteText, shellLine, type PlaceholderDevice, type PlaceholderState } from '../../shared/composerText';
 import { agentChipCount, headerState, nowMeta, runLine, stoppedText } from './sessions/runLogic';
-import { capLine } from './sessions/goalLogic';
 import { tryColumn } from './sessions/triesLogic';
 import { parseWhen, stripWhen } from './codex/data/tasks/when';
 import { cadenceLine, cadenceOf } from './codex/data/tasks/recur';
@@ -225,7 +218,7 @@ describe('cases shared with the Android app', () => {
     it(`task checklist: ${c.name}`, () => expect(c.toggle === undefined ? addCheck(c.text, c.add ?? '') : toggleCheck(c.text, c.toggle)).toBe(c.expected));
   }
 
-  for (const c of cases<{ name: string; path: string; isSpec: boolean; md: string; tasks: SpecTask[]; progress: string; start: string | null; all: string }>('spec-tasks')) {
+  for (const c of cases<{ name: string; path: string; isSpec: boolean; md: string; tasks: SpecTask[]; progress: string; start: string | null }>('spec-tasks')) {
     it(`specTasks: ${c.name}`, () => {
       const tasks = specTasks(c.md);
       const open = tasks.find((t) => !t.done);
@@ -233,7 +226,6 @@ describe('cases shared with the Android app', () => {
       expect(isSpecPath(c.path)).toBe(c.isSpec);
       expect(specProgress(tasks)).toBe(c.progress);
       expect(open && startTaskPrompt(open, c.path)).toBe(c.start ?? undefined);
-      expect(runAllPrompt(c.path)).toBe(c.all);
     });
   }
 
@@ -242,9 +234,6 @@ describe('cases shared with the Android app', () => {
       if (c.one != null) expect(findingFixPrompt(c.findings[0])).toBe(c.one);
       if (c.all != null) expect(findingsFixPrompt(c.findings)).toBe(c.all);
     });
-  }
-  for (const c of cases<{ name: string; brief: string; expected: string }>('build-prompt')) {
-    it(`buildPrompt: ${c.name}`, () => expect(buildPrompt(c.brief)).toBe(c.expected));
   }
 
   for (const c of cases<{ name: string; md: string; expected: string }>('spec-open-tasks')) {
@@ -269,28 +258,6 @@ describe('cases shared with the Android app', () => {
 
   for (const c of cases<{ name: string; path: string; sketch: boolean }>('sketch-path')) {
     it(`isSketchPath: ${c.name}`, () => expect(isSketchPath(c.path)).toBe(c.sketch));
-  }
-
-  for (const c of cases<{ name: string; form?: GoalForm; now?: number; command?: string; what?: string; plan?: string | null; path?: string; md?: string; condition?: string; every?: string; ms?: number | null }>('goal-command')) {
-    it(`goalForm: ${c.name}`, () => {
-      if (c.every !== undefined) expect(parseEvery(c.every)).toBe(c.ms!);
-      else if (c.form) expect(goalCommand(c.form, c.now!)).toBe(c.command);
-      else if (c.condition) expect(planCondition(c.path!, c.md!)).toBe(c.condition);
-      else expect(planOf(c.what!)).toBe(c.plan);
-    });
-  }
-
-  for (const c of cases<{ name: string; run: Parameters<typeof rerunForm>[0]; form: ReturnType<typeof rerunForm> }>('rerun-form')) {
-    it(`rerunForm: ${c.name}`, () => expect(rerunForm(c.run)).toEqual(c.form));
-  }
-
-  type PresetCase ={ name: string; op: string; raw?: unknown; rawText?: string; list?: GoalPreset[]; preset?: GoalPreset; target?: string; expected: GoalPreset[] };
-  for (const c of cases<PresetCase>('goal-presets')) {
-    it(`goalPresets: ${c.name}`, () => {
-      if (c.op === 'parse') expect(parsePresets(c.rawText ?? JSON.stringify(c.raw))).toEqual(c.expected);
-      else if (c.op === 'add') expect(addPreset(c.list!, c.preset!)).toEqual(c.expected);
-      else expect(removePreset(c.list!, c.target!)).toEqual(c.expected);
-    });
   }
 
   for (const c of cases<{ name: string; text: string; rule: string; expected: string | null }>('append-rule')) {
@@ -585,10 +552,6 @@ describe('cases shared with the Android app', () => {
     });
   }
 
-  for (const c of cases<{ name: string; events: ChatEvent[]; expected: { prompt: string; reset: number } | null }>('limit-resume')) {
-    it(`limitResume: ${c.name}`, () => expect(limitResume(c.events)).toEqual(c.expected));
-  }
-
   for (const c of cases<{ name: string; sessionId: string; expected: string }>('handoff-text')) {
     it(`handoffText: ${c.name}`, () => expect(handoffText(c.sessionId)).toBe(c.expected));
   }
@@ -618,94 +581,18 @@ describe('cases shared with the Android app', () => {
     it(`latestTodos: ${c.name}`, () => expect(latestTodos(c.events as ChatEvent[])).toEqual(c.expected));
   }
 
-  const run = (over: Partial<ChatRun>): ChatRun => ({ id: 'r', kind: 'loop', sessionId: 's', chatId: 'c', title: '', what: '', startedAt: 1, endedAt: null, state: 'running', why: '', round: 0, max: 0, nextAt: null, costUsd: 0, rounds: [], needsYou: false, ...over });
+  const run = (over: Partial<ChatRun>): ChatRun => ({ id: 'r', kind: 'job', sessionId: 's', chatId: 'c', title: '', what: '', startedAt: 1, endedAt: null, state: 'running', why: '', round: 0, max: 0, nextAt: null, costUsd: 0, rounds: [], needsYou: false, ...over });
 
-  for (const c of cases<{ name: string; run: Partial<ChatRun>; working: boolean; expected: string }>('stopped-text')) {
-    it(`stoppedText: ${c.name}`, () => expect(stoppedText(run(c.run), c.working)).toBe(c.expected));
+  for (const c of cases<{ name: string; run: Partial<ChatRun>; expected: string }>('stopped-text')) {
+    it(`stoppedText: ${c.name}`, () => expect(stoppedText(run(c.run))).toBe(c.expected));
   }
 
-  for (const c of cases<{ name: string; now: { at?: number; next?: string; stepsLeft?: number }; builds: string; expected: string }>('now-meta')) {
-    it(`nowMeta: ${c.name}`, () => expect(nowMeta({ at: null, ...c.now }, c.builds)).toBe(c.expected));
-  }
-
-  for (const c of cases<{ name: string; pipeline: SpecHomeItem['pipeline']; conclusion: string; updatedAt: number; meta: string; when: string }>('spec-row-parts')) {
-    it(`specRowParts: ${c.name}`, () => expect(specRowParts(c, (t) => `${t}h ago`)).toEqual({ meta: c.meta, when: c.when }));
-  }
-
-  for (const c of cases<{ name: string; why: string; endedAt: number | null; expected: string | null }>('finished-line')) {
-    it(`finishedLine: ${c.name}`, () => expect(finishedLine(c, (t) => `${t}h ago`)).toBe(c.expected));
-  }
-
-  for (const c of cases<{ name: string; kind: ChatRun['kind']; state: ChatRun['state']; expected: ReturnType<typeof runDetail> }>('run-detail')) {
-    it(`runDetail: ${c.name}`, () => expect(runDetail(c)).toEqual(c.expected));
-  }
-
-  for (const c of cases<{ name: string; chatId: string; runs: ChatRun[]; expected: string | null }>('ended-run')) {
-    it(`endedRun: ${c.name}`, () => expect(endedRun(c.runs, c.chatId)?.id ?? null).toBe(c.expected));
-  }
-
-  for (const c of cases<{ name: string; why: string; expected: string }>('goal-end')) {
-    it(`goalEnd: ${c.name}`, () => expect(goalEnd(c.why)).toBe(c.expected));
-  }
-
-  for (const c of cases<{ name: string; rounds: Round[]; expected: [number, number, number, number][] }>('merge-quiet')) {
-    it(`mergeQuiet: ${c.name}`, () => expect(mergeQuiet(c.rounds).map((g) => [g.first.n, g.last.n, g.count, g.costUsd])).toEqual(c.expected));
-  }
-
-  for (const c of cases<{ name: string; rounds: Round[]; expected: string }>('rounds-summary')) {
-    it(`roundsSummary: ${c.name}`, () => expect(roundsSummary(c.rounds)).toBe(c.expected));
-  }
-
-  for (const c of cases<{ name: string; title: string; rounds: Round[]; provider?: Provider; expected: string }>('rounds-markdown')) {
-    it(`roundsMarkdown: ${c.name}`, () => expect(roundsMarkdown(c.title, c.rounds, c.provider)).toBe(c.expected));
-  }
-
-  for (const c of cases<{ name: string; run: Partial<ChatRun>; expected: ReturnType<typeof capLine> }>('cap-line')) {
-    it(`capLine: ${c.name}`, () => expect(capLine(run(c.run))).toEqual(c.expected));
-  }
-
-  for (const c of cases<{ name: string; fiveHour?: FiveHour | null; label?: string; run?: Partial<ChatRun>; line?: string; text?: string; pct?: number | null }>('five-hour')) {
-    it(`fiveHour: ${c.name}`, () => {
-      if (c.label !== undefined) expect(fiveHourLabel(c.fiveHour)).toBe(c.label);
-      else if (c.run) expect(fiveHourLine(run(c.run))).toBe(c.line!);
-      else expect(parseFiveHour(c.text!)).toBe(c.pct!);
-    });
+  for (const c of cases<{ name: string; now: { at?: number; next?: string; stepsLeft?: number }; expected: string }>('now-meta')) {
+    it(`nowMeta: ${c.name}`, () => expect(nowMeta({ at: null, ...c.now })).toBe(c.expected));
   }
 
   for (const c of cases<{ name: string; run: Omit<Partial<ChatRun>, 'tries'> & { tries?: Partial<Try>[] }; expected: string }>('run-line')) {
     it(`runLine: ${c.name}`, () => expect(runLine(run({ ...c.run, tries: c.run.tries?.map((t) => ({ n: 0, chatId: '', sessionId: '', branch: '', ...t })) }))).toBe(c.expected));
-  }
-
-  for (const c of cases<{ name: string; open: string | null; repos: { cwd: string; last: number }[]; expected: string | null }>('advisor-root')) {
-    it(`defaultAdvisorRoot: ${c.name}`, () => {
-      expect(defaultAdvisorRoot(c.open, c.repos)).toBe(c.expected);
-    });
-  }
-
-  for (const c of cases<{ name: string; root: string; runs: Partial<ChatRun>[]; expected: { id: string; line: string; builds?: string } | null }>('advisor-loop')) {
-    it(`advisorLoop: ${c.name}`, () => {
-      const found = advisorLoopOf(c.runs.map(run), c.root);
-      expect(found ? { id: found.id, line: advisorLoopLine(found), builds: buildsLine(found) } : null).toEqual(c.expected && { builds: '', ...c.expected });
-    });
-  }
-
-  for (const c of cases<{ name: string; statuses: string[]; expected: string }>('audit-count')) {
-    it(`auditCountLine: ${c.name}`, () => {
-      expect(auditCountLine(c.statuses.map((status) => ({ status })))).toBe(c.expected);
-    });
-  }
-
-  type BoardCase = { name: string; backlog: BacklogItem[]; specs: SpecHomeItem[]; loopNeedsYou: boolean; expected: { defaultStage: string } & Record<string, unknown> };
-  for (const c of cases<BoardCase>('advisor-board')) {
-    it(`advisorBoard: ${c.name}`, () => {
-      const { stages, defaultStage } = advisorBoard(c.backlog, c.specs, c.loopNeedsYou);
-      const slim = Object.fromEntries(Object.entries(stages).map(([k, v]) => [k, v.map(({ slug, action, needsYou }) => ({ slug, action, needsYou }))]));
-      expect({ ...slim, defaultStage }).toEqual(c.expected);
-    });
-  }
-
-  for (const c of cases<{ name: string; root: string; item: BacklogItem; expected: string }>('spec-item-prompt')) {
-    it(`specItemPrompt: ${c.name}`, () => expect(specItemPrompt(c.root, c.item)).toBe(c.expected));
   }
 
   for (const c of cases<{ name: string; task: Parameters<typeof taskChatPrompt>[0]; expected: string }>('task-chat-prompt')) {
@@ -1003,8 +890,6 @@ describe('cases shared with the Android app', () => {
       expect(c.events.map((e) => barHidden((state = barState(state, e))))).toEqual(c.hidden);
     });
   }
-
-
 
   const featureUse = JSON.parse(readFileSync(new URL('../../shared/fixtures/feature-use.json', import.meta.url), 'utf8')) as {
     ids: string[];

@@ -6,7 +6,7 @@ import { IconButton } from '../../ui/Button';
 import { Menu, MenuItem, MenuSeparator } from '../../ui/Menu';
 import { safeHref } from '../../ui/util';
 import { openMeeting, openTask } from '../view';
-import { showChat } from '../../sessions/goalLogic';
+import { showChat } from '../../sessions/openChat';
 import { KIND } from './Chips';
 import { SOURCE_ICON, shortDate, type ClaimMenuItem } from './shared';
 

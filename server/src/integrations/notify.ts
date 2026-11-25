@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { readJson } from '../json.js';
-import type { ChatRun, LiveChat, RoundOutcome, ServerMessage } from '../../../shared/protocol.js';
+import type { ChatRun, LiveChat, ServerMessage } from '../../../shared/protocol.js';
 import { stripRound } from '../../../shared/edits.js';
 import { providerLabel } from '../../../shared/providers.js';
 
@@ -17,16 +17,10 @@ function detail(m: ServerMessage) {
   return null;
 }
 
-// A loop or goal round pushes only when it needs the user or ended the work.
-const ROUND_PUSH: Partial<Record<RoundOutcome, string>> = { done: 'done', blocked: 'blocked', question: 'question', failed: 'failed' };
-
 // With a desktop client active in the last 3 minutes the menu bar notification still shows but the ntfy push is skipped.
-export function notifyAway(m: ServerMessage, away: () => LiveChat | null, desktopActive: () => boolean = () => false, round: { outcome: RoundOutcome; line: string; goal?: boolean; ends?: boolean } | null = null) {
+export function notifyAway(m: ServerMessage, away: () => LiveChat | null, desktopActive: () => boolean = () => false) {
   const body = detail(m);
   if (body === null) return;
-  const ended = m.type === 'event' ? round : null;
-  const word = ended && ROUND_PUSH[ended.outcome];
-  if (ended && (!word || ended.ends)) return;
   const chat = away();
   if (!chat) return;
   const kind = m.type === 'pending' ? 'needs' : 'finished';
@@ -34,22 +28,12 @@ export function notifyAway(m: ServerMessage, away: () => LiveChat | null, deskto
   const prev = last.get(`${chat.id}:${kind}`);
   if (prev && prev.key === key && Date.now() - prev.at < 30_000) return;
   last.set(`${chat.id}:${kind}`, { at: Date.now(), key });
-  const title = word ? `${ended?.goal ? 'Goal' : 'Loop'} in ${path.basename(chat.cwd)}: ${word}` : `${providerLabel(chat.provider)} ${m.type === 'pending' ? 'needs you' : 'finished'} in ${path.basename(chat.cwd)}`;
-  post(title, chat.title, (ended?.line || body).split(/(?<=[.!?])\s|\n/)[0].slice(0, 200), `${APP}/?chat=${chat.id}`, !desktopActive());
-}
-
-// Whether the push went out; the same slug in the same chat within 30 s is skipped.
-export function notifyApproval(chat: LiveChat, slug: string, title: string, body: string) {
-  const prev = last.get(`${chat.id}:approval`);
-  if (prev && prev.key === `approval:${slug}` && Date.now() - prev.at < 30_000) return false;
-  last.set(`${chat.id}:approval`, { at: Date.now(), key: `approval:${slug}` });
-  post(`Approve ${title}?`, chat.title, body, `${APP}/?chat=${chat.id}&slug=${encodeURIComponent(slug)}`);
-  return true;
+  const title = `${providerLabel(chat.provider)} ${m.type === 'pending' ? 'needs you' : 'finished'} in ${path.basename(chat.cwd)}`;
+  post(title, chat.title, body.split(/(?<=[.!?])\s|\n/)[0].slice(0, 200), `${APP}/?chat=${chat.id}`, !desktopActive());
 }
 
 export function notifyRunEnded(run: ChatRun, repo: string, push: boolean) {
-  const kind = run.kind === 'tries' ? 'Tries' : 'Loop';
-  const title = run.kind === 'goal' ? (/^Goal met/.test(run.why) ? 'Goal met' : /^Not met/.test(run.why) ? 'Goal not met' : 'Goal stopped') : `${kind} ended`;
+  const title = `${run.kind === 'tries' ? 'Tries' : 'Job'} ended`;
   post(`${title}${repo ? ` in ${repo}` : ''}`, run.title, run.why, `${APP}/?chat=${run.chatId}`, push);
 }
 

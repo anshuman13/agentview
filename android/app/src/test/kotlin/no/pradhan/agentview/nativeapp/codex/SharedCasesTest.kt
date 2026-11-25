@@ -27,7 +27,6 @@ import kotlinx.serialization.json.decodeFromJsonElement
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
-import kotlinx.serialization.json.double
 import kotlinx.serialization.json.int
 import kotlinx.serialization.json.long
 import kotlinx.serialization.json.buildJsonObject
@@ -106,8 +105,6 @@ import no.pradhan.agentview.nativeapp.chat.workTitle
 import no.pradhan.agentview.nativeapp.chat.chatMarkdown
 import no.pradhan.agentview.nativeapp.chat.draftKey
 import no.pradhan.agentview.nativeapp.chat.handoffText
-import no.pradhan.agentview.nativeapp.chat.LimitResume
-import no.pradhan.agentview.nativeapp.chat.limitResume
 import no.pradhan.agentview.nativeapp.chat.lastReply
 import no.pradhan.agentview.nativeapp.chat.joinMarks
 import no.pradhan.agentview.nativeapp.chat.markLabel
@@ -119,52 +116,17 @@ import no.pradhan.agentview.nativeapp.chat.reviewLabel
 import no.pradhan.agentview.nativeapp.chat.s
 import no.pradhan.agentview.nativeapp.chat.statusLine
 import no.pradhan.agentview.nativeapp.chat.stripRound
-import no.pradhan.agentview.nativeapp.codex.autopilot.GoalForm
-import no.pradhan.agentview.nativeapp.codex.autopilot.endedRun
-import no.pradhan.agentview.nativeapp.codex.autopilot.goalEnd
-import no.pradhan.agentview.nativeapp.codex.autopilot.runDetail
 import no.pradhan.agentview.nativeapp.codex.autopilot.TryColumn
-import no.pradhan.agentview.nativeapp.codex.autopilot.addPreset
-import no.pradhan.agentview.nativeapp.codex.autopilot.goalCommand
-import no.pradhan.agentview.nativeapp.codex.autopilot.parsePresets
-import no.pradhan.agentview.nativeapp.codex.autopilot.rerunForm
-import no.pradhan.agentview.nativeapp.codex.autopilot.removePreset
-import no.pradhan.agentview.nativeapp.codex.autopilot.parseEvery
-import no.pradhan.agentview.nativeapp.codex.autopilot.planOf
-import no.pradhan.agentview.nativeapp.codex.autopilot.finishedLine
 import no.pradhan.agentview.nativeapp.codex.autopilot.runLine
-import no.pradhan.agentview.nativeapp.codex.autopilot.buildsLine
+import no.pradhan.agentview.nativeapp.codex.autopilot.stoppedText
 import no.pradhan.agentview.nativeapp.sessions.Repo
 import no.pradhan.agentview.nativeapp.sessions.Workspace
 import no.pradhan.agentview.nativeapp.sessions.Worktree
 import no.pradhan.agentview.nativeapp.sessions.chatPlace
 import no.pradhan.agentview.nativeapp.sessions.heldOrder
-import no.pradhan.agentview.nativeapp.sessions.advisorLoopLine
-import no.pradhan.agentview.nativeapp.sessions.advisorLoopOf
-import no.pradhan.agentview.nativeapp.codex.autopilot.mergeQuiet
-import no.pradhan.agentview.nativeapp.codex.autopilot.roundsSummary
-import no.pradhan.agentview.nativeapp.codex.autopilot.roundsMarkdown
-import no.pradhan.agentview.nativeapp.codex.autopilot.CapLine
-import no.pradhan.agentview.nativeapp.codex.autopilot.capLine
-import no.pradhan.agentview.nativeapp.codex.autopilot.fiveHourLabel
-import no.pradhan.agentview.nativeapp.codex.autopilot.fiveHourLine
-import no.pradhan.agentview.nativeapp.codex.autopilot.parseFiveHour
-import no.pradhan.agentview.nativeapp.codex.autopilot.stoppedText
 import no.pradhan.agentview.nativeapp.codex.autopilot.LoopNow
 import no.pradhan.agentview.nativeapp.codex.autopilot.nowMeta
 import no.pradhan.agentview.nativeapp.codex.autopilot.tryColumn
-import no.pradhan.agentview.nativeapp.chat.BuildEntry
-import no.pradhan.agentview.nativeapp.chat.SpecHomeItem
-import no.pradhan.agentview.nativeapp.chat.specHomeOrder
-import no.pradhan.agentview.nativeapp.chat.specRowParts
-import no.pradhan.agentview.nativeapp.sessions.BacklogItem
-import no.pradhan.agentview.nativeapp.sessions.advisorBoard
-import no.pradhan.agentview.nativeapp.sessions.specItemPrompt
-import no.pradhan.agentview.nativeapp.sessions.AuditFinding
-import no.pradhan.agentview.nativeapp.sessions.auditCountLine
-import no.pradhan.agentview.nativeapp.sessions.defaultAdvisorRoot
-import no.pradhan.agentview.nativeapp.chat.buildTotals
-import no.pradhan.agentview.nativeapp.chat.withoutCriteria
 import no.pradhan.agentview.nativeapp.net.ChatEvent
 import no.pradhan.agentview.nativeapp.net.ChatRun
 import no.pradhan.agentview.nativeapp.net.Edits
@@ -251,9 +213,6 @@ import no.pradhan.agentview.nativeapp.workspace.isSketchPath
 import no.pradhan.agentview.nativeapp.workspace.pathCopies
 import no.pradhan.agentview.nativeapp.workspace.isSpecPath
 import no.pradhan.agentview.nativeapp.workspace.sketchDoc
-import no.pradhan.agentview.nativeapp.workspace.planCondition
-import no.pradhan.agentview.nativeapp.chat.buildPrompt
-import no.pradhan.agentview.nativeapp.workspace.runAllPrompt
 import no.pradhan.agentview.nativeapp.workspace.specProgress
 import no.pradhan.agentview.nativeapp.workspace.specPrompt
 import no.pradhan.agentview.nativeapp.workspace.specSlug
@@ -415,22 +374,6 @@ class SharedCasesTest {
         for (c in cases("strip-round")) assertEquals(c.str("name"), c.str("expected"), stripRound(c.str("text")))
     }
 
-    @Test fun specCriteria() {
-        for (c in cases("spec-criteria")) assertEquals(c.str("name"), c.str("without"), withoutCriteria(c.str("markdown")))
-    }
-
-    @Test fun buildTotals() {
-        val fixture = Json.parseToJsonElement(File("../../shared/fixtures/builds.json").readText()).jsonObject
-        for (c in fixture.getValue("totals").jsonArray.map { it.jsonObject }) {
-            val entries = c.getValue("entries").jsonArray.mapIndexed { i, e -> e.jsonObject.let { o ->
-                BuildEntry("e$i", status = o.str("status"), startedAt = o.getValue("startedAt").jsonPrimitive.long, endedAt = o["endedAt"]?.takeIf { it !is JsonNull }?.jsonPrimitive?.long, tokens = o["tokens"]?.jsonPrimitive?.long)
-            } }
-            val t = buildTotals(entries, c.getValue("now").jsonPrimitive.long)
-            val want = c.getValue("expected").jsonObject
-            assertEquals(c.str("name"), listOf(want.getValue("runs").jsonPrimitive.int, want.getValue("ms").jsonPrimitive.long, want.getValue("tokens").jsonPrimitive.long, want.getValue("partial").jsonPrimitive.boolean), listOf(t.runs, t.ms, t.tokens, t.partial))
-        }
-    }
-
     @Test fun ago() {
         val now = 1_800_000_000_000
         for (c in cases("ago")) assertEquals(c.str("name"), c.str("expected"), agoShort(now - c.getValue("ageMs").jsonPrimitive.long, now, c.str("suffix")))
@@ -501,14 +444,6 @@ class SharedCasesTest {
         }
     }
 
-    @Test fun limitResume() {
-        for (c in cases("limit-resume")) {
-            val events = c.getValue("events").jsonArray.map { it.decode<ChatEvent>() }
-            val expected = c["expected"]?.takeIf { it !is JsonNull }?.jsonObject?.let { LimitResume(it.str("prompt"), it.getValue("reset").jsonPrimitive.long) }
-            assertEquals(c.str("name"), expected, limitResume(events))
-        }
-    }
-
     @Test fun handoffText() {
         for (c in cases("handoff-text")) assertEquals(c.str("name"), c.str("expected"), handoffText(c.str("sessionId")))
     }
@@ -522,13 +457,6 @@ class SharedCasesTest {
             val events = c.getValue("events").jsonArray.map { it.decode<ChatEvent>() }
             val expected = c.nullable("expected")?.jsonArray?.map { ChecklistItem(it.jsonObject.str("content"), it.jsonObject.str("activeForm"), it.jsonObject.str("status")) }
             assertEquals(c.str("name"), expected, latestChecklist(events))
-        }
-    }
-
-    @Test fun finishedLine() {
-        for (c in cases("finished-line")) {
-            val endedAt = c.nullable("endedAt")?.jsonPrimitive?.long
-            assertEquals(c.str("name"), c.nullable("expected")?.jsonPrimitive?.content, finishedLine(c.str("why"), endedAt) { "${it}h ago" })
         }
     }
 
@@ -569,90 +497,11 @@ class SharedCasesTest {
         for (c in cases("short-model")) assertEquals(c.str("name"), c.str("expected"), shortModel(c.str("model")))
     }
 
-    @Test fun endedRun() {
-        for (c in cases("ended-run")) {
-            val runs = c.getValue("runs").decode<List<ChatRun>>()
-            assertEquals(c.str("name"), c.nullable("expected")?.jsonPrimitive?.content, endedRun(runs, c.str("chatId"))?.id)
-        }
-    }
-
-    @Test fun goalEnd() {
-        for (c in cases("goal-end")) assertEquals(c.str("name"), c.str("expected"), goalEnd(c.str("why")))
-    }
-
-    @Test fun runDetail() {
-        for (c in cases("run-detail")) {
-            val d = runDetail(ChatRun(id = "r", kind = c.str("kind"), state = c.str("state")))
-            val e = c.getValue("expected").jsonObject
-            assertEquals(c.str("name"), listOf(e.str("heading"), e.str("what"), e.getValue("editable").jsonPrimitive.boolean, e.getValue("opens").jsonPrimitive.boolean), listOf(d.heading, d.what, d.editable, d.opens))
-        }
-    }
-
-    @Test fun rerunForm() {
-        for (c in cases("rerun-form")) {
-            val run = JsonObject(mapOf("id" to toJson("r")) + c.getValue("run").jsonObject).decode<ChatRun>()
-            val f = c.getValue("form").jsonObject
-            val got = rerunForm(run)
-            val name = c.str("name")
-            assertEquals(name, f.str("what"), got.form.what)
-            assertEquals(name, f.getValue("every").jsonPrimitive.long, got.form.every)
-            assertEquals(name, f.nullable("stopIn")?.jsonPrimitive?.long, got.form.stopIn)
-            assertEquals(name, f.nullable("stopAt")?.jsonPrimitive?.content, got.form.stopAt)
-            assertEquals(name, f.nullable("capPct")?.jsonPrimitive?.int, got.form.capPct)
-            assertEquals(name, f.nullable("capUsd")?.jsonPrimitive?.int, got.form.capUsd)
-            assertEquals(name, f.nullable("fiveHour")?.jsonPrimitive?.content, got.form.fiveHour)
-            assertEquals(name, f.nullable("builds")?.jsonPrimitive?.int, got.form.builds)
-            assertEquals(name, f.nullable("plan")?.jsonPrimitive?.content, got.plan)
-        }
-    }
-
     @Test fun runLine() {
         for (c in cases("run-line")) {
             val run = JsonObject(mapOf("id" to toJson("r")) + c.getValue("run").jsonObject).decode<ChatRun>()
             assertEquals(c.str("name"), c.str("expected"), runLine(run))
         }
-    }
-
-    @Test fun advisorLoop() {
-        for (c in cases("advisor-loop")) {
-            val runs = c.getValue("runs").jsonArray.map { JsonObject(mapOf("id" to toJson("r")) + it.jsonObject).decode<ChatRun>() }
-            val found = advisorLoopOf(runs, c.str("root"))
-            val expected = c.nullable("expected")?.jsonObject
-            assertEquals(c.str("name"), expected?.let { Triple(it.str("id"), it.str("line"), it.prim("builds")?.content ?: "") }, found?.let { Triple(it.id, advisorLoopLine(it), buildsLine(it)) })
-        }
-    }
-
-    @Test fun advisorRoot() {
-        for (c in cases("advisor-root")) {
-            val repos = c.getValue("repos").jsonArray.map { it.jsonObject.str("cwd") to it.jsonObject.getValue("last").jsonPrimitive.long }
-            val open = c.nullable("open")?.jsonPrimitive?.content
-            assertEquals(c.str("name"), c.nullable("expected")?.jsonPrimitive?.content, defaultAdvisorRoot(open, repos))
-        }
-    }
-
-    @Test fun auditCount() {
-        for (c in cases("audit-count")) {
-            val findings = c.getValue("statuses").jsonArray.mapIndexed { i, s -> AuditFinding(i + 1, "", "", "low", "", status = s.jsonPrimitive.content) }
-            assertEquals(c.str("name"), c.str("expected"), auditCountLine(findings))
-        }
-    }
-
-    @Test fun advisorBoard() {
-        for (c in cases("advisor-board")) {
-            val backlog = c.getValue("backlog").jsonArray.map { it.decode<BacklogItem>() }
-            val specs = c.getValue("specs").jsonArray.map { it.decode<SpecHomeItem>() }
-            val board = advisorBoard(backlog, specs, c.getValue("loopNeedsYou").jsonPrimitive.boolean)
-            val expected = c.getValue("expected").jsonObject
-            for (stage in listOf("ideas", "specced", "building", "done")) {
-                val want = expected.getValue(stage).jsonArray.map { val o = it.jsonObject; Triple(o.str("slug"), o.nullable("action")?.jsonPrimitive?.content, o.getValue("needsYou").jsonPrimitive.boolean) }
-                assertEquals("${c.str("name")}: $stage", want, board.stages.getValue(stage).map { Triple(it.slug, it.action, it.needsYou) })
-            }
-            assertEquals(c.str("name"), expected.str("defaultStage"), board.defaultStage)
-        }
-    }
-
-    @Test fun specItemPrompt() {
-        for (c in cases("spec-item-prompt")) assertEquals(c.str("name"), c.str("expected"), specItemPrompt(c.str("root"), c.getValue("item").decode<BacklogItem>()))
     }
 
     @Test fun taskChatPrompt() {
@@ -666,51 +515,10 @@ class SharedCasesTest {
         for (c in cases("chat-session-of")) assertEquals(c.str("name"), c.nullable("expected")?.jsonPrimitive?.content, chatSessionOf(c.nullable("url")?.jsonPrimitive?.content))
     }
 
-    @Test fun mergeQuiet() {
-        for (c in cases("merge-quiet")) {
-            val rounds = c.getValue("rounds").jsonArray.map { it.decode<Round>() }
-            val expected = c.getValue("expected").jsonArray.map { g -> g.jsonArray.map { it.jsonPrimitive.double } }
-            val actual = mergeQuiet(rounds).map { listOf(it.first.n.toDouble(), it.last.n.toDouble(), it.count.toDouble(), it.costUsd) }
-            assertEquals(c.str("name"), expected, actual)
-        }
-    }
-
-    @Test fun roundsSummary() {
-        for (c in cases("rounds-summary")) {
-            assertEquals(c.str("name"), c.str("expected"), roundsSummary(c.getValue("rounds").jsonArray.map { it.decode<Round>() }))
-        }
-    }
-
-    @Test fun roundsMarkdown() {
-        for (c in cases("rounds-markdown")) {
-            val rounds = c.getValue("rounds").jsonArray.map { it.decode<Round>() }
-            assertEquals(c.str("name"), c.str("expected"), roundsMarkdown(c.str("title"), rounds, c.nullable("provider")?.jsonPrimitive?.content))
-        }
-    }
-
-    @Test fun capLine() {
-        for (c in cases("cap-line")) {
-            val run = JsonObject(mapOf("id" to toJson("r")) + c.getValue("run").jsonObject).decode<ChatRun>()
-            val e = c.nullable("expected")?.jsonObject
-            assertEquals(c.str("name"), e?.let { CapLine(it.str("text"), it.getValue("near").jsonPrimitive.boolean) }, capLine(run))
-        }
-    }
-
-    @Test fun fiveHour() {
-        for (c in cases("five-hour")) {
-            val name = c.str("name")
-            if ("label" in c) assertEquals(name, c.str("label"), fiveHourLabel(c.nullable("fiveHour")?.jsonPrimitive?.content))
-            else if ("run" in c) {
-                val run = JsonObject(mapOf("id" to toJson("r")) + c.getValue("run").jsonObject).decode<ChatRun>()
-                assertEquals(name, c.str("line"), fiveHourLine(run.fiveHour?.content, run.capPct, run.provider))
-            } else assertEquals(name, c.nullable("pct")?.jsonPrimitive?.int, parseFiveHour(c.str("text")))
-        }
-    }
-
     @Test fun stoppedText() {
         for (c in cases("stopped-text")) {
             val run = JsonObject(mapOf("id" to toJson("r")) + c.getValue("run").jsonObject).decode<ChatRun>()
-            assertEquals(c.str("name"), c.str("expected"), stoppedText(run, c.getValue("working").jsonPrimitive.boolean))
+            assertEquals(c.str("name"), c.str("expected"), stoppedText(run))
         }
     }
 
@@ -718,7 +526,7 @@ class SharedCasesTest {
         for (c in cases("now-meta")) {
             val n = c.getValue("now").jsonObject
             val now = LoopNow("", n.nullable("at")?.jsonPrimitive?.long, "status", n.nullable("next")?.jsonPrimitive?.content, n.nullable("stepsLeft")?.jsonPrimitive?.int ?: 0)
-            assertEquals(c.str("name"), c.str("expected"), nowMeta(now, c.str("builds")))
+            assertEquals(c.str("name"), c.str("expected"), nowMeta(now))
         }
     }
 
@@ -919,7 +727,6 @@ class SharedCasesTest {
             assertEquals(c.str("name"), c.getValue("isSpec").jsonPrimitive.booleanOrNull, isSpecPath(c.str("path")))
             assertEquals(c.str("name"), c.str("progress"), specProgress(tasks))
             assertEquals(c.str("name"), c.nullable("start")?.jsonPrimitive?.content, tasks.firstOrNull { !it.done }?.let { startTaskPrompt(it, c.str("path")) })
-            assertEquals(c.str("name"), c.str("all"), runAllPrompt(c.str("path")))
         }
     }
 
@@ -929,10 +736,6 @@ class SharedCasesTest {
             c.nullable("one")?.let { assertEquals(c.str("name"), it.jsonPrimitive.content, findingFixPrompt(findings[0])) }
             c.nullable("all")?.let { assertEquals(c.str("name"), it.jsonPrimitive.content, findingsFixPrompt(findings)) }
         }
-    }
-
-    @Test fun buildPromptText() {
-        for (c in cases("build-prompt")) assertEquals(c.str("name"), c.str("expected"), buildPrompt(c.str("brief")))
     }
 
     @Test fun specOpenTasks() {
@@ -1025,24 +828,6 @@ class SharedCasesTest {
         }
     }
 
-    @Test fun specHome() {
-        for (c in cases("spec-home")) {
-            val items = c.getValue("items").jsonArray.map {
-                val o = it.jsonObject
-                SpecHomeItem(o.str("slug"), pipeline = o.str("pipeline"), state = o.str("state"), updatedAt = o.getValue("updatedAt").jsonPrimitive.long, hold = o.getValue("hold").jsonPrimitive.boolean, waiting = o.getValue("waiting").jsonPrimitive.boolean, built = o.getValue("built").jsonPrimitive.boolean)
-            }
-            assertEquals(c.str("name"), c.getValue("expected").jsonArray.map { it.jsonPrimitive.content }, specHomeOrder(items).map { it.slug })
-        }
-    }
-
-    @Test fun specRowParts() {
-        for (c in cases("spec-row-parts")) {
-            val i = SpecHomeItem("s", pipeline = c.str("pipeline"), conclusion = c.str("conclusion"), updatedAt = c.getValue("updatedAt").jsonPrimitive.long)
-            val parts = specRowParts(i) { "${it}h ago" }
-            assertEquals(c.str("name"), c.str("meta") to c.str("when"), parts.meta to parts.age)
-        }
-    }
-
     @Test fun specSlug() {
         for (c in cases("spec-slug")) assertEquals(c.str("name"), c.str("slug"), specSlug(c.str("path")))
     }
@@ -1062,32 +847,6 @@ class SharedCasesTest {
 
     @Test fun sketchDoc() {
         for (c in cases("sketch-doc")) assertEquals(c.str("name"), c.str("doc"), sketchDoc(c.str("html"), c.str("theme")))
-    }
-
-    @Test fun goalCommand() {
-        for (c in cases("goal-command")) {
-            c["command"]?.let {
-                val f = c.getValue("form").jsonObject
-                val form = GoalForm(f.str("what"), f.getValue("every").jsonPrimitive.long, f.nullable("stopIn")?.jsonPrimitive?.long, f.nullable("stopAt")?.jsonPrimitive?.content, f.nullable("capPct")?.jsonPrimitive?.int, f.nullable("builds")?.jsonPrimitive?.int, f.nullable("capUsd")?.jsonPrimitive?.int, f.nullable("fiveHour")?.jsonPrimitive?.content)
-                assertEquals(c.str("name"), it.jsonPrimitive.content, goalCommand(form, c.getValue("now").jsonPrimitive.long))
-            }
-            c["condition"]?.let { assertEquals(c.str("name"), it.jsonPrimitive.content, planCondition(c.str("path"), c.str("md"))) }
-            if ("plan" in c) assertEquals(c.str("name"), c.nullable("plan")?.jsonPrimitive?.content, planOf(c.str("what")))
-            if ("every" in c) assertEquals(c.str("name"), c.nullable("ms")?.jsonPrimitive?.long, parseEvery(c.str("every")))
-        }
-    }
-
-    @Test fun goalPresets() {
-        for (c in cases("goal-presets")) {
-            val name = c.str("name")
-            val list = c["list"]?.let { parsePresets(it.toString()) }.orEmpty()
-            val expected = parsePresets(c.getValue("expected").toString())
-            when (c.str("op")) {
-                "parse" -> assertEquals(name, expected, parsePresets(c["rawText"]?.jsonPrimitive?.content ?: c.getValue("raw").toString()))
-                "add" -> assertEquals(name, expected, addPreset(list, parsePresets("[${c.getValue("preset")}]").first()))
-                else -> assertEquals(name, expected, removePreset(list, c.str("target")))
-            }
-        }
     }
 
     @Test fun appendRule() {

@@ -13,9 +13,6 @@ host; the API server, which changes most often, restarts freely.
 **Driver interface around the Claude SDK.** Everything Claude-specific sits behind `AgentDriver` in `agent/claude/`,
 and each session reports its driver's capabilities, so another provider can be added without touching the session.
 
-**Loops in AgentView, not the CLI.** `/loop` and `/goal` are scheduled by the session and saved across restarts, so they
-do not depend on the CLI's own jobs.
-
 **Chrome through a relay.** The relay keeps the DevTools connection while the server restarts, so Chrome's Allow
 dialog does not come back.
 

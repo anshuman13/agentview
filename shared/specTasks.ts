@@ -5,10 +5,8 @@ const DOING = / \(in progress\)$/;
 const SPEC_PATH = /(^|\/)\.(claude|kiro)\/specs\/.+\.(md|markdown|mdx)$/i;
 
 export const isSpecPath = (path: string) => SPEC_PATH.test(path);
-// A spec the chat's repo holds; one written into another project (by an advisor) has no build record here.
-export const isRepoSpec = (path: string, cwd: string) => isSpecPath(path) && (!path.startsWith('/') || path.startsWith(`${cwd.replace(/\/+$/, '')}/`));
 
-// The build slug of a spec file: its name, or for a Kiro spec folder the folder's.
+// The slug of a spec file: its name, or for a Kiro spec folder the folder's.
 export const specSlug = (path: string) => /(?:^|\/)\.kiro\/specs\/([^/]+)\//.exec(path)?.[1] ?? path.slice(path.lastIndexOf('/') + 1).replace(/\.\w+$/, '');
 
 // Each line of a spec with its checkbox match, fenced code never matching.
@@ -51,17 +49,3 @@ export const specPrompt = (request: string) => `Write a spec for the request bel
 export const SPEC_REVIEW_COMMAND = 'spec-review';
 
 export const specReviewPrompt = (path: string) => `Review the spec at ${path} with two subagents started in parallel. Give each only the spec path and its brief below, and pass nothing from this chat.\n\n(a) Cold reader: open no file but the spec. Read it as someone who has never seen this repo or chat, and list each place you had to guess: a term, file, behaviour or number the spec does not pin down.\n\n(b) Readiness: check every file path, function or type name, route and test command the spec names against the repo, and list what is missing or different.\n\nThen call mcp__agentview__report_findings once with all findings from both, each with file = the repo-relative path of the spec, line = the spec line it concerns, summary, failure_scenario = what the spec should say, and category "guess" or "readiness". Pass an empty list when both are clean. Do not edit the spec.`;
-
-export const planGoalPrompt = (path: string) => `/goal every step of the plan in ${path} is done: work through it in order and note in the file which steps are finished.`;
-
-export const runAllPrompt = (path: string) => `/goal every task in ${path} is ticked: do them in order. While you work on one, append " (in progress)" to its line; when done, tick its box and remove that suffix in one edit before the next.`;
-
-export const buildPrompt = (brief: string) => `Run the agentview:build skill on the brief below (call the Skill tool with skill "agentview:build"). Pick the slug yourself: 2-5 lowercase words joined by hyphens. Pass the brief exactly as written between the brief tags.\n\n<brief>\n${brief}\n</brief>`;
-
-export const sketchSpecPrompt = (path: string) => `Start the agentview:designer subagent on the spec at ${path}. Give it only that path; it writes the sketch to .claude/sketches/<slug>.html. Reply with the sketch path.`;
-
-export const buildSpecPrompt = (path: string, approval = true) => `Run the agentview:build skill on the existing spec at ${path} (call the Skill tool with skill "agentview:build"). Use the file name as the slug and the spec's title as the brief; the pm starts from that file and changes it only where review finds a problem.${approval ? '' : ' The user asked to build without approving: pass approval: false.'}`;
-
-export const buildItemPrompt = (title: string, why: string, slug: string) => `Run the agentview:build skill on the backlog item below (call the Skill tool with skill "agentview:build"). No spec exists yet: the pm agent writes it first to .claude/specs/${slug}.md, then the build continues. Use ${slug} as the slug.\n\n<brief>\n${title}. ${why}\n</brief>`;
-
-export const planCondition = (path: string, markdown: string) => (specTasks(markdown).some((t) => !t.done) ? runAllPrompt(path) : planGoalPrompt(path));

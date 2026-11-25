@@ -1,14 +1,14 @@
 import { describe, expect, it, vi } from 'bun:test';
 import type { ComponentProps, ReactNode } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import * as goal from '../../sessions/goalLogic';
+import * as chats from '../../sessions/openChat';
 import * as menu from '../../ui/Menu';
 import type { Fact } from '../data/wiki/wiki';
 
 const RealItem = menu.MenuItem;
 const items: ComponentProps<typeof RealItem>[] = [];
 const showChat = vi.fn();
-vi.mock('../../sessions/goalLogic', () => ({ ...goal, showChat }));
+vi.mock('../../sessions/openChat', () => ({ ...chats, showChat }));
 vi.mock('../../ui/Menu', () => ({
   ...menu,
   Menu: ({ children }: { children: ReactNode }) => <>{children}</>,

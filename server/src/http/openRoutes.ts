@@ -13,40 +13,20 @@ import { resolvedRoute } from '../agent/claude/resolved.js';
 import { searchMessages } from '../agent/claude/search.js';
 import { seenRoute } from '../agent/claude/seen.js';
 import { readSummaries } from '../agent/claude/summaryStore.js';
-import { advisorsMac, askAdvisorsMac, assistantRoute } from '../integrations/assistant.js';
+import { assistantRoute } from '../integrations/assistant.js';
 import { linkTitleRoute } from '../integrations/linkTitle.js';
 import { otherMacs } from './macs.js';
 import { hideableIds } from '../../../shared/featureUse.js';
 import { ACCOUNT_LABEL, type Account } from '../../../shared/protocol.js';
 import { clearFeatureUse, featureUseDays, recordRoute } from '../featureUse.js';
-import { expandHome, homeRelative, loadSettings, publicSettings, saveSettings } from '../settings.js';
+import { loadSettings, publicSettings, saveSettings } from '../settings.js';
 import { listPorts, openPort } from './preview.js';
 import { createFolder, createWorktree, isWorkspaceRepo, listRepos, listWorktrees, removeRunWorktree, removeWorktree } from '../workspace/worktrees.js';
 import { branchSlug, makeWorktree } from '../workspace/tries.js';
 import { savePaste } from './body.js';
 import { readBody, failed } from '../json.js';
 import { entry, type Ctx, type Entry, type Prefix, type RouteDeps } from './routeTypes.js';
-import { advisorsInfo, moveBacklogFile, readAudit, readBacklog } from '../session/advisors.js';
-import { buildList } from '../session/builds.js';
-import { allowedFolder, listSketches, readFileWithOriginal } from '../workspace/files.js';
 import { exec } from '../exec.js';
-
-// Advisors keep one copy of their files, on the hub Mac. Elsewhere that Mac answers their routes, with the project root
-// sent relative to the home folder so it resolves there.
-const rootParam = (url: URL) => expandHome(url.searchParams.get('root') ?? '');
-const onHub = (fn: (c: Ctx) => unknown) => async (c: Ctx) => {
-  if (!advisorsMac()) return fn(c);
-  const q = new URLSearchParams(c.url.search);
-  if (q.has('root')) q.set('root', homeRelative(q.get('root')!));
-  return askAdvisorsMac(`${c.url.pathname}?${q}`, { method: c.method, body: c.method === 'POST' ? c.body : undefined });
-};
-
-const NOT_PROJECT = failed(400, 'Not a project folder');
-// An advisor route on a project folder, answered by the hub Mac.
-const inRoot = (fn: (root: string, c: Ctx) => unknown) => onHub((c) => {
-  const root = rootParam(c.url);
-  return allowedFolder(root) ? fn(root, c) : NOT_PROJECT;
-});
 
 export function sessionRoutes(d: RouteDeps): Record<string, Entry<Ctx>> {
   return {
@@ -63,19 +43,6 @@ export function sessionRoutes(d: RouteDeps): Record<string, Entry<Ctx>> {
       if (r.status === 200) d.host.notify({ op: 'rename', sessionId: id!, title: body.title.trim() });
       return r;
     }, true),
-    'GET /api/advisors': entry(onHub(() => advisorsInfo())),
-    'GET /api/advisors/backlog': entry(inRoot((root) => readBacklog(root))),
-    'GET /api/advisors/specs': entry(inRoot((root) => buildList(root))),
-    'POST /api/advisors/backlog/move': entry(inRoot(async (root, { body }) => {
-      if (body.dir !== 'up' && body.dir !== 'down') return failed(400, 'dir must be up or down');
-      return (await moveBacklogFile(root, String(body.slug), body.dir)) ? readBacklog(root) : failed(404, 'Not in the backlog');
-    }), true),
-    'GET /api/advisors/audit': entry(inRoot((root) => readAudit(root))),
-    'GET /api/advisors/sketches': entry(inRoot((root) => listSketches(root))),
-    'GET /api/advisors/sketch': entry(inRoot((root, { url }) => {
-      const name = url.searchParams.get('name') ?? '';
-      return /^[^/]+\.html$/.test(name) ? readFileWithOriginal(root, `.claude/sketches/${name}`) : failed(400, 'Not a sketch');
-    })),
     'ANY /api/sessions/pins': entry(({ method, url }) => pinsRoute(method, url.searchParams.get('id'))),
     'ANY /api/questions/resolved': entry(({ method, url }) => resolvedRoute(method, url.searchParams.get('key'))),
     'ANY /api/sessions/seen': entry(({ method, url }) => seenRoute(method, url.searchParams.get('id'), url.searchParams.get('unread') === '1')),

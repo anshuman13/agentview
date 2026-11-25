@@ -16,7 +16,6 @@ val MORE_TOOLS = listOf(
     MoreItem("github", "Pull Requests", "git-pull-request"),
 )
 val MORE_PAGES = listOf(
-    MoreItem("advisors", "Advisors", "organization"),
     MoreItem("sketches", "Sketches", "paintcan"),
     MoreItem("travel", "Travel", "briefcase"),
     MoreItem("observe", "Observe", "pulse"),
@@ -26,7 +25,7 @@ val MORE_PAGES = listOf(
 )
 
 // The pages the shell keeps to a reading width; Codex caps its own content so its Add task button stays at the screen edge.
-private val CAPPED_ROUTES = setOf("settings", "mcp", "github", "observe", "deploy", "advisors", "travel")
+private val CAPPED_ROUTES = setOf("settings", "mcp", "github", "observe", "deploy", "travel")
 
 fun cappedRoute(route: String) = route in CAPPED_ROUTES
 

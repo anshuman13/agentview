@@ -30,10 +30,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
@@ -57,15 +54,12 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import no.pradhan.agentview.nativeapp.app.DeepLink
-import no.pradhan.agentview.nativeapp.net.Capabilities
 import no.pradhan.agentview.nativeapp.net.ChatEvent
 import no.pradhan.agentview.nativeapp.app.Hub
 import no.pradhan.agentview.nativeapp.app.image
 import no.pradhan.agentview.nativeapp.app.stopTask
 import no.pradhan.agentview.nativeapp.ops.Agent
-import no.pradhan.agentview.nativeapp.workspace.Findings
 import no.pradhan.agentview.nativeapp.ops.agentSummary
-import no.pradhan.agentview.nativeapp.ops.tokensText
 
 import no.pradhan.agentview.nativeapp.ui.AvIcon
 import no.pradhan.agentview.nativeapp.ui.Badge
@@ -74,29 +68,19 @@ import no.pradhan.agentview.nativeapp.ui.ButtonSize
 import no.pradhan.agentview.nativeapp.ui.ButtonVariant
 import no.pradhan.agentview.nativeapp.ui.BadgeTone
 import no.pradhan.agentview.nativeapp.ui.Chevron
-import no.pradhan.agentview.nativeapp.ui.DotState
-import no.pradhan.agentview.nativeapp.ui.Group
 import no.pradhan.agentview.nativeapp.ui.IconBtn
 import no.pradhan.agentview.nativeapp.ui.ListRow
-import no.pradhan.agentview.nativeapp.ui.Loading
 import no.pradhan.agentview.nativeapp.ui.Menu
-import no.pradhan.agentview.nativeapp.ui.MenuItem
 import no.pradhan.agentview.nativeapp.workspace.CopyPathItems
 import no.pradhan.agentview.nativeapp.ui.Mono
 import no.pradhan.agentview.nativeapp.ui.MonoFont
-import no.pradhan.agentview.nativeapp.ui.MoreButton
-import no.pradhan.agentview.nativeapp.ui.StatusDot
 import no.pradhan.agentview.nativeapp.ui.Tokens
 import no.pradhan.agentview.nativeapp.ui.Type
 import no.pradhan.agentview.nativeapp.ui.WordClamp
 import no.pradhan.agentview.nativeapp.ui.av
 import no.pradhan.agentview.nativeapp.ui.select
 import no.pradhan.agentview.nativeapp.ui.well
-import no.pradhan.agentview.nativeapp.ui.agoShort
-import no.pradhan.agentview.nativeapp.workspace.buildSpecPrompt
 import no.pradhan.agentview.nativeapp.ui.lineDiff
-import no.pradhan.agentview.nativeapp.ui.rememberLoad
-import no.pradhan.agentview.nativeapp.workspace.sketchSpecPrompt
 import no.pradhan.agentview.nativeapp.workspace.sketchTitle
 import no.pradhan.agentview.nativeapp.ui.plural
 
@@ -210,126 +194,6 @@ private fun Pre(text: String, wrap: Boolean = true, error: Boolean = false) {
     }
 }
 
-// The live card of a spec in a chat: its header and menu load with the box closed; the body shows the flow, the criteria and the findings, and each row opens a sheet.
-@Composable
-internal fun SpecCard(hub: Hub, chat: String, slug: String, path: String, bump: Int) {
-    val (load, reload) = rememberLoad(chat, slug) { loadBuild(hub, slug) }
-    var seen by remember(chat, slug) { mutableIntStateOf(bump) }
-    LaunchedEffect(bump) { if (bump != seen) { seen = bump; reload() } }
-    val d = load.data
-    PollWhile(d?.summary?.state == "running", reload)
-    val gone = d == null && !load.busy && load.error.isEmpty()
-    val sheets = LocalBuildSheets.current
-    var saved by remember(chat, slug) { mutableIntStateOf(sheets.saved) }
-    LaunchedEffect(sheets.saved) { if (sheets.saved != saved) { saved = sheets.saved; if (sheets.slug == slug) reload() } }
-    val open: (BuildSheet) -> Unit = { s -> d?.let { sheets.open(it, s) } }
-    val want by hub.specSlug.collectAsState()
-    LaunchedEffect(want, d, gone) {
-        if (want != slug || (d == null && !gone)) return@LaunchedEffect
-        hub.specSlug.value = null
-        if (d != null) sheets.open(d, BuildSheet.Spec())
-    }
-    val actions = buildActions(hub, slug, reload)
-    TranscriptBox(
-        hub, "build:$chat:$slug", d?.title?.ifEmpty { null } ?: slug,
-        if (gone) "Spec removed" else d?.let { specMeta(it.pipeline, it.summary.conclusion) }.orEmpty(),
-        state = {
-            if (d?.hold == true) Badge(HOLD_BADGE.first, HOLD_BADGE.second)
-            else if (d != null && d.entries.isNotEmpty()) stateBadge(d.summary.state).let { Badge(it.first, it.second) }
-        },
-        action = { SpecMenu(hub, d, path, open, actions) },
-        icon = "beaker",
-        defaultOpen = true,
-        fitState = true,
-    ) {
-        when {
-            gone -> {}
-            d != null -> SpecBody(hub, d, open)
-            load.error.isNotEmpty() -> LoadFailed("this build", reload)
-            else -> Loading("Loading the build…")
-        }
-    }
-}
-
-@Composable
-private fun SpecMenu(hub: Hub, d: BuildDetail?, path: String, open: (BuildSheet) -> Unit, actions: BuildActions) {
-    val subagents by hub.store.state.select { (it.session?.capabilities ?: Capabilities()).can("subagents") }
-    MoreButton { dismiss ->
-        if (d != null) MenuItem("Open spec", "go-to-file", { dismiss(); open(BuildSheet.Spec()) })
-        if (d != null && !hub.readOnly) MenuItem(if (d.hold) "Release hold" else "Hold", "debug-pause", { dismiss(); actions.setHold(if (d.hold) "release" else "hold") })
-        MenuItem(if (subagents) "Review with fresh eyes" else "Needs subagents, not in this chat", "eye", { dismiss(); hub.askChat("/spec-review $path") }, enabled = subagents && !hub.readOnly)
-        if (d != null && subagents && !hub.readOnly && canSketch(d)) MenuItem("Sketch", "paintcan", { dismiss(); hub.askChat(sketchSpecPrompt(path)) })
-        if (d != null && subagents && !hub.readOnly && canBuild(d)) MenuItem("Build", "play", { dismiss(); hub.askChat(buildSpecPrompt(path)) })
-    }
-}
-
-private fun flowSheet(f: FlowStep, d: BuildDetail): BuildSheet? = when {
-    f.state == "todo" -> null
-    f.key == "spec" -> BuildSheet.Spec(d.phases.firstOrNull { it.key == "requirements" }?.key ?: d.phases.firstOrNull()?.key)
-    f.key == "sketch" -> BuildSheet.Spec("sketch")
-    f.key == "approval" -> BuildSheet.Spec()
-    f.key == "merge" -> null
-    else -> BuildSheet.Step(f.key)
-}
-
-// The flow as one strip of steps, then the step that matters now as a row.
-@Composable
-private fun SpecBody(hub: Hub, d: BuildDetail, open: (BuildSheet) -> Unit) {
-    var all by remember(d.slug) { mutableStateOf(false) }
-    val failed = d.criteria.any { it.result == "fail" }
-    val now = System.currentTimeMillis()
-    val step = if (d.summary.state == "done") null else currentStep(d.flow)
-    var list by remember(d.slug) { mutableStateOf(false) }
-    val cur = currentStep(d.flow) ?: d.flow.firstOrNull()
-    if (cur != null) {
-        val curBadge = flowBadge(cur)
-        Row(Modifier.fillMaxWidth().heightIn(min = Tokens.touchSm).clickable { list = !list }.padding(horizontal = Tokens.listPad), horizontalArrangement = Arrangement.spacedBy(Tokens.sp2), verticalAlignment = Alignment.CenterVertically) {
-            Text("Step ${d.flow.indexOf(cur) + 1} of ${d.flow.size}: ${FLOW_LABEL[cur.key] ?: cur.key}", Modifier.weight(1f), style = Type.callout, color = av.fg, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            if (curBadge != null) Badge(curBadge.first, curBadge.second)
-            AvIcon(if (list) "chevron-down" else "chevron-right", null, Tokens.icon, tint = av.fgMuted)
-        }
-    }
-    if (list) Column(Modifier.fillMaxWidth().padding(horizontal = Tokens.listPad)) {
-        d.flow.forEach { f ->
-            val sheet = flowSheet(f, d)
-            Row(
-                Modifier.fillMaxWidth().heightIn(min = Tokens.touchSm).then(if (sheet != null) Modifier.clickable { open(sheet) } else Modifier),
-                horizontalArrangement = Arrangement.spacedBy(Tokens.sp2), verticalAlignment = Alignment.CenterVertically,
-            ) {
-                StatusDot(if (f.state == "running") DotState.Running else stateDot(f.state))
-                Text(FLOW_LABEL[f.key] ?: f.key, style = if (f == step) Type.callout else Type.subheadline, color = if (f.state == "todo") av.fgMuted else av.fg)
-            }
-        }
-    }
-    val total = buildTotals(d.entries, now)
-    if (total.runs > 0) {
-        val line = listOf(plural(total.runs, "agent run"), duration(total.ms), if (total.tokens > 0) (if (total.partial) "~" else "") + tokensText(total.tokens) else "").filter(String::isNotEmpty).joinToString(" · ")
-        Text(line, style = Type.footnote, color = av.fgMuted, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(horizontal = Tokens.listPad, vertical = Tokens.sp2))
-    }
-    if (step != null) {
-        val badge = flowBadge(step)
-        val sheet = flowSheet(step, d)
-        Group {
-            ListRow(
-                FLOW_LABEL[step.key] ?: step.key, listOf(step.by, step.result, step.at?.let { agoShort(it, now) }.orEmpty()).filter(String::isNotEmpty).joinToString(" · "),
-                leading = { StatusDot(if (step.state == "running") DotState.Running else stateDot(step.state)) },
-                state = { if (badge != null) Badge(badge.first, badge.second) }, stateSlot = badge != null, fitState = true,
-                onClick = sheet?.let { { open(it) } },
-            )
-        }
-    }
-    Criteria(d.criteria, if (all || failed) d.criteria.size else 0, { all = true }) { open(BuildSheet.Criterion(it)) }
-    Findings(hub, "spec:${d.slug}") { open(BuildSheet.File(it.file, it.line)) }
-}
-
-// A spec write that no longer holds the live card, shown plain.
-@Composable
-internal fun SpecRow(slug: String, meta: String) {
-    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(Tokens.shapeLg)).background(av.groupCard)) {
-        ListRow(slug, meta, leading = { AvIcon("beaker", null, Tokens.icon) })
-    }
-}
-
 // web AlarmCard.tsx: an alarm the agent set on the phone, with the time, its label and whether the phone took it.
 @Composable
 internal fun AlarmCard(it: Item.Step, running: Boolean) {
@@ -353,30 +217,11 @@ internal fun AlarmCard(it: Item.Step, running: Boolean) {
     }
 }
 
-// A mockup the agent wrote with /sketch; a tap opens it on the Sketches page, the menu offers its spec when one has the same slug.
+// A mockup the agent wrote with /sketch; a tap opens it on the Sketches page.
 @Composable
-internal fun SketchCard(hub: Hub, chat: String, name: String, meta: String) {
-    val slug = sketchTitle(name)
-    var asked by remember { mutableStateOf(false) }
-    val (load) = rememberLoad(chat, slug, asked) { if (asked) loadBuild(hub, slug) else null }
-    val spec = load.data?.takeIf { it.specFile != null }
-    val subagents by hub.store.state.select { (it.session?.capabilities ?: Capabilities()).can("subagents") }
-    val sheets = LocalBuildSheets.current
+internal fun SketchCard(hub: Hub, name: String, meta: String) {
     val open = { hub.link.value = DeepLink(page = "sketches", slug = name) }
-    TranscriptBox(
-        hub, "sketch:$name", slug, meta, icon = "paintcan", onOpen = open,
-        action = {
-            LinkAction("Open", open)
-            MoreButton { dismiss ->
-                LaunchedEffect(Unit) { asked = true }
-                if (spec == null) MenuItem(if (load.busy) "Loading" else "No spec for this sketch", "go-to-file", {}, enabled = false)
-                else {
-                    if (subagents && !hub.readOnly && canBuild(spec)) MenuItem("Build", "play", { dismiss(); hub.askChat(buildSpecPrompt(spec.specFile!!)) })
-                    MenuItem("Open spec", "go-to-file", { dismiss(); sheets.open(spec, BuildSheet.Spec(), runs = false) })
-                }
-            }
-        },
-    )
+    TranscriptBox(hub, "sketch:$name", sketchTitle(name), meta, icon = "paintcan", onOpen = open, action = { LinkAction("Open", open) })
 }
 
 private fun docTitle(path: String) = path.substringAfterLast('/').replace(Regex("\\.(md|markdown|mdx)$", RegexOption.IGNORE_CASE), "").replace(Regex("[-_]+"), " ")

@@ -45,9 +45,4 @@ export class SessionSettings {
     this.s.setSession({ review: on });
     this.s.system(`Review changes after each turn: ${on ? 'on' : 'off'}`);
   }
-
-  setBuildFlow(on: boolean) {
-    this.s.setSession({ buildFlow: on });
-    this.s.system(`Build flow: ${on ? 'on, features go through spec, sketch and approval' : 'off'}`);
-  }
 }

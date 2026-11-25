@@ -3,7 +3,6 @@ import { createPortal } from 'react-dom';
 import type { EditorView } from '@codemirror/view';
 import { setUi, useStore } from '../app/store';
 import { imageUrl } from '../chat/chatApi';
-import { startGoal } from '../sessions/goalLogic';
 import { fileRequest, isDocPath } from './fileApi';
 import { Icon } from '../ui/Icon';
 import { IconButton } from '../ui/Button';
@@ -194,7 +193,6 @@ export function CodePane() {
         <div className="cd-actions">
           {isDoc && <Toggle on={showDoc} icon="open-preview" title={showDoc ? 'Show the Markdown source' : 'Show the rendered document'} onClick={() => setPreview(!showDoc)} />}
           {isTable && <Toggle on={showDoc} icon="table" title={showDoc ? 'Show the raw text' : 'Show as a table'} onClick={() => setPreview(!showDoc)} />}
-          {isDoc && <Toggle icon="target" title="Run as goal…" onClick={() => startGoal({ plan: openFile ?? undefined })} />}
           {canDiff && <Toggle on={diff} icon="diff" title="Show the change against the last commit" onClick={() => { setPreview(false); setMode(diff ? 'file' : 'diff'); }} />}
           {diff && <Toggle on={split} icon="split-horizontal" title={split ? 'Show the change inline' : 'Show the change side by side'} onClick={() => { saveFlag(SPLIT_KEY, !split); setSplit(!split); }} />}
           {diff && <Toggle on={changesOnly} icon="fold" title="Changes only" onClick={() => setChangesOnly(!changesOnly)} />}

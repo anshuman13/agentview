@@ -2,7 +2,7 @@ import { describe, expect, it } from 'bun:test';
 import type { ChatRun } from '../../../shared/protocol.js';
 import { eveningBefore, morningDigest } from './morningDigest.js';
 
-const run = (p: Partial<ChatRun>): ChatRun => ({ id: 'r', kind: 'loop', sessionId: 's', chatId: 'c', title: 'Chat', what: '', startedAt: 0, endedAt: null, state: 'running', why: '', round: 1, max: 0, nextAt: null, costUsd: 1.234, rounds: [], needsYou: false, ...p });
+const run = (p: Partial<ChatRun>): ChatRun => ({ id: 'r', kind: 'job', sessionId: 's', chatId: 'c', title: 'Chat', what: '', startedAt: 0, endedAt: null, state: 'running', why: '', round: 1, max: 0, nextAt: null, costUsd: 1.234, rounds: [], needsYou: false, ...p });
 const round = (at: number, line: string) => ({ n: 1, at, outcome: 'progress' as const, line, costUsd: 0 });
 
 describe('morningDigest', () => {

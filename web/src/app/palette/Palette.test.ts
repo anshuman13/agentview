@@ -61,16 +61,11 @@ describe('rankCommands', () => {
     expect(buildCommands(models, true).map((c) => c.id)).toContain('page:deploy');
   });
   it('leaves out hidden page and palette commands', () => {
-    const labels = (hidden: string[]) => buildCommands(models, true, undefined, [], undefined, false, hidden).map((c) => c.label);
+    const labels = (hidden: string[]) => buildCommands(models, true, undefined, [], undefined, hidden).map((c) => c.label);
     expect(labels([])).toContain('View: Sketches');
     expect(labels(['page:sketches'])).not.toContain('View: Sketches');
     expect(labels(['page:sketches'])).toContain('View: Deploy');
     expect(labels(['palette:theme'])).not.toContain('Preferences: Toggle Theme');
-  });
-  it('lists Run as goal only for a Markdown file', () => {
-    const open = (doc: boolean) => buildCommands(models, false, undefined, [], undefined, doc).map((c) => c.id);
-    expect(open(true)).toContain('goalFile');
-    expect(open(false)).not.toContain('goalFile');
   });
   it('offers the Codex views', () => {
     expect(ids(rankCommands(cmds, 'tasks', []))).toContain('codex:tasks');

@@ -42,12 +42,12 @@ Restarting the server keeps running chats alive; see [architecture](docs/archite
   - Person pages with their Slack DM summary, open asks, your promises and unanswered mail
   - Related wiki claims, meetings and Slack tasks shown while you write
   - Urgent pushes held during a meeting and sent as one when it ends
-- `/loop` and `/goal`, Team and effort settings
+- Team and effort settings
 - Notifications on the Mac, in the browser and on the phone through ntfy; works from a phone and across Macs over NetBird
 
 ## Docs
 
-- [Features](docs/features.md): layout, Codex, timeline, models, workspace, notifications, loops, shortcuts, keyboard
+- [Features](docs/features.md): layout, Codex, timeline, models, workspace, notifications, runs, shortcuts, keyboard
 - [Integrations](docs/integrations.md): Chrome, MCP servers, Grafana and Snowflake
 - [Phone and other Macs](docs/macs.md), including the [native Android app](docs/macs.md#native-android-app)
 - [Assistant plan](docs/assistant.md), [Codex flows](docs/codex-flows.md) and [Codex wiki and meetings](docs/codex-wiki.md)

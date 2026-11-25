@@ -17,7 +17,6 @@ import no.pradhan.agentview.nativeapp.net.protocolJson
 import no.pradhan.agentview.nativeapp.net.reviewCmd
 import no.pradhan.agentview.nativeapp.net.rewindCmd
 import no.pradhan.agentview.nativeapp.net.runCmd
-import no.pradhan.agentview.nativeapp.net.runEditCmd
 import no.pradhan.agentview.nativeapp.net.runHookCmd
 import no.pradhan.agentview.nativeapp.net.sendNowCmd
 import no.pradhan.agentview.nativeapp.net.setAccountCmd
@@ -25,7 +24,6 @@ import no.pradhan.agentview.nativeapp.net.setEffortCmd
 import no.pradhan.agentview.nativeapp.net.setModeCmd
 import no.pradhan.agentview.nativeapp.net.setModelCmd
 import no.pradhan.agentview.nativeapp.net.setReviewCmd
-import no.pradhan.agentview.nativeapp.net.setBuildFlowCmd
 import no.pradhan.agentview.nativeapp.net.retryCmd
 import no.pradhan.agentview.nativeapp.net.steerCmd
 import no.pradhan.agentview.nativeapp.net.stopTaskCmd
@@ -36,7 +34,6 @@ import androidx.lifecycle.viewModelScope
 import java.util.UUID
 import kotlinx.coroutines.launch
 import no.pradhan.agentview.nativeapp.chat.handoffText
-import no.pradhan.agentview.nativeapp.chat.loopAt
 import no.pradhan.agentview.nativeapp.chat.lastModelKey
 import no.pradhan.agentview.nativeapp.chat.modelsKey
 import no.pradhan.agentview.nativeapp.chat.parseModels
@@ -69,14 +66,14 @@ fun Hub.notesTemplatePicks() = parseNotesPicks(prefs.getString(NOTES_PICKS_KEY, 
 fun Hub.rememberNotesTemplate(m: Row, key: String) { prefs.edit().putString(NOTES_PICKS_KEY, encodeNotesPicks(notesTemplatePicks() + (notesPickKey(m) to key))).apply() }
 
 // A model is sent only when the provider's own list has it, so a Codex id never reaches a Claude chat or the reverse.
-fun Hub.newChat(cwd: String? = null, model: String? = null, fork: String? = null, mode: String? = null, draft: String? = null, provider: String? = null, text: String? = null, hub: Boolean = false, onOpened: () -> Unit = {}) {
+fun Hub.newChat(cwd: String? = null, model: String? = null, fork: String? = null, mode: String? = null, draft: String? = null, provider: String? = null, text: String? = null, onOpened: () -> Unit = {}) {
     if (readOnly) { notice.value = READ_ONLY_SENT; return }
     val group = modelGroup(provider ?: defaultProvider.value, providers.value)
     if (model != null) setLastModel(group, model)
     val sent = (model ?: lastModel(group).takeIf { fork == null })?.takeIf { m -> modelsOf(group).value.any { it.value == m } }
     viewModelScope.launch {
         val first = text.takeIf { mode == null }
-        val id = switchTo(newSessionCmd(cwd = cwd, model = sent, fork = fork, provider = provider, text = first, hub = hub))
+        val id = switchTo(newSessionCmd(cwd = cwd, model = sent, fork = fork, provider = provider, text = first))
         if (id == null) notice.value = "The chat did not open" else {
             onOpened()
             if (mode != null) {
@@ -140,19 +137,12 @@ fun Hub.submit(text: String, steer: Boolean, saved: String = text, voice: Boolea
     }
 }
 
-// Sends the text once at HH:MM as /loop at, even while Claude runs.
-fun Hub.sendAt(time: String, text: String, onLost: () -> Unit) =
-    post(promptCmd(loopAt(time, text.trim()), false, UUID.randomUUID().toString()), store.wanted) { ok -> if (!ok) onLost() }
-
 fun Hub.interrupt() = post(interruptCmd(), store.wanted)
 
 fun Hub.runControl(run: ChatRun, op: String) {
     post(runCmd(run.id, op), store.wanted)
-    val running = store.state.value.live.firstOrNull { it.id == run.chatId }?.running == true
-    if (op == "stop" && !readOnly) undoable.tryEmit(Undoable(stoppedText(run, running), if (run.kind == "tries") null else ({ post(runCmd(run.id, "restore"), store.wanted) })))
+    if (op == "stop" && !readOnly) undoable.tryEmit(Undoable(stoppedText(run), null))
 }
-
-fun Hub.runEdit(run: ChatRun, edit: Map<String, Any?>) = post(runEditCmd(run.id, edit), store.wanted)
 
 fun Hub.triesKeep(run: ChatRun, n: Int) = post(triesKeepCmd(run.id, n), store.wanted)
 fun Hub.triesSend(run: ChatRun, text: String) = post(triesSendCmd(run.id, text), store.wanted)
@@ -199,7 +189,6 @@ fun Hub.setMode(mode: String) = post(setModeCmd(mode), store.wanted)
 
 fun Hub.setReview(on: Boolean) = post(setReviewCmd(on), store.wanted)
 
-fun Hub.setBuildFlow(on: Boolean) = post(setBuildFlowCmd(on), store.wanted)
 
 
 fun Hub.review(id: String, action: String, file: String? = null, hunk: Int? = null) = post(reviewCmd(id, action, file, hunk), store.wanted)

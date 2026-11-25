@@ -206,7 +206,7 @@ on the left, an action (IconButton sm or Button quiet sm) on the right. No neste
 `<Badge status label? reason? count?>` in `ui/Badge.tsx`; `.badge`. Pill, `--size-2xs` high, `--fs-2xs` 600, foreground `--bg`.
 The visible text is the status word in sentence case, or "N word" with `count` ("2 failed"). No other text.
 - Seven words (Status language): waiting `--warn`; sent and done `--ok`; failed and late `--err`; skipped `--hover` with `--fg-muted`; new `--accent-fill`.
-- Labels: `label` replaces the word only for "Needs you" on waiting and "Live" on running, "Near cap" on waiting on the loop cap row, and on a Memory file row for "Conflicts" on waiting and "In wiki" or "Stale" on skipped.
+- Labels: `label` replaces the word only for "Needs you" on waiting and "Live" on running, "Near cap" on waiting, and on a Memory file row for "Conflicts" on waiting and "In wiki" or "Stale" on skipped.
 - Reason: `reason` becomes `aria-label` and `title`, never visible text ("Overdue" and "Missed" render Late with that reason).
 - Digits-only exception: count badges (tab bar, nav, Section count, group counts, the phone Jump to latest reply count) stay a raw `.badge` with neutral, quiet, waiting or running tone and hold only digits.
 - Progress exception: the Today header shows one quiet `.badge` "N of M done" in its Section `action` once N is at least 1.
@@ -382,7 +382,7 @@ Rules for the native app in `android/`. TokenGen applies `NATIVE_OVERRIDES`, `NA
 - **Loading and EmptyState**: a loading page shows `Loading` (spinner and one line). A page-level EmptyState has an icon and `small = false`. A section's EmptyState is small and sits under its SectionHeader, never inside a Group.
 
 - **Separation** is by tone (see Colour below): `bg` page, `surface` for bars and cards, `raised` for menus and dialogs. Hairlines only sit between rows of a group.
-- **Reading width**: the Codex tab and the list pages of More (Settings, MCP, Pull Requests, Observe, Deploy, Advisors; `cappedRoute` in `app/Tabs.kt`) sit in a centred column of at most `pageMax` (760dp, as web's `.assistant`) on wider windows. Codex caps its content inside `CodexScreen`, so the Add task button and the snackbar keep the full width. Chat, Sessions, agent and work screens and the tools (Files, Source Control, Terminal, Browser, Sketches) use the full width.
+- **Reading width**: the Codex tab and the list pages of More (Settings, MCP, Pull Requests, Observe, Deploy, Travel; `cappedRoute` in `app/Tabs.kt`) sit in a centred column of at most `pageMax` (760dp, as web's `.assistant`) on wider windows. Codex caps its content inside `CodexScreen`, so the Add task button and the snackbar keep the full width. Chat, Sessions, agent and work screens and the tools (Files, Source Control, Terminal, Browser, Sketches) use the full width.
 
 ### Colour
 Colours are Material 3 roles. `NATIVE_COLORS` in TokenGen sets each value for both themes, and `Theme.kt` maps every `colorScheme` slot, so Switch, pickers, dialogs and sheets need no call-site colours.

@@ -158,7 +158,7 @@ describe('history', () => {
 
 describe('agentOptions unattended', () => {
   const rules = unattendedRules('/w/job', { allowWrite: ['/extra'], allowedDomains: ['pypi.org'] }, ['/home/x/.claude-alt']);
-  const build = (unattended?: Unattended) => agentOptions({ cwd: '/w/job', host: { setStatus: vi.fn() }, chat: () => null, canUseTool: vi.fn() as unknown as CanUseTool, beforeAgent: vi.fn() as unknown as HookCallback, beforeEdit: vi.fn() as unknown as HookCallback, beforeStatus: vi.fn() as unknown as HookCallback, onSubagentStart: vi.fn() as unknown as HookCallback, onPrompt: vi.fn() as unknown as HookCallback, beforeTool: vi.fn() as unknown as HookCallback, afterTool: vi.fn() as unknown as HookCallback, onStop: vi.fn() as unknown as HookCallback, unattended });
+  const build = (unattended?: Unattended) => agentOptions({ cwd: '/w/job', host: { setStatus: vi.fn() }, chat: () => null, canUseTool: vi.fn() as unknown as CanUseTool, beforeAgent: vi.fn() as unknown as HookCallback, beforeEdit: vi.fn() as unknown as HookCallback, beforeStatus: vi.fn() as unknown as HookCallback, onSubagentStart: vi.fn() as unknown as HookCallback, beforeTool: vi.fn() as unknown as HookCallback, afterTool: vi.fn() as unknown as HookCallback, onStop: vi.fn() as unknown as HookCallback, unattended });
 
   it('disallows git push and gh only for an unattended chat', () => {
     expect(build(rules).disallowedTools).toEqual(expect.arrayContaining(['Bash(git push:*)', 'Bash(gh:*)']));
@@ -170,9 +170,8 @@ describe('agentOptions unattended', () => {
     expect(build().disallowedTools?.some((t) => t.startsWith('Read('))).toBe(false);
   });
 
-  it('loads the build kit plugin for attended and unattended chats', () => {
-    for (const o of [build(), build(rules)]) expect(o.plugins).toEqual([{ type: 'local', path: expect.stringMatching(/server[\\/]build-kit$/), skipMcpDiscovery: true }]);
-    expect(Object.keys(build().agents ?? {})).toEqual(['big-bro']);
+  it('adds the Fable agent for attended and unattended chats', () => {
+    for (const o of [build(), build(rules)]) expect(Object.keys(o.agents ?? {})).toEqual(['big-bro']);
   });
 
   it('holds the sandbox, with no Chrome, only for an unattended chat', () => {

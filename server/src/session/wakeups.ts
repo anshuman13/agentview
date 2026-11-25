@@ -1,7 +1,25 @@
 import { providerLabel } from '../../../shared/providers.js';
 import type { Cron } from '../agent/types.js';
-import { after, fireTime, restorePrompt } from './repeat.js';
 import type { AgentSession } from './session.js';
+
+const MAX_TIMER = 2 ** 31 - 1;
+
+// Node clamps setTimeout at 24.8 days and fires at once past it; longer waits go in chunks.
+export function after(at: number, fn: () => void): NodeJS.Timeout {
+  const left = at - Date.now();
+  return setTimeout(() => (Date.now() >= at ? fn() : void after(at, fn)), Math.min(Math.max(0, left), MAX_TIMER));
+}
+
+export function fireTime(schedule: string, now = Date.now()) {
+  const [m, h, dom, mon] = schedule.trim().split(/\s+/).slice(0, 4).map(Number);
+  if ([m, h, dom, mon].some((n) => !Number.isInteger(n))) return null;
+  const at = new Date(new Date(now).getFullYear(), mon - 1, dom, h, m);
+  if (at.getTime() < now - 60_000) at.setFullYear(at.getFullYear() + 1);
+  return at.getTime();
+}
+
+export const restorePrompt = (crons: Cron[], why: string) =>
+  `${why}. It is now ${new Date().toString()}. Your scheduled jobs are below. First run CronList: a job that is still listed survived the restart but will not fire, so CronDelete it. Then CronCreate each job below once, with the same cron, prompt and recurring flag, so exactly one copy exists. If a one-shot job's time has already passed, run its prompt now instead. Reply in one line.\n\n${JSON.stringify(crons.map(({ schedule, prompt, recurring }) => ({ cron: schedule, prompt, recurring })), null, 2)}`;
 
 export class Wakeups {
   private wokeAt = 0;

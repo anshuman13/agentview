@@ -3,7 +3,7 @@ import { RepoPicker } from '../../../app/lazy';
 import { taskChatPrompt } from '../../../../../shared/taskChat';
 import { chatSessionOf } from '../../../../../shared/chatLink';
 import { profileOfPath } from '../../../../../shared/workspace';
-import { showChat } from '../../../sessions/goalLogic';
+import { showChat } from '../../../sessions/openChat';
 import { useAssistant } from '../../data';
 import { atTime } from '../../data/tasks/engine';
 import type { ItemRow, Profile } from '../../data/sync';

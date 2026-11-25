@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { errText } from '../../../shared/util.js';
 import type { AgentSession } from '../session/session.js';
 import { openTries, firstSentence } from '../session/runs.js';
-import { ROUND_INSTRUCTION } from '../session/repeat.js';
+import { ROUND_INSTRUCTION } from '../session/runs.js';
 import { removeChat } from '../agent/claude/pins.js';
 import { startTries, TRIES_USAGE, type parseTries } from '../workspace/tries.js';
 import { closeByUser, openSaved, prompt } from './chats.js';
@@ -26,7 +26,7 @@ export function runTries(chat: AgentSession, text: string, tries: Exclude<Return
         provider: chat.state.session.provider,
         tries: started.map(({ id, branch }, i) => ({ n: i + 1, chatId: id, sessionId: live.get(id)?.chat.state.session.sessionId ?? '', branch })),
       });
-      chat.system(`Started ${started.length} chats, one per tries/ branch; compare them with Open board on the loop card`);
+      chat.system(`Started ${started.length} chats, one per tries/ branch; compare them with Open board on the run card`);
     },
     (err) => chat.system(`Tries failed: ${errText(err)}`),
   );

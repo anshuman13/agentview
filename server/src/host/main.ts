@@ -10,7 +10,7 @@ import { applyInitialModel } from './initialModel.js';
 import { alarmResult } from './phoneAlarm.js';
 import { command } from './commands.js';
 import { connection } from './connection.js';
-import { closeByUser, createChat, dropJobRun, endRun, jobChat, newChat, openAdvisor, openSaved, prompt, reviseRun } from './chats.js';
+import { closeByUser, createChat, dropJobRun, endRun, jobChat, newChat, openSaved, prompt, reviseRun } from './chats.js';
 import { liveList, broadcastLive, runs } from './listing.js';
 import { sweepIdle, restart } from './lifecycle.js';
 import { startMorningDigest } from '../integrations/morningDigest.js';
@@ -98,12 +98,6 @@ async function handle(req: HostRequest): Promise<unknown> {
       return (await openSaved(req.sessionId)).id;
     case 'new':
       return newInFolder(req);
-    case 'advisor': {
-      const chat = await openAdvisor(req.id, req.fresh);
-      // A prompt for a running advisor waits behind its turn.
-      if (req.text) void chat.prompt(req.text);
-      return chat.id;
-    }
     case 'job':
       return jobChat(req);
     case 'run_end':

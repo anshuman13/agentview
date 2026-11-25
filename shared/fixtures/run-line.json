@@ -1,11 +1,7 @@
 [
   { "name": "paused with a reason", "run": { "state": "paused", "why": "usage limit until 18:00" }, "expected": "Paused · usage limit until 18:00" },
   { "name": "paused without a reason", "run": { "state": "paused" }, "expected": "Paused" },
-  { "name": "paused goal", "run": { "kind": "goal", "state": "paused", "why": "you paused it" }, "expected": "Paused · you paused it" },
-  { "name": "loop without a next time", "run": { "kind": "loop", "round": 4 }, "expected": "Loop · round 4" },
-  { "name": "goal round", "run": { "kind": "goal", "round": 4, "max": 20 }, "expected": "Goal · round 4 of 20" },
-  { "name": "standing goal shows its round", "run": { "kind": "goal", "every": 3600000, "round": 12 }, "expected": "Goal · round 12" },
-  { "name": "standing goal before its first round", "run": { "kind": "goal", "every": 1800000 }, "expected": "Goal · round 0" },
+  { "name": "job names its branch", "run": { "kind": "job", "branch": "jobs/fix-1105" }, "expected": "Job · jobs/fix-1105" },
   { "name": "tries skips dropped", "run": { "kind": "tries", "tries": [{ "n": 1 }, { "n": 2, "dropped": true }, { "n": 3 }] }, "expected": "Tries · 2 chats" },
   { "name": "tries without tries", "run": { "kind": "tries" }, "expected": "Tries · 0 chats" }
 ]

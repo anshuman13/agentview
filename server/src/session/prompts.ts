@@ -17,10 +17,6 @@ export class Prompts {
     return this.s.log.get(id) !== undefined;
   }
 
-  private loopCommand(text: string, id: string) {
-    return this.s.repeater.command(text, () => this.s.pushEvent({ id, kind: 'user', text, at: Date.now() }));
-  }
-
   orQueue(text: string) {
     if (this.s.state.session.running) this.s.waiting.queue(text, randomUUID());
     else this.s.sendPrompt(text);
@@ -29,12 +25,11 @@ export class Prompts {
   async prompt(text: string, id: string = randomUUID(), voice = false) {
     const { state, waiting } = this.s;
     if (this.known(id)) return;
-    if (this.loopCommand(text, id)) return;
     if (state.session.running) return waiting.queue(text, id, voice);
     await (this.gate = this.gate.then(() => this.s.mcp.pickUpConnectors()));
     if (this.known(id)) return;
     if (this.s.state.session.running) return waiting.queue(text, id, voice);
-    this.s.sendPrompt(text, id, undefined, voice);
+    this.s.sendPrompt(text, id, voice);
   }
 
   async retryLast() {
@@ -70,7 +65,6 @@ export class Prompts {
   async steer(text: string, id: string = randomUUID(), voice = false) {
     const { state, waiting, approvals, turn, driver } = this.s;
     if (this.known(id)) return;
-    if (this.loopCommand(text, id)) return;
     if (state.session.compacting) return waiting.queue(text, id);
     const running = state.session.running;
     const ev: UserEvent = { id, kind: 'user', text, at: Date.now(), stopping: running, ...(voice && { voice }) };

@@ -7,7 +7,7 @@ import { Runs, WAITING, firstSentence, openTries, roundResult } from './runs.js'
 const dir = mkdtempSync(path.join(os.tmpdir(), 'runs-'));
 afterEach(() => rmSync(path.join(dir, 'runs.json'), { force: true }));
 
-const init = { kind: 'loop', sessionId: 's', chatId: 'c', title: 't', what: 'w' } as const;
+const init = { kind: 'job', sessionId: 's', chatId: 'c', title: 't', what: 'w' } as const;
 
 describe('roundResult', () => {
   it('takes the ROUND line, and without one reports progress with the first sentence', () => {
@@ -16,9 +16,8 @@ describe('roundResult', () => {
     expect(firstSentence(`${'a'.repeat(200)}. b`)).toHaveLength(120);
   });
 
-  it('a failed turn is failed and a met goal is done, whatever the line says', () => {
+  it('a failed turn is failed, whatever the line says', () => {
     expect(roundResult('Turn ended: error_during_execution\nROUND: progress x', { failed: true })).toEqual({ outcome: 'failed', line: 'x' });
-    expect(roundResult('GOAL MET\nROUND: progress x', { met: true }).outcome).toBe('done');
   });
 });
 

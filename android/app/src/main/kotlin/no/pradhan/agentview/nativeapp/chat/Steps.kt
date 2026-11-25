@@ -9,8 +9,6 @@ import no.pradhan.agentview.nativeapp.net.ChatEvent
 import no.pradhan.agentview.nativeapp.ops.Agent
 
 import no.pradhan.agentview.nativeapp.workspace.isMarkdown
-import no.pradhan.agentview.nativeapp.workspace.isSpecPath
-import no.pradhan.agentview.nativeapp.workspace.specSlug
 import no.pradhan.agentview.nativeapp.ui.plural
 
 // Port of web/src/chat/steps.ts: the transcript items built from the flat event list.
@@ -20,7 +18,7 @@ sealed interface Item {
 
     @Immutable data class User(override val id: String, val text: String, val at: Long, val stopping: Boolean, val queued: Boolean, val voice: Boolean = false) : Item
     @Immutable data class Assistant(override val id: String, val text: String, val streaming: Boolean) : Item
-    @Immutable data class System(override val id: String, val text: String, val error: Boolean = false, val detail: String? = null) : Item
+    @Immutable data class System(override val id: String, val text: String, val error: Boolean = false) : Item
     @Immutable data class Step(override val id: String, val use: ChatEvent, val result: ChatEvent?) : Item
     @Immutable data class File(override val id: String, val path: String, val add: Int, val del: Int, val uses: List<ChatEvent>, val error: String?, val denied: Boolean, val pending: Boolean = false) : Item
     @Immutable data class Agent(override val id: String, val use: ChatEvent, val result: ChatEvent?, val running: Boolean, val progress: String?, val steps: List<Item>) : Item
@@ -206,7 +204,6 @@ private fun itemsFrom(events: List<ChatEvent>, results: Map<String, ChatEvent>, 
     val items = mutableListOf<Item>()
     for (e in events) {
         when {
-            e.kind == "user" && e.auto != null -> items += Item.System(e.id, if (e.auto == "goal") "Goal round ${e.round}" else "Loop round ${e.round} \u00B7 ${firstLine(e.text)}", detail = e.text)
             e.kind == "user" -> items += Item.User(e.id, e.text, e.at, e.stopping, e.queued, e.voice)
             e.kind == "assistant" -> stripRound(e.text).let { if (it.isNotBlank()) items += Item.Assistant(e.id, it, e.streaming) }
             e.kind == "system" -> items += Item.System(e.id, e.text, e.error)
@@ -237,39 +234,13 @@ private fun itemsFrom(events: List<ChatEvent>, results: Map<String, ChatEvent>, 
     return items
 }
 
-fun agentBuild(use: ChatEvent) = buildStageOf(use.input.s("subagent_type"), use.input.s("description"), use.input.s("prompt"))
-
-fun itemSlug(it: Item) = when (it) {
-    is Item.File -> if (it.error == null && isSpecPath(it.path)) specSlug(it.path) else null
-    is Item.Agent -> agentBuild(it.use)?.slug
-    else -> null
-}
-
-// web steps.ts specCards: the item holding each spec's live card, the latest successful spec write or build agent naming that slug.
-fun specCardIds(items: List<Item>): Set<String> {
-    val latest = LinkedHashMap<String, String>()
-    for (it in items) itemSlug(it)?.let { slug -> latest[slug] = it.id }
-    return latest.values.toSet()
-}
-
-fun isDocFile(path: String) = isMarkdown(path) && !isSpecPath(path)
+fun isDocFile(path: String) = isMarkdown(path)
 
 // web steps.ts docCards: the item holding each Markdown file's doc card, its latest successful write or edit. Memory files stay in the work fold for its Remembered chip.
 fun docCardIds(items: List<Item>): Set<String> {
     val latest = LinkedHashMap<String, String>()
     for (it in items) if (it is Item.File && it.error == null && isDocFile(it.path) && !MEMORY_FILE.containsMatchIn(it.path)) latest[it.path] = it.id
     return latest.values.toSet()
-}
-
-// web steps.ts specBumps: per slug, the build agents naming it plus those still running, so a card reloads when one starts or ends.
-fun specBumps(items: List<Item>): Map<String, Int> {
-    val bumps = HashMap<String, Int>()
-    for (it in items) {
-        if (it !is Item.Agent) continue
-        val slug = agentBuild(it.use)?.slug ?: continue
-        bumps[slug] = (bumps[slug] ?: 0) + 1 + if (it.running) 1 else 0
-    }
-    return bumps
 }
 
 // Slack-style day dividers: the label to draw above each prompt that starts a new day. A chat that stays within today gets none.

@@ -40,7 +40,6 @@ import no.pradhan.agentview.nativeapp.chat.messageQuery
 import no.pradhan.agentview.nativeapp.ui.isoMillis
 import no.pradhan.agentview.nativeapp.codex.PERSONAL
 import no.pradhan.agentview.nativeapp.codex.WORK
-import no.pradhan.agentview.nativeapp.codex.autopilot.GoalSheet
 import no.pradhan.agentview.nativeapp.codex.profileLabel
 import no.pradhan.agentview.nativeapp.app.Hub
 import no.pradhan.agentview.nativeapp.net.LiveChat
@@ -201,7 +200,6 @@ private fun AllSessions(rows: ChatRows, filters: SessionsFilters, hits: List<Mes
                 IconBtn("mic", "Ask by voice", { hub.voiceRequest.tryEmit(Unit) })
                 MoreButton { close ->
                     if (done.isNotEmpty()) MenuItem("Mark all read", "check-all", { close(); hub.markRead(done) })
-                    MenuItem("New goal", "target", { close(); hub.shell.goalSheet.value = GoalSheet.Start() })
                     MenuItem("Refresh", "refresh", { close(); refresh() })
                 }
             }

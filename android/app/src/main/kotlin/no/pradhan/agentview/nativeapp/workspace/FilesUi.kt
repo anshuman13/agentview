@@ -14,7 +14,6 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
@@ -33,9 +32,7 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import no.pradhan.agentview.nativeapp.app.shownFeature
 import no.pradhan.agentview.nativeapp.chat.ChatImage
-import no.pradhan.agentview.nativeapp.codex.autopilot.GoalSheet
 import no.pradhan.agentview.nativeapp.app.Hub
 import no.pradhan.agentview.nativeapp.app.readDir
 import no.pradhan.agentview.nativeapp.app.readFile
@@ -164,7 +161,6 @@ fun FileScreen(hub: Hub, path: String, onBack: () -> Unit, diffFirst: Boolean = 
         WorkspaceHeader(hub, path.substringAfterLast('/'), onBack, sub = parentOf(path).ifEmpty { pageFolder(hub) }) {
             MoreButton { close ->
                 if (isDoc) MenuItem("Rendered document", "open-preview", { close(); preview = !showDoc }, checked = showDoc)
-                if (isDoc) MenuItem("Run as goal\u2026", "target", { close(); hub.track("action:runAsGoal"); hub.shell.goalSheet.value = GoalSheet.Start(plan = path) })
                 if (canDiff) MenuItem("Change against the last commit", "diff", { close(); preview = false; mode = if (diff) "file" else "diff" }, checked = diff)
                 if (diff) MenuItem("Changes only", "fold", { close(); changes = !changes }, checked = changes)
                 if (!showDoc) MenuItem("Word wrap", "word-wrap", { close(); wrap = !wrap }, checked = wrap)
@@ -196,24 +192,10 @@ fun FileScreen(hub: Hub, path: String, onBack: () -> Unit, diffFirst: Boolean = 
     }
 }
 
-// The checkbox lines of a spec file: progress, Run all (a goal) and a Start per open task, sent to the chat.
+// The checkbox lines of a spec file: progress and a Start per open task, sent to the chat.
 @Composable
 private fun SpecTasks(hub: Hub, path: String, tasks: List<SpecTask>) {
-    val hidden by hub.hiddenFeatures.collectAsState()
-    SectionHeader("Tasks", specProgress(tasks)) {
-        if (tasks.any { !it.done }) {
-            var menu by remember { mutableStateOf(false) }
-            val all = shownFeature("action:runAll", hidden)
-            val goal = shownFeature("action:runAsGoal", hidden)
-            if (all || goal) Box {
-                Button("Run", { menu = true }, variant = ButtonVariant.Plain, size = ButtonSize.Sm)
-                Menu(menu, { menu = false }) {
-                    if (all) MenuItem("Run all in this chat", "debug-start", { menu = false; hub.track("action:runAll"); hub.askChat(runAllPrompt(path)) }, enabled = !hub.readOnly)
-                    if (goal) MenuItem("Run as goal\u2026", "target", { menu = false; hub.track("action:runAsGoal"); hub.shell.goalSheet.value = GoalSheet.Start(plan = path) })
-                }
-            }
-        }
-    }
+    SectionHeader("Tasks", specProgress(tasks))
     Group {
         tasks.forEachIndexed { i, t ->
             if (i > 0) Hairline()

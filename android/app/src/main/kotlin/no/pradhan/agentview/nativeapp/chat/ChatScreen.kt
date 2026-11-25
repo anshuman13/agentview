@@ -27,23 +27,21 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
-import no.pradhan.agentview.nativeapp.codex.autopilot.GoalSheet
 import no.pradhan.agentview.nativeapp.codex.autopilot.loopNow
-import no.pradhan.agentview.nativeapp.codex.autopilot.runDetail
 import no.pradhan.agentview.nativeapp.codex.autopilot.RunActions
 import no.pradhan.agentview.nativeapp.codex.autopilot.RunRows
 import no.pradhan.agentview.nativeapp.codex.jobs.money
 import no.pradhan.agentview.nativeapp.codex.autopilot.runLine
 import no.pradhan.agentview.nativeapp.codex.autopilot.ReviewCard
 import no.pradhan.agentview.nativeapp.codex.autopilot.activeRun
-import no.pradhan.agentview.nativeapp.codex.clock
 import no.pradhan.agentview.nativeapp.app.Hub
-import no.pradhan.agentview.nativeapp.app.sendAt
 import no.pradhan.agentview.nativeapp.app.loadEarlier
 import no.pradhan.agentview.nativeapp.ops.Agent
 import no.pradhan.agentview.nativeapp.net.LiveChat
@@ -150,7 +148,6 @@ fun ChatScreen(hub: Hub, onOpenAgent: (String) -> Unit, onOpenWork: (String) -> 
     val panels = remember { ChatPanels() }
     val findRequest = hub.findRequest.collectAsState().value?.takeIf { settled && view.events.isNotEmpty() && it.sessionId == live.sessionId }
     LaunchedEffect(findRequest) { if (findRequest != null) panels.find = true }
-    val buildSheets = remember(live.id) { OpenBuildSheets() }
     val running = session?.running ?: live.running
     val cwd = session?.cwd ?: live.cwd
     val edits = remember(view.changed, cwd) { view.changed.map { relPath(it, cwd) }.filter { !it.startsWith("/") } }
@@ -184,7 +181,7 @@ fun ChatScreen(hub: Hub, onOpenAgent: (String) -> Unit, onOpenWork: (String) -> 
         SelectionContainer(Modifier.weight(1f).fillMaxWidth()) {
             val openFile = remember(panels) { { path: String, line: Int? -> panels.file = FilePath(path, line) } }
             val runCommand = remember(hub) { if (hub.readOnly) null else { cmd: String -> hub.runInTerminal(cmd, enter = false); Unit } }
-            CompositionLocalProvider(LocalBuildSheets provides buildSheets, LocalOpenFile provides openFile, LocalRunCommand provides runCommand) {
+            CompositionLocalProvider(LocalOpenFile provides openFile, LocalRunCommand provides runCommand) {
                 val failed = if (live.failed && !running && !hub.readOnly) failedLine(view.events, providerLabel(live.provider)) else null
                 Transcript(hub, view, earlier, settled, live.id, cwd, running, panels.find, onOpenAgent, onOpenWork, Modifier.fillMaxSize(), remember(queued, live.id) { queued.filter { it.chat == live.id } }, failed)
             }
@@ -193,16 +190,11 @@ fun ChatScreen(hub: Hub, onOpenAgent: (String) -> Unit, onOpenWork: (String) -> 
         if (live.stalled) Row(Modifier.fillMaxWidth().padding(horizontal = Tokens.listPad, vertical = Tokens.sp3), horizontalArrangement = Arrangement.End) {
             Button("Resume", { hub.submit("continue", true) {} }, variant = ButtonVariant.Tinted, icon = "debug-continue")
         }
-        val resume = remember(view.events) { limitResume(view.events) }
-        if (resume != null && !running && run == null && !hub.readOnly) Row(Modifier.fillMaxWidth().padding(horizontal = Tokens.listPad, vertical = Tokens.sp3), horizontalArrangement = Arrangement.End) {
-            Button("Continue at ${clock(resume.reset)}", { hub.sendAt(clock(resume.reset), resume.prompt) {} }, variant = ButtonVariant.Tinted, icon = "clock")
-        }
         run?.let { if (it.kind == "job" && it.review == "pending") ReviewCard(hub, it) }
-        Composer(hub, live.id, live.sessionId, session, running, pending.isNotEmpty(), run)
+        Composer(hub, live.id, live.sessionId, session, running, pending.isNotEmpty())
     }
     ChatSheets(hub, live, session, view.agents, view.images, panels, cwd, onOpenAgent, run)
     if (panels.prompts) PromptsSheet(hub, view.items, earlier) { panels.prompts = false }
-    BuildSheetsHost(hub, live.id, buildSheets)
 }
 
 // The chat menu's Prompts: each sent prompt with its time; a tap scrolls the transcript to it. Load earlier ends the list while older events are not loaded.
@@ -334,7 +326,7 @@ private fun ChatSheets(hub: Hub, live: LiveChat, session: SessionInfo?, agents: 
     if (panels.agents) Sheet(onDismiss = { panels.agents = false }, title = "Agents", padded = false, full = false, action = { AgentsActions(hub, run, agents) }) {
         run?.let { r ->
             val line = listOfNotNull(runLine(r), loopNow(r, live.now).next?.let { "next $it" }).joinToString(" · ")
-            Text(line, Modifier.fillMaxWidth().then(if (runDetail(r).opens) Modifier.heightIn(min = Tokens.touchSm).clickable { hub.shell.goalSheet.value = GoalSheet.Detail(r.id) } else Modifier).padding(start = Tokens.listPad, end = Tokens.listPad, bottom = Tokens.sp4), style = Type.footnote, color = av.fgMuted)
+            Text(line, Modifier.fillMaxWidth().padding(start = Tokens.listPad, end = Tokens.listPad, bottom = Tokens.sp4), style = Type.footnote, color = av.fgMuted)
             RunRows(hub, r, live)
         }
         AgentList(agents, { now.value }) { panels.agents = false; onOpenAgent(it) }
@@ -398,3 +390,6 @@ private fun AgentsActions(hub: Hub, run: ChatRun?, agents: List<Agent>) {
     if (run != null) RunActions(hub, run)
     else if (running.isNotEmpty()) IconBtn("debug-stop", "Stop all agents", { running.forEach { hub.stopTask(it.id) } }, enabled = !hub.readOnly)
 }
+
+@Composable
+internal fun sheetHeight() = LocalConfiguration.current.screenHeightDp.dp * 0.8f

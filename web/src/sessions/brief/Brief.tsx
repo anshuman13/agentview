@@ -1,7 +1,6 @@
 import { Suspense, useEffect, useMemo, useState } from 'react';
 import { useStore } from '../../app/store';
-import { chatTitle as chatTitleOf, clock } from '../../../../shared/util';
-import { limitResume } from '../../../../shared/limitResume';
+import { chatTitle as chatTitleOf } from '../../../../shared/util';
 import { REVIEW_LOCAL } from '../../ops/Findings';
 import { Pending } from '../../chat/cards/Pending';
 import { Composer } from '../../chat/Chat';
@@ -38,7 +37,6 @@ export function Brief() {
   const running = useStore((s) => s.session.running);
   const macName = useMacName();
   const stopping = useStore((s) => s.session.stopping);
-  const repeat = useStore((s) => s.session.repeat);
   const cwd = useStore((s) => s.session.cwd);
   const sessionId = useStore((s) => s.session.id);
   const live = useStore((s) => s.live.find((c) => c.id === s.session.id));
@@ -58,10 +56,6 @@ export function Brief() {
   const extras = [advisor > 0 && `advisor ${advisor}×`, fable > 0 && `Fable ${fable}×`].filter(Boolean).join(' · ');
   const lastReply = lastReplyOf(turns);
   const doneSteps = useMemo(() => (turns.at(-1)?.notes ?? []).filter((n) => n.kind === 'done' && n.id.endsWith(':done')), [turns]);
-  const limit = useMemo(() => {
-    const resume = limitResume(events);
-    return resume && { at: clock(resume.reset), prompt: resume.prompt };
-  }, [events]);
   const state = waiting ? 'waiting' : stopping ? 'stopping' : running ? 'running' : 'idle';
   const phone = useNarrow();
   const run = useChatRun(sessionId);
@@ -139,7 +133,7 @@ export function Brief() {
           <ChatDetailsMenu icon={phone ? 'kebab-vertical' : undefined} waitingElsewhere={waitingElsewhere} usage={usage} macName={macName} extras={extras} running={running} hasChanges={uncommitted || turns.some((t) => t.files.length > 0)} review={() => askChat(REVIEW_LOCAL)} rename={startRename} />
         </div>
         <div className="tl-line">
-          <HeadState state={state} status={status} repeat={repeat} chat={live} pending={pending.length} lastReply={lastReply} lastTool={lastTool} limit={limit} done={doneSteps} next={next} />
+          <HeadState state={state} status={status} chat={live} pending={pending.length} lastReply={lastReply} lastTool={lastTool} done={doneSteps} next={next} />
           {side && (phone || railClosed) && <button className="tl-agents" onClick={() => { if (phone) { setShowAgents(true); setAgentSel(null); } else setRailClosed(false); }}>{agentCount > 0 ? plural(agentCount, 'agent') : 'Run'}<Icon name="chevron-right" small /></button>}
         </div>
         <Transcript />

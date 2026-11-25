@@ -22,7 +22,6 @@ export const WorkPane = lazy(() => withMd(import('../chat/transcript/WorkPane'))
 export const AgentsPane = lazy(() => withMd(import('../sessions/AgentsPane')).then((m) => ({ default: m.AgentsPane })));
 export const FileSwitcher = lazy(() => import('../workspace/FileSwitcher').then((m) => ({ default: m.FileSwitcher })));
 export const Palette = lazy(() => import('./palette/Palette').then((m) => ({ default: m.Palette })));
-export const GoalSheets = lazy(() => import('../sessions/GoalSheets').then((m) => ({ default: m.GoalSheets })));
 export const Shortcuts = lazy(() => import('./shell/Shortcuts').then((m) => ({ default: m.Shortcuts })));
 export const OpenChats = prefetch(() => import('../sessions/OpenChats').then((m) => m.OpenChats));
 export const RepoPicker = lazy(() => import('../sessions/RepoPicker').then((m) => ({ default: m.RepoPicker })));
@@ -39,7 +38,6 @@ export const CodePane = lazy(() => import('../workspace/CodePane').then((m) => (
 export const BrowserPane = lazy(() => import('../workspace/BrowserPane').then((m) => ({ default: m.BrowserPane })));
 export const Observe = lazy(() => import('../ops/Observe').then((m) => ({ default: m.Observe })));
 export const Deploy = lazy(() => import('../ops/Deploy').then((m) => ({ default: m.Deploy })));
-export const Advisors = lazy(() => import('../sessions/Advisors').then((m) => ({ default: m.Advisors })));
 export const Travel = lazy(() => import('../travel/Travel').then((m) => ({ default: m.Travel })));
 export const Sketches = lazy(() => import('../workspace/Sketches').then((m) => ({ default: m.Sketches })));
 export const McpPage = lazy(() => import('../ops/McpStatus').then((m) => ({ default: m.McpPage })));

@@ -32,7 +32,7 @@ export class Stopper {
   }
 
   async interrupt() {
-    const { driver, state, turn, waiting, repeater } = this.s;
+    const { driver, state, turn, waiting } = this.s;
     if (!driver.attached || !state.session.running || state.session.stopping) return;
     driver.clearInjected();
     const idle = turn.drop(driver.dropInput());
@@ -40,7 +40,6 @@ export class Stopper {
     waiting.dropPending();
     if (idle) {
       this.s.setSession({ running: false, compacting: false });
-      repeater.defer();
       return;
     }
     await this.stop(true);

@@ -33,8 +33,7 @@ class ChatView(
     val ats: Map<String, Long>,
     val sent: String?,
     val checklist: List<ChecklistItem>?,
-    val specCards: Set<String>,
-    val specBumps: Map<String, Int>,
+    val docCards: Set<String>,
     val folds: List<FoldRow>,
     val answers: Set<String>, // turnAnswers(items, running = false)
     val openAnswer: String?, // the reply a running chat's turnAnswers leaves out
@@ -46,7 +45,7 @@ class ChatView(
 
 
     fun withItem(events: List<ChatEvent>, items: List<Item>, item: Item, answers: Set<String> = this.answers, openAnswer: String? = this.openAnswer) =
-        ChatView(chat, events, items, agents, cost, images, changed, rewinds, runs, days, dayOf, ats, sent, checklist, specCards, specBumps, folds.map { it.with(item) }, answers, openAnswer, replyCount)
+        ChatView(chat, events, items, agents, cost, images, changed, rewinds, runs, days, dayOf, ats, sent, checklist, docCards, folds.map { it.with(item) }, answers, openAnswer, replyCount)
 
     companion object {
         val EMPTY = buildView("", emptyList(), 0L, null)
@@ -63,7 +62,7 @@ fun buildView(chat: String, events: List<ChatEvent>, now: Long, prev: ChatView?)
         chat, events, items, buildAgents(events, items), chatCost(events), chatImages(events),
         items.filterIsInstance<Item.File>().filter { it.error == null }.map { it.path },
         rewindReplies(items), exploreRuns(items), days, dayOfRows(items, days),
-        events.associate { it.id to it.at }, items.lastOrNull { it is Item.User }?.id, latestChecklist(events), specCardIds(items) + docCardIds(items), specBumps(items),
+        events.associate { it.id to it.at }, items.lastOrNull { it is Item.User }?.id, latestChecklist(events), docCardIds(items),
         foldTurns(items, events), answers, openAnswerOf(items, answers), items.count { it is Item.Assistant },
     )
 }

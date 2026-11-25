@@ -1,7 +1,5 @@
 import { editCount, stripRound, type EditCount } from '../../../../shared/edits';
-import { isSpecPath, specSlug } from '../../../../shared/specTasks';
 import { exploreLabelOf, exploreRunsOf } from '../../../../shared/explore';
-import { buildStageOf } from '../../../../shared/builds';
 import type { ChatEvent } from '../../../../shared/protocol';
 import { firstLine } from '../../ui/util';
 
@@ -13,7 +11,6 @@ export const MEMORY_FILE = /\/projects\/[^/]+\/memory\/[^/]+\.md$/;
 
 export type Item =
   | { kind: 'user'; id: string; text: string; at: number; stopping?: boolean; queued?: boolean; voice?: boolean }
-  | { kind: 'auto'; id: string; label: string; text: string }
   | { kind: 'assistant'; id: string; text: string; streaming: boolean }
   | { kind: 'system'; id: string; text: string; error?: boolean }
   | { kind: 'step'; id: string; use: ToolUse; result?: ToolResult }
@@ -142,8 +139,7 @@ function orphanAgent(id: string, at: number): ToolUse {
 function itemsFrom(events: ChatEvent[], results: Map<string, ToolResult>, children: Map<string, ChatEvent[]>, resumed: Map<string, number>, progress: Map<string, string>, open: ReadonlySet<string> = new Set()): Item[] {
   const items: Item[] = [];
   for (const e of events) {
-    if (e.kind === 'user' && e.auto) items.push({ kind: 'auto', id: e.id, label: e.auto === 'goal' ? `Goal round ${e.round}` : `Loop round ${e.round} · ${firstLine(e.text)}`, text: e.text });
-    else if (e.kind === 'user') items.push({ kind: 'user', id: e.id, text: e.text, at: e.at, stopping: e.stopping, queued: e.queued, voice: e.voice });
+    if (e.kind === 'user') items.push({ kind: 'user', id: e.id, text: e.text, at: e.at, stopping: e.stopping, queued: e.queued, voice: e.voice });
     else if (e.kind === 'assistant') { const text = stripRound(e.text); if (text.trim()) items.push({ kind: 'assistant', id: e.id, text, streaming: e.streaming }); }
     else if (e.kind === 'system') items.push({ kind: 'system', id: e.id, text: e.text, ...(e.error && { error: true }) });
     else if (e.kind === 'blocked') items.push({ kind: 'blocked', id: e.id, ev: e });
@@ -229,38 +225,13 @@ export function dayDividers(items: Item[], now: number) {
   return out;
 }
 
-export const agentBuild = (use: ToolUse) => buildStageOf(str(use.input.subagent_type), str(use.input.description), str(use.input.prompt));
-
-export const itemSpecSlug = (it: Item) => (it.kind === 'file' ? (!it.error && isSpecPath(it.path) ? specSlug(it.path) : undefined) : it.kind === 'agent' ? agentBuild(it.use)?.slug : undefined);
-
-// The item that holds each spec's live card: the latest successful spec write or build agent naming that slug. Android Steps.kt specCardIds says the same.
-export function specCards(items: Item[]) {
-  const latest = new Map<string, string>();
-  for (const it of items) {
-    const slug = itemSpecSlug(it);
-    if (slug) latest.set(slug, it.id);
-  }
-  return new Set(latest.values());
-}
-
-export const isDocFile = (path: string) => /\.(md|markdown|mdx)$/i.test(path) && !isSpecPath(path);
+export const isDocFile = (path: string) => /\.(md|markdown|mdx)$/i.test(path);
 
 // The item that holds each Markdown file's doc card: its latest successful write or edit. Memory files stay in the work fold for its Remembered chip.
 export function docCards(items: Item[]) {
   const latest = new Map<string, string>();
   for (const it of items) if (it.kind === 'file' && !it.error && isDocFile(it.path) && !MEMORY_FILE.test(it.path)) latest.set(it.path, it.id);
   return new Set(latest.values());
-}
-
-// Per slug, the build agents naming it plus those still running, so a card reloads when one starts or ends.
-export function specBumps(items: Item[]) {
-  const bumps = new Map<string, number>();
-  for (const it of items) {
-    if (it.kind !== 'agent') continue;
-    const slug = agentBuild(it.use)?.slug;
-    if (slug) bumps.set(slug, (bumps.get(slug) ?? 0) + 1 + (it.running ? 1 : 0));
-  }
-  return bumps;
 }
 
 // Replies that arrived after the reader scrolled up, for the Jump to latest button.
@@ -285,13 +256,13 @@ export function rewindReplies(items: Item[]) {
 }
 
 // The last reply of each finished turn, when nothing follows it in the turn: the answers that get a Copy action.
-// A prompt, a loop or goal round or a system line ends a turn, and the running turn gets none yet.
+// A prompt or a system line ends a turn, and the running turn gets none yet.
 export function turnAnswers(items: Item[], running = false) {
   const out = new Set<string>();
   let last: Item | undefined;
   const flush = () => { if (last?.kind === 'assistant' && !last.streaming) out.add(last.id); };
   for (const it of items) {
-    if (it.kind === 'user' || it.kind === 'auto' || it.kind === 'system') { flush(); last = undefined; }
+    if (it.kind === 'user' || it.kind === 'system') { flush(); last = undefined; }
     else last = it;
   }
   if (!running) flush();

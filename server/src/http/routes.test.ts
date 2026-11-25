@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, realpathSync, rmSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { beforeEach, describe, expect, it, vi } from 'bun:test';
@@ -26,7 +26,6 @@ vi.mock('../workspace/terminal.js', () => ({ listTerminals: mocks.listTerminals,
 
 import type { RouteDeps } from './routes.js';
 const { createRoutes } = await import('./routes.js');
-const { ROOTS } = await import('../workspace/files.js');
 const accounts = await import('../agent/claude/accounts.js');
 
 const chat = { id: 'c1', cwd: '/tmp/x' } as LiveChat;
@@ -50,32 +49,6 @@ describe('routes', () => {
     expect((await call('GET', '/api/sessions')).json).toEqual([{ sessionId: 's' }]);
     mocks.listTerminals.mockReturnValue(['t']);
     expect((await call('PUT', '/api/terms')).json).toEqual(['t']);
-  });
-
-  it('moves a backlog row in a project folder and refuses other folders', async () => {
-    const base = realpathSync(mkdtempSync(path.join(os.tmpdir(), 'backlog-')));
-    const root = path.join(base, 'proj');
-    mkdirSync(path.join(root, '.claude'), { recursive: true });
-    const file = path.join(root, '.claude/backlog.md');
-    const md = '1. a | A | why | proposed\n2. b | B | why | specced\n';
-    writeFileSync(file, md);
-    ROOTS.push(base);
-    const move = (r: string, slug: string, dir = 'up') => call('POST', `/api/advisors/backlog/move?root=${encodeURIComponent(r)}`, JSON.stringify({ slug, dir }));
-    const up = await move(root, 'b');
-    expect([up.code, up.json.map((i: { slug: string }) => i.slug)]).toEqual([200, ['b', 'a']]);
-    expect(readFileSync(file, 'utf8')).toBe('1. b | B | why | specced\n2. a | A | why | proposed\n');
-    expect((await move(root, 'b', 'down')).code).toBe(200);
-    expect(readFileSync(file, 'utf8')).toBe(md);
-    expect([(await move(root, 'zzz')).code, readFileSync(file, 'utf8')]).toEqual([404, md]);
-    expect((await move(root, 'a', 'left')).code).toBe(400);
-    expect((await move(os.tmpdir(), 'a')).code).toBe(400);
-    ROOTS.pop();
-    rmSync(base, { recursive: true, force: true });
-  });
-
-  it('refuses the spec list for a folder outside the project folders', async () => {
-    const r = await call('GET', `/api/advisors/specs?root=${encodeURIComponent(os.tmpdir())}`);
-    expect([r.code, r.json]).toEqual([400, { error: 'Not a project folder' }]);
   });
 
   it('answers 404 for an unknown /api path, falls to the web fallback otherwise, and 503 for /api with no chat', async () => {

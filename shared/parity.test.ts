@@ -42,15 +42,15 @@ function scan(dir: string, pattern: RegExp): Set<string> {
 }
 
 describe('parity', () => {
-  const entry = { id: 'sheet:goal', side: 'web' as const, reason: 'x' };
+  const entry = { id: 'sheet:needsYou', side: 'web' as const, reason: 'x' };
   it('fails an id on one side that is not listed', () => {
-    expect(parity(new Set(['sheet:goal']), new Set(), [])).toEqual(['Add sheet:goal to Android, or to parity.json with a reason']);
-    expect(parity(new Set(['sheet:goal']), new Set(), [entry])).toEqual([]);
+    expect(parity(new Set(['sheet:needsYou']), new Set(), [])).toEqual(['Add sheet:needsYou to Android, or to parity.json with a reason']);
+    expect(parity(new Set(['sheet:needsYou']), new Set(), [entry])).toEqual([]);
   });
   it('fails a listed id that is on both sides, neither side or the other side', () => {
-    expect(parity(new Set(['sheet:goal']), new Set(['sheet:goal']), [entry]).length).toBe(1);
+    expect(parity(new Set(['sheet:needsYou']), new Set(['sheet:needsYou']), [entry]).length).toBe(1);
     expect(parity(new Set(), new Set(), [entry]).length).toBe(1);
-    expect(parity(new Set(), new Set(['sheet:goal']), [entry]).length).toBe(1);
+    expect(parity(new Set(), new Set(['sheet:needsYou']), [entry]).length).toBe(1);
   });
   it('fails an id that is not in FEATURES', () => {
     expect(parity(new Set(['sheet:nope']), new Set(['sheet:nope']), [])).toHaveLength(2);

@@ -4,7 +4,6 @@ import { send } from '../../app/store';
 import { Icon } from '../../ui/Icon';
 import { Button, IconButton } from '../../ui/Button';
 import { headerState } from '../runLogic';
-import { loopAt } from '../../../../shared/util';
 import type { LiveChat } from '../../../../shared/protocol';
 import type { ToolUse } from '../../chat/transcript/steps';
 import { time } from './time';
@@ -12,12 +11,10 @@ import { time } from './time';
 type Props = {
   state: 'waiting' | 'stopping' | 'running' | 'idle';
   status: string;
-  repeat: { nextAt?: number | null } | null | undefined;
   chat: LiveChat | undefined;
   pending: number;
   lastReply: { at: number } | undefined;
   lastTool: ToolUse | undefined;
-  limit: { at: string; prompt: string } | null;
   done: { id: string; text: string }[];
   next: string[];
 };
@@ -79,16 +76,14 @@ const markIcon = (state: Props['state']) => <Icon name={state === 'waiting' ? 'b
 
 // The chat's state at the right of its header, with the time of the last reply while idle; a click opens what it is doing: the tool running, the steps done this turn (checked) and the next steps.
 export function HeadState(p: Props) {
-  const { state, lastReply, repeat, lastTool, limit, done, next } = p;
+  const { state, lastReply, lastTool, done, next } = p;
   const [open, setOpen] = useState(false);
   const [adding, setAdding] = useState(false);
   const btn = useRef<HTMLButtonElement>(null);
   const text = nowText(p);
-  const retry = state === 'idle' && !repeat && limit;
   const count = done.length + next.length;
   return (
     <span className="tl-more">
-      {retry && <Button variant="plain" size="sm" title="Send the last prompt again when the limit resets" onClick={() => { setOpen(false); send({ type: 'prompt', text: loopAt(limit.at, limit.prompt) }); }}>Continue at {limit.at}</Button>}
       <button ref={btn} className={`tl-state ${state}`} title={text} aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen(!open)}>
         {markIcon(state)}
         <span className="text">{text}</span>
@@ -105,7 +100,6 @@ export function HeadState(p: Props) {
               {state === 'running' && lastTool?.kind === 'tool_use' && <span className="tool">{lastTool.summary}</span>}
             </span>
           </div>
-          {retry && <Button variant="plain" size="sm" title="Send the last prompt again when the limit resets" onClick={() => { setOpen(false); send({ type: 'prompt', text: loopAt(limit.at, limit.prompt) }); }}>Continue at {limit.at}</Button>}
           <StepList done={done} next={next} adding={adding} setAdding={setAdding} />
         </Menu>
       )}

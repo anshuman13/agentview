@@ -105,9 +105,7 @@ import no.pradhan.agentview.nativeapp.ui.Type
 import no.pradhan.agentview.nativeapp.ui.av
 import no.pradhan.agentview.nativeapp.ui.select
 import no.pradhan.agentview.nativeapp.workspace.isSketchPath
-import no.pradhan.agentview.nativeapp.workspace.isRepoSpec
 import no.pradhan.agentview.nativeapp.workspace.sketchName
-import no.pradhan.agentview.nativeapp.workspace.specSlug
 import no.pradhan.agentview.nativeapp.ui.plural
 
 internal fun gapAbove(older: Item?, it: Item): Dp? {
@@ -290,8 +288,7 @@ private fun LazyListScope.transcriptRows(hub: Hub, view: ChatView, list: List<Fo
     // Fields that keep their identity while a reply streams, so the rows do not capture the view, which does not.
     val days = view.days
     val runs = view.runs
-    val specCards = view.specCards
-    val specBumps = view.specBumps
+    val docCards = view.docCards
     val rewinds = view.rewinds
     val answers = view.answers
     val openAnswer = view.openAnswer
@@ -307,12 +304,9 @@ private fun LazyListScope.transcriptRows(hub: Hub, view: ChatView, list: List<Fo
                 it == null || it.id in folded -> {}
                 else -> {
                     val run = runs[it.id]
-                    val bump = if (it.id in specCards) specBumps[itemSlug(it)] ?: 0 else null
-                    val build = (it as? Item.Agent)?.let { a -> agentBuild(a.use) }
                     when {
                         run != null -> ExploredRow(hub, it.id, run, cwd, !running)
-                        build != null && bump != null -> SpecCard(hub, chatId, build.slug, ".claude/specs/${build.slug}.md", bump)
-                        else -> ItemRow(hub, it, chatId, cwd, !running, onOpenAgent, if (!running && canRewind) rewinds[it.id] else null, bump = bump, answer = it.id in answers && (!running || it.id != openAnswer))
+                        else -> ItemRow(hub, it, chatId, cwd, !running, onOpenAgent, if (!running && canRewind) rewinds[it.id] else null, card = it.id in docCards, answer = it.id in answers && (!running || it.id != openAnswer))
                     }
                 }
             }
@@ -439,43 +433,22 @@ private fun JumpButton(replies: Int, modifier: Modifier, onClick: () -> Unit) {
 }
 
 @Composable
-internal fun ItemRow(hub: Hub, it: Item, chat: String, cwd: String, settled: Boolean, onOpenAgent: (String) -> Unit, rewind: Item.User? = null, bump: Int? = null, answer: Boolean = false) {
+internal fun ItemRow(hub: Hub, it: Item, chat: String, cwd: String, settled: Boolean, onOpenAgent: (String) -> Unit, rewind: Item.User? = null, card: Boolean = false, answer: Boolean = false) {
     when (it) {
         is Item.User -> UserRow(hub, it, chat)
         is Item.Assistant -> {
             Markdown(it.text, Modifier.fillMaxWidth(), it.streaming, reading = true)
             if (!it.streaming && (answer || rewind != null)) ReplyActions(hub, if (answer) it.text.trim() else null, rewind)
         }
-        is Item.System -> if (it.detail != null) AutoRow(it.text, it.detail) else Text(it.text, style = Type.footnote, color = if (it.error) av.err else av.fgMuted)
+        is Item.System -> Text(it.text, style = Type.footnote, color = if (it.error) av.err else av.fgMuted)
         is Item.Step -> if (it.use.name == ALARM_TOOL) AlarmCard(it, !settled) else StepRow(it, cwd, settled)
         is Item.File -> if (it.error != null) FileCard(hub, it, cwd)
-            else if (isRepoSpec(it.path, cwd)) {
-                val meta = if (it.uses.first().name == "Write") "Spec written" else "Spec edited \u00B7 +${it.add} -${it.del}"
-                if (bump != null) SpecCard(hub, chat, specSlug(it.path), it.path, bump) else SpecRow(specSlug(it.path), meta)
-            }
-            else if (bump != null && isDocFile(it.path)) DocCard(hub, it, cwd)
-            else if (isSketchPath(it.path)) SketchCard(hub, chat, sketchName(it.path), if (it.uses.first().name == "Write") "Sketch written" else "Sketch edited \u00B7 +${it.add} -${it.del}")
+            else if (card && isDocFile(it.path)) DocCard(hub, it, cwd)
+            else if (isSketchPath(it.path)) SketchCard(hub, sketchName(it.path), if (it.uses.first().name == "Write") "Sketch written" else "Sketch edited \u00B7 +${it.add} -${it.del}")
             else FileCard(hub, it, cwd)
-        is Item.Agent -> {
-            AgentRow(hub, it, chat, cwd, onOpenAgent)
-            val build = agentBuild(it.use)
-            if (bump != null && build != null) Box(Modifier.padding(top = Tokens.sp4)) { SpecCard(hub, chat, build.slug, ".claude/specs/${build.slug}.md", bump) }
-        }
+        is Item.Agent -> AgentRow(hub, it, chat, cwd, onOpenAgent)
         is Item.Blocked -> BlockedCard(it.ev, hub)
         is Item.Review -> ReviewCard(it.ev, hub)
-    }
-}
-
-// A goal or loop round: the label opens the full prompt, like web's AutoRow.
-@Composable
-private fun AutoRow(label: String, prompt: String) {
-    var open by rememberSaveable { mutableStateOf(false) }
-    Column(Modifier.fillMaxWidth().clickable { open = !open }) {
-        Row(Modifier.heightIn(min = Tokens.touchSm), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Tokens.sp1)) {
-            AvIcon(if (open) "chevron-down" else "chevron-right", null, Tokens.sp5, tint = av.fgMuted)
-            Text(label, style = Type.footnote, color = av.fgMuted)
-        }
-        if (open) Text(prompt, Modifier.padding(top = Tokens.sp2), style = Type.footnote, color = av.fgMuted)
     }
 }
 

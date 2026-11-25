@@ -91,7 +91,7 @@ export const Composer = memo(function Composer() {
     wantCaret.current = splitMarks(next).body.length;
     setFull(next);
   };
-  const { submit, sendBuild, sendLater } = useSubmit({
+  const { submit } = useSubmit({
     text: full, setText: setFull, shell: ac.shell, uploading, uses, setUses, clear: () => { wantCaret.current = 0; setFull(''); },
     sentHistory: h.sentHistory, setSentHistory: h.setSentHistory, clearHistoryStep: () => h.setHist(null),
   });
@@ -104,7 +104,7 @@ export const Composer = memo(function Composer() {
   useEffect(() => { if (quick) submit(); }, [quick]);
   const reply = (t: string) => { applyFull(t); setQuick((n) => n + 1); };
 
-  useComposerEvents({ ta, wantCaret, setText, setUses, sendBuild, setPick, root, canEffort });
+  useComposerEvents({ ta, wantCaret, setText, setUses, setPick, root, canEffort });
 
   const { choose, onKeyDown } = useComposerKeys({ text, full, mode, modes, ghost, ac, h, apply, applyFull, submit });
 
@@ -125,7 +125,7 @@ export const Composer = memo(function Composer() {
         <UsesBar uses={uses} remove={(u) => setUses((l) => l.filter((x) => x !== u))} />
         <AttachmentsBar marks={marks} remove={(i) => setMarks((l) => l.filter((_, j) => j !== i))} />
         <div className={narrow ? 'cp-row' : undefined}>
-        {narrow && <AddMenu uploading={uploading} setPick={setPick} attach={attach} laterable={typed && !ac.shell} sendLater={sendLater} />}
+        {narrow && <AddMenu uploading={uploading} setPick={setPick} attach={attach} />}
         <div className="cp-text">
           <div ref={mirror} className="cp-mirror" aria-hidden><span className="cp-typed">{text}</span><span className="cp-ghost">{ghost}</span>{ghost && !touch() && <kbd className="cp-key">Tab</kbd>}</div>
           <textarea
@@ -157,7 +157,7 @@ export const Composer = memo(function Composer() {
             <Icon name="arrow-right" small /><span>{text.length > 12 && '…'}{text.slice(-12)}<b>{ghost}</b></span>
           </button>
         )}
-        {!narrow && <ComposerFoot uses={uses} uploading={uploading} typed={typed} shell={ac.shell} setPick={setPick} attach={attach} dictate={dictate} submit={submit} sendLater={sendLater} />}
+        {!narrow && <ComposerFoot uses={uses} uploading={uploading} typed={typed} shell={ac.shell} setPick={setPick} attach={attach} dictate={dictate} submit={submit} />}
       </div>
       <ComposerStats hint={ac.shell ? 'Runs in the terminal' : ''} />
       {ac.open && (

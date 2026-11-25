@@ -1,21 +1,17 @@
-import { buildStageOf } from '../../../shared/builds.js';
-import type { ChatEvent, LiveAgent, Repeat } from '../../../shared/protocol.js';
+import type { ChatEvent, LiveAgent } from '../../../shared/protocol.js';
 import type { Cron, RunningTask } from '../agent/types.js';
 import { RUN_ID } from '../agent/claude/transcript.js';
 import type { Stopped } from '../session/resume.js';
 import type { AgentSession } from '../session/session.js';
 
-export type Saved = { sessionId: string; crons: Cron[]; repeat?: Repeat | null; queued?: { id: string; text: string }[]; stopped?: Stopped };
+export type Saved = { sessionId: string; crons: Cron[]; queued?: { id: string; text: string }[]; stopped?: Stopped };
 
 export const runningAgents = (chat: AgentSession) => liveAgents(chat.state.events);
 
 export const liveAgents = (events: ChatEvent[]): LiveAgent[] =>
   events
     .filter((e): e is Extract<ChatEvent, { kind: 'agent' }> => e.kind === 'agent' && e.status === 'running')
-    .map((e) => {
-      const slug = buildStageOf(e.subagentType, e.description, e.prompt)?.slug;
-      return { id: e.toolUseId, description: e.description, type: e.subagentType, ...(slug && { slug }), ...(e.group && { group: e.group }), startedAt: e.startedAt };
-    })
+    .map((e) => ({ id: e.toolUseId, description: e.description, type: e.subagentType, ...(e.group && { group: e.group }), startedAt: e.startedAt }))
     .sort((a, b) => a.startedAt - b.startedAt);
 
 // A long-running background task (a dev server, a watcher) holds a restart, blocks the orphan exit and keeps the chat open on purpose.

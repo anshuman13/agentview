@@ -1,17 +1,12 @@
-import { notice, send, setUi, useStore } from '../app/store';
+import { notice, send, useStore } from '../app/store';
 import { chatImages, lastReply, remindChoices, sentPrompts } from './composer/composerLogic';
 import { time } from '../sessions/brief/time';
-import { runLine } from '../sessions/runLogic';
-import { useChatRun } from '../sessions/useChatRun';
-import { openGoal, startGoal } from '../sessions/goalLogic';
 import { QuickPick } from '../ui/QuickPick';
 import { Section } from '../ui/Section';
 import { Sheet } from '../ui/Sheet';
 import { useNarrow } from '../app/shell/useNarrow';
 import { keyText } from '../app/shell/keys';
 import { ACCOUNT_LABEL } from '../../../shared/protocol';
-import { endedRun, finishedLine, runDetail } from '../../../shared/goalText';
-import { since } from '../sessions/folders';
 import { firstLine, plural } from '../ui/util';
 import { copyChatMarkdown, copyLastReply, copyResumeCommand, forkChat, remindChat, sideChat } from './chatActions';
 import { useChatSettings, type Pick } from './ChatSettings';
@@ -27,17 +22,10 @@ export function SettingsMenu({ pick, setPick, close }: Props) {
   const sessionId = useStore((s) => s.session.sessionId);
   const account = useStore((s) => s.session.account) ?? 'main';
   const accounts = useStore((s) => s.session.accounts) ?? [];
-  const chat = useStore((s) => s.session.id);
-  const buildFlow = useStore((s) => Boolean(s.session.buildFlow));
   const prompts = sentPrompts(useStore((s) => s.events)).length;
-  const run = useChatRun(chat);
-  const ended = useStore((s) => (chat ? endedRun(s.runs, chat) : null));
   const act = (fn: () => void) => { fn(); close(); };
   const onPick = (v: string) => {
-    // Tries and jobs have their controls on the loop card only.
     if (v === 'find') return act(() => window.dispatchEvent(new Event('agentview:find')));
-    if (v === 'goal') return act(() => (ended ? openGoal(ended.id) : !run ? startGoal({ here: true }) : runDetail(run).opens && openGoal(run.id)));
-    if (v === 'again') return act(() => startGoal(ended?.kind === 'goal' ? { from: ended, here: true } : { here: true }));
     setPick({ kind: v as Pick['kind'], at: pick.at });
   };
   const narrow = useNarrow();
@@ -49,11 +37,6 @@ export function SettingsMenu({ pick, setPick, close }: Props) {
       picker('model', 'Model', modelName),
       ...(canEffort ? [picker('effort', 'Effort', effortName)] : []),
       ...(accounts.length > 1 || account !== 'main' ? [picker('account', 'Claude account', ACCOUNT_LABEL[account])] : []),
-    ]],
-    ['Goal', [
-      action('goal', 'Goal', run ? runLine(run) : ended ? (finishedLine(ended, since) ?? 'Ended') : 'Off'),
-      ...(ended ? [ended.kind === 'goal' ? action('again', 'Run again…', firstLine(ended.what)) : action('again', 'New goal…', 'Start a goal in this chat')] : []),
-      picker('build', 'Build', buildFlow ? 'Spec flow' : 'Off'),
     ]],
     ['Chat', [
       action('find', 'Find in chat', 'Search the prompts and replies'),

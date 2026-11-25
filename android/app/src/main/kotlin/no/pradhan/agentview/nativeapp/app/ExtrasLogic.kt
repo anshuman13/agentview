@@ -15,28 +15,21 @@ enum class NoticeKind(val channel: String, val label: String) {
 
 enum class NoticeAsk { None, Permission, Question }
 
-data class Notice(val kind: NoticeKind, val chatId: String, val title: String, val body: String, val ask: NoticeAsk = NoticeAsk.None, val permissionId: String = "", val questionId: String = "", val detail: String = "", val slug: String = "", val sub: String = "", val options: List<String> = emptyList(), val outcome: String = "")
+data class Notice(val kind: NoticeKind, val chatId: String, val title: String, val body: String, val ask: NoticeAsk = NoticeAsk.None, val permissionId: String = "", val questionId: String = "", val detail: String = "", val sub: String = "", val options: List<String> = emptyList())
 
-fun noticeId(n: Notice) = (n.kind.channel + n.chatId + n.slug).hashCode()
+fun noticeId(n: Notice) = (n.kind.channel + n.chatId).hashCode()
 
 fun repoName(c: LiveChat) = c.cwd.trimEnd('/').substringAfterLast('/')
 
-private val ROUND_NOTICE = setOf("done", "blocked", "question", "failed")
-
 // shared/notices.ts chatNotices, cases in shared/fixtures/chat-notices.json: the one notice a chat's live-list change earns.
-// A muted chat (Slack's mute) skips Finished and round notices; Needs you and Failed still come.
+// A muted chat (Slack's mute) skips Finished; Needs you and Failed still come. The chat of a run stays silent: the run reports.
 fun chatNotice(before: LiveChat, c: LiveChat, muted: Boolean): Notice? {
     val who = providerLabel(c.provider)
     val repo = repoName(c)
     if (c.pending > before.pending) return Notice(NoticeKind.Approval, c.id, "$who needs you in $repo", c.title)
     if (c.failed && !before.failed) return Notice(NoticeKind.Failed, c.id, "$who failed in $repo", c.title)
     if (muted) return null
-    val run = c.run
-    if (run != null) {
-        if (before.run == null || run.round <= before.run.round || run.outcome !in ROUND_NOTICE) return null
-        return Notice(NoticeKind.Finished, c.id, "${if (run.kind == "goal") "Goal" else "Loop"} in $repo: ${run.outcome}", run.line?.ifEmpty { null } ?: c.title, outcome = run.outcome.orEmpty())
-    }
-    if (!before.running || c.running || c.failed) return null
+    if (c.run != null || !before.running || c.running || c.failed) return null
     val title = "$who finished in $repo"
     return if (c.last.isNullOrEmpty()) Notice(NoticeKind.Finished, c.id, title, c.title) else Notice(NoticeKind.Finished, c.id, title, c.last, sub = c.title)
 }
@@ -56,10 +49,10 @@ fun quietWindow(pref: String?): Pair<Int, Int>? {
     return start to end
 }
 
-// Inside the window a chat finish or a done loop round posts without sound; a round that is blocked, a question or failed
-// keeps it. The window may wrap midnight and its end minute is outside it.
-fun silentNotice(kind: NoticeKind, outcome: String, minuteOfDay: Int, window: Pair<Int, Int>?): Boolean {
-    if (kind != NoticeKind.Finished || (outcome != "" && outcome != "done") || window == null) return false
+// Inside the window a chat finish posts without sound.
+// The window may wrap midnight and its end minute is outside it.
+fun silentNotice(kind: NoticeKind, minuteOfDay: Int, window: Pair<Int, Int>?): Boolean {
+    if (kind != NoticeKind.Finished || window == null) return false
     val (start, end) = window
     return if (start <= end) minuteOfDay in start until end else minuteOfDay >= start || minuteOfDay < end
 }
@@ -101,7 +94,7 @@ fun WaitingLine.text() = if (repo.isEmpty()) title else "$title · $repo"
 
 const val sessionsLink = "agentview://open?view=sessions"
 
-fun chatLink(id: String, slug: String = "") = "agentview://open?chat=${URLEncoder.encode(id, "UTF-8")}" + if (slug.isEmpty()) "" else "&slug=${URLEncoder.encode(slug, "UTF-8")}"
+fun chatLink(id: String) = "agentview://open?chat=${URLEncoder.encode(id, "UTF-8")}"
 
 data class SharedItem(val text: String?, val subject: String?, val images: List<String>)
 

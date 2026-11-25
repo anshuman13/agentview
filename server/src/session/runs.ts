@@ -5,6 +5,7 @@ import type { ChatRun, Round, RoundOutcome } from '../../../shared/protocol.js';
 
 export const WAITING = 'waiting for your approval';
 export const READY = 'Ready for review';
+export const STOPPED_BY_YOU = 'you stopped it';
 
 const KEEP_ENDED = 100;
 const KEEP_ROUNDS = 50;
@@ -12,15 +13,16 @@ const SAVE_MS = 1000;
 const SHOW_ENDED = 10;
 const SHOW_ENDED_MS = 24 * 3_600_000;
 
-type NewRun = Pick<ChatRun, 'kind' | 'sessionId' | 'chatId' | 'title' | 'what' | 'provider'> & Partial<Pick<ChatRun, 'round' | 'max' | 'nextAt' | 'every' | 'endAt' | 'capPct' | 'fiveHour' | 'maxBuilds' | 'builds' | 'tries' | 'cwd' | 'jobId' | 'branch' | 'repo' | 'worktree' | 'paseo' | 'once'>>;
+type NewRun = Pick<ChatRun, 'kind' | 'sessionId' | 'chatId' | 'title' | 'what' | 'provider'> & Partial<Pick<ChatRun, 'round' | 'max' | 'nextAt' | 'tries' | 'cwd' | 'jobId' | 'branch' | 'repo' | 'worktree' | 'paseo'>>;
 
 export const firstSentence = (text: string, max = 120) => text.trim().split(/(?<=[.!?])\s|\n/)[0].slice(0, max).trim();
 
-// The outcome of a loop round or goal round from its reply: the ROUND line, else progress with the first sentence.
-export function roundResult(text: string, { failed = false, met = false } = {}): { outcome: RoundOutcome; line: string } {
+export const ROUND_INSTRUCTION = 'Reply with the answer or result first, in plain sentences, with no narration of what you did. Then finish with one last line: ROUND: <done|progress|blocked|question|nothing> <one sentence>. The line is shown on the chat row and the run card and its first sentence is the push text, so name what changed, in at most 100 characters; use nothing when there was nothing to do.';
+
+// The outcome of a run's turn from its reply: the ROUND line, else progress with the first sentence.
+export function roundResult(text: string, { failed = false } = {}): { outcome: RoundOutcome; line: string } {
   const parsed = roundOf(text);
   if (failed) return { outcome: 'failed', line: parsed?.line || firstSentence(text) };
-  if (met) return { outcome: 'done', line: parsed?.line || 'Goal met' };
   return parsed ?? { outcome: 'progress', line: firstSentence(text) };
 }
 
@@ -43,7 +45,7 @@ export class Runs {
 
   constructor(private file: string | null = null, private onChange: () => void = () => {}, private onEnd: (run: ChatRun) => void = () => {}, private onReported: (run: ChatRun) => void = () => {}) {
     const saved = file ? readJsonSync<unknown>(file, []) : [];
-    this.runs = Array.isArray(saved) ? saved.filter((r): r is ChatRun => typeof r?.id === 'string' && Array.isArray(r.rounds)) : [];
+    this.runs = Array.isArray(saved) ? saved.filter((r): r is ChatRun => typeof r?.id === 'string' && Array.isArray(r.rounds) && (r.kind === 'tries' || r.kind === 'job')) : [];
     // A restart drops every open permission card, so no answer can resume a run that waited on one.
     for (const r of this.runs) {
       if (r.state === 'paused' && r.why === WAITING) Object.assign(r, { state: 'running', why: '' });
@@ -91,7 +93,7 @@ export class Runs {
     return run.id;
   }
 
-  update(id: string | undefined, patch: Partial<Pick<ChatRun, 'chatId' | 'sessionId' | 'state' | 'why' | 'round' | 'max' | 'nextAt' | 'every' | 'endAt' | 'capPct' | 'fiveHour' | 'maxBuilds' | 'builds' | 'usage' | 'review' | 'pr'>>) {
+  update(id: string | undefined, patch: Partial<Pick<ChatRun, 'chatId' | 'sessionId' | 'state' | 'why' | 'round' | 'max' | 'nextAt' | 'review' | 'pr'>>) {
     const run = this.get(id);
     if (!run || run.state === 'done') return;
     Object.assign(run, patch);
@@ -152,14 +154,6 @@ export class Runs {
     const reviewed = this.runs.filter((r) => r.kind === 'job' && r.chatId === chatId && r.review === 'pending');
     for (const r of reviewed) Object.assign(r, { state: 'running', why: '', review: undefined });
     if (asked.length || reviewed.length) this.touch();
-  }
-
-  // A stopped run starts again with its rounds and cost.
-  reopen(id: string | undefined) {
-    const run = this.get(id);
-    if (!run || run.state !== 'done') return;
-    Object.assign(run, { state: 'running', why: '', endedAt: null });
-    this.touch();
   }
 
   // After a restart, a run no chat took back is over.

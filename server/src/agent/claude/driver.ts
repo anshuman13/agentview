@@ -21,7 +21,7 @@ import { loadSettings, unattendedLimits } from '../../settings.js';
 import { ToolHooks } from './toolHooks.js';
 import { continuedTurn } from './subagents.js';
 import { StreamText } from './stream.js';
-import { historyFrom, workflowEvents } from './transcript.js';
+import { historyFrom } from './transcript.js';
 import { OPENROUTER_PREFIX } from '../../../../shared/openrouter.js';
 
 
@@ -87,7 +87,7 @@ export class ClaudeDriver implements AgentDriver {
 
   // On OpenRouter the models, effort and the Opus advisor are not Anthropic's, so they are left out.
   get capabilities(): Capabilities {
-    return { rewind: true, mcp: true, mcpEdit: true, connectors: !this.openrouter, effort: !this.openrouter, build: !this.openrouter, stopTask: true, subagents: true };
+    return { rewind: true, mcp: true, mcpEdit: true, connectors: !this.openrouter, effort: !this.openrouter, stopTask: true, subagents: true };
   }
 
   get instructionFiles() {
@@ -199,9 +199,7 @@ export class ClaudeDriver implements AgentDriver {
   private history(...args: Parameters<typeof historyFrom>): History {
     const { events, context, cache, agents } = historyFrom(...args);
     this.tasks.agents = agents;
-    const shown = new Set(events.map((e) => e.id));
-    const unshown = (args[2] ?? []).flatMap((run) => workflowEvents(run, '', 0)).filter((e) => !shown.has(e.id));
-    return { events, context, cache, unshown };
+    return { events, context, cache };
   }
 
   start() {
@@ -219,7 +217,6 @@ export class ClaudeDriver implements AgentDriver {
       beforeEdit: async (input) => this.toolHooks.beforeEdit(input, unattended),
       beforeStatus: async (input) => this.toolHooks.beforeStatus(input),
       onSubagentStart: async (input) => this.toolHooks.onSubagentStart(input),
-      onPrompt: async (input) => this.toolHooks.onPrompt(input),
       beforeTool: async (input) => (unattended ? this.toolHooks.beforeTool(input, unattended) : {}),
       afterTool: async (input) => this.toolHooks.afterTool(input),
       onStop: (input) => this.toolHooks.onStop(input),

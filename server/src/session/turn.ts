@@ -1,14 +1,9 @@
 import { randomUUID } from 'node:crypto';
 import { costRise } from '../../../shared/cost.js';
 import { providerLabel } from '../../../shared/providers.js';
-import { roundOf } from '../../../shared/edits.js';
 import { clock } from '../../../shared/util.js';
-import { goalMet as goalMetText, skipText } from '../../../shared/goalText.js';
-import type { Repeat } from '../../../shared/protocol.js';
 import type { TurnResult } from '../agent/types.js';
-import { goalMet, holdsUntil } from './repeat.js';
 import type { UserEvent } from './messageQueue.js';
-import { roundResult } from './runs.js';
 import type { AgentSession } from './session.js';
 
 const COMPACT = Symbol('compact');
@@ -23,10 +18,6 @@ export class Turn {
   lastResult = '';
   lastError = false;
   cost = 0;
-  // The last turn was a loop round or goal round; its reply ends with a ROUND line.
-  roundTurn = false;
-  // The id of the prompt of the weekly report round of a standing goal, while that round runs.
-  reportTurn: string | undefined;
   private lastCost = 0;
   // A message sent mid-turn missed the turn's last step, so the CLI starts a turn for it.
   private expectTurn = false;
@@ -86,36 +77,16 @@ export class Turn {
     this.lastResult = r.ok ? r.text : '';
     this.lastError = !r.ok || Boolean(r.isError);
     s.failed = this.lastError;
-    const repeat = s.state.session.repeat;
-    const met = Boolean(repeat?.goal && goalMet(this.lastResult) && !holdsUntil(repeat));
     this.noteCost(r.costUsd);
-    const report = this.reportTurn;
-    s.roundNote = this.roundNote(r.text, repeat, met, report);
-    this.roundTurn = false;
-    this.reportTurn = undefined;
     s.pushEvent({ id: r.id, kind: 'result', text: r.text, costUsd: r.costUsd, isError: r.isError, at: Date.now(), model: s.state.session.model });
-    s.links.record(r, report);
+    s.links.record(r);
     if (cancelled) this.resend(cancelled);
-    if (repeat?.goal && met) {
-      const text = goalMetText(repeat.round);
-      s.repeater.set(null, text);
-    }
     this.ended();
   }
 
   private noteCost(costUsd: number) {
     this.cost = costUsd > 0 ? costRise(costUsd, this.lastCost) : 0;
     if (costUsd > 0) this.lastCost = costUsd;
-  }
-
-  private roundNote(text: string, repeat: Repeat | null, met: boolean, report: string | undefined) {
-    if (!repeat?.runId) return null;
-    // A turn the run did not start, such as a background agent finishing, still reports with a ROUND line.
-    const goal = Boolean(repeat.goal);
-    if (!this.roundTurn) return roundOf(text) ? { ...roundResult(text, { failed: this.lastError, met }), goal, ends: met } : null;
-    const note = { ...roundResult(text, { failed: this.lastError, met }), goal, ends: met || this.s.repeater.ends() };
-    if (report && !this.lastError && !met) note.outcome = 'progress';
-    return note;
   }
 
   // The stop ended the turn with the waiting message in it unanswered, so it goes again as the next prompt, below the stopped turn.
@@ -152,22 +123,13 @@ export class Turn {
     else if (stopped) {
       // Messages typed while the stop was in flight go on in a fresh turn.
       s.waiting.dequeue();
-      s.repeater.defer();
-    } else if (idle) this.repeatWhenIdle();
+    } else if (idle && s.usage.reset) s.system(`Usage limit reached, resets at ${clock(s.usage.reset)}`, false, s.usage.reset);
     // A turn that ends without a result (a local command) must not read the last one's.
     s.usage.clear();
     this.lastResult = '';
     this.lastError = false;
     this.cost = 0;
     if (idle && !s.state.session.running && !s.state.pending.length) s.onIdle?.();
-  }
-
-  private repeatWhenIdle() {
-    const { usage, repeater, state } = this.s;
-    if (usage.reset && state.session.repeat) repeater.defer(usage.reset, skipText('usage limit reached'), true);
-    else if (usage.reset) this.s.system(`Usage limit reached, resets at ${clock(usage.reset)}`, false, usage.reset);
-    else if (this.lastError) repeater.defer();
-    else if (repeater.due || state.session.repeat?.every === 0) repeater.fire();
   }
 
   private followUp() {
@@ -190,9 +152,6 @@ export class Turn {
     s.setSession({ running: false, stopping: false, compacting: false });
     s.driver.clearInjected();
     s.approvals.denyAll(`${providerLabel(s.driver.provider)} exited before this was answered.`);
-    const repeat = s.state.session.repeat;
-    if (this.roundTurn && repeat?.runId) s.runs.addRound(repeat.runId, { n: s.runs.nextRoundN(repeat.runId), outcome: 'failed', line: `${providerLabel(s.driver.provider)} exited`, costUsd: 0 });
-    this.roundTurn = false;
     // Closing the chat also ends the CLI; a job run stays open so its review or a reopened chat can take it back.
     const job = s.closed ? undefined : s.runs.jobFor(s.id);
     if (job && job.review !== 'pending') {
@@ -200,7 +159,7 @@ export class Turn {
       s.runs.end(job.id, 'exited');
     }
     // Queued messages are not lost with the process; the first one starts a fresh CLI.
-    if (!s.waiting.dequeue()) s.repeater.defer();
+    s.waiting.dequeue();
     s.log.orphanRunning();
   }
 }

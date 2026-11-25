@@ -7,10 +7,9 @@ import { bigBroRequest, bigBroVerdict } from './approval.js';
 import { BIG_BRO } from '../../../../shared/protocol.js';
 
 const STATUS_EVERY = 8;
-export const BUILD_FLOW_ON = 'The Build flow option is on in this chat: build a feature by running the agentview:build skill with its brief, not directly.';
 export const SUBAGENT_STEPS = 'After each finished task call mcp__agentview__set_status with done: one plain sentence saying what you changed or found, not the process. Unless your instructions give a return format, keep your final report to 3 sentences.';
-// Fable answers one question and the approval gate runs one script: neither works in steps.
-const NO_STEPS = new Set([BIG_BRO, 'approval-gate', 'agentview:approval-gate']);
+// Fable answers one question, so it does not work in steps.
+const NO_STEPS = new Set([BIG_BRO]);
 
 // The callbacks the CLI makes around tool calls and when a turn stops.
 export class ToolHooks {
@@ -30,11 +29,6 @@ export class ToolHooks {
   beforeStatus(input: HookInput): HookJSONOutput {
     if (input.hook_event_name !== 'PreToolUse' || !input.agent_id) return {};
     return { hookSpecificOutput: { hookEventName: 'PreToolUse', permissionDecision: 'allow', updatedInput: { ...(input.tool_input as Record<string, unknown>), agent: input.agent_id } } };
-  }
-
-  onPrompt(input: HookInput): HookJSONOutput {
-    if (input.hook_event_name !== 'UserPromptSubmit' || !this.host.state.session.buildFlow) return {};
-    return { hookSpecificOutput: { hookEventName: 'UserPromptSubmit', additionalContext: BUILD_FLOW_ON } };
   }
 
   onSubagentStart(input: HookInput): HookJSONOutput {

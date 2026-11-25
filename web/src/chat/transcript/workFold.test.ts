@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'bun:test';
 import { readFileSync } from 'node:fs';
-import { buildTranscript, createTranscriptBuilder, docCards, specCards } from './steps';
+import { buildTranscript, createTranscriptBuilder, docCards } from './steps';
 import { createFoldBuilder, foldTurns, workTitle, type FoldRow } from './workFold';
 import type { ChatEvent } from '../../../../shared/protocol';
 
@@ -90,7 +90,7 @@ describe('foldTurns', () => {
     expect(rows.filter((r) => r.kind === 'fold').map((r) => r.kind === 'fold' && r.last)).toEqual([true]);
   });
 
-  it('keeps blocked cards, error system rows and spec and sketch cards visible', () => {
+  it('keeps blocked cards, error system rows and doc and sketch cards visible', () => {
     const spec = tool('Write', { file_path: '/w/.claude/specs/a.md', content: 'x' });
     const sketch = tool('Write', { file_path: '/w/.claude/sketches/a.html', content: 'x' });
     const events: ChatEvent[] = [
@@ -149,7 +149,7 @@ describe('remembered', () => {
   it('holds the memory file a Write in the server history wrote', () => {
     const events: ChatEvent[] = JSON.parse(readFileSync(new URL('../../../../shared/fixtures/remembered-history.json', import.meta.url), 'utf8'));
     const items = buildTranscript(events);
-    const rows = foldTurns(items, events, new Set([...specCards(items), ...docCards(items)]));
+    const rows = foldTurns(items, events, docCards(items));
     expect(rows.flatMap((r) => (r.kind === 'fold' ? [r.remembered] : []))).toEqual([['/Users/x/.claude-alt/projects/-Users-x-repo/memory/prefs.md']]);
   });
 });

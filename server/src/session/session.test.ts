@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'bun:test';
 import type { AgentSession } from './session.js';
 import { prFrom } from './pr.js';
 import { busy } from '../host/restore.js';
-import { fireTime } from './repeat.js';
+import { fireTime } from './wakeups.js';
 import { Runs, WAITING } from './runs.js';
 import type { ClaudeDriver } from '../agent/claude/driver.js';
 import { claudeSession } from '../agent/claude/testSession.js';
@@ -1046,7 +1046,7 @@ describe('job runs', () => {
     expect(runs.get(id)).toMatchObject({ state: 'running', needsYou: false });
   });
 
-  it('ends on Stop from the loop card and ignores Pause', () => {
+  it('ends on Stop from the run card and ignores Pause', () => {
     const { s, runs, id } = jobSession();
     s.runControl(id, 'pause');
     expect(runs.get(id)?.state).toBe('running');

@@ -2,14 +2,13 @@ import os from 'node:os';
 import path from 'node:path';
 import type { ChatRun, LiveChat } from '../../../shared/protocol.js';
 import type { AgentSession } from '../session/session.js';
-import { Runs } from '../session/runs.js';
+import { Runs, STOPPED_BY_YOU } from '../session/runs.js';
 import { desktopActive } from '../presence.js';
 import { notifyRunEnded, notifyStall, stallWatch } from '../integrations/notify.js';
 import { sendWhenChanged } from './changed.js';
 import { LearnQueue } from './learnQueue.js';
 import { summary } from './summary.js';
 import { broadcast, hub, live, viewers } from './state.js';
-import { STOPPED_BY_YOU } from '../../../shared/goalText.js';
 
 export const runs = new Runs(path.join(os.homedir(), '.agentview', 'runs.json'), () => broadcastLive(), (run) => {
   const chat = live.get(run.chatId)?.chat;

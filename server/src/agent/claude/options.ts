@@ -1,7 +1,5 @@
 import { EDIT_TOOLS } from '../steps.js';
 import { createSdkMcpServer, tool, type CanUseTool, type HookCallback, type McpServerConfig, type Options, type SDKUserMessage } from '@anthropic-ai/claude-agent-sdk';
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { BIG_BRO, type Effort } from '../../../../shared/protocol.js';
 import { ASK_TOOLS, TOOLS, TOOL_INSTRUCTIONS } from '../tools/index.js';
 import { RUN_CODE_RULES } from '../tools/runCode.js';
@@ -9,8 +7,6 @@ import type { ToolCtx } from '../tools/tool.js';
 import { ownChromeMcp, ownProfile } from '../../chrome/launch.js';
 import { sandboxOf, type Unattended } from './unattended.js';
 import { openRouterEnv, type OpenRouterSettings } from './openrouter.js';
-
-const BUILD_KIT = path.join(path.dirname(fileURLToPath(import.meta.url)), '../../../build-kit');
 
 export const STATUS_REMINDER = 'You have not called mcp__agentview__set_status for a while, so the user sees no progress. Call it now with what you are doing, what is done and the next steps.';
 
@@ -39,7 +35,6 @@ export function agentOptions(o: {
   beforeEdit: HookCallback;
   beforeStatus: HookCallback;
   onSubagentStart: HookCallback;
-  onPrompt: HookCallback;
   beforeTool: HookCallback;
   afterTool: HookCallback;
   onStop: HookCallback;
@@ -72,7 +67,6 @@ export function agentOptions(o: {
     canUseTool: o.canUseTool,
     perTaskStopAffordance: true,
     ...(!o.openrouter && { agentProgressSummaries: true }),
-    ...(!o.openrouter && { plugins: [{ type: 'local' as const, path: BUILD_KIT, skipMcpDiscovery: true }] }),
     agents: o.openrouter ? {} : {
       [BIG_BRO]: {
         description:
@@ -87,7 +81,6 @@ export function agentOptions(o: {
       PostToolUse: [{ hooks: [o.afterTool] }],
       Stop: [{ hooks: [o.onStop] }],
       SubagentStart: [{ hooks: [o.onSubagentStart] }],
-      UserPromptSubmit: [{ hooks: [o.onPrompt] }],
     },
     stderr: (d) => process.stderr.write(d),
   };

@@ -2,9 +2,7 @@ import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'bun:test';
 import { Explored } from './Transcript';
-import { readFileSync } from 'node:fs';
-import path from 'node:path';
-import { buildTranscript, createTranscriptBuilder, duration, exploreLabel, exploreRuns, specCards, stepLabel, stepTone, newMarker, newReplies, dayDividers, type Item } from './steps';
+import { buildTranscript, createTranscriptBuilder, duration, exploreLabel, exploreRuns, stepLabel, stepTone, newMarker, newReplies, dayDividers } from './steps';
 import { replyLine, sumEdits } from '../../../../shared/edits';
 import { buildTurns } from './turns';
 import { chatLine } from '../../sessions/folders';
@@ -19,13 +17,7 @@ const user = (text: string): ChatEvent => ({ id: `u${at()}`, kind: 'user', text,
 const edit = (file: string, oldText: string, newText: string) => tool('Edit', { file_path: file, old_string: oldText, new_string: newText });
 const cwd = '/w/app';
 
-describe('automatic prompts', () => {
-  it('turn into compact labelled items instead of user bubbles', () => {
-    const loop: ChatEvent = { id: 'l1', kind: 'user', text: 'check the build\nthen report', at: 1, auto: 'loop', round: 3 };
-    const goal: ChatEvent = { id: 'g1', kind: 'user', text: 'Check whether this goal is met', at: 2, auto: 'goal', round: 2 };
-    expect(buildTranscript([loop, goal, user('hi')]).map((i) => i.kind === 'auto' ? i.label : i.kind)).toEqual(['Loop round 3 · check the build', 'Goal round 2', 'user']);
-  });
-
+describe('prompts', () => {
   it('carry voice from a spoken prompt to its item', () => {
     const [spoken, typed] = buildTranscript([{ ...user('hello'), voice: true }, user('hi')]);
     expect(spoken).toMatchObject({ kind: 'user', voice: true });
@@ -241,17 +233,6 @@ describe('dayDividers', () => {
     expect([...d]).toEqual([['a', 'Tuesday 3 November'], ['b', 'Yesterday'], ['d', 'Today']]);
   });
   it('has none for a chat within today', () => expect(dayDividers([user('a', now)], now).size).toBe(0));
-});
-
-describe('specCards', () => {
-  type Case = { name: string; items: { id: string; kind: 'user' | 'file' | 'agent'; path?: string; subagentType?: string; prompt?: string }[]; expected: string[] };
-  const cases = JSON.parse(readFileSync(path.join(__dirname, '../../../../shared/fixtures/spec-cards.json'), 'utf8')) as Case[];
-  for (const c of cases) {
-    it(c.name, () => {
-      const items = c.items.map((i) => i.kind === 'agent' ? { kind: 'agent', id: i.id, use: { id: i.id, kind: 'tool_use', name: 'Agent', input: { subagent_type: i.subagentType, prompt: i.prompt }, summary: '', at: 0 }, running: false, progress: null, steps: [] } : i.kind === 'file' ? { kind: 'file', id: i.id, path: i.path, count: { add: 0, del: 0 }, uses: [] } : { kind: 'user', id: i.id, text: '', at: 0 }) as Item[];
-      expect([...specCards(items)]).toEqual(c.expected);
-    });
-  }
 });
 
 describe('collapsible boxes', () => {

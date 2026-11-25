@@ -11,7 +11,6 @@ import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
-import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.jsonObject
@@ -19,7 +18,6 @@ import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
 import no.pradhan.agentview.nativeapp.chat.ROW_WINDOW
 import no.pradhan.agentview.nativeapp.codex.AssistantRemote
-import no.pradhan.agentview.nativeapp.sessions.BacklogItem
 import no.pradhan.agentview.nativeapp.sessions.BinnedSession
 import no.pradhan.agentview.nativeapp.sessions.Repo
 import no.pradhan.agentview.nativeapp.sessions.SavedSession
@@ -142,21 +140,10 @@ class Api(private val origin: () -> String, private val http: OkHttpClient = sha
     private fun scoped(path: String, chat: String) = if (chat.isEmpty()) path else path + (if ('?' in path) "&" else "?") + "chat=${enc(chat)}"
     suspend fun get(path: String, chat: String = ""): String = call(url(scoped(path, chat))).decodeToString()
     suspend fun post(path: String, body: String, chat: String = ""): String = call(url(scoped(path, chat)).post(body.toRequestBody(json))).decodeToString()
-    suspend fun moveBacklog(root: String, slug: String, dir: String): List<BacklogItem> =
-        protocolJson.decodeFromString(post("/api/advisors/backlog/move?root=${enc(root)}", buildJsonObject { put("slug", slug); put("dir", dir) }.toString()))
     suspend fun put(path: String, body: String, chat: String = ""): String = call(url(scoped(path, chat)).put(body.toRequestBody("text/plain".toMediaType()))).decodeToString()
 
     override suspend fun pending(chat: String): List<Pending> =
         (protocolJson.parseToJsonElement(get("/api/state?limit=0", chat)).jsonObject["pending"] as? kotlinx.serialization.json.JsonArray)?.mapNotNull { parsePending(it) } ?: emptyList()
-
-    override suspend fun review(chat: String, slug: String): Boolean =
-        protocolJson.parseToJsonElement(postReview(chat, slug, "approve", "all")).jsonObject["already"]?.jsonPrimitive?.booleanOrNull == true
-
-    // A build review: a phase decision with its note, or a hold on the whole build when phase is null.
-    suspend fun postReview(chat: String, slug: String, decision: String, phase: String? = null, note: String? = null): String {
-        val body = buildJsonObject { put("slug", slug); phase?.let { put("phase", it) }; put("decision", decision); note?.let { put("note", it) } }.toString()
-        return post("/api/builds/review", body, chat)
-    }
 
     override suspend fun send(chat: String, body: String) { post("/api/cmd?cid=${enc(java.util.UUID.randomUUID().toString())}&client=phone", body, chat) }
 }

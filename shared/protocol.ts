@@ -1,4 +1,3 @@
-import type { AdvisorId } from './advisors.js';
 
 export type PendingQuestion = {
   id: string;
@@ -54,7 +53,7 @@ export type ReviewHunk = { line: number; del: string[]; add: string[]; state?: R
 export type ReviewFile = { path: string; hunks: ReviewHunk[]; created?: boolean; binary?: boolean; large?: boolean; state?: ReviewState };
 
 export type ChatEvent =
-  | { id: string; kind: 'user'; text: string; at: number; stopping?: boolean; queued?: boolean; auto?: 'loop' | 'goal'; round?: number; voice?: boolean }
+  | { id: string; kind: 'user'; text: string; at: number; stopping?: boolean; queued?: boolean; voice?: boolean }
   | { id: string; kind: 'assistant'; text: string; streaming: boolean; at: number; parent?: string }
   | { id: string; kind: 'tool_use'; name: string; input: Record<string, unknown>; summary: string; at: number; parent?: string; agent?: string }
   | { id: string; kind: 'tool_result'; toolUseId: string; text: string; isError: boolean; at: number; parent?: string; stopped?: boolean }
@@ -104,8 +103,6 @@ export type SessionInfo = {
   permissionMode: string | null;
   // Changed files are reviewed after each turn.
   review?: boolean;
-  // Features are built through the spec, sketch and approval flow instead of directly.
-  buildFlow?: boolean;
   apiKeySource: string | null;
   models: Array<{ value: string; displayName: string; description?: string; efforts?: string[] }>;
   commands: Array<{ name: string; description: string }>;
@@ -116,7 +113,6 @@ export type SessionInfo = {
   compacting: boolean;
   stopping: boolean;
   mcp: McpServer[];
-  repeat: Repeat | null;
   pr: number | null;
   account: Account;
   accounts: Account[];
@@ -134,31 +130,21 @@ export type SessionInfo = {
 export type SessionUpdate = Omit<SessionInfo, 'commands' | 'mcp'> & Partial<Pick<SessionInfo, 'commands' | 'mcp'>>;
 
 // What the agent behind a chat supports.
-export type Capabilities = { rewind: boolean; mcp: boolean; mcpEdit: boolean; connectors: boolean; effort: boolean; build: boolean; stopTask: boolean; subagents: boolean };
-
-// A goal's 5-hour pause: rounds wait while 5-hour usage is over the percent, or auto paces usage over the window.
-export type FiveHour = number | 'auto';
-
-// A prompt sent again on an interval (every > 0) or as soon as the last round ends (every = 0), until a clock time.
-export type Repeat = { prompt: string; every: number; until: number | null; round: number; nextAt: number | null; goal?: string; runId?: string; paused?: boolean; reportAt?: number; endAt?: number; capPct?: number; fiveHour?: FiveHour; capUsd?: number; maxBuilds?: number; builds?: string[] };
-
-export const MAX_GOAL_ROUNDS = 20;
+export type Capabilities = { rewind: boolean; mcp: boolean; mcpEdit: boolean; connectors: boolean; effort: boolean; stopTask: boolean; subagents: boolean };
 
 export const BIG_BRO = 'big-bro';
 
 export type RoundOutcome = 'done' | 'progress' | 'blocked' | 'question' | 'quiet' | 'failed';
-export type RunOp = 'pause' | 'resume' | 'now' | 'stop' | 'restore';
-// endAt is epoch ms, capPct a percent, fiveHour a percent or auto, maxBuilds a count; null clears them.
-export type RunEdit = { every?: number; endAt?: number | null; capPct?: number | null; fiveHour?: FiveHour | null; maxBuilds?: number | null };
-export type Round = { n: number; at: number; outcome: RoundOutcome; line: string; costUsd: number; report?: string };
+export type RunOp = 'stop';
+export type Round = { n: number; at: number; outcome: RoundOutcome; line: string; costUsd: number };
 
 // One chat of a /tries run: its Claude session, and the worktree branch it works on. A kept try archives the others.
 export type Try = { n: number; chatId: string; sessionId: string; branch: string; dropped?: boolean };
 
-// One /loop, /goal, /tries or scheduled coding job: sessionId is the Claude session (stable across restarts), chatId the live chat now running it.
+// One /tries or scheduled coding job: sessionId is the Claude session (stable across restarts), chatId the live chat now running it.
 export type ChatRun = {
   id: string;
-  kind: 'loop' | 'goal' | 'tries' | 'job';
+  kind: 'tries' | 'job';
   sessionId: string;
   chatId: string;
   title: string;
@@ -170,14 +156,6 @@ export type ChatRun = {
   round: number;
   max: number;
   nextAt: number | null;
-  every?: number;
-  endAt?: number;
-  capPct?: number;
-  fiveHour?: FiveHour;
-  capUsd?: number;
-  maxBuilds?: number;
-  builds?: number;
-  usage?: PlanUsage | null;
   provider?: Provider;
   costUsd: number;
   rounds: Round[];
@@ -190,7 +168,6 @@ export type ChatRun = {
   repo?: string;
   worktree?: string;
   paseo?: boolean;
-  once?: boolean;
   review?: 'pending';
   pr?: string;
 };
@@ -260,11 +237,9 @@ export type ServerMessage =
   | { type: 'restarting' }
   // To one phone app: set this alarm. The phone answers with phone_alarm_result.
   | { type: 'phone_alarm'; id: string; time: string; day?: string; label?: string }
-  // A build in this chat waits for approval and nobody is viewing the chat.
-  | { type: 'approval'; chat: string; slug: string; title: string }
   | { type: 'error'; text: string };
 
-export type LiveAgent = { id: string; description: string; type: string; slug?: string; group?: string; startedAt: number };
+export type LiveAgent = { id: string; description: string; type: string; group?: string; startedAt: number };
 
 export type LiveNow = { text: string; at: number; done?: string; next?: string[] };
 
@@ -387,10 +362,8 @@ export type ClientMessage =
   | { type: 'set_account'; account: string }
   | { type: 'set_permission_mode'; mode: string }
   | { type: 'set_review'; on: boolean }
-  | { type: 'set_build_flow'; on: boolean }
   | { type: 'review'; id: string; action: 'keep' | 'undo'; file?: string; hunk?: number }
   | { type: 'run'; run: string; op: RunOp }
-  | ({ type: 'run_edit'; run: string } & RunEdit)
   | { type: 'tries_send'; run: string; text: string }
   | { type: 'tries_keep'; run: string; n: number }
   | { type: 'interrupt' }
@@ -401,8 +374,7 @@ export type ClientMessage =
   | { type: 'run_hook'; name: string }
   | { type: 'close'; id: string }
   | { type: 'open_session'; sessionId: string }
-  | { type: 'open_advisor'; id: AdvisorId; fresh?: boolean; text?: string }
-  | { type: 'new_session'; cwd?: string; fork?: string; profile?: 'work' | 'personal'; model?: string; provider?: Provider; text?: string; hub?: boolean }
+  | { type: 'new_session'; cwd?: string; fork?: string; profile?: 'work' | 'personal'; model?: string; provider?: Provider; text?: string }
   | { type: 'mcp_status' }
   | { type: 'phone_alarm_result'; id: string; ok: boolean; notified?: boolean; weekday?: string; error?: string }
   | { type: 'usage' }

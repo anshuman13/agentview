@@ -9,7 +9,6 @@ fun Capabilities.can(what: String) = when (what) {
     "mcpEdit" -> mcpEdit
     "connectors" -> connectors
     "effort" -> effort
-    "build" -> build
     "stopTask" -> stopTask
     "subagents" -> subagents
     else -> true

@@ -43,8 +43,6 @@ data class ChatEvent(
     val agent: String? = null,
     val costUsd: Double = 0.0,
     val model: String? = null,
-    val auto: String? = null,
-    val round: Int = 0,
     val stopping: Boolean = false,
     val stopped: Boolean = false,
     val rule: String = "",
@@ -122,7 +120,7 @@ data class LiveChat(
 
 // shared/protocol.ts LiveAgent: a running subagent of a chat.
 @Serializable
-data class LiveAgent(val id: String, val description: String = "", val type: String = "", val slug: String? = null, val startedAt: Long = 0)
+data class LiveAgent(val id: String, val description: String = "", val type: String = "", val startedAt: Long = 0)
 
 // shared/protocol.ts LiveNow: the agent's last set_status with its detail.
 @Serializable
@@ -136,7 +134,7 @@ data class LiveTodos(val done: Int = 0, val total: Int = 0)
 @Serializable
 data class LiveRun(
     val id: String,
-    val kind: String = "loop",
+    val kind: String = "job",
     val state: String = "running",
     val why: String? = null,
     val nextAt: Long? = null,
@@ -148,7 +146,7 @@ data class LiveRun(
 
 // shared/protocol.ts Round and ChatRun, the entries of the 'runs' message.
 @Serializable
-data class Round(val n: Int = 0, val at: Long = 0, val outcome: String = "", val line: String = "", val costUsd: Double = 0.0, val report: String? = null)
+data class Round(val n: Int = 0, val at: Long = 0, val outcome: String = "", val line: String = "", val costUsd: Double = 0.0)
 
 // shared/protocol.ts Try: one chat of a /tries run.
 @Serializable
@@ -157,7 +155,7 @@ data class RunTry(val n: Int = 0, val chatId: String = "", val sessionId: String
 @Serializable
 data class ChatRun(
     val id: String,
-    val kind: String = "loop",
+    val kind: String = "job",
     val sessionId: String = "",
     val chatId: String = "",
     val title: String = "",
@@ -167,17 +165,7 @@ data class ChatRun(
     val state: String = "running",
     val why: String = "",
     val round: Int = 0,
-    val max: Int = 0,
     val nextAt: Long? = null,
-    val every: Long? = null,
-    val endAt: Long? = null,
-    val capPct: Int? = null,
-    // A percent or "auto" (shared/protocol.ts FiveHour).
-    val fiveHour: JsonPrimitive? = null,
-    val capUsd: Int? = null,
-    val maxBuilds: Int? = null,
-    val builds: Int? = null,
-    val usage: PlanUsage? = null,
     val provider: String? = null,
     val costUsd: Double = 0.0,
     val rounds: List<Round> = emptyList(),
@@ -186,7 +174,6 @@ data class ChatRun(
     val branch: String = "",
     val review: String? = null,
     val pr: String? = null,
-    val once: Boolean = false,
     val cwd: String? = null,
 )
 
@@ -198,7 +185,7 @@ data class ModelInfo(val value: String, val displayName: String = "", val descri
 
 // shared/protocol.ts Capabilities: what the chat's driver supports; a missing field counts as supported.
 @Serializable
-data class Capabilities(val rewind: Boolean = true, val mcp: Boolean = true, val mcpEdit: Boolean = true, val connectors: Boolean = true, val effort: Boolean = true, val build: Boolean = true, val stopTask: Boolean = true, val subagents: Boolean = true)
+data class Capabilities(val rewind: Boolean = true, val mcp: Boolean = true, val mcpEdit: Boolean = true, val connectors: Boolean = true, val effort: Boolean = true, val stopTask: Boolean = true, val subagents: Boolean = true)
 
 @Serializable
 data class CommandInfo(val name: String, val description: String = "")
@@ -226,7 +213,6 @@ data class SessionInfo(
     val usage: PlanUsage? = null,
     val hooks: List<String> = emptyList(),
     val review: Boolean = false,
-    val buildFlow: Boolean = false,
     val provider: String? = null,
     val capabilities: Capabilities = Capabilities(),
     val instructionFiles: List<String> = emptyList(),
@@ -304,7 +290,6 @@ sealed interface ServerMessage {
     data class Runs(val runs: List<ChatRun>) : ServerMessage
     data class Findings(val review: ReviewFindings) : ServerMessage
     data class FileChanged(val path: String) : ServerMessage
-    data class Approval(val chat: String, val slug: String, val title: String) : ServerMessage
     data class PhoneAlarm(val id: String, val time: String, val day: String?, val label: String) : ServerMessage
     data class Other(val type: String) : ServerMessage
 }
@@ -335,7 +320,6 @@ fun parseMessage(data: String): ServerMessage {
         "runs" -> ServerMessage.Runs(protocolJson.decodeFromJsonElement(ListSerializer(ChatRun.serializer()), o["runs"]!!))
         "findings" -> ServerMessage.Findings(protocolJson.decodeFromJsonElement(ReviewFindings.serializer(), o["review"]!!))
         "file_changed" -> ServerMessage.FileChanged(o["path"]!!.jsonPrimitive.content)
-        "approval" -> ServerMessage.Approval(o["chat"]!!.jsonPrimitive.content, o["slug"]!!.jsonPrimitive.content, o["title"]!!.jsonPrimitive.content)
         "phone_alarm" -> ServerMessage.PhoneAlarm(o["id"]!!.jsonPrimitive.content, o["time"]!!.jsonPrimitive.content, o["day"]?.jsonPrimitive?.contentOrNull, o["label"]?.jsonPrimitive?.contentOrNull ?: "")
         else -> ServerMessage.Other(type)
     }
@@ -375,7 +359,6 @@ fun interruptCmd() = cmd("interrupt")
 fun retryCmd() = cmd("retry")
 fun runCmd(run: String, op: String) = cmd("run") { put("run", run); put("op", op) }
 // A null value clears the end time or the cap; a key left out stays as it is. A string is the 5-hour pause's auto.
-fun runEditCmd(run: String, edit: Map<String, Any?>) = cmd("run_edit") { put("run", run); edit.forEach { (k, v) -> if (v is String) put(k, v) else put(k, v as Number?) } }
 fun triesKeepCmd(run: String, n: Int) = cmd("tries_keep") { put("run", run); put("n", n) }
 fun triesSendCmd(run: String, text: String) = cmd("tries_send") { put("run", run); put("text", text) }
 fun permissionCmd(id: String, allow: Boolean, always: Boolean = false) = cmd("permission") {
@@ -394,14 +377,12 @@ fun usageCmd() = cmd("usage")
 fun setAccountCmd(account: String) = cmd("set_account") { put("account", account) }
 fun setModeCmd(mode: String) = cmd("set_permission_mode") { put("mode", mode) }
 fun setReviewCmd(on: Boolean) = cmd("set_review") { put("on", on) }
-fun setBuildFlowCmd(on: Boolean) = cmd("set_build_flow") { put("on", on) }
 fun reviewCmd(id: String, action: String, file: String? = null, hunk: Int? = null) = cmd("review") { put("id", id); put("action", action); if (file != null) put("file", file); if (hunk != null) put("hunk", hunk) }
-fun newSessionCmd(profile: String? = null, cwd: String? = null, model: String? = null, fork: String? = null, provider: String? = null, text: String? = null, hub: Boolean = false) = cmd("new_session") { if (hub) put("hub", true); if (profile != null) put("profile", profile); if (cwd != null) put("cwd", cwd); if (model != null) put("model", model); if (fork != null) put("fork", fork); if (provider != null) put("provider", provider); if (text != null) put("text", text) }
+fun newSessionCmd(profile: String? = null, cwd: String? = null, model: String? = null, fork: String? = null, provider: String? = null, text: String? = null) = cmd("new_session") { if (profile != null) put("profile", profile); if (cwd != null) put("cwd", cwd); if (model != null) put("model", model); if (fork != null) put("fork", fork); if (provider != null) put("provider", provider); if (text != null) put("text", text) }
 fun phoneAlarmResultCmd(id: String, ok: Boolean, notified: Boolean = false, weekday: String? = null, error: String? = null) = cmd("phone_alarm_result") {
     put("id", id); put("ok", ok); if (notified) put("notified", true); if (weekday != null) put("weekday", weekday); if (error != null) put("error", error)
 }
 fun closeCmd(id: String) = cmd("close") { put("id", id) }
 fun openSessionCmd(sessionId: String) = cmd("open_session") { put("sessionId", sessionId) }
-fun openAdvisorCmd(id: String, fresh: Boolean, text: String? = null) = cmd("open_advisor") { put("id", id); if (fresh) put("fresh", true); if (text != null) put("text", text) }
 fun rewindCmd(id: String) = cmd("rewind") { put("id", id) }
 fun stopTaskCmd(toolUseId: String) = cmd("stop_task") { put("toolUseId", toolUseId) }

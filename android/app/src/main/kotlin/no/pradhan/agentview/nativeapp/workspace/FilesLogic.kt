@@ -130,9 +130,6 @@ private val FENCE = Regex("^\\s*(`{3,}|~{3,})")
 
 fun isSpecPath(path: String) = SPEC_PATH.containsMatchIn(path)
 
-// shared/specTasks.ts isRepoSpec: a spec written into another project (by an advisor) has no build record in this chat's repo.
-fun isRepoSpec(path: String, cwd: String) = isSpecPath(path) && (!path.startsWith("/") || path.startsWith(cwd.trimEnd('/') + "/"))
-
 private val KIRO_FOLDER = Regex("(?:^|/)\\.kiro/specs/([^/]+)/")
 
 fun specSlug(path: String) = KIRO_FOLDER.find(path)?.groupValues?.get(1) ?: path.substringAfterLast('/').replace(Regex("\\.\\w+$"), "")
@@ -169,15 +166,3 @@ fun startTaskPrompt(t: SpecTask, path: String) = "Do task ${t.n} in $path: ${t.t
 
 fun specPrompt(request: String) = "Write a spec for the request below in .claude/specs/<slug>.md with three sections: Requirements (numbered, each with testable acceptance criteria), Design, and Tasks (`- [ ]` lines, each one small step). Do not change any code; stop for review when the spec is written. When the tasks are done later, tick each box right after finishing it (one edit per task) and mark the one you are on with \" (in progress)\".\n\nRequest: $request"
 
-fun planGoalPrompt(path: String) = "/goal every step of the plan in $path is done: work through it in order and note in the file which steps are finished."
-
-
-fun sketchSpecPrompt(path: String) = "Start the agentview:designer subagent on the spec at $path. Give it only that path; it writes the sketch to .claude/sketches/<slug>.html. Reply with the sketch path."
-
-fun buildSpecPrompt(path: String) = "Run the agentview:build skill on the existing spec at $path (call the Skill tool with skill \"agentview:build\"). Use the file name as the slug and the spec's title as the brief; the pm starts from that file and changes it only where review finds a problem."
-
-fun buildItemPrompt(title: String, why: String, slug: String) = "Run the agentview:build skill on the backlog item below (call the Skill tool with skill \"agentview:build\"). No spec exists yet: the pm agent writes it first to .claude/specs/$slug.md, then the build continues. Use $slug as the slug.\n\n<brief>\n$title. $why\n</brief>"
-
-fun planCondition(path: String, markdown: String) = if (specTasks(markdown).any { !it.done }) runAllPrompt(path) else planGoalPrompt(path)
-
-fun runAllPrompt(path: String) = "/goal every task in $path is ticked: do them in order. While you work on one, append \" (in progress)\" to its line; when done, tick its box and remove that suffix in one edit before the next."

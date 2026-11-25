@@ -3,7 +3,6 @@ package no.pradhan.agentview.nativeapp.chat
 import no.pradhan.agentview.nativeapp.codex.codexZone
 import no.pradhan.agentview.nativeapp.net.CommandInfo
 import no.pradhan.agentview.nativeapp.net.ModelInfo
-import no.pradhan.agentview.nativeapp.net.READ_ONLY_SENT
 import no.pradhan.agentview.nativeapp.net.SessionInfo
 import no.pradhan.agentview.nativeapp.sessions.SavedSession
 import no.pradhan.agentview.nativeapp.workspace.appendPrompt
@@ -91,22 +90,6 @@ class ComposerLogicTest {
         assertEquals("default", startModeFor("plan", "codex"))
         assertEquals("plan", startModeFor("plan", "claude"))
         assertNull(startModeFor(null, "codex"))
-    }
-
-    @Test
-    fun buildSendsTheTrimmedBriefOrShowsANotice() {
-        assertEquals(BuildStep.Send("!ls"), buildStep("  !ls\n", 0, false))
-        assertEquals(BuildStep.Notice(READ_ONLY_SENT), buildStep("brief", 0, true))
-        assertEquals(BuildStep.Notice("Type the brief in the composer first"), buildStep(" \n", 0, false))
-        assertEquals(BuildStep.Notice("Wait for the upload to finish"), buildStep("brief", 1, false))
-    }
-
-    @Test
-    fun sendAtIsTodayWhileTheTimeIsAheadAndTomorrowOnceItHasPassed() {
-        val now = java.time.ZonedDateTime.of(2026, 11, 9, 14, 0, 0, 0, java.time.ZoneId.of("UTC")).toInstant().toEpochMilli()
-        assertEquals("today", laterDay(22, 0, now, java.time.ZoneId.of("UTC")))
-        assertEquals("tomorrow", laterDay(9, 30, now, java.time.ZoneId.of("UTC")))
-        assertEquals("/loop at 22:00 fix it", loopAt("22:00", "fix it"))
     }
 
     @Test fun offersQuickRepliesOnlyAfterAFinishedQuestion() {

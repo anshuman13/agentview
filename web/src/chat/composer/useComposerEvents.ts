@@ -3,13 +3,11 @@ import { MAC } from '../../app/shell/keys';
 import type { Pick } from '../ChatSettings';
 import { addUse, append, type Use } from './composerLogic';
 
-type Target = { ta: RefObject<HTMLTextAreaElement | null>; wantCaret: MutableRefObject<number | null>; setText: Dispatch<SetStateAction<string>>; setUses: Dispatch<SetStateAction<Use[]>>; sendBuild: () => void; setPick: Dispatch<SetStateAction<Pick | null>>; root: RefObject<HTMLDivElement | null>; canEffort: boolean };
+type Target = { ta: RefObject<HTMLTextAreaElement | null>; wantCaret: MutableRefObject<number | null>; setText: Dispatch<SetStateAction<string>>; setUses: Dispatch<SetStateAction<Use[]>>; setPick: Dispatch<SetStateAction<Pick | null>>; root: RefObject<HTMLDivElement | null>; canEffort: boolean };
 
 const PICK_KEYS: Record<string, 'model' | 'mode' | 'effort'> = { KeyI: 'model', KeyM: 'mode', KeyE: 'effort' };
 
-export function useComposerEvents({ ta, wantCaret, setText, setUses, sendBuild, setPick, root, canEffort }: Target) {
-  const build = useRef(sendBuild);
-  build.current = sendBuild;
+export function useComposerEvents({ ta, wantCaret, setText, setUses, setPick, root, canEffort }: Target) {
   const effortAllowed = useRef(canEffort);
   effortAllowed.current = canEffort;
 
@@ -25,12 +23,6 @@ export function useComposerEvents({ ta, wantCaret, setText, setUses, sendBuild, 
     };
     window.addEventListener('agentview:insert', insert);
     return () => window.removeEventListener('agentview:insert', insert);
-  }, []);
-
-  useEffect(() => {
-    const run = () => build.current();
-    window.addEventListener('agentview:build', run);
-    return () => window.removeEventListener('agentview:build', run);
   }, []);
 
   useEffect(() => {

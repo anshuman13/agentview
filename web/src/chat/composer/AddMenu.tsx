@@ -6,17 +6,14 @@ import { plural } from '../../ui/util';
 import type { Pick } from '../ChatSettings';
 import { useCan } from '../useCan';
 import { useModeText } from './ComposerFoot';
-import { SendAtMenu } from './SendAt';
 
-type AddMenuProps = { uploading: number; setPick: (p: Pick) => void; attach: (list: File[]) => Promise<void>; laterable: boolean; sendLater: (time: string) => void };
+type AddMenuProps = { uploading: number; setPick: (p: Pick) => void; attach: (list: File[]) => Promise<void> };
 
-export function AddMenu({ uploading, setPick, attach, laterable, sendLater }: AddMenuProps) {
+export function AddMenu({ uploading, setPick, attach }: AddMenuProps) {
   const [open, setOpen] = useState(false);
-  const [later, setLater] = useState(false);
   const trigger = useRef<HTMLButtonElement>(null);
   const picker = useRef<HTMLInputElement>(null);
   const canMcp = useCan('mcp');
-  const canBuild = useCan('build');
   const connected = useStore((s) => s.session.mcp).some((m) => m.status === 'connected');
   const modeText = useModeText();
   const pickAt = (kind: Pick['kind']) => () => {
@@ -39,12 +36,9 @@ export function AddMenu({ uploading, setPick, attach, laterable, sendLater }: Ad
         <Menu trigger={trigger} onClose={() => setOpen(false)}>
           <MenuItem icon="file-add" onClick={() => { setOpen(false); picker.current?.click(); }}>Add files</MenuItem>
           {canMcp && connected && <MenuItem icon="plug" onClick={pickAt('mcp')}>Use an MCP server</MenuItem>}
-          {canBuild && <MenuItem icon="tools" onClick={() => { setOpen(false); window.dispatchEvent(new CustomEvent('agentview:build')); }}>Build the brief</MenuItem>}
-          {laterable && <MenuItem icon="clock" onClick={() => { setOpen(false); setLater(true); }}>Send at</MenuItem>}
           <MenuItem icon="settings-gear" onClick={pickAt('menu')}>Model and mode · {modeText}</MenuItem>
         </Menu>
       )}
-      {later && <SendAtMenu trigger={trigger} onClose={() => setLater(false)} sendLater={sendLater} />}
     </div>
   );
 }

@@ -11,10 +11,9 @@ import { FileIcon } from '../../workspace/FileIcon';
 import { AlarmCard } from './AlarmCard';
 import { SketchCard } from './SketchCard';
 import { DocCard } from './DocCard';
-import { SpecCard, SpecRow } from './SpecCard';
 import { LinkAction, TranscriptBox } from './Box';
 import { FindBar, findPending, markHit, takeFind, type FindRequest } from './FindBar';
-import { showTurn, turnPending } from '../../sessions/goalLogic';
+import { showTurn, turnPending } from '../../sessions/openChat';
 import { readBox, saveBox } from './boxOpen';
 import { RewindLink } from './Rewind';
 import { createFoldBuilder, openWork, proposalState, usedClaimState, type Claim, type FoldRow, type Proposal } from './workFold';
@@ -24,7 +23,7 @@ import { MEMORY } from '../../codex/wiki/shared';
 import { replaceTarget } from '../../../../shared/claimActions';
 import { Badge } from '../../ui/Badge';
 import { agentSummary } from '../../sessions/agents';
-import { ALARM_TOOL, createTranscriptBuilder, denied, exploreLabel, exploreRuns, dayDividers, duration, newMarker, newReplies, openAtNew, rewindReplies, turnAnswers, firstLine, itemSpecSlug, relPath, specBumps, specCards, docCards, isDocFile, stepLabel, stepTone, type Item, type Rewind, type StepItem, type ToolResult, type ToolUse } from './steps';
+import { ALARM_TOOL, createTranscriptBuilder, denied, exploreLabel, exploreRuns, dayDividers, duration, newMarker, newReplies, openAtNew, rewindReplies, turnAnswers, firstLine, relPath, docCards, isDocFile, stepLabel, stepTone, type Item, type Rewind, type StepItem, type ToolResult, type ToolUse } from './steps';
 import { clickOnKey, command, plural, pressable } from '../../ui/util';
 import { useCan } from '../useCan';
 import { copyPrompt, copyReply } from '../chatActions';
@@ -33,7 +32,6 @@ import { MemoryPick } from '../cards/Memory';
 import { failedLine, userParts } from '../composer/composerLogic';
 import { billing, providerLabel } from '../../../../shared/providers';
 import { isSketchPath } from '../../../../shared/sketches';
-import { isRepoSpec, specSlug } from '../../../../shared/specTasks';
 import { FIRST_ROWS, hiddenCount, needsEarlier, revealMore, stageRows, windowStart } from './window';
 import { ROW_WINDOW, type ChatEvent } from '../../../../shared/protocol';
 import { quoteText } from '../../../../shared/composerText';
@@ -278,7 +276,7 @@ function TranscriptView({ sessionId, events, earlier, cwd, running, bill, failed
   const rewinds = useMemo(() => rewindReplies(items), [items]);
   const answers = useMemo(() => turnAnswers(items, running), [items, running]);
   const replyCount = useMemo(() => items.filter((it) => it.kind === 'assistant').length, [items]);
-  const cards = useMemo(() => new Set([...specCards(items), ...docCards(items)]), [items]);
+  const cards = useMemo(() => docCards(items), [items]);
   const [fold] = useState(createFoldBuilder);
   const list = useMemo<FoldRow[]>(() => fold(items, events, cards).filter((r) => r.kind === 'item' || r.steps.length > 0 || r.work.tools > 0), [fold, items, events, cards]);
   const { shown, start, from, staging, loading, showEarlier, reveal } = useRowWindow(list.length, replyCount, earlier, box, scroll.stick);
@@ -323,7 +321,6 @@ function TranscriptView({ sessionId, events, earlier, cwd, running, bill, failed
     return () => window.removeEventListener('agentview:show-prompt', show);
   }, []);
   const runs = useMemo(() => exploreRuns(items), [items]);
-  const bumps = useMemo(() => specBumps(items), [items]);
   const mark = useSeenMark();
   const days = useMemo(() => dayDividers(items, Date.now()), [items]);
   const newId = useMemo(() => (mark.seen > 0 ? newMarker(items, new Map(events.map((e) => [e.id, e.at])), mark.seen, mark.openedAt) : null), [mark, events.length]);
@@ -343,16 +340,11 @@ function TranscriptView({ sessionId, events, earlier, cwd, running, bill, failed
   const jumpLabel = `Jump to latest${replies > 0 ? ` · ${replies} new ${replies === 1 ? 'reply' : 'replies'}` : ''}`;
   const failText = failed && !running ? failedLine(events, label) : null;
 
-  const rowOf = (it: Item, first: boolean, where: 'flat' | 'shown' | 'hidden') => {
+  const rowOf = (it: Item, first: boolean) => {
     if (!first && folded.has(it.id)) return null;
     const run = runs.get(it.id);
     if (run) return <Explored key={it.id} id={it.id} run={run} cwd={cwd} />;
-    const slug = itemSpecSlug(it);
-    const bump = slug ? bumps.get(slug) ?? 0 : 0;
-    const card = cards.has(it.id);
-    const agentCard = card && it.kind === 'agent' && slug && where !== 'hidden' ? <SpecCard slug={slug} bump={bump} /> : null;
-    if (where === 'shown' && agentCard) return <Fragment key={it.id}>{agentCard}</Fragment>;
-    return <Fragment key={it.id}><Row it={it} cwd={cwd} settled={!running} card={card} answer={answers.has(it.id)} rewind={canRewind && !running ? rewinds.get(it.id) : undefined} bump={card && it.kind === 'file' ? bump : undefined} />{agentCard}</Fragment>;
+    return <Row key={it.id} it={it} cwd={cwd} settled={!running} card={cards.has(it.id)} answer={answers.has(it.id)} rewind={canRewind && !running ? rewinds.get(it.id) : undefined} />;
   };
 
   return (
@@ -367,7 +359,7 @@ function TranscriptView({ sessionId, events, earlier, cwd, running, bill, failed
         const day = r.kind === 'item' ? days.get(r.it.id) : undefined;
         const row = r.kind === 'fold'
           ? <Tasks key={id} row={r} live={running && r.last} />
-          : rowOf(r.it, i === 0, 'shown');
+          : rowOf(r.it, i === 0);
         return day || r === newRow ? <Fragment key={id}>{day && <div className="tr-day"><span>{day}</span></div>}{r === newRow && <div className="tr-new"><span>New</span></div>}{row}</Fragment> : row;
       })}
       {failText && <EndLine key={events.length} text={failText} label="Retry" onPress={() => send({ type: 'retry' })} />}
@@ -413,17 +405,7 @@ function sameItem(a: Item, b: Item): boolean {
   }
 }
 
-export const Row = memo(RowImpl, (p, n) => p.cwd === n.cwd && p.settled === n.settled && p.card === n.card && p.answer === n.answer && p.rewind?.id === n.rewind?.id && p.bump === n.bump && sameItem(p.it, n.it));
-
-function AutoRow({ it }: { it: Extract<Item, { kind: 'auto' }> }) {
-  const [open, setOpen] = useState(false);
-  return (
-    <div id={`turn-${it.id}`} className="tr-auto" {...pressable(() => setOpen((v) => !v))} title={open ? 'Hide the prompt' : 'Show the full prompt'}>
-      <Icon name={open ? 'chevron-down' : 'chevron-right'} small />{it.label}
-      {open && <div className="tr-auto-text">{it.text}</div>}
-    </div>
-  );
-}
+export const Row = memo(RowImpl, (p, n) => p.cwd === n.cwd && p.settled === n.settled && p.card === n.card && p.answer === n.answer && p.rewind?.id === n.rewind?.id && sameItem(p.it, n.it));
 
 const FOLD_LINES = 6;
 
@@ -539,13 +521,11 @@ function ProposedClaims({ proposed }: { proposed: Proposal[] }) {
   );
 }
 
-function RowImpl({ it, cwd, settled, card, answer, rewind, bump = 0 }: { it: Item; cwd: string; settled?: boolean; card?: boolean; answer?: boolean; rewind?: Rewind; bump?: number }) {
+function RowImpl({ it, cwd, settled, card, answer, rewind }: { it: Item; cwd: string; settled?: boolean; card?: boolean; answer?: boolean; rewind?: Rewind }) {
   const label = useStore((s) => providerLabel(s.session.provider));
   switch (it.kind) {
     case 'user':
       return <div id={`turn-${it.id}`} className={`tr-user ${it.stopping ? 'stopping' : ''} ${it.queued ? 'queued' : ''}`}>{it.voice && <span className="tr-mic" title="Spoken"><Icon name="mic" small /></span>}<UserText id={it.id} text={it.text} />{it.stopping && <span className="tr-stop"><Icon name="loading" small spin />{`Stopping ${label} to send this`}</span>}{it.queued && <span className="tr-stop"><Icon name="clock" small />{`Waiting for ${label}'s next step`}<Button variant="plain" size="sm" className="tl-send-now" title={`Stop ${label}'s current step and send this now`} onClick={() => send({ type: 'send_now', id: it.id })}>Send now</Button></span>}{!it.stopping && !it.queued && <span className="tr-acts"><IconButton icon="reply" label="Use again" onClick={() => window.dispatchEvent(new CustomEvent('agentview:insert', { detail: { text: it.text } }))} /><IconButton icon="copy" label="Copy" onClick={() => copyPrompt(it.text)} /></span>}</div>;
-    case 'auto':
-      return <AutoRow it={it} />;
     case 'assistant':
       return <div id={`turn-${it.id}`} className={`tr-assistant ${it.streaming ? 'streaming' : ''}`}><Markdown text={it.text} id={it.streaming ? undefined : it.id} />{!it.streaming && (answer || rewind) && <div className="tr-acts">{answer && <IconButton icon="copy" label="Copy" onClick={() => copyReply(it.text.trim())} />}{rewind && <RewindLink rewind={rewind} />}</div>}</div>;
     case 'system':
@@ -556,8 +536,7 @@ function RowImpl({ it, cwd, settled, card, answer, rewind, bump = 0 }: { it: Ite
     case 'file':
       if (isSketchPath(it.path) && !it.error) return <SketchCard path={it.path} meta={fileMeta(it, 'Sketch')} />;
       if (card && isDocFile(it.path) && !it.error) return <DocCard it={it} cwd={cwd} />;
-      if (!isRepoSpec(it.path, cwd) || it.error) return <FileCard it={it} cwd={cwd} />;
-      return card ? <SpecCard slug={specSlug(it.path)} path={it.path} bump={bump} /> : <SpecRow slug={specSlug(it.path)} meta={fileMeta(it, 'Spec')} />;
+      return <FileCard it={it} cwd={cwd} />;
     case 'agent':
       return <AgentRow it={it} cwd={cwd} />;
     case 'blocked':

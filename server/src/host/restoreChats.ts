@@ -21,16 +21,14 @@ export async function restoreChats() {
     const job = runs.jobOfSession(s.sessionId);
     if (job) runs.update(job.id, { chatId: chat.id });
     if (s.crons.length) chat.wakeups.restore(s.crons);
-    if (s.repeat) chat.resumeRepeat(s.repeat);
     if (s.stopped) chat.resumeStopped(s.stopped);
     for (const q of s.queued ?? []) void chat.prompt(q.text, q.id);
   }));
   await rm(RESTORE, { force: true });
-  // A run that no restored loop or goal took back has no chat to go on in; a job run stays while its chat came back or it waits for review.
-  const taken = [...live.values()].map(({ chat }) => chat.state.session.repeat?.runId).concat(hub.unrestored.map((u) => u.repeat?.runId));
+  // A run has no chat to go on in after a restart; a job run stays while its chat came back or it waits for review.
   const sessions = new Set([...live.values()].map(({ chat }) => chat.state.session.sessionId));
   const jobs = runs.list().filter((r) => r.kind === 'job' && (r.review === 'pending' || sessions.has(r.sessionId))).map((r) => r.id);
-  runs.endExcept([...taken, ...jobs], 'AgentView restarted');
+  runs.endExcept(jobs, 'AgentView restarted');
   saveSoon();
   return (saved.view && bySession(saved.view)) || null;
 }

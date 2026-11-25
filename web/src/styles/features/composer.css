@@ -47,9 +47,8 @@
 }
 @media (hover: hover) { :is(.cp-send, .cp-stop, .cp-row .icon-btn.cp-talk):hover:not(:disabled) { background: var(--fg-strong); color: var(--bg); } }
 .cp-send:disabled, .cp-stop:disabled { background: var(--hover); color: var(--fg-faint); cursor: default; }
-.cp-foot .icon-btn:is(.voice, .attach, .mcp, .later) { width: var(--size-xl); height: var(--size-xl); border-radius: var(--radius-round); }
+.cp-foot .icon-btn:is(.voice, .attach, .mcp) { width: var(--size-xl); height: var(--size-xl); border-radius: var(--radius-round); }
 .cp-foot .icon-btn.mcp.on { color: var(--fg); }
-.cp-later-pick { display: flex; flex-direction: column; gap: var(--sp-2); padding: var(--sp-2) var(--sp-4); }
 
 .cp-under { display: flex; flex-wrap: wrap; gap: var(--sp-1) var(--sp-6); padding: 0 var(--sp-2); font-size: var(--fs-xs); line-height: var(--line-xs); color: var(--fg-muted); }
 .cp-hint { flex: none; white-space: nowrap; }
@@ -90,7 +89,7 @@
 @media (max-width: 900px) {
   .cp-card textarea, .cp-mirror { font-size: var(--fs-2xl); line-height: var(--line-lg); }
   .cp-card.shell :is(textarea, .cp-mirror) { font-size: var(--fs-xl); }
-  .cp-send, .cp-stop, .cp-row .icon-btn.cp-talk, .cp-foot .icon-btn:is(.voice, .mcp, .later) { width: var(--touch); height: var(--touch); }
+  .cp-send, .cp-stop, .cp-row .icon-btn.cp-talk, .cp-foot .icon-btn:is(.voice, .mcp) { width: var(--touch); height: var(--touch); }
   .cp-foot { gap: var(--sp-1); padding: var(--sp-1) var(--sp-3) var(--sp-3); }
   .cp-pop li { height: var(--touch); }
   .cp-pop { max-height: min(300px, 45vh); max-height: min(300px, 45dvh); }
@@ -120,7 +119,7 @@
   .cp-card.pill textarea { min-height: var(--touch); }
   .cp-card.pill textarea::placeholder { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .cp-add { position: relative; flex: none; }
-  .cp-add > .icon-btn, .cp-row > :is(.voice:not(.cp-talk), .later) { width: var(--touch); height: var(--touch); border-radius: var(--radius-round); }
+  .cp-add > .icon-btn, .cp-row > :is(.voice:not(.cp-talk)) { width: var(--touch); height: var(--touch); border-radius: var(--radius-round); }
   .cp-add > .ui-menu { top: auto; right: auto; bottom: 100%; left: 0; white-space: nowrap; }
 }
 .cp-quick { display: flex; flex-wrap: wrap; gap: var(--sp-3); padding: 0 0 var(--sp-4); }

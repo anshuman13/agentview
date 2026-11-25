@@ -1,4 +1,3 @@
-import { ADVISORS } from '../../../../shared/advisors';
 import { EFFORT_LABEL, EFFORT_LEVELS, type Effort, type ProviderOption } from '../../../../shared/protocol';
 import { providerModes, type ModeOption } from '../../../../shared/providers';
 import { paletteFeature, shownFeature } from '../../../../shared/featureUse';
@@ -33,7 +32,7 @@ const VIEWS = [
   ['sessions', 'Workspace'],
 ];
 const TABS = [['chat', 'Chat'], ['code', 'Files'], ['term', 'Terminal'], ['browser', 'Browser'], ['agents', 'Agents']];
-export function buildCommands(models: { value: string; displayName: string }[], deploy: boolean, efforts: readonly Effort[] = EFFORT_LEVELS, providers: ProviderOption[] = [], modes: ModeOption[] = providerModes(), doc = false, hidden: string[] = []): Command[] {
+export function buildCommands(models: { value: string; displayName: string }[], deploy: boolean, efforts: readonly Effort[] = EFFORT_LEVELS, providers: ProviderOption[] = [], modes: ModeOption[] = providerModes(), hidden: string[] = []): Command[] {
   return [
     ...VIEWS.map(([id, title]) => ({ id: `view:${id}`, label: `View: Show ${title}` })),
     ...TABS.map(([id, title]) => ({ id: `tab:${id}`, label: `Tab: ${title}` })),
@@ -46,23 +45,18 @@ export function buildCommands(models: { value: string; displayName: string }[], 
     { id: 'page:observe', label: 'View: Observe' },
     ...(deploy ? [{ id: 'page:deploy', label: 'View: Deploy' }] : []),
     { id: 'page:mcp', label: 'View: MCP Servers' },
-    { id: 'page:advisors', label: 'View: Advisors' },
     { id: 'page:sketches', label: 'View: Sketches' },
     { id: 'page:travel', label: 'View: Travel' },
     { id: 'file', label: 'Go to File', key: '⌘P' },
     { id: 'repo', label: 'Chat: Open Repository', key: '⌘O' },
     { id: 'newChat', label: 'Chat: New Chat' },
     ...providers.filter((p) => p.id !== 'claude').map((p) => ({ id: `newChat:${p.id}`, label: `Chat: New ${p.label} Chat${p.enabled ? '' : ` (${p.note})`}` })),
-    ...ADVISORS.map((a) => ({ id: `advisor:${a.id}`, label: `Chat: Talk to ${a.name}` })),
-    { id: 'audit', label: 'Chat: Audit usability' },
     { id: 'forkChat', label: 'Chat: Fork Chat' },
     ...models.map((m) => ({ id: `model:${m.value}`, label: `Model: ${m.displayName}` })),
     ...efforts.map((e) => ({ id: `effort:${e}`, label: `Effort: ${EFFORT_LABEL[e]}` })),
     ...modes.map((m) => ({ id: `mode:${m.value}`, label: `Permission Mode: ${m.label}` })),
     { id: 'compact', label: 'Chat: Compact Context' },
     { id: 'review', label: 'Chat: Toggle Review Changes' },
-    { id: 'goal', label: 'Chat: New goal' },
-    ...(doc ? [{ id: 'goalFile', label: 'File: Run as goal…' }] : []),
     { id: 'spec', label: 'Chat: Start with a spec' },
     { id: 'stop', label: 'Chat: Stop the Agent' },
     { id: 'theme', label: 'Preferences: Toggle Theme' },

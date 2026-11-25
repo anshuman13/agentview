@@ -3,17 +3,12 @@ import { createPortal } from 'react-dom';
 import { Marked } from 'marked';
 import { classHighlighter, highlightCode } from '@lezer/highlight';
 import type { Parser } from '@lezer/common';
-import { isSpecPath, runAllPrompt, specProgress, specTasks, startTaskPrompt, type SpecTask } from '../../../shared/specTasks';
+import { isSpecPath, specProgress, specTasks, startTaskPrompt, type SpecTask } from '../../../shared/specTasks';
 import { sendToChat, setUi } from '../app/store';
 import { imageUrl } from '../chat/chatApi';
-import { appSettings } from '../app/appSettings';
 import { track } from '../app/featureUse';
-import { startGoal } from '../sessions/goalLogic';
-import { Button } from '../ui/Button';
-import { Menu, MenuItem } from '../ui/Menu';
 import { Section } from '../ui/Section';
 import { escapeHtml } from '../ui/util';
-import { shownRunItems } from './docLogic';
 import { DocAsk, BlockEditor, useSelectionAsk } from './DocEdit';
 import { replaceBlock } from '../../../shared/docEdit';
 import { copyText, showSnack } from '../codex/view';
@@ -203,9 +198,6 @@ export function MarkdownDoc({ path, text, onSave }: { path: string; text: string
   const [headings, setHeadings] = useState<Heading[]>([]);
   const [active, setActive] = useState('');
   const last = useRef(path);
-  const [runMenu, setRunMenu] = useState(false);
-  const runBox = useRef<HTMLSpanElement>(null);
-  const runItems = shownRunItems(appSettings.use((s) => s.hiddenFeatures));
   const tasks = useMemo(() => (isSpecPath(path) ? specTasks(text) : []), [path, text]);
   const rendered = useMemo(() => toHtml(text), [text]);
   const [edit, setEdit] = useState<{ i: number; host: HTMLElement } | null>(null);
@@ -315,17 +307,7 @@ export function MarkdownDoc({ path, text, onSave }: { path: string; text: string
     <div className="doc-scroll" ref={scroller}>
       {edit && rendered.blocks[edit.i] && createPortal(<BlockEditor raw={rendered.blocks[edit.i].raw} onSave={saveBlock} onCancel={closeEdit} />, edit.host)}
       {ask.at && <DocAsk path={path} at={ask.at} onDone={ask.clear} open={ask.open} />}
-      {tasks.length > 0 && <Section label="Tasks" count={specProgress(tasks)} action={tasks.some((t) => !t.done) && (runItems.all || runItems.goal) && (
-        <span className="doc-run" ref={runBox}>
-          <Button size="sm" variant="plain" aria-haspopup="menu" aria-expanded={runMenu} onClick={() => setRunMenu(!runMenu)}>Run</Button>
-          {runMenu && (
-            <Menu trigger={runBox} onClose={() => setRunMenu(false)}>
-              {runItems.all && <MenuItem onClick={() => { setRunMenu(false); track('action:runAll'); sendToChat(runAllPrompt(path)); }}>Run all in this chat</MenuItem>}
-              {runItems.goal && <MenuItem onClick={() => { setRunMenu(false); startGoal({ plan: path }); }}>Run as goal…</MenuItem>}
-            </Menu>
-          )}
-        </span>
-      )} />}
+      {tasks.length > 0 && <Section label="Tasks" count={specProgress(tasks)} />}
       <div className="doc-layout">
         <article className="doc" ref={body} onClick={onClick} />
         {outline.length >= 3 && (

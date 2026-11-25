@@ -13,7 +13,7 @@ const { loadOpenRouter, openRouterEnv, openRouterModels, openRouterValue, openRo
 const settings: OpenRouterSettings = { key: 'sk-or-test-1234567890', default: 'sonnet', models: { sonnet: 'vendor/model-a', haiku: 'vendor/model-b' } };
 
 const build = (openrouter: OpenRouterSettings | null) =>
-  agentOptions({ cwd: '/tmp', host: { setStatus: vi.fn() }, chat: () => null, canUseTool: vi.fn() as unknown as CanUseTool, beforeAgent: vi.fn() as unknown as HookCallback, beforeEdit: vi.fn() as unknown as HookCallback, beforeStatus: vi.fn() as unknown as HookCallback, onSubagentStart: vi.fn() as unknown as HookCallback, onPrompt: vi.fn() as unknown as HookCallback, beforeTool: vi.fn() as unknown as HookCallback, afterTool: vi.fn() as unknown as HookCallback, onStop: vi.fn() as unknown as HookCallback, openrouter });
+  agentOptions({ cwd: '/tmp', host: { setStatus: vi.fn() }, chat: () => null, canUseTool: vi.fn() as unknown as CanUseTool, beforeAgent: vi.fn() as unknown as HookCallback, beforeEdit: vi.fn() as unknown as HookCallback, beforeStatus: vi.fn() as unknown as HookCallback, onSubagentStart: vi.fn() as unknown as HookCallback, beforeTool: vi.fn() as unknown as HookCallback, afterTool: vi.fn() as unknown as HookCallback, onStop: vi.fn() as unknown as HookCallback, openrouter });
 
 describe('openrouter', () => {
   it('points the SDK at OpenRouter and gives every slot a model', () => {
@@ -34,11 +34,9 @@ describe('openrouter', () => {
     const on = build(settings);
     expect(on.env).toMatchObject(openRouterEnv(settings));
     expect(on.agents).toEqual({});
-    expect(on.plugins).toBeUndefined();
     const off = build(null);
     expect(off.env?.ANTHROPIC_BASE_URL).toBe(process.env.ANTHROPIC_BASE_URL);
     expect(Object.keys(off.agents ?? {})).toEqual(['big-bro']);
-    expect(off.plugins).toEqual([{ type: 'local', path: expect.stringMatching(/server[\\/]build-kit$/), skipMcpDiscovery: true }]);
   });
 
   it('disallows WebSearch when a slot is not an Anthropic model', () => {

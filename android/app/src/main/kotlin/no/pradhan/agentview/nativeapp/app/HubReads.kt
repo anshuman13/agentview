@@ -10,7 +10,6 @@ import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
-import no.pradhan.agentview.nativeapp.net.ApiError
 import no.pradhan.agentview.nativeapp.net.enc
 import no.pradhan.agentview.nativeapp.net.protocolJson
 import no.pradhan.agentview.nativeapp.chat.MemoryFile
@@ -19,11 +18,6 @@ import no.pradhan.agentview.nativeapp.chat.Todos
 import no.pradhan.agentview.nativeapp.codex.autopilot.parseGitLog
 import no.pradhan.agentview.nativeapp.codex.autopilot.parseRunDiff
 import no.pradhan.agentview.nativeapp.net.ChatRun
-import no.pradhan.agentview.nativeapp.sessions.AdvisorInfo
-import no.pradhan.agentview.nativeapp.sessions.AuditInfo
-import no.pradhan.agentview.nativeapp.sessions.BacklogItem
-import no.pradhan.agentview.nativeapp.chat.SpecHomeItem
-import no.pradhan.agentview.nativeapp.chat.parseBuild
 import no.pradhan.agentview.nativeapp.workspace.DevPort
 import no.pradhan.agentview.nativeapp.workspace.DevScript
 import no.pradhan.agentview.nativeapp.workspace.OpenedPort
@@ -53,11 +47,6 @@ suspend fun Hub.macs(origin: String) = parseMacs(read("/api/connect"), origin)
 suspend fun Hub.searchMessages(q: String): List<MessageHit> = protocolJson.decodeFromString(read("/api/sessions/search?q=${enc(q)}"))
 suspend fun Hub.runDiff(run: String) = parseRunDiff(read("/api/runs/diff?run=${enc(run)}"))
 suspend fun Hub.runCommits(run: ChatRun) = parseGitLog(api.get("/api/git/log?since=${run.startedAt}", run.chatId))
-suspend fun Hub.advisors(): List<AdvisorInfo> = protocolJson.decodeFromString(read("/api/advisors"))
-suspend fun Hub.backlog(root: String): List<BacklogItem> = protocolJson.decodeFromString(read("/api/advisors/backlog?root=${enc(root)}"))
-suspend fun Hub.specs(root: String): List<SpecHomeItem> = protocolJson.decodeFromString(read("/api/advisors/specs?root=${enc(root)}"))
-suspend fun Hub.audit(root: String): AuditInfo? = protocolJson.decodeFromString(read("/api/advisors/audit?root=${enc(root)}"))
-suspend fun Hub.postBuildReview(slug: String, decision: String, phase: String? = null, note: String? = null) { api.postReview(pageChat, slug, decision, phase, note) }
 
 private val linkTitles = ConcurrentHashMap<String, Deferred<String?>>()
 private val linkSlots = Semaphore(3)
@@ -68,6 +57,3 @@ suspend fun Hub.linkTitle(url: String): String? = linkTitles.computeIfAbsent(url
         linkSlots.withPermit { runCatching { protocolJson.parseToJsonElement(read("/api/link-title?url=${enc(url)}")).jsonObject["title"]?.jsonPrimitive?.contentOrNull?.ifEmpty { null } }.getOrNull() }
     }
 }.await()
-
-// The build, or null when the server has no such spec any more.
-suspend fun Hub.build(slug: String) = try { parseBuild(read("/api/builds/one?slug=${enc(slug)}")) } catch (e: ApiError) { if (e.code == 404) null else throw e }

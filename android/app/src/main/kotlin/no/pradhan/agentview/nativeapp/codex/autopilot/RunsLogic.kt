@@ -2,8 +2,6 @@ package no.pradhan.agentview.nativeapp.codex.autopilot
 
 import kotlinx.serialization.Serializable
 import no.pradhan.agentview.nativeapp.codex.clock
-import no.pradhan.agentview.nativeapp.codex.jobs.money
-import no.pradhan.agentview.nativeapp.net.billing
 import no.pradhan.agentview.nativeapp.net.ChatRun
 import no.pradhan.agentview.nativeapp.net.Edits
 import no.pradhan.agentview.nativeapp.net.LiveChat
@@ -19,35 +17,25 @@ import no.pradhan.agentview.nativeapp.ui.DotState
 import no.pradhan.agentview.nativeapp.workspace.PrFile
 import no.pradhan.agentview.nativeapp.ui.agoShort
 
-// Loops, goals, tries and jobs (web/src/chat/composerLogic.ts runLine).
+// Tries and jobs (web/src/chat/composerLogic.ts runLine).
 
-private val KIND = mapOf("loop" to "Loop", "goal" to "Goal", "tries" to "Tries", "job" to "Job")
+private val KIND = mapOf("tries" to "Tries", "job" to "Job")
 
-// A prompt queued with Send at: a one-shot loop that has not fired yet (web sessions/runLogic.ts sendsAt).
-fun sendsAt(run: ChatRun): Long? = run.nextAt.takeIf { run.kind == "loop" && run.once && run.state == "running" && run.round == 0 }
+// The run a chat is on, while it is not done.
+fun activeRun(runs: List<ChatRun>, chatId: String?) = runs.lastOrNull { it.chatId == chatId && it.state != "done" }
 
-// What a waiting loop or goal asked in its last round: the row's meta line carries it after the age (web sessions/runLogic.ts askLine).
+// What a waiting run asked in its last round: the row's meta line carries it after the age (web sessions/runLogic.ts askLine).
 fun askLine(run: LiveRun?): String? = run?.line?.takeIf { run.needsYou && (run.outcome == "question" || run.outcome == "blocked") }
 
-fun runLine(run: ChatRun): String = sendsAt(run)?.let { "Sends at ${clock(it)}" } ?: when {
+fun runLine(run: ChatRun): String = when {
     run.state == "paused" -> if (run.why.isNotEmpty()) "Paused · ${run.why}" else "Paused"
-    run.kind == "goal" -> roundLine("Goal", run)
     run.kind == "tries" -> "Tries · ${run.tries.count { !it.dropped }} chats"
-    run.kind == "job" -> "Job · ${run.branch}"
-    else -> roundLine("Loop", run)
+    else -> "Job · ${run.branch}"
 }
-
-private fun roundLine(word: String, run: ChatRun) = "$word · round ${run.round}" + (if (run.max > 0) " of ${run.max}" else "") + (run.nextAt?.let { " · next ${clock(it)}" } ?: "") + (run.endAt?.let { " · until ${clock(it)}" } ?: "")
-
-fun finishedLine(why: String, endedAt: Long?, ago: (Long) -> String): String? =
-    if (why.isEmpty()) null else why.replaceFirstChar(Char::uppercase) + (endedAt?.let { " · ${ago(it)}" } ?: "")
 
 fun firstRoundText(at: Long?) = "First round" + (at?.let { " ${clock(it)}" } ?: "")
 
 fun nextRoundText(at: Long?) = "Next round" + (at?.let { " ${clock(it)}" } ?: "")
-
-// Web span in shared/util.ts.
-fun everyText(ms: Long) = if (ms % 3_600_000L == 0L) "${ms / 3_600_000L}h" else "${Math.round(ms / 60_000.0)}m"
 
 // One column of the tries board (web/src/sessions/TriesBoard.tsx tryColumn): the try's state, last report, diff size and cost.
 data class TryColumn(val n: Int, val branch: String, val state: String, val line: String, val edits: Edits?, val cost: Double, val archived: Boolean)
@@ -74,40 +62,7 @@ private fun roundOutcome(r: Round) = when {
 
 private fun roundSummary(r: Round) = "Round ${r.n} · ${clock(r.at)} · " + roundOutcome(r)
 
-// A round as every list shows it (web shared/goalText.ts roundText).
-fun roundText(r: Round) = if (r.report != null) "Weekly report" else roundSummary(r)
-
-// Rounds in time order, each run of consecutive quiet rounds (not a weekly report) merged (web shared/goalText.ts mergeQuiet).
-data class RoundGroup(val first: Round, val last: Round, val count: Int, val costUsd: Double)
-
-fun mergeQuiet(rounds: List<Round>): List<RoundGroup> {
-    val groups = mutableListOf<RoundGroup>()
-    for (r in rounds) {
-        val g = groups.lastOrNull()
-        val quiet = r.outcome == "quiet" && r.report == null
-        if (g != null && quiet && g.last.outcome == "quiet" && g.last.report == null) groups[groups.lastIndex] = g.copy(last = r, count = g.count + 1, costUsd = g.costUsd + r.costUsd)
-        else groups.add(RoundGroup(r, r, 1, r.costUsd))
-    }
-    return groups
-}
-
-// How the kept rounds went, by outcome: "2 done · 1 blocked · 8 nothing to do" (web shared/goalText.ts roundsSummary, fixture rounds-summary.json).
-fun roundsSummary(rounds: List<Round>) = listOf("done", "progress", "blocked", "question", "failed", "quiet")
-    .map { o -> o to rounds.count { it.outcome == o } }
-    .filter { it.second > 0 }
-    .joinToString(" · ") { (o, n) -> "$n ${if (o == "quiet") "nothing to do" else o}" }
-
-// The summary and the rounds' total cost: "2 done · 1 blocked · $0.42" (web shared/goalText.ts roundsMeta).
-fun roundsMeta(rounds: List<Round>, provider: String?) = "${roundsSummary(rounds)} · ${money(rounds.sumOf { it.costUsd }, billing(provider))}"
-
-fun roundGroupText(g: RoundGroup) = if (g.count > 1) "Rounds ${g.first.n}-${g.last.n} · ${clock(g.last.at)} · nothing to do" else roundText(g.last)
-
-// A run's rounds as Markdown to paste in a chat or note, oldest first; "" with no rounds (web shared/goalText.ts roundsMarkdown, fixture rounds-markdown.json).
-fun roundsMarkdown(title: String, rounds: List<Round>, provider: String?) = if (rounds.isEmpty()) "" else (
-    listOf("## $title", roundsMeta(rounds, provider), "") + mergeQuiet(rounds).map { "- ${roundGroupText(it)}" }
-).joinToString("\n")
-
-// The loop card's first row (web composerLogic loopNow): the agent's status or the last round, whichever is newer.
+// The run card's first row (web composerLogic loopNow): the agent's status or the last round, whichever is newer.
 data class LoopNow(val title: String, val at: Long?, val source: String, val next: String? = null, val stepsLeft: Int = 0)
 
 fun loopNow(run: ChatRun, now: LiveNow?): LoopNow {
@@ -119,15 +74,14 @@ fun loopNow(run: ChatRun, now: LiveNow?): LoopNow {
     return LoopNow(firstRoundText(run.nextAt), null, "none")
 }
 
-// The meta line of the loop card's first row (web runLogic nowMeta): the status time, the next step, the steps left and the build limit.
-fun nowMeta(now: LoopNow, builds: String): String = listOfNotNull(
+// The meta line of the run card's first row (web runLogic nowMeta): the status time, the next step and the steps left.
+fun nowMeta(now: LoopNow): String = listOfNotNull(
     now.at?.let { clock(it) },
     now.next?.let { "Next: $it" },
     now.stepsLeft.takeIf { it > 0 }?.let { "${plural(it, "step")} left" },
-    builds.ifEmpty { null },
 ).joinToString(" · ")
 
-fun stoppedText(run: ChatRun, running: Boolean) = "${KIND[run.kind] ?: "Loop"} stopped" + if (running && run.round > 0 && (run.kind == "goal" || run.kind == "loop")) " · round ${run.round} was running" else ""
+fun stoppedText(run: ChatRun) = "${KIND[run.kind] ?: "Run"} stopped"
 
 fun outcomeDot(outcome: String) = when (outcome) {
     "blocked", "question" -> DotState.Warn

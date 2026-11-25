@@ -19,8 +19,8 @@ class RunsTest {
     @Before fun zone() { codexZone = ZoneId.of("UTC") }
 
     private fun round(outcome: String) = Round(1, 0, outcome, "x", 0.1)
-    private fun run(id: String, state: String = "running", kind: String = "loop", rounds: List<Round> = emptyList(), why: String = "", endedAt: Long? = null, needsYou: Boolean = false, every: Long? = null) =
-        ChatRun(id, kind, round = 4, max = 20, nextAt = 14 * 3_600_000L + 20 * 60_000L, state = state, why = why, rounds = rounds, endedAt = endedAt, needsYou = needsYou, every = every)
+    private fun run(id: String, state: String = "running", kind: String = "job", rounds: List<Round> = emptyList(), why: String = "") =
+        ChatRun(id, kind, round = 4, nextAt = 14 * 3_600_000L + 20 * 60_000L, state = state, why = why, rounds = rounds, branch = "job/x")
 
     @Test fun askLineIsTheSentenceOfAWaitingQuestionOrBlockedRound() {
         fun live(outcome: String?, needsYou: Boolean = true, line: String? = "Ship it?") = LiveRun("r", needsYou = needsYou, outcome = outcome, line = line)
@@ -39,13 +39,6 @@ class RunsTest {
         assertTrue(Regex("Round 1 · \\d\\d:\\d\\d · progress: round").matches(loopNow(r, LiveNow("Working", 300)).title))
         assertEquals("First round 14:20", loopNow(r.copy(rounds = emptyList()), LiveNow("Old", 50)).title)    }
 
-    @Test fun mergedQuietRoundsReadAsARange() {
-        val q = { n: Int, report: String? -> Round(n, 14 * 3_600_000L, "quiet", "", 0.0, report) }
-        assertEquals("Rounds 4-9 · 14:00 · nothing to do", roundGroupText(mergeQuiet(listOf(q(4, null), q(5, null), q(9, null))).single()))
-        assertEquals("Round 4 · 14:00 · nothing to do", roundGroupText(mergeQuiet(listOf(q(4, null))).single()))
-        assertEquals("Weekly report", roundGroupText(mergeQuiet(listOf(q(4, "t1"))).single()))
-    }
-
     @Test fun triesColumnsFollowTheChatAndItsLastReport() {
         val tries = listOf(RunTry(1, "c1", "s1", "tries/a-1"), RunTry(2, "c2", "s2", "tries/a-2"), RunTry(3, "c3", "s3", "tries/a-3", dropped = true))
         val r = run("t", kind = "tries", rounds = listOf(Round(1, 0, "done", "Try 1: patched it", 0.5), Round(2, 0, "question", "Try 2: which one?", 0.2))).copy(tries = tries)
@@ -56,29 +49,12 @@ class RunsTest {
         assertEquals("Archived", tryColumn(r, tries[2], live).state)
     }
 
-    @Test fun sendsAtNamesAOneShotLoopThatHasNotFired() {
-        val once = run("a").copy(round = 0, once = true)
-        assertEquals("Sends at 14:20", runLine(once))
-        assertEquals(null, sendsAt(once.copy(round = 1)))
-        assertEquals(null, sendsAt(once.copy(once = false)))
-        assertEquals(null, sendsAt(once.copy(state = "paused")))
-    }
-
-    @Test fun stateLineForRunningPausedAndDone() {
-        assertEquals("Loop · round 4 · next 14:20", runLine(run("a").copy(max = 0)))
-        assertEquals("Goal · round 4 of 20 · next 14:20", runLine(run("a", kind = "goal")))
-        assertEquals("Goal · round 4 · next 14:20", runLine(run("a", kind = "goal", every = 3_600_000L).copy(max = 0)))
-        val end = java.util.Calendar.getInstance().apply { set(2026, 10, 9, 21, 0, 0) }.timeInMillis
-        assertEquals("Goal · round 4 · next 14:20 · until 21:00", runLine(run("a", kind = "goal", every = 600_000L).copy(max = 0, endAt = end)))
+    @Test fun stateLineForRunningAndPaused() {
+        assertEquals("Job · job/x", runLine(run("a")))
         assertEquals("Paused · usage limit until 18:00", runLine(run("a", "paused", why = "usage limit until 18:00")))
         assertEquals("Paused", runLine(run("a", "paused")))
-        assertEquals("Loop · round 4 · next 14:20", runLine(run("a", "done").copy(max = 0)))
-    }
-
-    @Test fun plannedEndsStayDoneForNewAndOldReasons() {
-        for (why in listOf("Goal met after 12 rounds", "Stopped at 09:00 · 41 rounds", "Usage cap 100% reached", "Ran for 28 days, start it again to continue", "goal met", "end time 18:00"))
-            assertEquals(why, "Done", goalBadge(run("a", "done", why = why, kind = "goal")).first)
-        assertEquals("Failed", goalBadge(run("a", "done", why = "Not met after 20 rounds", kind = "goal")).first)
+        assertEquals("Tries stopped", stoppedText(run("a", kind = "tries")))
+        assertEquals("Job stopped", stoppedText(run("a")))
     }
 
     @Test fun oldJobPayloadsParse() {

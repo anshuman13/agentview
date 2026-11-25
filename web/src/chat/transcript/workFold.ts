@@ -3,12 +3,12 @@ import { costRise } from '../../../../shared/cost';
 import type { ChatEvent } from '../../../../shared/protocol';
 import { isSketchPath } from '../../../../shared/sketches';
 import { money, plural } from '../../ui/util';
-import { ALARM_TOOL, denied, duration, firstLine, MEMORY_FILE, specCards, type Item } from './steps';
+import { ALARM_TOOL, denied, docCards, duration, firstLine, MEMORY_FILE, type Item } from './steps';
 
 export type Work = { tools: number; files: number; agents: number; failed: number; ms: number; cost: number; note?: string };
 
 // What a fold without tool work holds: the one note's first line, else their count.
-const noteOf = (it: Item) => (it.kind === 'auto' ? it.label : 'text' in it ? firstLine(it.text) : '');
+const noteOf = (it: Item) => ('text' in it ? firstLine(it.text) : '');
 const notes = (items: Item[]) => (items.length === 1 ? noteOf(items[0]) : '') || (items.length > 0 ? plural(items.length, 'note') : '');
 
 export type FoldRow =
@@ -140,7 +140,7 @@ function workOf(items: Item[], span: Span): Work {
 
 // Splits the rows into turns, one per prompt, and moves the work of each into one fold placed above its last reply, or at its end while there is no reply.
 // Android WorkFold.kt foldTurns says the same.
-export function foldTurns(items: Item[], events: ChatEvent[], cards = specCards(items)): FoldRow[] {
+export function foldTurns(items: Item[], events: ChatEvent[], cards = docCards(items)): FoldRow[] {
   const prompts = new Set(events.filter((e) => e.kind === 'user').map((e) => e.id));
   const span = spans(events);
   const steps = stepsByTurn(events);
@@ -160,7 +160,6 @@ export function foldTurns(items: Item[], events: ChatEvent[], cards = specCards(
       const shown = prompts.has(it.id) || i === reply || it.kind === 'blocked' || it.kind === 'review'
         || (it.kind === 'system' && Boolean(it.error))
         || (it.kind === 'file' && !it.error && (isSketchPath(it.path) || cards.has(it.id)))
-        || (it.kind === 'agent' && cards.has(it.id))
         || (it.kind === 'step' && it.use.name === ALARM_TOOL);
       if (!shown || it.kind === 'agent') hidden.push(it);
       if (shown) rows.push({ kind: 'item', it });
@@ -197,7 +196,7 @@ const rowKey = (r: FoldRow) => (r.kind === 'item' ? `item:${r.it.id}` : `fold:${
 // foldTurns that hands back the previous row object for every row that came out the same, so an append changes only the rows of its own turn.
 export function createFoldBuilder() {
   let prev = new Map<string, FoldRow>();
-  return (items: Item[], events: ChatEvent[], cards = specCards(items)): FoldRow[] => {
+  return (items: Item[], events: ChatEvent[], cards = docCards(items)): FoldRow[] => {
     const rows = foldTurns(items, events, cards).map((r) => {
       const old = prev.get(rowKey(r));
       return old && sameRow(old, r) ? old : r;

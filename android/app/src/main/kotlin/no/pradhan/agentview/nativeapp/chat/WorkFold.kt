@@ -174,7 +174,7 @@ fun foldTurns(items: List<Item>, events: List<ChatEvent>): List<FoldRow> {
     val prompts = events.filter { it.kind == "user" }.mapTo(HashSet()) { it.id }
     val span = spans(events)
     val steps = stepsByTurn(events)
-    val cards = specCardIds(items) + docCardIds(items)
+    val cards = docCardIds(items)
     val groups = mutableListOf<MutableList<Item>>()
     for (it in items) {
         if (it.id in prompts || groups.isEmpty()) groups.add(mutableListOf())
@@ -191,7 +191,6 @@ fun foldTurns(items: List<Item>, events: List<ChatEvent>): List<FoldRow> {
             val shown = it.id in prompts || i == reply || it is Item.Blocked || it is Item.Review ||
                 (it is Item.System && it.error) ||
                 (it is Item.File && it.error == null && (isSketchPath(it.path) || it.id in cards)) ||
-                (it is Item.Agent && it.id in cards) ||
                 (it is Item.Step && it.use.name == ALARM_TOOL)
             if (!shown || it is Item.Agent) hidden += it
             if (shown) rows += FoldRow.Row(it)

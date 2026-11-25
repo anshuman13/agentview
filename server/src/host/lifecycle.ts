@@ -16,7 +16,7 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const CODE = () => codeHash(path.join(here, 'main.ts'), [path.resolve(here, '../../package.json')]);
 const BOOT_CODE = CODE();
 
-const idle = (chat: AgentSession) => !busy(chat) && chat.crons.length === 0 && !chat.state.session.repeat && !runs.activeFor(chat.id) && chat.state.pending.length === 0 && viewers(chat) === 0 && chat !== hub.lastViewed;
+const idle = (chat: AgentSession) => !busy(chat) && chat.crons.length === 0 && !runs.activeFor(chat.id) && chat.state.pending.length === 0 && viewers(chat) === 0 && chat !== hub.lastViewed;
 
 const anyBusy = () => [...live.values()].some(({ chat }) => busy(chat));
 
@@ -36,9 +36,8 @@ export function restart(now: boolean, force: boolean) {
   if (now) return saveAndExit();
   if (hub.restarting) return true;
   broadcast({ type: 'restarting' });
-  for (const { chat } of live.values()) chat.repeater.hold();
   // Background agents and tasks live in the Claude process, so they hold the restart too.
-  // A turn that never ends (a card nobody answers) must not hold the restart and every loop for good.
+  // A turn that never ends (a card nobody answers) must not hold the restart for good.
   const deadline = Date.now() + 10 * 60_000;
   hub.restarting = setInterval(() => {
     if (Date.now() > deadline || !anyBusy()) saveAndExit();

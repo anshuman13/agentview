@@ -11,7 +11,7 @@ import { START_MODES, checkedModel, newestModels } from '../../../shared/provide
 import type { Provider } from '../../../shared/protocol';
 import { UNTITLED } from '../../../shared/util';
 import { dirChoices, since, useWorkspace } from './folders';
-import { openChat } from './goalLogic';
+import { openChat } from './openChat';
 
 // The sheet behind the new chat buttons (Android NewChatSheet): the repo when none is given (the open chat's first), and the model, which starts on the last one used, else the provider's default (its first model, which the chat gets when none is sent).
 export function NewChatSheet({ repo: fixed, onClose }: { repo?: string; onClose: () => void }) {

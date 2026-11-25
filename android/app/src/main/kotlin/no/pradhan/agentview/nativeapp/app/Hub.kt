@@ -10,12 +10,10 @@ import no.pradhan.agentview.nativeapp.net.Outbox
 import no.pradhan.agentview.nativeapp.net.PrefsKeyValue
 import no.pradhan.agentview.nativeapp.net.ProviderOption
 import no.pradhan.agentview.nativeapp.net.READ_ONLY_OPEN
-import no.pradhan.agentview.nativeapp.net.READ_ONLY_SENT
 import no.pradhan.agentview.nativeapp.net.ServerMessage
 import no.pradhan.agentview.nativeapp.net.TranscriptDisk
 import no.pradhan.agentview.nativeapp.net.Writes
 import no.pradhan.agentview.nativeapp.net.enc
-import no.pradhan.agentview.nativeapp.net.openAdvisorCmd
 import no.pradhan.agentview.nativeapp.net.openSessionCmd
 import no.pradhan.agentview.nativeapp.net.parseMessage
 import no.pradhan.agentview.nativeapp.net.phoneAlarmResultCmd
@@ -48,7 +46,6 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.emptyFlow
-import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
@@ -72,16 +69,11 @@ import no.pradhan.agentview.nativeapp.chat.parseModels
 import no.pradhan.agentview.nativeapp.codex.CodexStore
 import no.pradhan.agentview.nativeapp.codex.WORK
 import no.pradhan.agentview.nativeapp.codex.meetings.parseResolved
-import no.pradhan.agentview.nativeapp.codex.autopilot.GoalPreset
-import no.pradhan.agentview.nativeapp.codex.autopilot.GoalSheet
-import no.pradhan.agentview.nativeapp.codex.autopilot.encodePresets
-import no.pradhan.agentview.nativeapp.codex.autopilot.parsePresets
 import no.pradhan.agentview.nativeapp.codex.needsView
 import no.pradhan.agentview.nativeapp.workspace.Findings
 import no.pradhan.agentview.nativeapp.workspace.ReviewFindings
 import no.pradhan.agentview.nativeapp.sessions.BinnedSession
 import no.pradhan.agentview.nativeapp.sessions.Workspace
-import no.pradhan.agentview.nativeapp.sessions.advisorOf
 import no.pradhan.agentview.nativeapp.sessions.state
 import no.pradhan.agentview.nativeapp.workspace.appendPrompt
 
@@ -164,7 +156,6 @@ class Hub(internal val app: Application, private val saved: SavedStateHandle) : 
     val link = MutableStateFlow<DeepLink?>(null)
     val sketchSlug = MutableStateFlow<String?>(null)
     val termId = MutableStateFlow<String?>(null)
-    val specSlug = MutableStateFlow<String?>(null)
 
     // Review findings by target, a PR number or "local"; null clears one.
     val findings = MutableStateFlow<Map<String, ReviewFindings>>(emptyMap())
@@ -210,7 +201,6 @@ class Hub(internal val app: Application, private val saved: SavedStateHandle) : 
 
     internal val pullCache = PullCache()
 
-    init { viewModelScope.launch { shell.goalSheet.filterNotNull().collect { track("sheet:goal") } } }
 
     private val foregroundNow = MutableStateFlow(false)
 
@@ -226,13 +216,6 @@ class Hub(internal val app: Application, private val saved: SavedStateHandle) : 
     )
 
     val resolvedQuestions = MutableStateFlow(parseResolved(prefs.getString("questionsResolved", null)))
-
-    val goalPresets = MutableStateFlow(parsePresets(prefs.getString("goalPresets", null)))
-
-    fun saveGoalPresets(list: List<GoalPreset>) {
-        goalPresets.value = list
-        prefs.edit().putString("goalPresets", encodePresets(list)).apply()
-    }
 
     val codexFilter = MutableStateFlow(prefs.getString("codexFilter", null) ?: "all")
 
@@ -359,13 +342,12 @@ class Hub(internal val app: Application, private val saved: SavedStateHandle) : 
 
     // A permission notification gets Allow and Deny, a question one Reply; the kind of request is read from the chat first.
     internal fun notify(n: Notice) {
-        if (n.kind != NoticeKind.Approval) return notifier.post(n, silentNotice(n.kind, n.outcome, LocalTime.now().let { it.hour * 60 + it.minute }, quietWindow(quietHours.value)))
+        if (n.kind != NoticeKind.Approval) return notifier.post(n, silentNotice(n.kind, LocalTime.now().let { it.hour * 60 + it.minute }, quietWindow(quietHours.value)))
         viewModelScope.launch { notifier.post(withContext(Dispatchers.IO) { noticeAsk(api, n) }) }
     }
 
     private fun handle(m: ServerMessage) {
         if (m is ServerMessage.Live && !foreground && notifyOn.value) notices(store.state.value.live, m.chats, muted.value).forEach(::notify)
-        if (m is ServerMessage.Approval && !foreground && notifyOn.value) notifier.post(Notice(NoticeKind.Approval, m.chat, m.title, "Spec waiting for your approval", slug = m.slug))
         if (m is ServerMessage.Error) notice.value = m.text
         if (m is ServerMessage.PhoneAlarm) setPhoneAlarm(m)
         if (m is ServerMessage.Findings) setFindings(m.review.target, m.review)
@@ -447,7 +429,6 @@ class Hub(internal val app: Application, private val saved: SavedStateHandle) : 
     fun retry() = stream.start()
 
     fun open(id: String) {
-        specSlug.value = null
         saved[CHAT_KEY] = id
         showChat(store, id)
         markSeen(store.state.value.live.firstOrNull { it.id == id }?.sessionId)
@@ -461,19 +442,6 @@ class Hub(internal val app: Application, private val saved: SavedStateHandle) : 
         val chat = store.state.value.live.firstOrNull { it.sessionId == sessionId }
         if (chat != null) { open(chat.id); return true }
         return switchTo(openSessionCmd(sessionId)) != null
-    }
-
-    suspend fun openAdvisor(id: String, fresh: Boolean): Boolean {
-        val chat = if (fresh) null else store.state.value.live.firstOrNull { advisorOf(it.cwd)?.id == id }
-        if (chat != null) { open(chat.id); return true }
-        if (readOnly) { notice.value = READ_ONLY_OPEN; return false }
-        return switchTo(openAdvisorCmd(id, fresh)) != null
-    }
-
-    // The server sends the prompt to the advisor's chat, behind a running turn, on the hub Mac when advisors run there.
-    suspend fun askAdvisor(id: String, text: String): Boolean {
-        if (readOnly) { notice.value = READ_ONLY_SENT; return false }
-        return switchTo(openAdvisorCmd(id, false, text)) != null
     }
 
     // Sends a command that makes the server show another chat and waits for that chat's init.
@@ -526,12 +494,4 @@ class Hub(internal val app: Application, private val saved: SavedStateHandle) : 
 
     // The chat the workspace pages act on: the one on screen, else the server's last viewed chat.
     val pageChat: String get() = store.state.value.shownId
-
-    // Has the open chat's Spec card show its sheet once it loads; given up after 30 s.
-    fun showSpec(slug: String) {
-        specSlug.value = slug
-        viewModelScope.launch { delay(SPEC_LINK_MS); if (specSlug.value == slug) specSlug.value = null }
-    }
 }
-
-private const val SPEC_LINK_MS = 30_000L
