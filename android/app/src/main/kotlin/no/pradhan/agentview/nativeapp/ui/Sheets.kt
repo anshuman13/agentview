@@ -68,9 +68,16 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 
 // Bottom sheet (web Sheet): a card that rises over a scrim, with a drag handle and a title row. With `onBack`, system Back calls it instead of closing the sheet.
+// With `motion`, it opens and closes with the shared sheet motion; the content keeps the app's motion.
+@Composable
+fun Sheet(onDismiss: () -> Unit, title: String, padded: Boolean = true, full: Boolean = true, count: String? = null, action: (@Composable () -> Unit)? = null, onBack: (() -> Unit)? = null, scroll: ScrollState = rememberScrollState(), motion: Boolean = false, content: @Composable ColumnScope.() -> Unit) {
+    if (!motion) return SheetBody(onDismiss, title, padded, full, count, action, onBack, scroll, content)
+    SheetMotion { keep -> SheetBody(onDismiss, title, padded, full, count, action, onBack, scroll) { val col = this; keep { col.content() } } }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun Sheet(onDismiss: () -> Unit, title: String, padded: Boolean = true, full: Boolean = true, count: String? = null, action: (@Composable () -> Unit)? = null, onBack: (() -> Unit)? = null, scroll: ScrollState = rememberScrollState(), content: @Composable ColumnScope.() -> Unit) {
+private fun SheetBody(onDismiss: () -> Unit, title: String, padded: Boolean, full: Boolean, count: String?, action: (@Composable () -> Unit)?, onBack: (() -> Unit)?, scroll: ScrollState, content: @Composable ColumnScope.() -> Unit) {
     val c = av
     ModalBottomSheet(
         onDismissRequest = onDismiss,

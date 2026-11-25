@@ -86,7 +86,7 @@ fun TripSheet(hub: Hub, trip: Trip?, onDismiss: () -> Unit, onSaved: (String) ->
             if (ok) onSaved(id)
         }
     }
-    Sheet(onDismiss, if (trip == null) "New trip" else "Edit trip", full = false) {
+    Sheet(onDismiss, if (trip == null) "New trip" else "Edit trip", full = false, motion = true) {
         TextField(name, { name = it }, Modifier.fillMaxWidth(), placeholder = "Trip, such as Stockholm offsite", singleLine = true)
         DateRow("From", from) { from = it; if (to.isEmpty() || to < it) to = it }
         DateRow("To", to) { to = it }
@@ -108,7 +108,7 @@ fun HomeSheet(hub: Hub, home: String, onDismiss: () -> Unit, onSaved: () -> Unit
             if (ok) { hub.notice.value = "Home address saved"; onSaved(); onDismiss() }
         }
     }
-    Sheet(onDismiss, "Home address", full = false) {
+    Sheet(onDismiss, "Home address", full = false, motion = true) {
         TextField(value, { value = it }, Modifier.fillMaxWidth(), placeholder = "Street, city", singleLine = true)
         Button("Save", { save() }, Modifier.fillMaxWidth().padding(top = Tokens.sp4), variant = ButtonVariant.Filled, enabled = !busy, fill = true)
     }
@@ -140,7 +140,7 @@ fun PlanItemSheet(hub: Hub, trip: Trip, item: PlanItem?, today: String, onDismis
         val next = PlanItem(item?.id ?: "", day, start.trim(), end.trim(), kind, title.trim(), place.trim(), ref.trim())
         write(if (item == null) trip.plan + next else trip.plan.map { if (it.id == item.id) next else it }) {}
     }
-    Sheet(onDismiss, if (item == null) "Add item" else "Edit item", full = false) {
+    Sheet(onDismiss, if (item == null) "Add item" else "Edit item", full = false, motion = true) {
         FlowRow(horizontalArrangement = Arrangement.spacedBy(Tokens.sp2), verticalArrangement = Arrangement.spacedBy(Tokens.sp2)) {
             PLAN_KINDS.forEach { k -> Chip(k.replaceFirstChar { it.uppercase() }, { kind = k }, on = kind == k) }
         }
@@ -182,7 +182,7 @@ fun ReceiptSheet(hub: Hub, r: Receipt, onOpen: () -> Unit, onDismiss: () -> Unit
     val remove = {
         scope.launch { if (hub.travelWrite { api.post("/api/travel/receipt/delete", idJson(r.id)) }) { hub.notice.value = "Receipt deleted"; onSaved(); onDismiss() } }
     }
-    Sheet(onDismiss, if (r.read == "pending") "Claude is reading this receipt…" else r.merchant.ifEmpty { r.name }) {
+    Sheet(onDismiss, if (r.read == "pending") "Claude is reading this receipt…" else r.merchant.ifEmpty { r.name }, motion = true) {
         if (isImage(r)) {
             val img by produceState<ImageBitmap?>(null, r.id) { value = receiptImage(hub, r.id, 1600) }
             img?.let { Image(it, r.name, Modifier.fillMaxWidth().heightIn(max = 360.dp).clickable(onClick = onOpen), contentScale = ContentScale.Fit) }
