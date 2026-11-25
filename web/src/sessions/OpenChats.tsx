@@ -15,6 +15,7 @@ import { byUrgency, chatFinder, chatState, doneChats, findHere, flip, groupByRep
 import { FilterInput } from './FilterInput';
 import { LiveRow, SavedRow, chatActions, metaLine } from './ChatRows';
 import { searchMessages } from './sessionApi';
+import { searchHitRows } from '../../../shared/subChats';
 import { NeedsYou } from './NeedsYou';
 import { NewChatSheet } from './NewChatSheet';
 import { requestFind, takeFind } from '../chat/transcript/FindBar';
@@ -166,11 +167,13 @@ export function OpenChats() {
     <SavedRow key={s.sessionId} s={s} repo={repo} branch={findHere(folders, s.cwd).folder?.repo?.branch} opening={opening === s.sessionId} pinned={pinSet.has(s.sessionId)} onOpen={() => { setOpening(s.sessionId); send({ type: 'open_session', sessionId: s.sessionId }); }} actions={actions} onPin={(on) => setPin(s.sessionId, on)} />
   );
 
-  const openHit = (h: MessageHit) => {
-    requestFind({ sessionId: h.sessionId, query: filter.trim(), at: h.at ? Date.parse(h.at) : null }, h.sessionId === current);
-    if (h.sessionId !== current) {
-      setOpening(h.sessionId);
-      send({ type: 'open_session', sessionId: h.sessionId });
+  // A hit in a sub-chat opens its chat (the latest session) with that sub-chat expanded at the hit.
+  const openHit = (h: ChatHit) => {
+    const here = h.session === root(current);
+    requestFind({ sessionId: h.session, query: filter.trim(), at: h.at ? Date.parse(h.at) : null, ...(h.sub && { sub: h.sub }) }, here);
+    if (!here) {
+      setOpening(h.session);
+      send({ type: 'open_session', sessionId: h.session });
     }
   };
 
@@ -219,7 +222,7 @@ export function OpenChats() {
         {!groups.length && !hits.length && <EmptyState size="sm" icon={filter ? 'search' : 'comment-discussion'} title={filter ? 'No repo or chat matches' : 'No chats yet'} hint={filter ? undefined : 'Chats you start show here'} />}
         {hits.length > 0 && <div className="group">Messages</div>}
         {hits.map((h) => (
-          <Row key={`${h.sessionId}-${h.role}-${h.at}`} title={markSegments(h.text, queryWords(filter)).map((x, i) => (x.hit ? <b key={i}>{x.text}</b> : x.text))} lines={2} meta={messageMeta(h)} className="chat-hit" onClick={() => openHit(h)} />
+          <Row key={h.session} title={markSegments(h.text, queryWords(filter)).map((x, i) => (x.hit ? <b key={i}>{x.text}</b> : x.text))} lines={2} meta={messageMeta({ ...h, title: savedById.get(h.session)?.title || h.title })} className="chat-hit" onClick={() => openHit(h)} />
         ))}
         {!filter && <Bin folders={folders} ask={setAsk} onRestore={(b) => setChats((l) => [{ sessionId: b.sessionId, title: b.title, cwd: b.cwd, gitBranch: null, lastModified: b.lastModified }, ...l])} />}
       </div>
@@ -237,18 +240,19 @@ function GroupGlance({ g, seen }: { g: RepoGroup; seen: Record<string, number> }
   return null;
 }
 
-type MessageHit = { sessionId: string; role: 'user' | 'assistant'; text: string; at: string; title: string };
+type MessageHit = { sessionId: string; parentId?: string; role: 'user' | 'assistant'; text: string; at: string; title: string };
+type ChatHit = ReturnType<typeof searchHitRows<MessageHit>>[number];
 
 export const messageMeta = (h: Pick<MessageHit, 'title' | 'role' | 'at'>) => metaLine(h.title || 'Untitled', h.role === 'user' ? 'You' : 'Agent', h.at ? ago(h.at) : undefined);
 
 // Prompts and replies of every chat matching the sidebar search, from 3 characters.
 function useMessageSearch(filter: string) {
-  const [hits, setHits] = useState<MessageHit[]>([]);
+  const [hits, setHits] = useState<ChatHit[]>([]);
   useEffect(() => {
     const q = filter.trim();
     if (q.length < 3) { setHits([]); return; }
     let live = true;
-    const t = setTimeout(() => searchMessages(q).then((l) => live && setHits(Array.isArray(l) ? l : []), () => live && setHits([])), 300);
+    const t = setTimeout(() => searchMessages(q).then((l) => live && setHits(Array.isArray(l) ? searchHitRows<MessageHit>(l) : []), () => live && setHits([])), 300);
     return () => { live = false; clearTimeout(t); };
   }, [filter]);
   return hits;

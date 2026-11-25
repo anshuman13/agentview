@@ -41,10 +41,12 @@ export function useSubChats(sessionId: string | null) {
     setFeeds((f) => { const { [id]: _, ...rest } = f; return rest; });
   }, [feeds, page]);
 
+  const open = useCallback((id: string) => { if (!feeds[id]) page(id, ''); }, [feeds, page]);
+
   const earlier = useCallback((id: string) => {
     const first = feeds[id]?.events[0];
     if (first && !feeds[id].loading) page(id, first.id);
   }, [feeds, page]);
 
-  return { subs, tasks, feeds, toggle, earlier };
+  return { subs, tasks, feeds, toggle, open, earlier };
 }

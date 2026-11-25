@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Icon } from '../../ui/Icon';
 import { Button, IconButton } from '../../ui/Button';
 import { stepMatch } from '../../ui/util';
-import { loadEarlier } from '../../app/store';
+import { loadEarlier, rootOf } from '../../app/store';
 import { findInChat, findStart } from '../../../../shared/findInChat';
 import { hitBeforeLoaded } from './window';
 import type { ChatEvent } from '../../../../shared/protocol';
@@ -18,7 +18,7 @@ export function markHit(el: HTMLElement) {
 
 export const findLabel = (cur: number, count: number, earlier: number) => `${count ? `${cur + 1} of ${count}` : 'No matches'}${earlier > 0 ? ' · loaded only' : ''}`;
 
-export type FindRequest = { sessionId: string; query: string; at: number | null };
+export type FindRequest = { sessionId: string; query: string; at: number | null; sub?: string };
 
 // A sidebar message hit waiting for its chat: the find bar opens on it once that chat shows. `here` is whether the chat is the one on screen.
 let pending: FindRequest | null = null;
@@ -28,10 +28,13 @@ export function requestFind(r: FindRequest, here: boolean) {
   if (here) window.dispatchEvent(new Event('agentview:find'));
 }
 
-export const findPending = (sessionId: string | null) => pending?.sessionId === sessionId;
+// A hit in a sub-chat names the chat's root, which any of its sessions matches.
+const forChat = (r: FindRequest | null, sessionId: string | null) => !!r && (r.sessionId === sessionId || r.sessionId === rootOf(sessionId));
+
+export const findPending = (sessionId: string | null) => forChat(pending, sessionId);
 
 export function takeFind(sessionId: string | null) {
-  const r = pending?.sessionId === sessionId ? pending : null;
+  const r = forChat(pending, sessionId) ? pending : null;
   if (r) pending = null;
   return r;
 }

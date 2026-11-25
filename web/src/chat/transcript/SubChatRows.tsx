@@ -1,17 +1,38 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { findInChat, findStart } from '../../../../shared/findInChat';
+import { showTurn } from '../../sessions/openChat';
 import { Icon } from '../../ui/Icon';
 import { pressable } from '../../ui/util';
 import { TranscriptBox } from './Box';
+import { markHit, type FindRequest } from './FindBar';
 import { Row } from './Transcript';
 import { createTranscriptBuilder } from './steps';
+import { hitBeforeLoaded } from './window';
 import { foldRows, subChatRow, type SubChat } from './subChatsLogic';
 import { useSubChats, type SubFeed } from './useSubChats';
 
 // The chat's earlier sub-chats as collapsed rows, oldest first; a tap shows that sub-chat's transcript, read-only.
-export function SubChatRows({ sessionId, cwd }: { sessionId: string | null; cwd: string }) {
-  const { subs, tasks, feeds, toggle, earlier } = useSubChats(sessionId);
+// `find` is a message search hit in one of them: that row unfolds and opens, loads earlier pages until the hit's time, and scrolls to it.
+export function SubChatRows({ sessionId, cwd, find, unstick }: { sessionId: string | null; cwd: string; find: FindRequest | null; unstick: () => void }) {
+  const { subs, tasks, feeds, toggle, open, earlier } = useSubChats(sessionId);
   const [unfolded, setUnfolded] = useState(false);
   const { shown, hidden } = foldRows(subs, unfolded);
+  const [seek, setSeek] = useState<FindRequest | null>(null);
+  useEffect(() => setSeek(find), [find]);
+  const target = seek?.sub && subs.some((s) => s.sessionId === seek.sub) ? seek.sub : null;
+  const feed = target ? feeds[target] : undefined;
+  useEffect(() => {
+    if (!seek || !target) return;
+    if (!shown.some((s) => s.sessionId === target)) return setUnfolded(true);
+    if (!feed) return open(target);
+    if (feed.loading) return;
+    if (!feed.error && feed.earlier > 0 && hitBeforeLoaded(feed.events, seek.query, seek.at)) return earlier(target);
+    setSeek(null);
+    const hits = findInChat(feed.events, seek.query, seek.at);
+    if (!hits.length) return;
+    unstick();
+    showTurn(hits[findStart(feed.events, hits, seek.at)], markHit);
+  }, [seek, target, shown, feed]);
   if (!subs.length) return null;
   return (
     <div className="tr-subs">

@@ -290,14 +290,18 @@ function TranscriptView({ sessionId, events, earlier, cwd, running, bill, failed
   const [begun, setBegun] = useState<{ n: number; request: FindRequest | null }>({ n: 0, request: null });
   const chatId = useRef(sessionId);
   chatId.current = sessionId;
+  // A hit in an earlier sub-chat opens that sub-chat's row at the hit instead of the find bar.
+  const [subFind, setSubFind] = useState<FindRequest | null>(null);
   const begin = () => {
     const request = takeFind(chatId.current);
+    if (request?.sub && request.sub !== chatId.current) { setSubFind(request); return 'sub'; }
     if (request) setBegun((b) => ({ n: b.n + 1, request }));
     return request;
   };
   useEffect(() => {
-    if (begin()) setFinding(true);
-    const open = () => { begin(); setFinding(true); document.querySelector<HTMLInputElement>('.tr-find input')?.focus(); };
+    const first = begin();
+    if (first && first !== 'sub') setFinding(true);
+    const open = () => { if (begin() === 'sub') return; setFinding(true); document.querySelector<HTMLInputElement>('.tr-find input')?.focus(); };
     window.addEventListener('agentview:find', open);
     return () => window.removeEventListener('agentview:find', open);
   }, []);
@@ -353,7 +357,7 @@ function TranscriptView({ sessionId, events, earlier, cwd, running, bill, failed
     {finding && <FindBar key={begun.n} events={events} earlier={earlier} start={begun.request} go={goToHit} onClose={() => setFinding(false)} />}
     <div ref={box} className="tr" onScroll={onScroll}>
       <div ref={rows} className="tr-rows">
-      <SubChatRows sessionId={sessionId} cwd={cwd} />
+      <SubChatRows sessionId={sessionId} cwd={cwd} find={subFind} unstick={() => { scroll.stick.current = false; }} />
       {items.length === 0 && <EmptyState size="sm" icon="comment-discussion" title="No messages yet" hint="Your prompts, the agent's steps and replies show up here" />}
       {!staging && (start > 0 || earlier > 0) && <div className="tr-more" {...pressable(() => showEarlier())}>{loading ? <><Icon name="loading" small spin /> Loading earlier…</> : `Show earlier (${hiddenCount(earlier, list.length, shown)} hidden)`}</div>}
       {list.slice(from).map((r, i) => {
