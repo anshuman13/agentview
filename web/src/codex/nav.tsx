@@ -108,7 +108,7 @@ export function AssistantNav({ onPick }: { onPick?: () => void }) {
         <div className="as-seg" role="radiogroup" aria-label="Show work, personal or both">
           {FILTERS.map((f) => <button key={f} role="radio" aria-checked={filter === f} className={filter === f ? 'on' : ''} onClick={() => setView({ filter: f })}>{FILTER_LABEL[f]}</button>)}
         </div>
-        <button className={`as-nav-sync ${dot}`} title="Sync now and show each scan" onClick={() => { setScans(true); void store.syncNow(); }}><span className="as-dot" /><span>{status}</span></button>
+        <button className={`as-nav-sync ${dot}`} title="Sync now and show each scan" onClick={() => { setScans(true); void store.syncNow(); }}><span className="as-dot" aria-hidden /><span>{status}</span></button>
         {paused && <div className="as-nav-paused">{paused}</div>}
         <ScanLines scans={sync.scans} show={scans || !!paused} />
       </div>

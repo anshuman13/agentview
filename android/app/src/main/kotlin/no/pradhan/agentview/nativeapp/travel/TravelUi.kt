@@ -51,6 +51,8 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
@@ -361,7 +363,7 @@ private fun Checklist(hub: Hub, trip: Trip) {
     Group {
         items.forEachIndexed { i, c ->
             if (i > 0) Hairline(lead = true)
-            ListRow(c.text, leading = { AvIcon(if (c.done) "check" else "circle-outline") }, strike = c.done, onClick = if (hub.readOnly) null else ({
+            ListRow(c.text, leading = { AvIcon(if (c.done) "check" else "circle-outline") }, strike = c.done, modifier = Modifier.semantics { stateDescription = if (c.done) "Done" else "Not done" }, onClick = if (hub.readOnly) null else ({
                 flipped = flipped + (c.id to !c.done)
                 scope.launch { if (!hub.travelWrite("Could not save the checklist") { api.post("/api/travel/check", checkJson(trip.id, c.id, !c.done)) }) flipped = flipped + (c.id to c.done) }
             }))

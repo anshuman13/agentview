@@ -160,7 +160,7 @@ function SketchView({ file, device, theme, onDevice, onTheme, onBack }: { file: 
       <div className="bd-head sk-head">
         <Back close={onBack} />
         {!narrow && <IconButton icon="arrow-left" label="Back" onClick={onBack} />}
-        <h2 className="bd-title">{sketchTitle(file.name)}</h2>
+        <h2 className="bd-title" tabIndex={-1}>{sketchTitle(file.name)}</h2>
         <span className="sk-pick">
           {(['desktop', 'phone'] as const).map((d) => <Chip key={d} size="sm" on={device === d} onClick={() => onDevice(d)}>{d === 'desktop' ? 'Desktop' : 'Phone'}</Chip>)}
         </span>
@@ -205,11 +205,15 @@ export function Sketches({ shown }: { shown: boolean }) {
   const file = data?.find((s) => s.name === open);
   const scroller = useRef<HTMLDivElement>(null);
   const listTop = useRef(0);
+  const opener = useRef<HTMLElement | null>(null);
   useLayoutEffect(() => {
     if (scroller.current) scroller.current.scrollTop = file ? 0 : listTop.current;
+    if (file) scroller.current?.querySelector<HTMLElement>('h2')?.focus({ preventScroll: true });
+    else opener.current?.focus({ preventScroll: true });
   }, [!!file]);
   const openSketch = (name: string) => {
     listTop.current = scroller.current?.scrollTop ?? 0;
+    opener.current = document.activeElement as HTMLElement | null;
     flushSync(() => setZoomed(name));
     zoom(() => setOpen(name));
   };

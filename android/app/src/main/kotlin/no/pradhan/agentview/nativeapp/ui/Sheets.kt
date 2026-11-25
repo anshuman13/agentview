@@ -25,6 +25,8 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.Velocity
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
@@ -89,7 +91,7 @@ private fun SheetBody(onDismiss: () -> Unit, title: String, padded: Boolean, ful
         shape = RoundedCornerShape(topStart = Tokens.radiusSheet, topEnd = Tokens.radiusSheet),
         tonalElevation = 0.dp,
         dragHandle = {
-            Box(Modifier.fillMaxWidth().height(Tokens.sp24), contentAlignment = Alignment.Center) {
+            Box(Modifier.fillMaxWidth().height(Tokens.sp24).semantics { contentDescription = "Drag handle" }, contentAlignment = Alignment.Center) {
                 Box(Modifier.size(Tokens.handleWidth, Tokens.handleHeight).clip(RoundedCornerShape(Tokens.radiusXs)).background(c.borderStrong))
             }
         },

@@ -171,7 +171,7 @@ function Checklist({ trip }: { trip: Trip }) {
     <section>
       <Section label="Checklist" count={sectionCount(items.filter((c) => !c.done).length)} />
       <div className="ui-group">
-        {items.map((c) => <Row key={c.id} className={cx('tv-check', c.done && 'done')} leading={<Icon name={c.done ? 'check' : 'circle-outline'} />} title={c.text} onClick={() => flip(c)} />)}
+        {items.map((c) => <Row key={c.id} className={cx('tv-check', c.done && 'done')} leading={<Icon name={c.done ? 'check' : 'circle-outline'} />} title={c.text} aria-pressed={c.done} onClick={() => flip(c)} />)}
       </div>
     </section>
   );
@@ -219,7 +219,7 @@ function TripView({ trip, receipts, home, onBack, reload }: { trip: Trip; receip
         <Back close={onBack} />
         {!narrow && <IconButton icon="arrow-left" label="Back" onClick={onBack} />}
         <div className="tv-title">
-          <h2>{trip.name}</h2>
+          <h2 tabIndex={-1}>{trip.name}</h2>
           {tripDates(trip) && (
             <span className="tv-sub">{tripDates(trip)} · <span className={tripState(trip, today()) === 'now' ? 'tv-now' : undefined}>{tripStateText(trip, today())}</span></span>
           )}
@@ -323,11 +323,15 @@ export function Travel({ shown }: { shown: boolean }) {
   const drop = useFileDrop(fileFromList, !!data && !trip);
   const scroller = useRef<HTMLDivElement>(null);
   const listTop = useRef(0);
+  const opener = useRef<HTMLElement | null>(null);
   useLayoutEffect(() => {
     if (scroller.current) scroller.current.scrollTop = trip ? 0 : listTop.current;
+    if (trip) scroller.current?.querySelector<HTMLElement>('h2')?.focus({ preventScroll: true });
+    else opener.current?.focus({ preventScroll: true });
   }, [!!trip]);
   const openTrip = (id: string) => {
     listTop.current = scroller.current?.scrollTop ?? 0;
+    opener.current = document.activeElement as HTMLElement | null;
     flushSync(() => setZoomed(id));
     zoom(() => setOpen(id));
   };
@@ -340,12 +344,12 @@ export function Travel({ shown }: { shown: boolean }) {
       <TripList trips={data.trips} receipts={data.receipts} filing={filing} cap={cap} narrow={narrow} zoomed={zoomed} archivedOpen={archivedOpen} onArchived={() => setArchivedOpen(!archivedOpen)} onOpen={openTrip} onDrop={fileFiles} onNew={() => setAdding(true)} find={find} />
     </div>
   ) : null;
-  const body = trip ? (
+  const body = list ? (
     <>
-      <TripView trip={trip} receipts={data!.receipts.filter((r) => r.tripId === trip.id)} home={data!.home ?? ''} onBack={closeTrip} reload={reload} />
+      {trip && <TripView trip={trip} receipts={data!.receipts.filter((r) => r.tripId === trip.id)} home={data!.home ?? ''} onBack={closeTrip} reload={reload} />}
       {list}
     </>
-  ) : list ? list : data ? (
+  ) : data ? (
     <div className="tv-empty">
       {cap.inputs}
       <EmptyState icon="briefcase" title="No trips yet. Add one, or start with a receipt" action={<span className="tv-empty-actions">{find}<Button size="sm" icon="add" onClick={() => setAdding(true)}>New trip</Button></span>} />

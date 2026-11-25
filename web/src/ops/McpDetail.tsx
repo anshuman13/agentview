@@ -32,7 +32,7 @@ export function Detail({ row, usage, group, onGroup, onClose }: { row: Row; usag
       <Section
         label={
           <>
-            <span className={`dot ${tone}`} />
+            <span className={`dot ${tone}`} aria-hidden />
             <span className="mcp-detail-name">{shortName(row.name)}</span>
           </>
         }

@@ -215,7 +215,7 @@ private fun SketchThumb(hub: Hub, file: SketchFile, onClick: () -> Unit) {
             val f = load.data
             val dark = when (hub.theme.collectAsState().value) { "dark" -> true; "light" -> false; else -> isSystemInDarkTheme() }
             if (f != null && !f.binary && f.error == null && f.content.length <= MAX_SKETCH) {
-                SketchFrame(remember(f.content, dark) { sketchPage(f.content, if (dark) "dark" else "light", true) }, true, Modifier.fillMaxSize())
+                SketchFrame(remember(f.content, dark) { sketchPage(f.content, if (dark) "dark" else "light", true) }, true, Modifier.fillMaxSize(), thumb = true)
             }
         }
         Box(Modifier.matchParentSize().clearAndSetSemantics {}.clickable(indication = null, interactionSource = null, onClick = onClick))
@@ -279,13 +279,15 @@ private fun WebSettings.asSketch() = object : SketchSettings {
 
 // No scripts, no network, no files and no link taps: the sketch is a picture of its own page.
 @Composable
-internal fun SketchFrame(page: String, desktop: Boolean, modifier: Modifier = Modifier.fillMaxSize()) {
+internal fun SketchFrame(page: String, desktop: Boolean, modifier: Modifier = Modifier.fillMaxSize(), thumb: Boolean = false) {
     AndroidView(
         modifier = modifier,
         factory = { ctx ->
             WebView(ctx).apply {
                 lockSketch(settings.asSketch())
                 visibility = android.view.View.INVISIBLE
+                // A card cover is a picture: the card names it, so screen readers skip the page inside.
+                if (thumb) importantForAccessibility = android.view.View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS
                 webViewClient = object : WebViewClient() {
                     override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest) = true
                     override fun onPageFinished(view: WebView, url: String?) { view.visibility = android.view.View.VISIBLE }

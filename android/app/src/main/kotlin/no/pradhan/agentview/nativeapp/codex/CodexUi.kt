@@ -3,7 +3,10 @@ package no.pradhan.agentview.nativeapp.codex
 import no.pradhan.agentview.nativeapp.ui.UNTITLED
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.selection.toggleable
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
@@ -52,7 +55,7 @@ import no.pradhan.agentview.nativeapp.ui.av
 fun CheckCircle(done: Boolean, label: String, ring: Color? = null, onClick: () -> Unit) {
     val haptic = LocalHapticFeedback.current
     Box(Modifier.size(Tokens.leadWidth), contentAlignment = Alignment.Center) {
-        Box(Modifier.requiredSize(Tokens.touch).clip(CircleShape).clickable(onClickLabel = label) { haptic.performHapticFeedback(HapticFeedbackType.Confirm); onClick() }, contentAlignment = Alignment.Center) {
+        Box(Modifier.requiredSize(Tokens.touch).clip(CircleShape).toggleable(done, role = Role.Checkbox) { haptic.performHapticFeedback(HapticFeedbackType.Confirm); onClick() }.semantics { contentDescription = label }, contentAlignment = Alignment.Center) {
             Box(Modifier.size(Tokens.sizeRow).clip(CircleShape).then(if (done) Modifier.background(av.okContainer) else Modifier.border(Tokens.stroke, ring ?: av.fgFaint, CircleShape)), contentAlignment = Alignment.Center) {
                 if (done) AvIcon("check", null, Tokens.size2xs, tint = av.onOkContainer)
             }

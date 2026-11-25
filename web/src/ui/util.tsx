@@ -111,10 +111,14 @@ export function useEscape(onClose: () => void) {
 }
 
 // While `on`, remembers the focused element and puts focus back there on close, unless focus moved on.
+// It reads the focus while rendering, before a child's autoFocus moves it.
 export function useReturnFocus(on = true) {
+  const opener = useRef<HTMLElement | null>(null);
+  if (!on) opener.current = null;
+  else if (!opener.current) opener.current = document.activeElement as HTMLElement | null;
   useEffect(() => {
     if (!on) return;
-    const back = document.activeElement as HTMLElement | null;
+    const back = opener.current;
     return () => {
       const at = document.activeElement;
       if ((!at || at === document.body) && back?.isConnected) back.focus({ preventScroll: true });

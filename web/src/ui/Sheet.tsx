@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { Back } from '../app/touch/back';
-import { useEscape } from './util';
+import { useEscape, useReturnFocus } from './util';
 import { useSheetDrag } from './useSheetDrag';
 
 const stack: object[] = [];
@@ -16,6 +16,7 @@ export function Sheet({ label, onClose, onBack, className, overlayClassName, act
     stack.push(me);
     return () => { stack.splice(stack.lastIndexOf(me), 1); };
   }, [active]);
+  useReturnFocus();
   // Each Back press pops its history entry, so `backs` remounts Back to push a new one while the sheet stays open.
   const [backs, setBacks] = useState(0);
   const goBack = onBack && (() => { setBacks((n) => n + 1); onBack(); });
