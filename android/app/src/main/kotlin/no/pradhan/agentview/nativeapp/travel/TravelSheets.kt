@@ -140,7 +140,7 @@ fun PlanItemSheet(hub: Hub, trip: Trip, item: PlanItem?, today: String, onDismis
         val next = PlanItem(item?.id ?: "", day, start.trim(), end.trim(), kind, title.trim(), place.trim(), ref.trim())
         write(if (item == null) trip.plan + next else trip.plan.map { if (it.id == item.id) next else it }) {}
     }
-    Sheet(onDismiss, if (item == null) "Add item" else "Edit item", full = false, motion = true) {
+    Sheet(onDismiss, if (item == null) "Add item" else "Edit item", motion = true) {
         FlowRow(horizontalArrangement = Arrangement.spacedBy(Tokens.sp2), verticalArrangement = Arrangement.spacedBy(Tokens.sp2)) {
             PLAN_KINDS.forEach { k -> Chip(k.replaceFirstChar { it.uppercase() }, { kind = k }, on = kind == k) }
         }
