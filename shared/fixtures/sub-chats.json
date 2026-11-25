@@ -1,0 +1,181 @@
+{
+  "rootOf": [
+    { "name": "not a sub-chat", "links": {}, "id": "a", "expected": "a" },
+    { "name": "a sub-chat", "links": { "b": { "parent": "a", "via": "clear", "at": 2 } }, "id": "b", "expected": "a" },
+    { "name": "an older link to another sub-chat", "links": { "b": { "parent": "a", "via": "clear", "at": 2 }, "c": { "parent": "b", "via": "clear", "at": 3 } }, "id": "c", "expected": "a" },
+    { "name": "a loop stops", "links": { "a": { "parent": "b", "via": "clear", "at": 1 }, "b": { "parent": "a", "via": "clear", "at": 2 } }, "id": "a", "expected": "a" }
+  ],
+  "subChatLabel": [
+    { "count": 0, "allBuild": false, "expected": "" },
+    { "count": 1, "allBuild": false, "expected": "1 sub-chat" },
+    { "count": 12, "allBuild": false, "expected": "12 sub-chats" },
+    { "count": 1, "allBuild": true, "expected": "1 task" },
+    { "count": 62, "allBuild": true, "expected": "62 tasks" }
+  ],
+  "groupSessions": [
+    {
+      "name": "no links",
+      "saved": [{ "sessionId": "a", "lastModified": 30 }, { "sessionId": "b", "lastModified": 20 }],
+      "open": [],
+      "expected": [
+        { "root": "a", "latest": "a", "count": 0, "label": "", "lastModified": 30, "members": ["a"] },
+        { "root": "b", "latest": "b", "count": 0, "label": "", "lastModified": 20, "members": ["b"] }
+      ]
+    },
+    {
+      "name": "one chain",
+      "saved": [
+        { "sessionId": "c2", "lastModified": 50, "parentId": "a", "via": "clear", "startedAt": 40 },
+        { "sessionId": "x", "lastModified": 35 },
+        { "sessionId": "c1", "lastModified": 30, "parentId": "a", "via": "clear", "startedAt": 20 },
+        { "sessionId": "a", "lastModified": 10 }
+      ],
+      "open": [],
+      "expected": [
+        { "root": "a", "latest": "c2", "count": 2, "label": "2 sub-chats", "lastModified": 50, "members": ["a", "c1", "c2"] },
+        { "root": "x", "latest": "x", "count": 0, "label": "", "lastModified": 35, "members": ["x"] }
+      ]
+    },
+    {
+      "name": "a build chain",
+      "saved": [
+        { "sessionId": "t2", "lastModified": 50, "parentId": "a", "via": "build", "startedAt": 40 },
+        { "sessionId": "t1", "lastModified": 30, "parentId": "a", "via": "build", "startedAt": 20 },
+        { "sessionId": "a", "lastModified": 10 }
+      ],
+      "open": [],
+      "expected": [{ "root": "a", "latest": "t2", "count": 2, "label": "2 tasks", "lastModified": 50, "members": ["a", "t1", "t2"] }]
+    },
+    {
+      "name": "a mixed chain",
+      "saved": [
+        { "sessionId": "a", "lastModified": 10 },
+        { "sessionId": "t1", "lastModified": 30, "parentId": "a", "via": "build", "startedAt": 20 },
+        { "sessionId": "c1", "lastModified": 50, "parentId": "a", "via": "clear", "startedAt": 40 }
+      ],
+      "open": [],
+      "expected": [{ "root": "a", "latest": "c1", "count": 2, "label": "2 sub-chats", "lastModified": 50, "members": ["a", "t1", "c1"] }]
+    },
+    {
+      "name": "a sub-chat whose parent is in the bin or missing stands on its own",
+      "saved": [
+        { "sessionId": "c1", "lastModified": 30, "parentId": "gone", "via": "clear", "startedAt": 20 },
+        { "sessionId": "b", "lastModified": 20 }
+      ],
+      "open": [],
+      "expected": [
+        { "root": "c1", "latest": "c1", "count": 0, "label": "", "lastModified": 30, "members": ["c1"] },
+        { "root": "b", "latest": "b", "count": 0, "label": "", "lastModified": 20, "members": ["b"] }
+      ]
+    },
+    {
+      "name": "a parent with a live open chat in a new sub-chat",
+      "saved": [
+        { "sessionId": "t1", "lastModified": 30, "parentId": "a", "via": "build", "startedAt": 20 },
+        { "sessionId": "a", "lastModified": 10 },
+        { "sessionId": "b", "lastModified": 40 }
+      ],
+      "open": [{ "sessionId": "live", "parentId": "a", "lastActive": 60 }, { "sessionId": "t1", "parentId": "a", "lastActive": 30 }, { "sessionId": null }],
+      "expected": [
+        { "root": "a", "latest": "live", "count": 2, "label": "2 sub-chats", "lastModified": 60, "members": ["a", "t1", "live"] },
+        { "root": "b", "latest": "b", "count": 0, "label": "", "lastModified": 40, "members": ["b"] }
+      ]
+    }
+  ],
+  "searchHitRows": [
+    {
+      "name": "a hit in a sub-chat opens the parent at the sub-chat",
+      "hits": [{ "sessionId": "t2", "parentId": "a", "text": "found in task 2" }],
+      "expected": [{ "sessionId": "t2", "parentId": "a", "text": "found in task 2", "session": "a", "sub": "t2" }]
+    },
+    {
+      "name": "several hits in one group show as one row with the first snippet",
+      "hits": [
+        { "sessionId": "t2", "parentId": "a", "text": "best" },
+        { "sessionId": "a", "text": "second" },
+        { "sessionId": "b", "text": "other chat" }
+      ],
+      "expected": [
+        { "sessionId": "t2", "parentId": "a", "text": "best", "session": "a", "sub": "t2" },
+        { "sessionId": "b", "text": "other chat", "session": "b" }
+      ]
+    }
+  ],
+  "linkOlder": [
+    {
+      "name": "a single chain",
+      "sessions": [
+        { "sessionId": "a", "cwd": "/r", "branch": "main", "account": "p", "lastAt": 1000 },
+        { "sessionId": "c1", "cwd": "/r", "branch": "main", "account": "p", "lastAt": 5000, "clearAt": 1060 },
+        { "sessionId": "c2", "cwd": "/r", "branch": "main", "account": "p", "lastAt": 9000, "clearAt": 5030 }
+      ],
+      "links": {},
+      "runs": [],
+      "expected": { "c1": { "parent": "a", "via": "clear", "at": 1060 }, "c2": { "parent": "a", "via": "clear", "at": 5030 } }
+    },
+    {
+      "name": "two chats in the same cwd at different times",
+      "sessions": [
+        { "sessionId": "old", "cwd": "/r", "branch": "main", "account": "p", "lastAt": 1000 },
+        { "sessionId": "a", "cwd": "/r", "branch": "main", "account": "p", "lastAt": 500000 },
+        { "sessionId": "c1", "cwd": "/r", "branch": "main", "account": "p", "lastAt": 600000, "clearAt": 500050 }
+      ],
+      "links": {},
+      "runs": [],
+      "expected": { "c1": { "parent": "a", "via": "clear", "at": 500050 } }
+    },
+    {
+      "name": "an ambiguous pair stays unlinked",
+      "sessions": [
+        { "sessionId": "a", "cwd": "/r", "branch": "main", "account": "p", "lastAt": 1000 },
+        { "sessionId": "b", "cwd": "/r", "branch": "main", "account": "p", "lastAt": 1010 },
+        { "sessionId": "c1", "cwd": "/r", "branch": "main", "account": "p", "lastAt": 5000, "clearAt": 1060 }
+      ],
+      "links": {},
+      "runs": [],
+      "expected": {}
+    },
+    {
+      "name": "a build run settles a tie",
+      "sessions": [
+        { "sessionId": "a", "cwd": "/r", "branch": "main", "account": "p", "lastAt": 1000 },
+        { "sessionId": "b", "cwd": "/r", "branch": "main", "account": "p", "lastAt": 1010 },
+        { "sessionId": "c1", "cwd": "/r", "branch": "main", "account": "p", "lastAt": 5000, "clearAt": 1060 }
+      ],
+      "links": {},
+      "runs": [{ "sessionId": "a", "cwd": "/r", "kind": "build", "startedAt": 900, "endedAt": null }],
+      "expected": { "c1": { "parent": "a", "via": "build", "at": 1060 } }
+    },
+    {
+      "name": "a different branch is not linked",
+      "sessions": [
+        { "sessionId": "a", "cwd": "/r", "branch": "feat", "account": "p", "lastAt": 1000 },
+        { "sessionId": "c1", "cwd": "/r", "branch": "main", "account": "p", "lastAt": 5000, "clearAt": 1060 }
+      ],
+      "links": {},
+      "runs": [],
+      "expected": {}
+    },
+    {
+      "name": "a gap over 2 minutes is not linked",
+      "sessions": [
+        { "sessionId": "a", "cwd": "/r", "branch": "main", "account": "p", "lastAt": 1000 },
+        { "sessionId": "c1", "cwd": "/r", "branch": "main", "account": "p", "lastAt": 500000, "clearAt": 122000 }
+      ],
+      "links": {},
+      "runs": [],
+      "expected": {}
+    },
+    {
+      "name": "an unlinked clear continues a recorded chain from its latest member",
+      "sessions": [
+        { "sessionId": "a", "cwd": "/r", "branch": "main", "account": "p", "lastAt": 1000 },
+        { "sessionId": "c1", "cwd": "/r", "branch": "main", "account": "p", "lastAt": 5000, "clearAt": 1060 },
+        { "sessionId": "c2", "cwd": "/r", "branch": "main", "account": "p", "lastAt": 9000, "clearAt": 5030 }
+      ],
+      "links": { "c1": { "parent": "a", "via": "build", "at": 1060 } },
+      "runs": [],
+      "expected": { "c2": { "parent": "a", "via": "clear", "at": 5030 } }
+    }
+  ]
+}
