@@ -10,7 +10,7 @@ import no.pradhan.agentview.nativeapp.ui.agoShort
 import no.pradhan.agentview.nativeapp.ui.isoMillis
 
 @Serializable
-data class MessageHit(val sessionId: String, val role: String, val text: String, val at: String = "", val title: String = "", val cwd: String = "")
+data class MessageHit(val sessionId: String, val role: String, val text: String, val at: String = "", val title: String = "", val cwd: String = "", val parentId: String? = null)
 
 // Searching every chat's prompts and replies starts at 3 characters.
 fun messageQuery(filter: String): String? = filter.trim().takeIf { it.length >= 3 }

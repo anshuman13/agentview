@@ -19,6 +19,9 @@ data class SavedSession(
     val firstPrompt: String? = null,
     val summary: String? = null,
     val provider: String? = null,
+    val parentId: String? = null,
+    val via: String? = null,
+    val startedAt: Long? = null,
 )
 
 @Serializable
