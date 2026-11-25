@@ -99,3 +99,6 @@
   .mcp-page.with-detail { grid-template-columns: minmax(0, 1fr); }
   .mcp-detail { position: absolute; inset: 0; z-index: 2; border-left: 0; }
 }
+
+.mcp-main .mcp-count { font-variant-numeric: tabular-nums; }
+.mcp-main .mcp-off :is(.ui-row-title, .ui-row-lead) { color: var(--fg-muted); }

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'bun:test';
 import type { ChatEvent } from '../../../shared/protocol';
-import { argsOf, fieldsOf, initialValues, mcpCalls, merge, services, stateOf, toolId } from './mcpHelpers';
+import { argsOf, dotTone, fieldsOf, initialValues, mcpCalls, merge, rowNote, services, stateOf, toolId } from './mcpHelpers';
 
 describe('merge', () => {
   it('drops the probe error once the chat has the server connected', () => {
@@ -77,5 +77,19 @@ describe('stateOf', () => {
     expect(stateOf({ status: 'probing' })).toEqual(['waiting', 'Checking']);
     expect(stateOf({ status: 'needs-auth' })).toEqual(['skipped', 'OAuth via Claude']);
     expect(stateOf({ status: 'disabled' })).toEqual(['skipped', 'Disabled']);
+  });
+});
+
+describe('row dot and note', () => {
+  it('tones the dot by status and says why a row is not connected', () => {
+    expect(dotTone({ name: 'a', status: 'connected' })).toBe('ok');
+    expect(dotTone({ name: 'a', status: 'pending' })).toBe('wait');
+    expect(dotTone({ name: 'a', status: 'failed' })).toBe('bad');
+    expect(dotTone({ name: 'a', status: 'needs-auth', live: true })).toBe('warn');
+    expect(dotTone({ name: 'a', status: 'disabled' })).toBe('');
+    expect(rowNote({ name: 'a', status: 'failed', error: 'spawn ENOENT' })).toBe('spawn ENOENT');
+    expect(rowNote({ name: 'a', status: 'disabled' })).toBe('Disabled');
+    expect(rowNote({ name: 'a', status: 'connected', scope: 'project' })).toBe('This repo');
+    expect(rowNote({ name: 'claude.ai Slack', status: 'connected', type: 'claudeai' })).toBe('Claude.ai connector');
   });
 });

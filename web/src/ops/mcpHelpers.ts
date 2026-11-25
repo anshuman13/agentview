@@ -153,7 +153,7 @@ export type Group = 'work' | 'personal';
 // claude.ai connectors belong to the chat's Claude account: main is the personal one, the others are work.
 export const accountGroup = (a: string): Group => (a === 'main' ? 'personal' : 'work');
 export const shortName = (name: string) => name.replace(/^claude\.ai /, '');
-export const hideKey = (s: Service) => `hide:${s.name}`;
+export const hideKey = (s: { name: string }) => `hide:${s.name}`;
 export const groupKey = (r: Row) => splitName(r.name)[0];
 
 export type StatusGroup = 'Connected' | 'Needs login' | 'Failed' | 'Off';
@@ -166,3 +166,15 @@ export const statusGroup = (r: Row): StatusGroup =>
 export const statusGroups = (rows: Row[]): [StatusGroup, Row[]][] =>
   STATUS_GROUPS.map((g): [StatusGroup, Row[]] => [g, rows.filter((r) => statusGroup(r) === g).sort((a, b) => a.name.toLowerCase().localeCompare(b.name.toLowerCase()))])
     .filter(([, rs]) => rs.length > 0);
+
+const TONE: Record<BadgeSpec['status'], string> = { done: 'ok', failed: 'bad', waiting: 'warn', skipped: '', sent: 'ok', late: 'bad', new: '', running: 'busy' };
+// Dot tone for a row: connecting and checking rows shimmer, the rest follow their badge status.
+export const dotTone = (r: Row) => (r.status === 'pending' || r.status === 'probing' ? 'wait' : TONE[stateOf(r)[0]]);
+
+// One line under the name: the error or reason when not connected, else where the server is configured.
+export const rowNote = (r: Row) => {
+  if (r.status === 'failed' && r.error) return r.error;
+  const [status, reason] = stateOf(r);
+  if (status !== 'done') return reason;
+  return r.type === 'claudeai' ? 'Claude.ai connector' : r.scope ? scopeInfo(r.scope)[1] : undefined;
+};

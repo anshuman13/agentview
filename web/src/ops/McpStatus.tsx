@@ -7,7 +7,7 @@ import { EmptyState } from '../ui/Panel';
 import { Section } from '../ui/Section';
 import { useCan } from '../chat/useCan';
 import { ago, useSlot, useTick } from '../ui/util';
-import { accountGroup, groupKey, hideKey, KINDS, mcpCalls, rowKey, services, slug, type Group, type Row, type Service } from './mcpHelpers';
+import { accountGroup, groupKey, hideKey, mcpCalls, rowKey, slug, statusGroups, type Group, type Row, type StatusGroup } from './mcpHelpers';
 import { mcpRows } from './mcpRows';
 import { useCounts } from '../app/shell/counts';
 import { useMcpGroups, useMcpProbe } from './useMcpPage';
@@ -33,7 +33,6 @@ function McpStats({ probed, busy, at, ok, total, attention, onCheck }: Stats) {
 }
 
 const FOLD = 5;
-const rowCount = (of: Service[]) => of.reduce((n, s) => n + s.variants.length, 0);
 
 export function McpPage() {
   const mcp = useStore((s) => s.session.mcp);
@@ -45,25 +44,24 @@ export function McpPage() {
   const { groups, setGroup } = useMcpGroups();
   const [sel, setSel] = useState<string | null>(null);
   const [showHidden, setShowHidden] = useState(false);
-  const [expanded, setExpanded] = useState<Group[]>([]);
+  const [expanded, setExpanded] = useState<StatusGroup[]>([]);
   const { mcp: health } = useCounts();
   useTick(15000);
 
   const rows = useMemo(() => mcpRows(probed, mcp, account, accounts, connectors), [probed, mcp, account, accounts, connectors]);
-  const list = useMemo(() => services(rows).sort((a, b) => KINDS.indexOf(a.kind) - KINDS.indexOf(b.kind)), [rows]);
   const usage = useMemo(() => mcpCalls(getState().events), [toolKey]);
   const usageOf = (r: Row) => usage.get(slug(r.name));
   const current = rows.find((r) => rowKey(r) === sel) ?? null;
   const groupOf = (r: Row): Group => (r.account ? accountGroup(r.account) : groups[groupKey(r)] === 'personal' ? 'personal' : 'work');
-  const hidden = (s: Service) => groups[hideKey(s)] === 'hidden';
-  const shown = list.filter((s) => !hidden(s));
-  const hiddenList = list.filter(hidden);
+  const hidden = (r: Row) => groups[hideKey({ name: groupKey(r) })] === 'hidden';
+  const sections = useMemo(() => statusGroups(rows.filter((r) => !hidden(r))), [rows, groups]);
+  const hiddenList = useMemo(() => statusGroups(rows.filter(hidden)).flatMap(([, rs]) => rs), [rows, groups]);
   const extra = document.getElementById('page-mcp-extra');
   const action = useSlot('page-mcp-action');
   const pick = (name: string) => setSel((s) => (s === name ? null : name));
-  const renderRows = (s: Service, g: Group, isHidden: boolean) => s.variants.map(({ row }) => (
-    <ServiceRow key={rowKey(row)} row={row} selected={rowKey(row) === sel} usage={usageOf(row)} onPick={() => pick(rowKey(row))} group={g} onGroup={(to) => setGroup(groupKey(s.variants[0].row), to)} onHide={() => setGroup(hideKey(s), isHidden ? 'shown' : 'hidden')} isHidden={isHidden} />
-  ));
+  const renderRow = (row: Row, isHidden: boolean) => (
+    <ServiceRow key={rowKey(row)} row={row} selected={rowKey(row) === sel} usage={usageOf(row)} onPick={() => pick(rowKey(row))} group={groupOf(row)} onGroup={(to) => setGroup(groupKey(row), to)} onHide={() => setGroup(hideKey({ name: groupKey(row) }), isHidden ? 'shown' : 'hidden')} isHidden={isHidden} />
+  );
 
   return (
     <div className={`mcp-page ${current ? 'with-detail' : ''}`}>
@@ -78,23 +76,20 @@ export function McpPage() {
           <EmptyState size="sm" icon="plug" title="No MCP servers yet" hint="Servers you add show here" action={<SetupButton kind="mcp" mcpCommand={connectors ? 'claude mcp add' : 'codex mcp add'} />} />
         )}
         {!connectors && <div className="muted">claude.ai connectors load in Claude chats only</div>}
-        {(['work', 'personal'] as Group[]).map((g) => {
-          const mine = shown.filter((s) => groupOf(s.variants[0].row) === g);
-          if (!mine.length) return null;
-          const all = mine.flatMap((s) => renderRows(s, g, false));
-          const folded = !expanded.includes(g) && all.length > FOLD;
+        {sections.map(([g, rs]) => {
+          const folded = !expanded.includes(g) && rs.length > FOLD;
           return (
             <section key={g}>
-              <Section label={g === 'work' ? 'Work' : 'Personal'} count={rowCount(mine)} />
-              <div className="as-group">{folded ? all.slice(0, FOLD) : all}</div>
-              {folded && <ShowAll count={all.length} onClick={() => setExpanded((e) => [...e, g])} />}
+              <Section label={g} count={rs.length} />
+              <div className="as-group mcp-group">{(folded ? rs.slice(0, FOLD) : rs).map((r) => renderRow(r, false))}</div>
+              {folded && <ShowAll count={rs.length} onClick={() => setExpanded((e) => [...e, g])} />}
             </section>
           );
         })}
         {hiddenList.length > 0 && (
           <section>
-            <Section label="Hidden" count={rowCount(hiddenList)} open={showHidden} onToggle={() => setShowHidden((v) => !v)} />
-            {showHidden && <div className="as-group">{hiddenList.map((s) => renderRows(s, groupOf(s.variants[0].row), true))}</div>}
+            <Section label="Hidden" count={hiddenList.length} open={showHidden} onToggle={() => setShowHidden((v) => !v)} />
+            {showHidden && <div className="as-group mcp-group">{hiddenList.map((r) => renderRow(r, true))}</div>}
           </section>
         )}
       </div></div></div>
