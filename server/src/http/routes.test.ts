@@ -15,6 +15,8 @@ const mocks = {
   removeChat: vi.fn(),
   listBin: vi.fn(),
   listTerminals: vi.fn(),
+  listLinks: vi.fn(async () => ({})),
+  searchMessages: vi.fn(),
 };
 
 vi.mock('../integrations/focus.js', () => ({ scheduleFocus: mocks.scheduleFocus, cancelFocus: mocks.cancelFocus }));
@@ -22,6 +24,8 @@ vi.mock('../workspace/worktrees.js', () => ({ listRepos: mocks.listRepos, isWork
 vi.mock('../agent/claude/sessions.js', () => ({ listSessions: mocks.listSessions, savedSession: (x: unknown) => x, renameRoute: vi.fn() }));
 vi.mock('../agent/claude/pins.js', () => ({ removeChat: mocks.removeChat, pinsRoute: vi.fn() }));
 vi.mock('../agent/claude/bin.js', () => ({ listBin: mocks.listBin, emptyBin: vi.fn(), restoreSession: vi.fn() }));
+vi.mock('../session/subChats.js', () => ({ listLinks: mocks.listLinks }));
+vi.mock('../agent/claude/search.js', () => ({ searchMessages: mocks.searchMessages }));
 vi.mock('../workspace/terminal.js', () => ({ listTerminals: mocks.listTerminals, createTerminal: vi.fn(), closeTerminal: vi.fn() }));
 
 import type { RouteDeps } from './routes.js';
@@ -49,6 +53,22 @@ describe('routes', () => {
     expect((await call('GET', '/api/sessions')).json).toEqual([{ sessionId: 's' }]);
     mocks.listTerminals.mockReturnValue(['t']);
     expect((await call('PUT', '/api/terms')).json).toEqual(['t']);
+  });
+
+  it('returns sub-chat links with saved sessions and search hits', async () => {
+    mocks.listSessions.mockResolvedValue([{ sessionId: 'root', lastModified: 1, summary: 'Root', cwd: '/r' }, { sessionId: 'kid', lastModified: 2, summary: 'Kid', cwd: '/r' }]);
+    mocks.listBin.mockResolvedValue([]);
+    mocks.listLinks.mockResolvedValue({ kid: { parent: 'root', via: 'build', at: 5 } });
+    expect((await call('GET', '/api/sessions')).json).toEqual([
+      { sessionId: 'kid', lastModified: 2, summary: 'Kid', cwd: '/r', parentId: 'root', via: 'build', startedAt: 5 },
+      { sessionId: 'root', lastModified: 1, summary: 'Root', cwd: '/r' },
+    ]);
+    expect(mocks.listSessions).toHaveBeenCalledWith({ limit: 1000 });
+    mocks.searchMessages.mockResolvedValue([{ sessionId: 'kid', role: 'user', text: 'x', at: '' }, { sessionId: 'root', role: 'user', text: 'y', at: '' }]);
+    expect((await call('GET', '/api/sessions/search?q=x')).json).toEqual([
+      { sessionId: 'kid', role: 'user', text: 'x', at: '', title: 'Kid', cwd: '/r', parentId: 'root' },
+      { sessionId: 'root', role: 'user', text: 'y', at: '', title: 'Root', cwd: '/r' },
+    ]);
   });
 
   it('answers 404 for an unknown /api path, falls to the web fallback otherwise, and 503 for /api with no chat', async () => {

@@ -12,12 +12,13 @@ import { openRouterView, saveOpenRouter } from '../agent/claude/openrouter.js';
 import { resolvedRoute } from '../agent/claude/resolved.js';
 import { searchMessages } from '../agent/claude/search.js';
 import { seenRoute } from '../agent/claude/seen.js';
+import { listLinks } from '../session/subChats.js';
 import { readSummaries } from '../agent/claude/summaryStore.js';
 import { assistantRoute } from '../integrations/assistant.js';
 import { linkTitleRoute } from '../integrations/linkTitle.js';
 import { otherMacs } from './macs.js';
 import { hideableIds } from '../../../shared/featureUse.js';
-import { ACCOUNT_LABEL, type Account } from '../../../shared/protocol.js';
+import { ACCOUNT_LABEL, type Account, type SavedSession } from '../../../shared/protocol.js';
 import { clearFeatureUse, featureUseDays, recordRoute } from '../featureUse.js';
 import { loadSettings, publicSettings, saveSettings } from '../settings.js';
 import { listPorts, openPort } from './preview.js';
@@ -56,15 +57,21 @@ export function sessionRoutes(d: RouteDeps): Record<string, Entry<Ctx>> {
       return { ok: true };
     }),
     'ANY /api/sessions': entry(async () => {
-      const [list, codex, bin, summaries] = await Promise.all([listSessions({ limit: 300 }), codexSessions(), listBin(), readSummaries()]);
+      const [list, codex, bin, summaries, links] = await Promise.all([listSessions({ limit: 1000 }), codexSessions(), listBin(), readSummaries(), listLinks()]);
       const binned = new Set(bin.map((b) => b.sessionId));
-      return [...list.filter((x) => !binned.has(x.sessionId)).map((x) => savedSession(x, summaries[x.sessionId]?.text)), ...codex].sort((a, b) => b.lastModified - a.lastModified);
+      const linked = (s: SavedSession): SavedSession => {
+        const l = links[s.sessionId];
+        return l ? { ...s, parentId: l.parent, via: l.via, startedAt: l.at } : s;
+      };
+      return [...list.filter((x) => !binned.has(x.sessionId)).map((x) => linked(savedSession(x, summaries[x.sessionId]?.text))), ...codex].sort((a, b) => b.lastModified - a.lastModified);
     }),
     'ANY /api/sessions/search': entry(async ({ url }) => {
-      const [hits, list, bin] = await Promise.all([searchMessages(url.searchParams.get('q') ?? ''), listSessions({ limit: 300 }), listBin()]);
+      const [hits, list, bin, links] = await Promise.all([searchMessages(url.searchParams.get('q') ?? ''), listSessions({ limit: 1000 }), listBin(), listLinks()]);
       const binned = new Set(bin.map((b) => b.sessionId));
       const byId = new Map(list.map((x) => [x.sessionId, x]));
-      return hits.filter((h) => byId.has(h.sessionId) && !binned.has(h.sessionId)).map((h) => ({ ...h, title: byId.get(h.sessionId)!.summary, cwd: byId.get(h.sessionId)!.cwd ?? '' }));
+      return hits
+        .filter((h) => byId.has(h.sessionId) && !binned.has(h.sessionId))
+        .map((h) => ({ ...h, title: byId.get(h.sessionId)!.summary, cwd: byId.get(h.sessionId)!.cwd ?? '', ...(links[h.sessionId] && { parentId: links[h.sessionId].parent }) }));
     }),
   };
 }
