@@ -159,3 +159,5 @@
 .tr-assistant .md :is(th, td) { border-width: 0 0 1px; border-color: var(--border); padding: var(--sp-3) var(--sp-8) var(--sp-3) 0; }
 .tr-assistant .md th { border-bottom-color: var(--border-strong); }
 .tr-steps-head > span + .tr-tools::before { content: '\00b7'; margin-right: var(--sp-3); }
+.tr-subs { display: flex; flex-direction: column; gap: var(--sp-3); }
+.tr-sub-feed { display: flex; flex-direction: column; gap: var(--sp-5); padding: var(--sp-4) var(--sp-6) var(--sp-6); }

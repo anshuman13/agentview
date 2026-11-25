@@ -11,6 +11,7 @@ import { FileIcon } from '../../workspace/FileIcon';
 import { AlarmCard } from './AlarmCard';
 import { SketchCard } from './SketchCard';
 import { DocCard } from './DocCard';
+import { SubChatRows } from './SubChatRows';
 import { LinkAction, TranscriptBox } from './Box';
 import { FindBar, findPending, markHit, takeFind, type FindRequest } from './FindBar';
 import { showTurn, turnPending } from '../../sessions/openChat';
@@ -352,6 +353,7 @@ function TranscriptView({ sessionId, events, earlier, cwd, running, bill, failed
     {finding && <FindBar key={begun.n} events={events} earlier={earlier} start={begun.request} go={goToHit} onClose={() => setFinding(false)} />}
     <div ref={box} className="tr" onScroll={onScroll}>
       <div ref={rows} className="tr-rows">
+      <SubChatRows sessionId={sessionId} cwd={cwd} />
       {items.length === 0 && <EmptyState size="sm" icon="comment-discussion" title="No messages yet" hint="Your prompts, the agent's steps and replies show up here" />}
       {!staging && (start > 0 || earlier > 0) && <div className="tr-more" {...pressable(() => showEarlier())}>{loading ? <><Icon name="loading" small spin /> Loading earlier…</> : `Show earlier (${hiddenCount(earlier, list.length, shown)} hidden)`}</div>}
       {list.slice(from).map((r, i) => {
@@ -405,7 +407,7 @@ function sameItem(a: Item, b: Item): boolean {
   }
 }
 
-export const Row = memo(RowImpl, (p, n) => p.cwd === n.cwd && p.settled === n.settled && p.card === n.card && p.answer === n.answer && p.rewind?.id === n.rewind?.id && sameItem(p.it, n.it));
+export const Row = memo(RowImpl, (p, n) => p.cwd === n.cwd && p.settled === n.settled && p.card === n.card && p.answer === n.answer && p.rewind?.id === n.rewind?.id && p.readOnly === n.readOnly && sameItem(p.it, n.it));
 
 const FOLD_LINES = 6;
 
@@ -521,11 +523,11 @@ function ProposedClaims({ proposed }: { proposed: Proposal[] }) {
   );
 }
 
-function RowImpl({ it, cwd, settled, card, answer, rewind }: { it: Item; cwd: string; settled?: boolean; card?: boolean; answer?: boolean; rewind?: Rewind }) {
+function RowImpl({ it, cwd, settled, card, answer, rewind, readOnly }: { it: Item; cwd: string; settled?: boolean; card?: boolean; answer?: boolean; rewind?: Rewind; readOnly?: boolean }) {
   const label = useStore((s) => providerLabel(s.session.provider));
   switch (it.kind) {
     case 'user':
-      return <div id={`turn-${it.id}`} className={`tr-user ${it.stopping ? 'stopping' : ''} ${it.queued ? 'queued' : ''}`}>{it.voice && <span className="tr-mic" title="Spoken"><Icon name="mic" small /></span>}<UserText id={it.id} text={it.text} />{it.stopping && <span className="tr-stop"><Icon name="loading" small spin />{`Stopping ${label} to send this`}</span>}{it.queued && <span className="tr-stop"><Icon name="clock" small />{`Waiting for ${label}'s next step`}<Button variant="plain" size="sm" className="tl-send-now" title={`Stop ${label}'s current step and send this now`} onClick={() => send({ type: 'send_now', id: it.id })}>Send now</Button></span>}{!it.stopping && !it.queued && <span className="tr-acts"><IconButton icon="reply" label="Use again" onClick={() => window.dispatchEvent(new CustomEvent('agentview:insert', { detail: { text: it.text } }))} /><IconButton icon="copy" label="Copy" onClick={() => copyPrompt(it.text)} /></span>}</div>;
+      return <div id={`turn-${it.id}`} className={`tr-user ${it.stopping ? 'stopping' : ''} ${it.queued ? 'queued' : ''}`}>{it.voice && <span className="tr-mic" title="Spoken"><Icon name="mic" small /></span>}<UserText id={it.id} text={it.text} />{it.stopping && <span className="tr-stop"><Icon name="loading" small spin />{`Stopping ${label} to send this`}</span>}{it.queued && <span className="tr-stop"><Icon name="clock" small />{`Waiting for ${label}'s next step`}<Button variant="plain" size="sm" className="tl-send-now" title={`Stop ${label}'s current step and send this now`} onClick={() => send({ type: 'send_now', id: it.id })}>Send now</Button></span>}{!it.stopping && !it.queued && !readOnly && <span className="tr-acts"><IconButton icon="reply" label="Use again" onClick={() => window.dispatchEvent(new CustomEvent('agentview:insert', { detail: { text: it.text } }))} /><IconButton icon="copy" label="Copy" onClick={() => copyPrompt(it.text)} /></span>}</div>;
     case 'assistant':
       return <div id={`turn-${it.id}`} className={`tr-assistant ${it.streaming ? 'streaming' : ''}`}><Markdown text={it.text} id={it.streaming ? undefined : it.id} />{!it.streaming && (answer || rewind) && <div className="tr-acts">{answer && <IconButton icon="copy" label="Copy" onClick={() => copyReply(it.text.trim())} />}{rewind && <RewindLink rewind={rewind} />}</div>}</div>;
     case 'system':
