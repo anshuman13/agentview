@@ -3,6 +3,7 @@ import { notice } from '../app/store';
 import { Back } from '../app/touch/back';
 import { useNarrow } from '../app/shell/useNarrow';
 import { Button, IconButton, ShowAll } from '../ui/Button';
+import { Card, CardGrid } from '../ui/Card';
 import { Confirm, type ConfirmRequest } from '../ui/Confirm';
 import { Icon } from '../ui/Icon';
 import { Menu, MenuItem } from '../ui/Menu';
@@ -12,7 +13,7 @@ import { Section, sectionCount } from '../ui/Section';
 import { Skeleton } from '../ui/Skeleton';
 import { ask } from '../codex/data/ask/ask';
 import { copyText, cx, plural } from '../ui/util';
-import { groupPlan, KIND_ICONS, nextItem, scanText, splitTrips, totalsText, tripAsk, tripKind, tripState, tripStateText, type CheckItem, type PlanItem, type Receipt, type Trip } from '../../../shared/travel';
+import { groupPlan, KIND_ICONS, nextItem, scanText, splitTrips, totalsText, tripAsk, tripCard, tripKind, tripState, tripStateText, type CheckItem, type PlanItem, type Receipt, type Trip } from '../../../shared/travel';
 import { deleteTrip, exportUrl, receiptUrl, saveTrip, scanCalendar, setCheck, uploadReceipt } from './travelApi';
 import { dayLabel, isImage, itemMeta, localNow, receiptMeta, shrink, tripDates, tripMeta } from './travelLogic';
 import { HomeSheet, PlanItemSheet, ReceiptSheet, TripSheet } from './TravelSheets';
@@ -62,7 +63,14 @@ function TripList({ trips, receipts, filing, cap, narrow, archivedOpen, onArchiv
   const day = today();
   const { active, archived } = splitTrips(trips, day);
   const rows = all ? active : active.slice(0, FOLD);
-  const row = (t: Trip) => <Row key={t.id} leading={<Icon name="briefcase" />} title={t.name} meta={tripMeta(t, receipts.filter((r) => r.tripId === t.id), day)} onClick={() => onOpen(t.id)} />;
+  const row = (t: Trip) => {
+    const c = tripCard(t, receipts.filter((r) => r.tripId === t.id), day);
+    return (
+      <Card key={t.id} className="tv-card" cover={c.cover ? <img src={receiptUrl(c.cover)} alt="" loading="lazy" /> : <span className="tv-strip"><Icon name="briefcase" /></span>} title={t.name} meta={tripMeta(t, c)} onClick={() => onOpen(t.id)}>
+        {c.stateText && <span className={cx('tv-state', c.state)}>{c.stateText}</span>}
+      </Card>
+    );
+  };
   const capture = !narrow && <><Button size="sm" icon="device-camera" onClick={cap.takePhoto}>Take photo</Button><Button size="sm" icon="add" onClick={cap.addFiles}>Add files</Button></>;
   return (
     <div className="tv-trip">
@@ -71,13 +79,13 @@ function TripList({ trips, receipts, filing, cap, narrow, archivedOpen, onArchiv
       {filing > 0 && <div className="ui-group"><Row plain leading={<span className="tv-thumb tv-file"><Icon name="loading" spin /></span>} title={`Adding ${plural(filing, 'receipt')}…`} /></div>}
       <section>
         <Section label="Trips" count={sectionCount(active.length)} action={<>{find}{capture}<Button size="sm" icon="add" onClick={onNew}>New trip</Button></>} />
-        {active.length ? <div className="ui-group">{rows.map(row)}</div> : <EmptyState size="sm" icon="briefcase" title="No upcoming trips" hint="Find in calendar or New trip adds one" />}
+        {active.length ? <CardGrid>{rows.map(row)}</CardGrid> : <EmptyState size="sm" icon="briefcase" title="No upcoming trips" hint="Find in calendar or New trip adds one" />}
         {rows.length < active.length && <ShowAll count={active.length} className="ov-more" onClick={() => setAll(true)} />}
       </section>
       {archived.length > 0 && (
         <section>
           <Section label="Archived" count={archived.length} open={archivedOpen} onToggle={onArchived} />
-          {archivedOpen && <div className="ui-group">{archived.map(row)}</div>}
+          {archivedOpen && <CardGrid>{archived.map(row)}</CardGrid>}
         </section>
       )}
     </div>
