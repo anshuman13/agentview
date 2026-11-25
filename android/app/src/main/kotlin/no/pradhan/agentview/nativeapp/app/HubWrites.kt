@@ -44,7 +44,8 @@ fun Hub.shareToTravel(item: SharedItem) {
         var trip = ""
         for (uri in item.images) {
             val mime = r.getType(Uri.parse(uri)) ?: "image/jpeg"
-            val bytes = withContext(Dispatchers.IO) { runCatching { r.openInputStream(Uri.parse(uri))?.use { it.readBytes() } }.getOrNull() } ?: continue
+            val bytes = withContext(Dispatchers.IO) { runCatching { r.openInputStream(Uri.parse(uri))?.use { it.readBytes() } }.getOrNull() }
+            if (bytes == null) { notice.value = "Could not read the shared file"; continue }
             val name = "receipt.${mime.substringAfter('/', "jpg").substringBefore('+')}"
             runCatching { api.postBytes("/api/travel/receipt?name=${enc(name)}", mime, bytes, slow = true) }
                 .onSuccess { trip = protocolJson.decodeFromString(Receipt.serializer(), it).tripId; added++ }
