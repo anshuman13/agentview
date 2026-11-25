@@ -40,6 +40,9 @@ import no.pradhan.agentview.nativeapp.ops.mcpGroupBody
 import no.pradhan.agentview.nativeapp.ops.mcpKey
 import no.pradhan.agentview.nativeapp.ops.mcpLoggedInSince
 import no.pradhan.agentview.nativeapp.ops.mcpMeta
+import no.pradhan.agentview.nativeapp.ops.mcpDot
+import no.pradhan.agentview.nativeapp.ops.mcpNote
+import no.pradhan.agentview.nativeapp.ops.mcpToolCount
 import no.pradhan.agentview.nativeapp.ops.mcpSections
 import no.pradhan.agentview.nativeapp.ops.mcpShortName
 import no.pradhan.agentview.nativeapp.ops.mcpState
@@ -240,7 +243,13 @@ class PagesLogicTest {
             ChatEvent("t2", "tool_use", name = "mcp__grafana_prod__q"), ChatEvent("t3", "tool_use", name = "Read"),
         )
         assertEquals(mapOf("grafana_prod" to (2 to 1)), mcpCalls(events))
-        assertEquals("1 tool · 40 ms · 2 calls · 1 error", mcpMeta(McpRow(probed[0]), 2 to 1))
+        assertEquals("Your servers · 40 ms · 2 calls · 1 error", mcpMeta(McpRow(probed[0]), 2 to 1))
+        assertEquals("boom · Personal · 40 ms", mcpMeta(rows[0], null, personal = true))
+        assertEquals("1 tool", mcpToolCount(McpRow(probed[0])))
+        assertNull(mcpToolCount(rows[1]))
+        assertEquals("Claude.ai connector", mcpNote(rows[2]))
+        assertEquals("Disabled", mcpNote(McpRow(McpServer("x", "disabled"))))
+        assertEquals(listOf(DotState.Bad, DotState.Faint, DotState.Ok, DotState.Busy, DotState.Warn), listOf(rows[0], rows[1], rows[2], McpRow(McpServer("x", "pending")), McpRow(McpServer("x", "needs-auth"), live = true)).map(::mcpDot))
         assertEquals("Linear", mcpShortName("claude.ai Linear"))
         assertEquals("""{"service":"slack","group":"personal"}""", mcpGroupBody("slack", "personal"))
     }

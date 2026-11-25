@@ -32,6 +32,8 @@ import no.pradhan.agentview.nativeapp.ui.Badge
 import no.pradhan.agentview.nativeapp.ui.BadgeTone
 import no.pradhan.agentview.nativeapp.ui.Button
 import no.pradhan.agentview.nativeapp.ui.ButtonSize
+import no.pradhan.agentview.nativeapp.ui.ButtonVariant
+import no.pradhan.agentview.nativeapp.ui.StatusDot
 import no.pradhan.agentview.nativeapp.ui.EmptyState
 import no.pradhan.agentview.nativeapp.ui.Group
 import no.pradhan.agentview.nativeapp.ui.Hairline
@@ -52,7 +54,7 @@ import no.pradhan.agentview.nativeapp.ui.rememberLoad
 import no.pradhan.agentview.nativeapp.ui.select
 import no.pradhan.agentview.nativeapp.ui.plural
 
-// MCP Servers (web/src/ops/McpStatus.tsx): the probed servers with the chat's live state, by Work and Personal, and a detail page.
+// MCP Servers (web/src/ops/McpStatus.tsx): the probed servers with the chat's live state, in status groups (Connected, Needs login, Failed, Off), and a detail page.
 @Composable
 fun McpScreen(hub: Hub, onBack: () -> Unit) {
     val chat by hub.store.state.select { it.shownId }
@@ -81,11 +83,14 @@ fun McpScreen(hub: Hub, onBack: () -> Unit) {
     LaunchedEffect(Unit) { hub.refreshMcpGroups() }
     var sel by rememberSaveable(chat) { mutableStateOf<String?>(null) }
     var showHidden by rememberSaveable { mutableStateOf(false) }
+    var expanded by rememberSaveable { mutableStateOf(listOf<String>()) }
     val live = session?.mcp ?: emptyList()
     val account = session?.account
     val rows = remember(probe.data, live, account, accounts, connectors) { mergeMcp(probe.data ?: emptyList(), live).let { if (connectors) mcpWithAccounts(it, account, accounts) else it } }
     val calls = remember(events) { mcpCalls(events) }
     val sections = remember(rows, groups) { mcpSections(rows, groups) }
+    val byStatus = remember(sections) { mcpStatusGroups(sections.work + sections.personal) }
+    val personal = remember(sections) { sections.personal.map(::mcpKey).toSet() }
 
     fun setGroup(service: String, group: String) {
         val before = groups
@@ -107,15 +112,15 @@ fun McpScreen(hub: Hub, onBack: () -> Unit) {
                 if (probe.data == null && probe.error.isEmpty()) item { Loading("Checking the servers…") }
                 if (probe.data != null && rows.isEmpty()) item { EmptyState("No MCP servers yet", "Servers you add show here", action = { SetupButton(hub, "mcp", mcpCommand = if (connectors) "claude mcp add" else "codex mcp add") }, icon = "plug") }
                 if (!connectors) item { Hint("claude.ai connectors load in Claude chats only") }
-                listOf("Work" to sections.work, "Personal" to sections.personal).forEach { (label, list) ->
-                    if (list.isNotEmpty()) {
-                        item { SectionHeader(label, list.size.toString()) }
-                        item { McpGroup(list, calls) { sel = mcpKey(it) } }
-                    }
+                byStatus.forEach { (label, list) ->
+                    val folded = label !in expanded && list.size > FOLD
+                    item { SectionHeader(label, list.size.toString()) }
+                    item { McpGroup(if (folded) list.take(FOLD) else list, calls, personal) { sel = mcpKey(it) } }
+                    if (folded) item { Button("Show all ${list.size}", { expanded = expanded + label }, Modifier.padding(start = Tokens.listPad), variant = ButtonVariant.Plain, size = ButtonSize.Sm) }
                 }
                 if (sections.hidden.isNotEmpty()) {
                     item { SectionHeader("Hidden", sections.hidden.size.toString(), open = showHidden, onToggle = { showHidden = !showHidden }) }
-                    if (showHidden) item { McpGroup(sections.hidden, calls) { sel = mcpKey(it) } }
+                    if (showHidden) item { McpGroup(mcpStatusGroups(sections.hidden).flatMap { it.second }, calls, personal) { sel = mcpKey(it) } }
                 }
                 item { Spacer(Modifier.padding(bottom = Tokens.sp16)) }
             }
@@ -123,13 +128,21 @@ fun McpScreen(hub: Hub, onBack: () -> Unit) {
     }
 }
 
+private const val FOLD = 5
+
+// One row per server: status dot, name, one meta line and the tool count; Off rows are greyed.
 @Composable
-private fun McpGroup(rows: List<McpRow>, calls: Map<String, Pair<Int, Int>>, onOpen: (McpRow) -> Unit) {
+private fun McpGroup(rows: List<McpRow>, calls: Map<String, Pair<Int, Int>>, personal: Set<String>, onOpen: (McpRow) -> Unit) {
     Group {
         rows.forEachIndexed { i, r ->
             if (i > 0) Hairline()
-            val (label, tone) = mcpState(r)
-            ListRow(mcpShortName(r.name), mcpMeta(r, calls[mcpSlug(r.name)]).ifEmpty { null }, state = { Badge(if (r.status == "needs-auth" && tone == BadgeTone.Waiting) "Needs you" else label, tone) }, onClick = { onOpen(r) })
+            val count = mcpToolCount(r)
+            ListRow(
+                mcpShortName(r.name), mcpMeta(r, calls[mcpSlug(r.name)], mcpKey(r) in personal).ifEmpty { null },
+                leading = { StatusDot(mcpDot(r), desc = mcpState(r).first) }, leadMin = Tokens.dot,
+                trailing = count?.let { { Badge(it, BadgeTone.Quiet) } },
+                lines = 1, metaLines = 1, muted = mcpStatusGroup(r) == "Off", onClick = { onOpen(r) },
+            )
         }
     }
 }

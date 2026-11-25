@@ -14,6 +14,7 @@ import kotlinx.serialization.json.put
 import no.pradhan.agentview.nativeapp.net.ChatEvent
 import no.pradhan.agentview.nativeapp.net.protocolJson
 import no.pradhan.agentview.nativeapp.ui.BadgeTone
+import no.pradhan.agentview.nativeapp.ui.DotState
 import no.pradhan.agentview.nativeapp.ui.agoShort
 import no.pradhan.agentview.nativeapp.ui.isoMillis
 import no.pradhan.agentview.nativeapp.ui.plural
@@ -221,8 +222,27 @@ fun mcpCalls(events: List<ChatEvent>): Map<String, Pair<Int, Int>> {
         .mapValues { (_, uses) -> uses.size to uses.count { it.id in failed } }
 }
 
-fun mcpMeta(r: McpRow, calls: Pair<Int, Int>?): String = listOfNotNull(
-    r.server.tools?.let { if (it.isEmpty()) "No tools" else plural(it.size, "tool") },
+// Dot for a row (web dotTone): connecting and checking rows pulse, the rest follow their state.
+fun mcpDot(r: McpRow): DotState = if (r.status == "pending" || r.status == "probing") DotState.Busy else when (mcpState(r).second) {
+    BadgeTone.Done -> DotState.Ok
+    BadgeTone.Failed -> DotState.Bad
+    BadgeTone.Waiting -> DotState.Warn
+    else -> DotState.Faint
+}
+
+// One line under the name (web rowNote): the error or reason when not connected, else where the server is configured.
+fun mcpNote(r: McpRow): String? = when {
+    r.status == "failed" && r.server.error != null -> r.server.error
+    r.status != "connected" -> mcpState(r).first
+    r.server.type == "claudeai" -> "Claude.ai connector"
+    else -> r.server.scope?.let { mcpScope(it).first }
+}
+
+fun mcpToolCount(r: McpRow): String? = r.server.tools?.let { if (it.isEmpty()) "No tools" else plural(it.size, "tool") }
+
+fun mcpMeta(r: McpRow, calls: Pair<Int, Int>?, personal: Boolean = false): String = listOfNotNull(
+    mcpNote(r),
+    "Personal".takeIf { personal },
     r.server.ms?.let { "$it ms" },
     calls?.let { (n, e) -> plural(n, "call") + if (e > 0) " · ${plural(e, "error")}" else "" },
 ).joinToString(" · ")
