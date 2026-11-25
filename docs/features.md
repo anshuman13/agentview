@@ -567,6 +567,34 @@ PR with Approve (behind a confirm) and a More menu with Revise… and Discard. S
 an active run show the run tag ("Paused" in warn, else the sync icon) or "Needs you" in warn. The status bar shows "N running"
 and "· M need you" in warn while a chat runs or waits on you (the Overview Running counts), and a click opens Sessions.
 
+## Sub-chats
+
+A chat that sends `/clear` (by hand or in a build run) gets a new Claude session, a sub-chat of the chat's root (the
+first session of the chain). The host records the link when the session id changes after a `/clear` left the queue, in
+`~/.agentview/subchats.json` as `{ child: { parent, via, at } }` with `via` `build` or `clear`
+(`server/src/session/subChats.ts`); a fork, a resume or a new chat records nothing. Chats split before this existed are
+linked by a scan on start and when the listing changes (`subChatScan.ts`, matching in `linkOlder` in `shared/subChats.ts`):
+a session whose transcript starts with `/clear` links to the session in the same cwd, branch and account whose last entry
+is the latest one at most 2 minutes before it; a build run in `runs.json` settles a tie, and anything still ambiguous
+stays unlinked. `/api/sessions` (up to 1000) returns `parentId`, `via` and `startedAt`, and search hits carry `parentId`.
+
+Every list shows one row per chat: Sessions (Pinned, Needs you, repo groups, Recent), Open chats, the sidebar count,
+⇧⌘] / ⌥⇧↓ and the phone Sessions list group by root with `groupSessions` (`shared/subChats.ts`, mirrored in
+`sessions/SubChats.kt`, both tested on `shared/fixtures/sub-chats.json`). The row has the root's title, the group's last
+activity and the count label after the repo and branch ("62 tasks" when every sub-chat came from a build run, else
+"12 sub-chats", "1 sub-chat"); its dot and bold come from the latest sub-chat. Pin, Mute, Mark as unread, Rename, Copy
+link and Archive act on the root, Archive and Restore move the whole group, and auto-archive goes by the group's last
+activity. A sub-chat whose root is missing or in the bin shows on its own.
+
+Opening the row resumes the latest sub-chat; `?session=` and `/api/events?session=` take any id of the group, and the
+header shows the root's title. Above the live transcript the earlier sub-chats show oldest first as collapsed rows
+(`SubChatRows.tsx`, `SubChatRows.kt`, text from `subChatsLogic.ts` / `SubChatsLogic.kt`): the title ("Task 3 of 12:
+<task line>" for a build task, else the first prompt without @mentions), the round's result line and the short hash and
+subject of its commit (`GET /api/chat/subchats`). More than 5 fold to the last 5 with "Show N earlier". A tap expands
+a row to that sub-chat's transcript, read-only and paged from `GET /api/chat/subchat-events`; only the current sub-chat
+is live. A message search hit in a sub-chat shows as the root's row (one row per chat), and opening it opens the chat
+with that sub-chat expanded and scrolled to the hit (web and phone).
+
 ## Agents
 
 Agents in the More menu of the task box header opens a pane that lists the subagents of the chat with their status, elapsed time and tokens.
