@@ -24,6 +24,13 @@ private class TokenMotion(private val still: Boolean) : MotionScheme {
     override fun <T> slowEffectsSpec() = spec<T>()
 }
 
+// True when the animator duration scale is 0: token motion is then instant.
+@Composable
+internal fun motionOff(): Boolean {
+    val resolver = LocalContext.current.contentResolver
+    return remember(resolver) { Settings.Global.getFloat(resolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f) == 0f }
+}
+
 // Runs `sheet` under the token motion; `keep` puts the app's motion back for the sheet's content.
 @Composable
 internal fun SheetMotion(sheet: @Composable (keep: @Composable (@Composable () -> Unit) -> Unit) -> Unit) {
@@ -32,8 +39,7 @@ internal fun SheetMotion(sheet: @Composable (keep: @Composable (@Composable () -
     val shapes = m.shapes
     val type = m.typography
     val app = m.motionScheme
-    val resolver = LocalContext.current.contentResolver
-    val still = remember(resolver) { Settings.Global.getFloat(resolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f) == 0f }
+    val still = motionOff()
     MaterialTheme(colors, remember(still) { TokenMotion(still) }, shapes, type) {
         sheet { inner -> MaterialTheme(colors, app, shapes, type, inner) }
     }

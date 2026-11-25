@@ -6,6 +6,15 @@ import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
@@ -56,6 +65,7 @@ import no.pradhan.agentview.nativeapp.ui.Tokens
 import no.pradhan.agentview.nativeapp.ui.select
 import no.pradhan.agentview.nativeapp.ui.rememberLoad
 import no.pradhan.agentview.nativeapp.ui.agoShort
+import no.pradhan.agentview.nativeapp.ui.motionOff
 
 private const val FOLD = 5
 
@@ -76,22 +86,40 @@ fun SketchesScreen(hub: Hub, onBack: () -> Unit) {
         if (!load.busy) { open = w.takeIf { sketchOpenable(it, sketches.orEmpty().map { s -> s.name }) }; want = null }
     }
     val file = sketches?.firstOrNull { it.name == open }
-    if (file != null) { SketchView(hub, file, onBack = { open = null }); return }
     var all by rememberSaveable(chat) { mutableStateOf(false) }
+    val still = motionOff()
+    // Zoom in on open and out on back (web: the sk-zoom view transition), instant at animator scale 0.
+    AnimatedContent(file, Modifier.fillMaxSize(), transitionSpec = {
+        if (still) EnterTransition.None togetherWith ExitTransition.None
+        else if (targetState != null) {
+            (scaleIn(tween(Tokens.motionDuration, easing = Tokens.motionEaseIn), 0.92f) + fadeIn(tween(Tokens.motionDuration, easing = Tokens.motionEaseIn))) togetherWith
+                fadeOut(tween(Tokens.motionDuration, easing = Tokens.motionEaseIn))
+        } else {
+            fadeIn(tween(Tokens.motionDuration, easing = Tokens.motionEaseOut)) togetherWith
+                (scaleOut(tween(Tokens.motionDuration, easing = Tokens.motionEaseOut), 0.92f) + fadeOut(tween(Tokens.motionDuration, easing = Tokens.motionEaseOut)))
+        }.apply { targetContentZIndex = if (targetState != null) 1f else -1f }
+    }, label = "sketch") { shown ->
+        if (shown != null) SketchView(hub, shown, onBack = { open = null })
+        else SketchList(hub, sketches, load.error, reload, all, { all = true }, onBack) { open = it }
+    }
+}
+
+@Composable
+private fun SketchList(hub: Hub, sketches: List<SketchFile>?, error: String, reload: () -> Unit, all: Boolean, showAll: () -> Unit, onBack: () -> Unit, onOpen: (String) -> Unit) {
     val now = System.currentTimeMillis()
     Column(Modifier.fillMaxSize()) {
         WorkspaceHeader(hub, "Sketches", onBack) { IconBtn("refresh", "Refresh", reload) }
         PageBody {
             when {
-                sketches == null && load.error.isNotEmpty() -> EmptyState("Could not load sketches", load.error, icon = "paintcan", action = { Button("Retry", reload, size = ButtonSize.Sm) })
+                sketches == null && error.isNotEmpty() -> EmptyState("Could not load sketches", error, icon = "paintcan", action = { Button("Retry", reload, size = ButtonSize.Sm) })
                 sketches == null -> Loading("Loading sketches…")
                 sketches.isEmpty() -> EmptyState("No sketches yet", "Mockups the agent writes with /sketch show here", icon = "paintcan", action = { Button("New sketch", { newSketch(hub) }, size = ButtonSize.Sm) })
                 else -> Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
                     SectionHeader("Sketches", sketches.size.toString())
                     CardGrid(sketches.take(if (all) sketches.size else FOLD), Modifier.padding(horizontal = Tokens.listPad)) { s ->
-                        Card(sketchTitle(s.name), meta = agoShort(s.mtime.toLong(), now, " ago"), onClick = { open = s.name }, cover = { SketchThumb(hub, s) { open = s.name } })
+                        Card(sketchTitle(s.name), meta = agoShort(s.mtime.toLong(), now, " ago"), onClick = { onOpen(s.name) }, cover = { SketchThumb(hub, s) { onOpen(s.name) } })
                     }
-                    if (!all && sketches.size > FOLD) Button("Show all ${sketches.size}", { all = true }, Modifier.padding(horizontal = Tokens.listPad), variant = ButtonVariant.Plain, size = ButtonSize.Sm)
+                    if (!all && sketches.size > FOLD) Button("Show all ${sketches.size}", showAll, Modifier.padding(horizontal = Tokens.listPad), variant = ButtonVariant.Plain, size = ButtonSize.Sm)
                     Spacer(Modifier.padding(bottom = Tokens.sp16))
                 }
             }
