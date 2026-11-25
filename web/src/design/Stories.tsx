@@ -6,6 +6,7 @@ import { copyText } from '../codex/view';
 import { AskRow } from '../ui/AskRow';
 import { Badge } from '../ui/Badge';
 import { Button, Chip, IconButton } from '../ui/Button';
+import { Card, CardGrid } from '../ui/Card';
 import { Menu, MenuItem, MenuSeparator } from '../ui/Menu';
 import { EmptyState, Panel } from '../ui/Panel';
 import { Row } from '../ui/Row';
@@ -196,6 +197,13 @@ function Stories() {
         <Panel padding="sm" title="Title">Padding sm</Panel>
         <Panel>No title</Panel>
         <Panel padding="sm">No title, padding sm</Panel>
+      </Block>
+      <Block name="Card">
+        <CardGrid>
+          <Card title="With cover" meta="2d ago" cover={<span className="ds-label">Cover</span>} />
+          <Card title="Selected" meta="Sample" selected />
+          <Card title="With extra content" meta="Sample"><Badge status="new" /></Card>
+        </CardGrid>
       </Block>
       <Block name="Badge">
         {(['waiting', 'sent', 'skipped', 'failed', 'done', 'late', 'new'] as const).map((status) => <Story key={status} label={status}><Badge status={status} /></Story>)}

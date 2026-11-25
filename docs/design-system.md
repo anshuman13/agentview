@@ -202,6 +202,9 @@ Accessibility: a Row that opens something (button or link) takes its name from t
 Padding md `--sp-8`, sm `--sp-2 --sp-6` for panels holding rows. Optional header: title role
 on the left, an action (IconButton sm or Button quiet sm) on the right. No nested panels.
 
+### Card
+`<Card cover title meta selected>` and `<CardGrid>` in `ui/Card.tsx`; `.ui-card`, components/cards.css. A preview card for Travel trips and Sketches: `--hairline` border, `--shape-lg` (12px), `--surface`, no shadow. Cover on top (16:10, an img or iframe fills it), then the title (one line) and a meta caption; children (a state chip, totals) follow in the body. `selected` draws a thin accent outline and sets `aria-pressed`. `CardGrid` fills columns of at least 220px and is one column at 600px and below. Tested in `web/src/ui/Card.test.ts`.
+
 ### Badge
 `<Badge status label? reason? count?>` in `ui/Badge.tsx`; `.badge`. Pill, `--size-2xs` high, `--fs-2xs` 600, foreground `--bg`.
 The visible text is the status word in sentence case, or "N word" with `count` ("2 failed"). No other text.
