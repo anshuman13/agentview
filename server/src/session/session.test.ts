@@ -384,6 +384,55 @@ describe('Fable approval', () => {
 
 });
 
+describe('sub-chat links', () => {
+  const init = (handle: (m: unknown) => void, id: string) => handle({ type: 'system', subtype: 'init', session_id: id, model: 'm', permissionMode: 'auto', apiKeySource: 'none', mcp_servers: [], tools: [] });
+  const linked = (s: AgentSession) => {
+    const calls: [string, string, string][] = [];
+    s.onSubChat = (child, parent, via) => calls.push([child, parent, via]);
+    return calls;
+  };
+
+  it('links each new session after a /clear to the one before, in order', () => {
+    const { s, handle, result } = fakeSession();
+    const calls = linked(s);
+    init(handle, 'a');
+    s.sendPrompt('/clear');
+    init(handle, 'b');
+    result('r1');
+    init(handle, 'b');
+    s.sendPrompt('/clear');
+    init(handle, 'c');
+    expect(calls).toEqual([['b', 'a', 'clear'], ['c', 'b', 'clear']]);
+  });
+
+  it('marks a /clear sent by the chat build run as build', () => {
+    const { s, handle } = fakeSession();
+    const calls = linked(s);
+    s.runs = new Runs();
+    init(handle, 'a');
+    const run = s.runs.start({ kind: 'build', chatId: s.id, sessionId: 'a', title: 't', what: 'w', provider: 'claude' });
+    s.runs.update(run, { clearing: true });
+    s.enqueue('/clear');
+    init(handle, 'b');
+    expect(calls).toEqual([['b', 'a', 'build']]);
+  });
+
+  it('records nothing for a fork, a resume or a new chat', () => {
+    const { s, handle } = fakeSession();
+    const calls = linked(s);
+    init(handle, 'a');
+    init(handle, 'forked');
+    s.setSession({ sessionId: 'resumed' });
+    const fresh = fakeSession();
+    const freshCalls = linked(fresh.s);
+    fresh.s.sendPrompt('/clear');
+    init(fresh.handle, 'first');
+    init(fresh.handle, 'second');
+    expect(calls).toEqual([]);
+    expect(freshCalls).toEqual([]);
+  });
+});
+
 describe('changed files', () => {
   const run = (isError: boolean) => {
     const s = claudeSession('/repo');

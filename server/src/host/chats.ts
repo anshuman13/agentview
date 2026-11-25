@@ -8,6 +8,7 @@ import { codexThread } from '../agent/codex/threads.js';
 import { removeChat } from '../agent/claude/pins.js';
 import { AgentSession } from '../session/session.js';
 import { READY } from '../session/runs.js';
+import { linkSubChat } from '../session/subChats.js';
 import { UNATTENDED_INSTRUCTION } from '../session/prompts.js';
 import { hasWork } from '../workspace/git.js';
 import { runWorktree } from '../workspace/review.js';
@@ -67,6 +68,7 @@ export async function createChat(cwd: string, resume?: string, title = '', fork 
   const chat = new AgentSession(cwd, p.driver(cwd, resume, fork, unattended, account), resume ?? null);
   chat.runs = runs;
   chat.transcriptPath = transcriptPath;
+  chat.onSubChat = (child, parent, via) => void linkSubChat(child, parent, via).catch(() => {});
   chat.resumeLine = (id, dir, sessionId, account) => provider(id).resume(dir, sessionId, account);
   chat.title = title;
   chat.onIdle = () => learning.later(chat);

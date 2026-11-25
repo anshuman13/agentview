@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import path from 'node:path';
-import type { Account, Provider, ChatEvent, RunOp, ServerMessage, ServerState, SessionInfo } from '../../../shared/protocol.js';
+import type { Account, Provider, ChatEvent, RunOp, ServerMessage, ServerState, SessionInfo, SubVia } from '../../../shared/protocol.js';
 import type { AgentDriver, AgentHost, AskOptions, Cron, DriverFactory, History, TurnResult } from '../agent/types.js';
 import { resumePrompt, type Stopped } from './resume.js';
 import { Approvals } from './approvals.js';
@@ -47,6 +47,8 @@ export class AgentSession implements AgentHost {
   // The host sets the provider registry's lookups, which a session must not import.
   transcriptPath: (id: string) => string | null = () => null;
   resumeLine: (provider: Provider, cwd: string, sessionId: string, account: Account) => string | null = () => null;
+  // The host saves the link when a /clear moves the chat to a new session.
+  onSubChat: (child: string, parent: string, via: SubVia) => void = () => {};
   readonly approvals: Approvals;
   readonly log: EventLog;
   readonly waiting = new MessageQueue(this);
@@ -67,6 +69,8 @@ export class AgentSession implements AgentHost {
   private reviewTarget: string | null = null;
   private reported = new Set<string>();
   private sent: Pick<SessionInfo, 'commands' | 'mcp'> | null = null;
+  // How the /clear that left the queue started, until the provider reports the new session id.
+  private clearing: SubVia | null = null;
   constructor(public cwd: string, driver: DriverFactory, sessionId: string | null = null) {
     this.state = {
       session: { id: this.id, sessionId, model: null, effort: 'medium', cwd, running: false, permissionMode: 'auto', apiKeySource: null, models: [], commands: SESSION_COMMANDS, cache: null, context: null, compacting: false, stopping: false, mcp: [], pr: null, account: 'main', accounts: [] },
@@ -156,6 +160,11 @@ export class AgentSession implements AgentHost {
 
   setSession(patch: Partial<SessionInfo>) {
     const wasRunning = this.state.session.running;
+    const oldId = this.state.session.sessionId;
+    if (patch.sessionId && patch.sessionId !== oldId && this.clearing) {
+      if (oldId) this.onSubChat(patch.sessionId, oldId, this.clearing);
+      this.clearing = null;
+    }
     this.state.session = { ...this.state.session, ...patch, ...(patch.commands && { commands: withSessionCommands(patch.commands) }) };
     if ('sessionId' in patch || 'account' in patch || 'provider' in patch) this.setResumeCommand();
     if (patch.sessionId) this.runs.bind(this.id, patch.sessionId);
@@ -285,6 +294,7 @@ export class AgentSession implements AgentHost {
   enqueue(text: string, id?: string) {
     const [, name, args = ''] = /^\/([\w-]+)(?:\s+(.*))?$/s.exec(text.trim()) ?? [];
     if (name === 'compact') return this.compact(args);
+    if (name === 'clear') this.clearing = this.runs.buildFor(this.id)?.clearing ? 'build' : 'clear';
     const specReview = name === SPEC_REVIEW_COMMAND && /^\S+$/.test(args);
     const asPrompt = name === 'code-review' || name === SKETCH_COMMAND.name || specReview;
     if (name && !asPrompt && this.driver.command(name, args)) return;

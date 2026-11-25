@@ -10,6 +10,8 @@ const realRegistry = { ...registry };
 
 vi.mock('./listing.js', () => ({ runs: mocks.runs, broadcastLive: vi.fn(), learning: { later: vi.fn(), forget: vi.fn() }, seenRunning: () => false, summaryOf: vi.fn() }));
 vi.mock('../agent/claude/pins.js', () => ({ removeChat: vi.fn() }));
+const linkSubChat = vi.fn(async () => ({}));
+vi.mock('../session/subChats.js', () => ({ linkSubChat }));
 vi.mock('./watchFiles.js', () => ({ watchFiles: () => ({ close() {} }) }));
 vi.mock('../agent/registry.js', () => {
   const real = realRegistry;
@@ -69,6 +71,14 @@ describe('jobChat', () => {
     expect(unattended((await createChat('/tmp', 'sess-2')))).toBe(false);
     mocks.runs.end(id, 'done');
     expect(unattended((await createChat('/tmp', 'sess-1')))).toBe(false);
+  });
+});
+
+describe('createChat', () => {
+  it('saves a sub-chat link the chat reports', async () => {
+    const chat = await createChat('/tmp');
+    chat.onSubChat('b', 'a', 'build');
+    expect(linkSubChat).toHaveBeenCalledWith('b', 'a', 'build');
   });
 });
 
