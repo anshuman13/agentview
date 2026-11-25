@@ -56,6 +56,7 @@ import no.pradhan.agentview.nativeapp.sessions.folderName
 import no.pradhan.agentview.nativeapp.ui.Badge
 import no.pradhan.agentview.nativeapp.ui.BadgeTone
 import no.pradhan.agentview.nativeapp.ui.Button
+import no.pradhan.agentview.nativeapp.app.openConnectors
 import no.pradhan.agentview.nativeapp.ui.ButtonSize
 import no.pradhan.agentview.nativeapp.ui.ButtonVariant
 import no.pradhan.agentview.nativeapp.ui.Chevron
@@ -143,7 +144,7 @@ fun OverviewPage(hub: Hub, st: CodexState, profile: String?, now: Long, actions:
     val failedCalendars = remember(st.scans) { failedCalendars(st.scans) }
     CompositionLocalProvider(LocalCardGroups provides true) { LazyColumn(Modifier.fillMaxSize()) {
         if (failedCalendars.isNotEmpty()) item(key = "failed-calendars") {
-            Group { failedCalendars.forEachIndexed { i, h -> if (i > 0) Hairline(); ListRow(calendarFailText(h, failedCalendars.size), h.ok?.let { "Last synced ${clock(it)}" } ?: "Never synced") } }
+            Group { failedCalendars.forEachIndexed { i, h -> if (i > 0) Hairline(); ListRow(calendarFailText(h, failedCalendars.size), h.ok?.let { "Last synced ${clock(it)}" } ?: "Never synced", trailing = if (hub.readOnly) null else ({ Button("Reconnect", { hub.openConnectors(calendarAccount(h)) {} }, size = ButtonSize.Sm) })) } }
         }
         morningSection(hub, st, profile, now)
         item(key = "up-next") { UpNextSection(hub, st, d, now, actions, onOpen, onNeeds, onAdd, onMeeting, onNotes) }

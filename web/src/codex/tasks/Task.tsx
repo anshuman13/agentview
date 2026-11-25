@@ -76,6 +76,7 @@ export function TaskRow({ row, onOpen, onGrab, lifted, inDay, picking, selected 
         <>
           <MenuItem icon="arrow-right" onClick={onOpen}>Open</MenuItem>
           {isDone && <MenuItem icon="discard" onClick={() => act.reopen(row)}>Not done</MenuItem>}
+          <MenuItem icon="arrow-swap" onClick={() => void act.move(row, row.profile === 'work' ? 'personal' : 'work')}>Move to {FILTER_LABEL[row.profile === 'work' ? 'personal' : 'work']}</MenuItem>
           <MenuItem icon="trash" danger onClick={() => act.remove(row)}>Delete</MenuItem>
         </>
       ))}

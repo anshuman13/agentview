@@ -189,6 +189,7 @@ fun Composer(hub: Hub, chatId: String, sessionId: String?, session: SessionInfo?
     var bar by remember(chatId) { mutableStateOf(barState(BarState(), if (s.full.isEmpty()) BarEvent.TextEmpty else BarEvent.TextFilled)) }
     val imeVisible = WindowInsets.isImeVisible
     LaunchedEffect(chatId) { hub.draftChanged.collect { if (it == chatId) s.reload() } }
+    LaunchedEffect(chatId) { hub.pendingUse.collect { u -> if (u != null) { s.uses = addUse(s.uses, u); hub.pendingUse.value = null } } }
     val focus = remember { FocusRequester() }
     val keyboard = LocalSoftwareKeyboardController.current
     val window = LocalWindowInfo.current

@@ -35,6 +35,8 @@ val SyncScan.bad get() = !missing && ((error != null && (failed ?: 0) >= (ok ?: 
 fun failedCalendars(scans: List<SyncScan>) = scans.filter { it.scan.startsWith("calendar:") && it.bad }
 
 // The banner title of a calendar scan, naming the account when two fail.
+// The Claude account whose claude.ai connectors hold the calendar (web CalendarSyncBanner ACCOUNT_OF).
+fun calendarAccount(scan: SyncScan) = if (scan.scan == "calendar:personal") "main" else "alt"
 fun calendarFailText(scan: SyncScan, count: Int) = "Calendar sync failed" + if (scan.scan == "calendar:personal") " (personal)" else if (count > 1) " (work)" else ""
 
 // Meetings with a start time, in the profile, not focus blocks, in the pieces the Overview shows.

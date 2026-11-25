@@ -60,6 +60,7 @@ import no.pradhan.agentview.nativeapp.WaitingWidget
 import no.pradhan.agentview.nativeapp.chat.ChatStore
 import no.pradhan.agentview.nativeapp.chat.FindRequest
 import no.pradhan.agentview.nativeapp.chat.RecentChats
+import no.pradhan.agentview.nativeapp.chat.Use
 import no.pradhan.agentview.nativeapp.chat.TranscriptFeed
 import no.pradhan.agentview.nativeapp.chat.draftKey
 import no.pradhan.agentview.nativeapp.chat.encodeModels
@@ -158,6 +159,8 @@ class Hub(internal val app: Application, private val saved: SavedStateHandle) : 
 
     val link = MutableStateFlow<DeepLink?>(null)
     val sketchSlug = MutableStateFlow<String?>(null)
+    // An MCP server or tool picked on the MCP page; the next composer shown adds it as a use chip.
+    val pendingUse = MutableStateFlow<Use?>(null)
     val termId = MutableStateFlow<String?>(null)
 
     // Review findings by target, a PR number or "local"; null clears one.

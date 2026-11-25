@@ -44,6 +44,10 @@ import no.pradhan.agentview.nativeapp.ops.mcpDot
 import no.pradhan.agentview.nativeapp.ops.mcpNote
 import no.pradhan.agentview.nativeapp.ops.McpLogin
 import no.pradhan.agentview.nativeapp.ops.mcpLogin
+import no.pradhan.agentview.nativeapp.ops.mcpCanManage
+import no.pradhan.agentview.nativeapp.ops.mcpCanUse
+import no.pradhan.agentview.nativeapp.ops.mcpNoTools
+import no.pradhan.agentview.nativeapp.ops.parseMcp
 import no.pradhan.agentview.nativeapp.ops.mcpAuthUrl
 import no.pradhan.agentview.nativeapp.ops.openConnectorsBody
 import no.pradhan.agentview.nativeapp.ops.mcpToolCount
@@ -264,6 +268,22 @@ class PagesLogicTest {
         assertEquals("""{"url":"https://claude.ai/settings/connectors","browser":"firefox"}""", openConnectorsBody("main"))
         assertEquals("https://x/auth", mcpAuthUrl("""{"authUrl":"https://x/auth"}"""))
         assertNull(mcpAuthUrl("{}"))
+    }
+
+    @Test fun mcpDetailActionsMatchWeb() {
+        val slack = McpServer("claude.ai Slack", "connected", type = "claudeai")
+        assertTrue(mcpCanUse(McpRow(slack, live = true)))
+        assertFalse(mcpCanUse(McpRow(slack)))
+        assertFalse(mcpCanUse(McpRow(slack.copy(status = "failed"), live = true)))
+        assertTrue(mcpCanManage(McpRow(slack)))
+        assertFalse(mcpCanManage(McpRow(slack.copy(status = "needs-auth"))))
+        assertFalse(mcpCanManage(McpRow(McpServer("grafana", "connected", type = "http"))))
+        assertEquals("No tools reported" to null, mcpNoTools(McpRow(slack)))
+        assertEquals("No tools yet" to "Log in to load them", mcpNoTools(McpRow(slack.copy(status = "needs-auth"))))
+        assertEquals("No tools yet" to "They load once the server connects", mcpNoTools(McpRow(slack.copy(status = "pending"))))
+        val tool = parseMcp("""[{"name":"s","tools":[{"name":"read","readOnly":true},{"name":"drop","destructive":true}]}]""")[0].tools!!
+        assertTrue(tool[0].readOnly && !tool[0].destructive)
+        assertTrue(tool[1].destructive && !tool[1].readOnly)
     }
 
     @Test fun agentsComeFromTheTranscriptWithTheirInfo() {

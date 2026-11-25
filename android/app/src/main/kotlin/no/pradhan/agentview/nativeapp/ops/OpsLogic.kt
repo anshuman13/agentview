@@ -120,7 +120,7 @@ fun deployBody(app: String, env: String, ref: String) = buildJsonObject { put("a
 fun rollbackBody(app: String, env: String, sha: String) = buildJsonObject { put("app", app); put("env", env); put("sha", sha) }.toString()
 
 // shared/protocol.ts McpServer and web/src/ops/mcpHelpers.ts.
-@Serializable data class McpTool(val name: String, val description: String = "")
+@Serializable data class McpTool(val name: String, val description: String = "", val readOnly: Boolean = false, val destructive: Boolean = false)
 
 @Serializable
 data class McpServer(
@@ -272,6 +272,17 @@ fun mcpStatusCmd() = buildJsonObject { put("type", "mcp_status") }.toString()
 // web McpDetail: how a Needs login row logs in. claude.ai connectors on claude.ai for their account, a local server through its own OAuth page.
 enum class McpLogin { ClaudeAi, OAuth }
 fun mcpLogin(r: McpRow): McpLogin? = if (r.status != "needs-auth") null else if (r.server.type == "claudeai") McpLogin.ClaudeAi else McpLogin.OAuth
+
+// web McpDetail: Add to chat needs the server loaded and connected in this chat; Manage on claude.ai a signed-in connector.
+fun mcpCanUse(r: McpRow) = r.live && r.status == "connected"
+fun mcpCanManage(r: McpRow) = r.server.type == "claudeai" && r.status != "needs-auth"
+
+// The Tools section's empty line and hint (web McpDetail).
+fun mcpNoTools(r: McpRow): Pair<String, String?> = when (r.status) {
+    "connected" -> "No tools reported" to null
+    "needs-auth" -> "No tools yet" to "Log in to load them"
+    else -> "No tools yet" to "They load once the server connects"
+}
 
 // web openConnectors: the work accounts are signed in to claude.ai in Chrome on the Mac, the personal one in Firefox.
 fun connectorsBrowser(account: String?) = if (account != null && account != "main") "Chrome" else "Firefox"

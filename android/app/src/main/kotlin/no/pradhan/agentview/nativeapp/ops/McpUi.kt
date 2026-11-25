@@ -40,6 +40,11 @@ import no.pradhan.agentview.nativeapp.app.mcpConnectors
 import no.pradhan.agentview.nativeapp.app.loginMcp
 import no.pradhan.agentview.nativeapp.app.mcpProbe
 import no.pradhan.agentview.nativeapp.app.openConnectors
+import no.pradhan.agentview.nativeapp.app.DeepLink
+import no.pradhan.agentview.nativeapp.chat.Use
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Row
+import androidx.compose.ui.Alignment
 import no.pradhan.agentview.nativeapp.app.refreshMcpGroups
 import no.pradhan.agentview.nativeapp.app.saveMcpGroup
 import no.pradhan.agentview.nativeapp.ui.Badge
@@ -205,7 +210,11 @@ private fun McpDetail(hub: Hub, r: McpRow, calls: Pair<Int, Int>?, groups: Map<S
     BackHandler(onBack = onBack)
     val (label, tone) = mcpState(r)
     val (scope, where) = mcpScope(r.server.scope)
-    val canEdit = (hub.store.state.value.session?.capabilities ?: Capabilities()).can("mcpEdit")
+    val caps = hub.store.state.value.session?.capabilities ?: Capabilities()
+    val canEdit = caps.can("mcpEdit")
+    val canUse = mcpCanUse(r)
+    val canManage = caps.can("connectors") && mcpCanManage(r) && !hub.readOnly
+    val use = { u: Use -> hub.pendingUse.value = u; hub.link.value = DeepLink(chat = hub.pageChat) }
     var q by rememberSaveable(r.name) { mutableStateOf("") }
     val link = openLink()
     val hidden = groups[mcpHideKey(r)] == "hidden"
@@ -223,6 +232,12 @@ private fun McpDetail(hub: Hub, r: McpRow, calls: Pair<Int, Int>?, groups: Map<S
         }
         PageBody {
             LazyColumn(Modifier.fillMaxSize()) {
+                if (canUse || canManage) item {
+                    Row(Modifier.padding(start = Tokens.listPad, end = Tokens.listPad, top = Tokens.sp4), horizontalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
+                        if (canUse) Button("Add to chat", { use(Use(r.name)) }, size = ButtonSize.Sm, icon = "comment")
+                        if (canManage) Button("Manage on claude.ai", { hub.openConnectors(r.account) {} }, size = ButtonSize.Sm, icon = "key")
+                    }
+                }
                 item {
                     Group(Modifier.padding(top = Tokens.sp4)) {
                         ListRow("Status", r.server.version?.let { "v$it" }, trailing = {
@@ -244,10 +259,16 @@ private fun McpDetail(hub: Hub, r: McpRow, calls: Pair<Int, Int>?, groups: Map<S
                 if ((r.server.tools?.size ?: 0) > 6) item { SearchField(q, { q = it }, "Filter") }
                 item {
                     Group {
-                        if (tools.isEmpty()) EmptyState("No tools")
+                        if (tools.isEmpty()) mcpNoTools(r).let { (title, hint) -> EmptyState(if (r.server.tools.isNullOrEmpty()) title else "No tool matches", hint.takeIf { r.server.tools.isNullOrEmpty() }) }
                         tools.forEachIndexed { i, t ->
                             if (i > 0) Hairline()
-                            ListRow(t.name, firstLine(t.description).ifEmpty { null }, metaLines = 2)
+                            ListRow(t.name, firstLine(t.description).ifEmpty { null }, metaLines = 2, trailing = if (t.readOnly || t.destructive || canUse) ({
+                                Row(horizontalArrangement = Arrangement.spacedBy(Tokens.sp2), verticalAlignment = Alignment.CenterVertically) {
+                                    if (t.readOnly) Badge("read only", BadgeTone.Done)
+                                    if (t.destructive) Badge("destructive", BadgeTone.Waiting)
+                                    if (canUse) IconBtn("comment", "Add ${t.name} to chat", { use(Use(r.name, t.name)) })
+                                }
+                            }) else null)
                         }
                     }
                 }
