@@ -54,6 +54,11 @@ When everything is healthy that one line is all the nav shows; clicking it syncs
 line per source appears below it with the last Slack, Gmail and calendar run, its counts, the error in the warning color,
 or "not set up"; Slack and Gmail have a "Scan now" button.
 
+- Codex lists share design tokens in tokens.css: `--row-h` (40px), `--row-title` and `--row-meta` (md and sm type), `--meta-fg` (muted secondary text) and `--hairline` (1px separators). Task rows, section headers with counts and the Slack Summary page use them.
+- On the web and Android Overview every group (Up next, Needs you, Running chats, Today, Plan your day, Goals, the morning card) is a hairline card: `--hairline` border, `--shape-lg` radius and `--surface` fill, the same shell as the design system Card (Android: `LocalCardGroups` switches `Group` to it).
+- On the web and Android Tasks lists each section's rows (Overdue, the days, Review, Done, search hits) sit in the same hairline card, with the section label above it.
+- Empty Overview blocks, Tasks sections and Search results use the shared empty state on web and Android: an icon, one line and at most one action, such as "All clear. Next: Tue 09:00 Standup" on Today or "No matches" in Search.
+
 ### Overview
 
 - Overview is headed by a greeting in the reading serif after an accent spark, like the Claude apps' home ("Good morning, Tue 24" on web, "Good morning" on the phone). An event on both the work and personal calendars shows once under All
@@ -583,7 +588,7 @@ palette), so they get the full width instead of the sidebar. One page is open at
 
 On the phone Observe, Deploy, MCP Servers, Settings, Files, Source Control and Pull Requests have no editor tab strip. One header row replaces it: Back, the title, a muted one-line subtitle (the repo folder; "N connected of M" on MCP; the file's folder in an open file) and at most one trailing control (Refresh on Observe, Deploy and Pull Requests, Check on MCP, the Explorer's More menu on Files, a More menu with Close file on an open file). Back, the system back and the edge swipe return to the tab that was open before, or to Codex when there was none; in an open file Back shows the Explorer first. With nothing set up, Observe, Deploy and MCP show an empty state with one "Set up with Claude" button (the chat's provider) that asks the chat on screen to do the setup.
 
-On web the MCP Servers page lists servers in grouped sections Connected (also connecting and checking), Needs login, Failed and Off (`statusGroups` in `ops/mcpHelpers.ts`), each sorted by name and folded at 5 with Show all; hidden servers stay in a collapsed Hidden section. A row has a status dot, the name, one line (the error or reason when not connected, else where it is configured, plus "Personal", latency and call counts) and a tool count pill; Off rows are greyed. Its More menu keeps Hide or Show and Move to Work or Personal. Opening a server pushes its detail in from the right (a short slide beside the list, a full one over it when the page is narrow; none with reduced motion). The Android MCP Servers page has the same sections, rows and fold (`mcpStatusGroups`, `mcpDot`, `mcpNote` in `ops/OpsLogic.kt`), keeps the "N connected of M" subtitle, and keeps Hide and Move in the server's detail menu. Its detail slides in from the right over the list and back out on back, instant at animator scale 0.
+On web the MCP Servers page lists servers in grouped sections Connected (also connecting and checking), Needs login, Failed and Off (`statusGroups` in `ops/mcpHelpers.ts`), each sorted by name and folded at 5 with Show all; hidden servers stay in a collapsed Hidden section. A row has a status dot, the name, one line (the error or reason when not connected, else where it is configured, plus the Claude account a connector comes from, such as "Work Enterprise", or "Personal", latency and call counts) and a tool count pill; Off rows are greyed. Its More menu keeps Hide or Show and Move to Work or Personal. Opening a server pushes its detail in from the right (a short slide beside the list, a full one over it when the page is narrow; none with reduced motion). The Android MCP Servers page has the same sections, rows and fold (`mcpStatusGroups`, `mcpDot`, `mcpNote` in `ops/OpsLogic.kt`), keeps the "N connected of M" subtitle, and keeps Hide and Move in the server's detail menu. Its detail slides in from the right over the list and back out on back, instant at animator scale 0.
 
 Source Control on web and phone has a "Committed since <base>" section below Changes, listing what the branch committed since it left the default branch (`/api/git/branch`); on the default branch itself it is named "Not pushed", the commits origin does not have yet. A row expands to its patch, or "Diff too large to show" when the server left the patch out. It is absent when the branch committed nothing or the load fails. The phone only has a review pager that swipes through the changed files with Keep and Revert, where Revert restores the whole file (`/api/git/revert`).
 
@@ -661,10 +666,6 @@ The palette's Keyboard shortcuts command shows the same list.
   returns focus to the list
 - In Codex, snack messages are announced, with "Undo available" when they have Undo. Goals, Related
   and the Slack DMs under Since <meeting> are lists, and Esc in a goal field restores its text
-
-- Codex lists share design tokens in tokens.css: `--row-h` (40px), `--row-title` and `--row-meta` (md and sm type), `--meta-fg` (muted secondary text) and `--hairline` (1px separators). Task rows, section headers with counts and the Slack Summary page use them.
-- On the web and Android Overview every group (Up next, Needs you, Running chats, Today, Plan your day, Goals, the morning card) is a hairline card: `--hairline` border, `--shape-lg` radius and `--surface` fill, the same shell as the design system Card (Android: `LocalCardGroups` switches `Group` to it).
-- On the web and Android Tasks lists each section's rows (Overdue, the days, Review, Done, search hits) sit in the same hairline card, with the section label above it.
 
 ## Copy a file path
 
