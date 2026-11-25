@@ -70,6 +70,7 @@
 .mcp-call pre.bad { color: var(--err); }
 @media (hover: hover) { .mcp-insert:hover .codicon { color: var(--fg) !important; } }
 :is(.mcp-tool, .mcp-call) .mcp-insert { width: var(--size-sm); height: var(--size-sm); opacity: 0; }
+@media (pointer: coarse), (max-width: 480px) { :is(.mcp-tool, .mcp-call) .mcp-insert { width: var(--touch); height: var(--touch); } }
 .mcp-insert:focus-visible, .mcp-tool .mcp-insert.on { opacity: 1; }
 @media (hover: hover) { :is(.mcp-tool, .mcp-call):hover .mcp-insert { opacity: 1; } }
 @media (hover: none) { .mcp-insert { opacity: 1 !important; } }
