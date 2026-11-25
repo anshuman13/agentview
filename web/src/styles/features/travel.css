@@ -1,5 +1,8 @@
 .tv-page { gap: var(--sp-8); }
 .tv-trip { display: flex; flex-direction: column; gap: var(--sp-8); }
+.tv-trip .ui-section { flex-wrap: wrap; }
+.tv-trip .ui-section-head { min-width: fit-content; }
+.tv-trip .ui-section-actions { flex-wrap: wrap; padding-left: var(--list-pad); }
 .tv-head { display: flex; align-items: center; gap: var(--sp-4); padding: var(--sp-4) 0; }
 .tv-title { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 .tv-title h2 { margin: 0; font-size: var(--type-headline-size); font-weight: var(--type-headline-weight); line-height: var(--type-headline-line); overflow-wrap: anywhere; }
