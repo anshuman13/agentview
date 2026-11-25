@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'bun:test';
 import { nextClock } from '../../../shared/util.js';
 import type { FiveHour, PlanUsage, Repeat } from '../../../shared/protocol.js';
 import { goalCommand } from '../../../shared/goalForm.js';
-import { ROUND_INSTRUCTION, parseGoal, parseLoop, costGate, usageGate } from './repeat.js';
+import { ROUND_INSTRUCTION, parseGoal, parseLoop, costGate, usageGate, holdsUntil, timedPrompt } from './repeat.js';
 import { setSystemTime } from '../../../testing.js';
 
 const now = new Date(2026, 9, 24, 9, 0, 0).getTime();
@@ -178,5 +178,17 @@ describe('goal prompts', () => {
     }
     expect(ROUND_INSTRUCTION).toContain('first sentence is the push text');
     expect(ROUND_INSTRUCTION).not.toMatch(/allowed to push|you may push/i);
+  });
+});
+
+describe('goals with an end time', () => {
+  it('keep running until the end time, even after GOAL MET', () => {
+    const now = new Date(2026, 10, 25, 9, 0).getTime();
+    const g = parseGoal('/goal every 10m until 21:00 cap 60% ship the briefs', now) as Repeat;
+    expect(holdsUntil(g, now)).toBe(true);
+    expect(holdsUntil(g, g.endAt! + 1)).toBe(false);
+    expect(timedPrompt(g, now)).toContain('runs until 21:00');
+    expect(timedPrompt(g, g.endAt! + 1)).toBe(g.prompt);
+    expect(holdsUntil(parseGoal('/goal ship the briefs', now) as Repeat, now)).toBe(false);
   });
 });

@@ -97,6 +97,10 @@ export const costGate = (r: Repeat, spent: number) => (r.capUsd && spent >= r.ca
 export const ROUND_INSTRUCTION = 'Reply with the answer or result first, in plain sentences, with no narration of what you did. Then finish with one last line: ROUND: <done|progress|blocked|question|nothing> <one sentence>. The line is shown on the chat row and the loop card and its first sentence is the push text, so name what changed, in at most 100 characters; use nothing when there was nothing to do.';
 
 export const goalMet = (text: string) => /\bGOAL MET\b/.test(text);
+// A goal with an end time runs until then: GOAL MET before it does not stop it, and each round says so.
+export const holdsUntil = (r: Repeat | null | undefined, now = Date.now()) => Boolean(r?.goal && r.endAt && now < r.endAt);
+export const timedPrompt = (r: Repeat, now = Date.now()) =>
+  holdsUntil(r, now) ? `${r.prompt} This goal runs until ${clock(r.endAt!)} even when the condition is met: then find the next most useful work in the same area (verify, polish, fix what you find, ask the advisors what comes next) and keep going. GOAL MET does not end it before ${clock(r.endAt!)}.` : r.prompt;
 
 const offCommand = (r: Repeat) => (r.goal ? '/goal off' : '/loop off');
 
@@ -312,7 +316,7 @@ export class RepeatController {
     this.host.setSession({ repeat: { ...r, round, nextAt, reportAt } });
     this.patchRun({ state: 'running', why: '', round, nextAt, usage });
     this.arm();
-    this.host.sendPrompt(report ? reportPrompt(r.goal!) : r.prompt, r.goal ? 'goal' : 'loop', round, report);
+    this.host.sendPrompt(report ? reportPrompt(r.goal!) : timedPrompt(r), r.goal ? 'goal' : 'loop', round, report);
   }
 
   private pauseAtLimit(r: Repeat) {

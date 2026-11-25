@@ -561,6 +561,10 @@ The goal sheet ("Chat: New goal" in the palette, the New goal (target) button in
 Claude replies GOAL MET to end it; the goal also stops by itself after 20 rounds ("Not met after 20 rounds"). `/goal off` ends it early, and
 the run head shows "Goal · round 3 of 20".
 
+A goal with a Stop at time (`until 21:00`) runs until that time: GOAL MET before it does not end the goal (`holdsUntil`), and
+each round's prompt says it runs until then and to take the next most useful work in the same area once the condition is
+met (`timedPrompt`). It ends at the time, on the usage cap or on Stop.
+
 `/goal every 1h <condition>` (30m, 2h, 4h or any interval from 10m up to 7 days) starts a standing goal that works on a
 heartbeat: each interval Claude reads where things stand, does what moves the goal forward without you, and asks as a
 question anything irreversible or outward-facing (push, deploy, delete, send a message) instead of doing it. A heartbeat

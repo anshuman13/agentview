@@ -6,7 +6,7 @@ import { clock } from '../../../shared/util.js';
 import { goalMet as goalMetText, skipText } from '../../../shared/goalText.js';
 import type { Repeat } from '../../../shared/protocol.js';
 import type { TurnResult } from '../agent/types.js';
-import { goalMet } from './repeat.js';
+import { goalMet, holdsUntil } from './repeat.js';
 import type { UserEvent } from './messageQueue.js';
 import { roundResult } from './runs.js';
 import type { AgentSession } from './session.js';
@@ -87,7 +87,7 @@ export class Turn {
     this.lastError = !r.ok || Boolean(r.isError);
     s.failed = this.lastError;
     const repeat = s.state.session.repeat;
-    const met = Boolean(repeat?.goal && goalMet(this.lastResult));
+    const met = Boolean(repeat?.goal && goalMet(this.lastResult) && !holdsUntil(repeat));
     this.noteCost(r.costUsd);
     const report = this.reportTurn;
     s.roundNote = this.roundNote(r.text, repeat, met, report);
