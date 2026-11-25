@@ -1,4 +1,4 @@
-import { Children, useEffect, useRef, useSyncExternalStore, type ComponentPropsWithoutRef, type KeyboardEvent, type ReactNode, type RefObject } from 'react';
+import { Children, useEffect, useRef, useSyncExternalStore, type ComponentPropsWithoutRef, type KeyboardEvent, type MouseEvent as ReactMouseEvent, type ReactNode, type RefObject } from 'react';
 import { createPortal } from 'react-dom';
 import { Icon } from './Icon';
 import { cx } from './util';
@@ -95,9 +95,16 @@ export function Menu({ trigger, onClose, className, children }: {
     const next = e.key === 'Home' ? 0 : e.key === 'End' ? items.length - 1 : (at + (e.key === 'ArrowDown' ? 1 : -1) + items.length) % items.length;
     items[next].focus();
   };
+  // An item that closes the menu leaves focus on its opener, so a sheet or dialog it opens returns focus there.
+  const pick = (e: ReactMouseEvent) => {
+    const item = (e.target as Element).closest<HTMLElement>('[role=menuitem]');
+    if (!item) return;
+    trigger.current?.focus();
+    setTimeout(() => { if (item.isConnected) item.focus(); });
+  };
   if (Children.toArray(children).length === 0) return null;
   const menu = (
-    <div ref={box} role="menu" className={menuClass(phone, className)} onKeyDown={move}>
+    <div ref={box} role="menu" className={menuClass(phone, className)} onKeyDown={move} onClickCapture={pick}>
       {children}
     </div>
   );

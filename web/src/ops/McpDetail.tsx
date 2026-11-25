@@ -25,6 +25,15 @@ export function Detail({ row, usage, group, onGroup, onClose }: { row: Row; usag
   const [q, setQ] = useState('');
   const [run, setRun] = useState<string | null>(null);
   useEffect(() => { setQ(''); setRun(null); }, [row.name]);
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const t = e.target as HTMLElement | null;
+      if (e.key !== 'Escape' || e.defaultPrevented || t?.closest('input, textarea, select, [contenteditable]') || document.querySelector('[role=dialog], [role=menu]')) return;
+      onClose();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
   const url = row.command?.startsWith('http');
   const tools = (row.tools ?? []).filter((t) => !q || t.name.toLowerCase().includes(q.toLowerCase()) || t.description?.toLowerCase().includes(q.toLowerCase()));
   return (
