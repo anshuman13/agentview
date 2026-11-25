@@ -46,7 +46,7 @@ object TokenGen {
         "dark" to mapOf(
             "bg" to "#1C1B19", "group-page" to "#1C1B19", "container-lowest" to "#171614", "container-low" to "#201F1D", "surface" to "#262522",
             "group-card" to "#262522", "raised" to "#2E2D2A", "sunken" to "#33322E", "hover" to "#33322E", "fg" to "#ECEAE4", "fg-strong" to "#F7F6F2",
-            "fg-muted" to "#A9A69E", "fg-faint" to "#85827B", "border-strong" to "#85827B", "border" to "#3A3935", "border-card" to "#3A3935",
+            "fg-muted" to "#A9A69E", "fg-faint" to "#9A978F", "border-strong" to "#85827B", "border" to "#3A3935", "border-card" to "#3A3935",
             "accent" to "#7AA7F0", "accent-fill" to "#7AA7F0", "accent-text" to "#7AA7F0", "on-accent" to "#0B2350", "primary-container" to "#1D3B6E",
             "on-primary-container" to "#D8E4FF", "accent-soft" to "#2F3340", "on-secondary-container" to "#E4E2DC", "inverse-surface" to "#E6E3DC",
             "inverse-on-surface" to "#31302C", "inverse-primary" to "#2B59A8", "ok" to "#5FD38D", "ok-container" to "#00522A",
@@ -58,7 +58,7 @@ object TokenGen {
         "light" to mapOf(
             "bg" to "#FAF9F5", "group-page" to "#FAF9F5", "container-lowest" to "#FFFFFF", "container-low" to "#F6F5F0", "surface" to "#F3F1EB",
             "group-card" to "#F3F1EB", "raised" to "#FFFFFF", "sunken" to "#EDEAE2", "hover" to "#EDEAE2", "fg" to "#1F1E1C", "fg-strong" to "#141311",
-            "fg-muted" to "#57544D", "fg-faint" to "#7A766E", "border-strong" to "#7A766E", "border" to "#E3E0D8", "border-card" to "#E3E0D8",
+            "fg-muted" to "#57544D", "fg-faint" to "#6B675F", "border-strong" to "#7A766E", "border" to "#E3E0D8", "border-card" to "#E3E0D8",
             "accent" to "#2B59A8", "accent-fill" to "#2F6BD8", "accent-text" to "#2B59A8", "on-accent" to "#FFFFFF", "primary-container" to "#D8E4FF",
             "on-primary-container" to "#0B2350", "accent-soft" to "#E3E9F5", "on-secondary-container" to "#1F2433", "inverse-surface" to "#31302C",
             "inverse-on-surface" to "#F3F1EB", "inverse-primary" to "#A9C4F5", "ok" to "#00703A", "ok-container" to "#C4F2D3",

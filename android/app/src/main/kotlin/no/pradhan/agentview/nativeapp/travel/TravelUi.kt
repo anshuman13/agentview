@@ -317,7 +317,7 @@ private fun TripSubtitle(trip: Trip, dates: String) {
         if (tripState(trip, day) == "now") {
             Box(Modifier.size(6.dp).background(av.accentFill, CircleShape))
             Spacer(Modifier.width(Tokens.sp2))
-            Text(tripStateText(trip, day), color = av.accentFill)
+            Text(tripStateText(trip, day), color = av.accentText)
         } else Text(tripStateText(trip, day))
     }
 }
