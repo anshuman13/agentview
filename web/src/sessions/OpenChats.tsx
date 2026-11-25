@@ -124,7 +124,7 @@ export function OpenChats() {
   const pinnedRows = useMemo(() => {
     const find = chatFinder(filter, chats);
     return [...pinSet].flatMap((id) => {
-      const c = live.find((x) => root(x.sessionId) === id);
+      const c = [...live].sort(byUrgency).find((x) => root(x.sessionId) === id);
       const s = c ? undefined : chats.find((x) => x.sessionId === id);
       const item = c ? { c, title: c.title, repo: repoName(folders, c.cwd) } : s ? { s, title: s.title, repo: repoName(folders, s.cwd) } : null;
       return item && (!find.active || find.match(item.title, id, item.repo)) ? [item] : [];
@@ -133,7 +133,7 @@ export function OpenChats() {
   const waiting = live.filter((c) => c.pending).sort(byUrgency);
   const shownWaiting = useMemo(() => waitingChats(live, chats, folders, filter), [live, chats, folders, filter]);
   const order = useMemo(() => {
-    const pinned = [...pinSet].flatMap((id) => live.filter((c) => root(c.sessionId) === id));
+    const pinned = [...pinSet].flatMap((id) => [...live].sort(byUrgency).find((c) => root(c.sessionId) === id) ?? []);
     return chatOrder(waiting, pinned, orderGroups(groupByRepo(live, chats, folders, '', pinSet, held.chats), held.groups));
   }, [live, chats, folders, root, pinSet, held]);
   const seen = useStore((s) => s.seen);

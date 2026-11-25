@@ -10,6 +10,7 @@ describe('subChatTitle', () => {
     expect(parseBrief(taskBrief(SPEC, 2, 3, true))).toEqual({ n: 2, of: 3, spec: SPEC });
     expect(subChatTitle(taskBrief(SPEC, 1, 3, false), specTasks(MD))).toBe('Task 1 of 3: Add the store');
     expect(subChatTitle(taskBrief(SPEC, 9, 9, false), specTasks(MD))).toBe('Task 9 of 9');
+    expect(subChatTitle(taskBrief(SPEC, 1, 2, false), specTasks(MD))).toBe('Task 1 of 2');
     expect(subChatTitle(taskBrief(SPEC, 2, 3, false))).toBe('Task 2 of 3');
   });
 

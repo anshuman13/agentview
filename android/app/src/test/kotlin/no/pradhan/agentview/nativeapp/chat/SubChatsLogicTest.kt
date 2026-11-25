@@ -20,6 +20,7 @@ class SubChatsLogicTest {
         assertEquals(Brief(2, 3, spec), parseBrief(brief(2, 3)))
         assertEquals("Task 1 of 3: Add the store", subChatTitle(brief(1, 3), specTasks(md)))
         assertEquals("Task 9 of 9", subChatTitle(brief(9, 9), specTasks(md)))
+        assertEquals("Task 1 of 2", subChatTitle(brief(1, 2), specTasks(md)))
         assertEquals("Task 2 of 3", subChatTitle(brief(2, 3)))
     }
 

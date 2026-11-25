@@ -31,7 +31,8 @@ const oneLine = (text: string) => text.replace(/(^|\s)@\S+/g, '$1').replace(/\s+
 export function subChatTitle(prompt: string, tasks?: string[]) {
   const brief = parseBrief(prompt);
   if (!brief) return oneLine(prompt) || 'Untitled';
-  const task = tasks?.[brief.n - 1];
+  // The spec may have changed since the brief was sent; its lines only fit while the task count matches.
+  const task = tasks?.length === brief.of ? tasks[brief.n - 1] : undefined;
   return `Task ${brief.n} of ${brief.of}${task ? `: ${task}` : ''}`;
 }
 

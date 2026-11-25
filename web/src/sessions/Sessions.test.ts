@@ -104,6 +104,15 @@ describe('holdOrder', () => {
     const ids = groupByRepo([live('a', 2), live('b', 9), live('n', 0)], [], f, '', new Set(), held.chats)[0].open.map((c) => c.id);
     expect(ids).toEqual(['n', 'a', 'b']);
   });
+  it('shows one open row per chat group, the busiest', () => {
+    const f = buildFolders([repo('shop')], [], []);
+    const live = (id: string, running: boolean): LiveChat => ({ id, sessionId: id, cwd: '/w/shop', title: id, running, pending: 0, status: '', lastActive: 1 });
+    const chats = groupChats([
+      { sessionId: 'r', cwd: '/w/shop', title: 'r', lastModified: 1 },
+      { sessionId: 's', cwd: '/w/shop', title: 's', lastModified: 2, parentId: 'r', via: 'build' },
+    ] as SavedSession[]);
+    expect(groupByRepo([live('r', false), live('s', true)], chats, f)[0].open.map((c) => c.id)).toEqual(['s']);
+  });
   it('holds new groups and chats after their first appearance', () => {
     const held = holdOrder(null, [g('a', 1), g('b', 9)], true, 0);
     const added = holdOrder(held, [g('a', 1), g('b', 9), g('n', 0)], true, 0);

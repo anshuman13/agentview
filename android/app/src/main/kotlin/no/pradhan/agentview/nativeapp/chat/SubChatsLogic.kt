@@ -27,7 +27,7 @@ private fun oneLine(text: String) = text.replace(Regex("""(^|\s)@\S+"""), "$1").
 
 fun subChatTitle(prompt: String, tasks: List<String>? = null): String {
     val brief = parseBrief(prompt) ?: return oneLine(prompt).ifEmpty { "Untitled" }
-    val task = tasks?.getOrNull(brief.n - 1)
+    val task = tasks?.takeIf { it.size == brief.of }?.getOrNull(brief.n - 1)
     return "Task ${brief.n} of ${brief.of}" + (task?.let { ": $it" } ?: "")
 }
 

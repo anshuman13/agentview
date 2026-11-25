@@ -305,9 +305,11 @@ export function groupByRepo(live: LiveChat[], chats: ChatSession[], folders: Fol
     return g;
   };
   const root = rootLookup(chats);
-  for (const c of live) {
+  const shown = new Set<string>();
+  for (const c of [...live].sort(byUrgency)) {
     const id = root(c.sessionId);
-    if (id && pinned.has(id)) continue;
+    if (id && (pinned.has(id) || shown.has(id))) continue;
+    if (id) shown.add(id);
     const g = add(c.cwd, c.title, id, c.lastActive);
     if (!g) continue;
     g.open.push(c);

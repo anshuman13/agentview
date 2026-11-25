@@ -195,7 +195,10 @@ fun groupByRepo(live: List<LiveChat>, ws: Workspace, filter: String = "", held: 
         g.last = maxOf(g.last, last)
         return g
     }
-    for (c in live) {
+    val shown = mutableSetOf<String>()
+    for (c in live.sortedWith(byUrgency)) {
+        val id = saved.rowId(c.sessionId)
+        if (id != null && !shown.add(id)) continue
         val g = add(c.cwd, c.title, c.sessionId, c.lastActive) ?: continue
         g.open += c
         if (c.pending > 0) g.waiting++
@@ -260,7 +263,7 @@ fun pinnedRows(live: List<LiveChat>, ws: Workspace, filter: String): List<ChatIt
     val words = queryWords(filter)
     val saved = rowsById(ws.saved)
     return rowPins(ws, saved).mapNotNull { id ->
-        val c = live.firstOrNull { saved.rowId(it.sessionId) == id }
+        val c = live.sortedWith(byUrgency).firstOrNull { saved.rowId(it.sessionId) == id }
         val s = if (c == null) saved[id] else null
         val title = c?.title ?: s?.title ?: return@mapNotNull null
         val cwd = c?.cwd ?: s!!.cwd

@@ -126,6 +126,7 @@ class FoldersTest {
         val open = live("c", "/w/agentview", sid = "k2", active = 40, pending = 1)
         val groups = groupByRepo(listOf(open), ws)
         assertEquals(listOf("c"), groups[0].open.map { it.id })
+        assertEquals(listOf("c"), groupByRepo(listOf(live("old", "/w/agentview", sid = "k1", active = 50), open), ws)[0].open.map { it.id })
         assertEquals(emptyList<String>(), groups[0].recent.map { it.sessionId })
         assertEquals(listOf("k1"), rowPins(ws))
         assertEquals("c", pinnedRows(listOf(open), ws, "").single().live?.id)
