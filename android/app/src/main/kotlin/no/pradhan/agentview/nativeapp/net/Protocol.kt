@@ -148,6 +148,13 @@ data class LiveRun(
 @Serializable
 data class Round(val n: Int = 0, val at: Long = 0, val outcome: String = "", val line: String = "", val costUsd: Double = 0.0)
 
+// One earlier session of a chat, as /api/chat/subchats returns it (web chat/transcript/subChatsLogic.ts SubChat).
+@Serializable
+data class SubChatCommit(val hash: String = "", val subject: String = "")
+
+@Serializable
+data class SubChat(val sessionId: String, val title: String = "", val startedAt: Long = 0, val round: Round? = null, val commit: SubChatCommit? = null)
+
 // shared/protocol.ts Try: one chat of a /tries run.
 @Serializable
 data class RunTry(val n: Int = 0, val chatId: String = "", val sessionId: String = "", val branch: String = "", val dropped: Boolean = false)

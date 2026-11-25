@@ -214,7 +214,8 @@ private fun rememberEarlierDue(hub: Hub, chatId: String, replies: Int, loading: 
 }
 
 @Composable
-fun Transcript(hub: Hub, view: ChatView, earlier: Int, settled: Boolean, chatId: String, cwd: String, running: Boolean, finding: Boolean, onOpenAgent: (String) -> Unit, onOpenWork: (String) -> Unit, modifier: Modifier = Modifier, queued: List<Queued> = emptyList(), failed: String? = null) {
+fun Transcript(hub: Hub, view: ChatView, earlier: Int, settled: Boolean, chatId: String, cwd: String, running: Boolean, finding: Boolean, onOpenAgent: (String) -> Unit, onOpenWork: (String) -> Unit, modifier: Modifier = Modifier, queued: List<Queued> = emptyList(), failed: String? = null, sessionId: String? = null) {
+    val subChats = rememberSubChats(hub, sessionId, chatId)
     val items = view.items
     val rows = view.rows
     val noEvents by hub.store.state.select { it.events.isEmpty() }
@@ -268,6 +269,7 @@ fun Transcript(hub: Hub, view: ChatView, earlier: Int, settled: Boolean, chatId:
                     Text(if (loading) "Loading earlier…" else "Show earlier ($earlier hidden)", style = Type.callout, color = av.accentText)
                 }
             }
+            if (subChats.subs.isNotEmpty()) item(key = "subchats") { SubChatRows(hub, subChats, chatId, cwd) }
             if (rows.isEmpty()) item(key = "empty") {
                 if (settled && noEvents == view.events.isEmpty() && !(blank && (loading || earlierDue))) EmptyState("No messages yet", "Your prompts, the agent's steps and replies show up here", icon = "comment-discussion") else Loading("Loading the chat…")
             }
@@ -433,9 +435,9 @@ private fun JumpButton(replies: Int, modifier: Modifier, onClick: () -> Unit) {
 }
 
 @Composable
-internal fun ItemRow(hub: Hub, it: Item, chat: String, cwd: String, settled: Boolean, onOpenAgent: (String) -> Unit, rewind: Item.User? = null, card: Boolean = false, answer: Boolean = false) {
+internal fun ItemRow(hub: Hub, it: Item, chat: String, cwd: String, settled: Boolean, onOpenAgent: (String) -> Unit, rewind: Item.User? = null, card: Boolean = false, answer: Boolean = false, readOnly: Boolean = false) {
     when (it) {
-        is Item.User -> UserRow(hub, it, chat)
+        is Item.User -> UserRow(hub, it, chat, readOnly)
         is Item.Assistant -> {
             Markdown(it.text, Modifier.fillMaxWidth(), it.streaming, reading = true)
             if (!it.streaming && (answer || rewind != null)) ReplyActions(hub, if (answer) it.text.trim() else null, rewind)
@@ -494,7 +496,7 @@ private fun ReplyActions(hub: Hub, copy: String?, rewind: Item.User?) {
 }
 
 @Composable
-private fun UserRow(hub: Hub, it: Item.User, chat: String) {
+private fun UserRow(hub: Hub, it: Item.User, chat: String, readOnly: Boolean = false) {
     val label = providerLabel(hub.store.state.value.session?.provider)
     val clip = LocalClipboardManager.current
     val haptic = LocalHapticFeedback.current
@@ -502,7 +504,7 @@ private fun UserRow(hub: Hub, it: Item.User, chat: String) {
     val menuable = !it.queued && !it.stopping
     UserBubble(if (menuable) ({ haptic.performHapticFeedback(HapticFeedbackType.LongPress); menu = true }) else null) {
         Menu(menu, { menu = false }) {
-            if (!hub.readOnly) MenuItem("Use again", "reply", { menu = false; hub.useAgain(chat, it.text) })
+            if (!hub.readOnly && !readOnly) MenuItem("Use again", "reply", { menu = false; hub.useAgain(chat, it.text) })
             MenuItem("Copy", "copy", { menu = false; clip.setText(AnnotatedString(it.text)); hub.notice.value = "Prompt copied" })
         }
         Row(horizontalArrangement = Arrangement.spacedBy(Tokens.sp3)) {

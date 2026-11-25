@@ -183,7 +183,7 @@ fun ChatScreen(hub: Hub, onOpenAgent: (String) -> Unit, onOpenWork: (String) -> 
             val runCommand = remember(hub) { if (hub.readOnly) null else { cmd: String -> hub.runInTerminal(cmd, enter = false); Unit } }
             CompositionLocalProvider(LocalOpenFile provides openFile, LocalRunCommand provides runCommand) {
                 val failed = if (live.failed && !running && !hub.readOnly) failedLine(view.events, providerLabel(live.provider)) else null
-                Transcript(hub, view, earlier, settled, live.id, cwd, running, panels.find, onOpenAgent, onOpenWork, Modifier.fillMaxSize(), remember(queued, live.id) { queued.filter { it.chat == live.id } }, failed)
+                Transcript(hub, view, earlier, settled, live.id, cwd, running, panels.find, onOpenAgent, onOpenWork, Modifier.fillMaxSize(), remember(queued, live.id) { queued.filter { it.chat == live.id } }, failed, live.sessionId)
             }
         }
         PendingList(pending, session?.permissionMode ?: "default", hub)
