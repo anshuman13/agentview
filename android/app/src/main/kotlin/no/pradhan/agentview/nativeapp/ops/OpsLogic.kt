@@ -11,6 +11,7 @@ import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
+import no.pradhan.agentview.nativeapp.chat.ACCOUNT_LABEL
 import no.pradhan.agentview.nativeapp.net.ChatEvent
 import no.pradhan.agentview.nativeapp.net.protocolJson
 import no.pradhan.agentview.nativeapp.ui.BadgeTone
@@ -242,7 +243,7 @@ fun mcpToolCount(r: McpRow): String? = r.server.tools?.let { if (it.isEmpty()) "
 
 fun mcpMeta(r: McpRow, calls: Pair<Int, Int>?, personal: Boolean = false): String = listOfNotNull(
     mcpNote(r),
-    "Personal".takeIf { personal },
+    r.account?.let { ACCOUNT_LABEL[it] ?: it } ?: "Personal".takeIf { personal },
     r.server.ms?.let { "$it ms" },
     calls?.let { (n, e) -> plural(n, "call") + if (e > 0) " · ${plural(e, "error")}" else "" },
 ).joinToString(" · ")

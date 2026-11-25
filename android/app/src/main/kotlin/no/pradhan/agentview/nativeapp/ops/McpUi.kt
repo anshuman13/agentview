@@ -27,6 +27,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.IntOffset
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
+import no.pradhan.agentview.nativeapp.chat.ACCOUNT_LABEL
 import no.pradhan.agentview.nativeapp.chat.can
 import no.pradhan.agentview.nativeapp.chat.firstLine
 import no.pradhan.agentview.nativeapp.codex.firstLine
@@ -203,7 +204,7 @@ private fun McpDetail(hub: Hub, r: McpRow, calls: Pair<Int, Int>?, groups: Map<S
                         r.server.env?.takeIf { it.isNotEmpty() }?.let { Hairline(); ListRow("Env", it.joinToString("  ")) }
                         Hairline(); ListRow("From", scope + if (where.isNotEmpty()) " · $where" else "")
                         Hairline(); ListRow("In chat", if (r.live) "Loaded" else "Not loaded")
-                        Hairline(); ListRow(if (r.account != null) "Account" else "Group", if (r.account != null) r.account else if (group == "work") "Work" else "Personal")
+                        Hairline(); ListRow(if (r.account != null) "Account" else "Group", if (r.account != null) ACCOUNT_LABEL[r.account] ?: r.account else if (group == "work") "Work" else "Personal")
                         if (!canEdit) { Hairline(); ListRow("Edit", "~/.codex/config.toml, then Reconnect") }
                         calls?.let { (n, e) -> Hairline(); ListRow("Used in this chat", plural(n, "call") + if (e > 0) " · ${plural(e, "error")}" else "") }
                     }
