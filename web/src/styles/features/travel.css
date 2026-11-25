@@ -9,6 +9,9 @@
 .tv-add { display: flex; flex-wrap: wrap; gap: var(--sp-4); }
 .tv-add .btn { flex: 1; min-width: 0; justify-content: center; }
 .tv-add .btn:first-child { flex-basis: 100%; }
+.tv-empty { display: flex; flex-direction: column; align-items: center; }
+.tv-empty .tv-add { width: 100%; max-width: 360px; }
+.tv-empty-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--sp-4); margin-top: var(--sp-4); }
 .tv-thumb { width: 40px; height: 40px; border-radius: var(--shape-sm); object-fit: cover; background: var(--sunken); display: inline-flex; align-items: center; justify-content: center; color: var(--fg-muted); }
 .tv-total { padding: var(--sp-4) var(--sp-8); text-align: right; font-weight: 600; }
 .tv-item { --lead-w: calc(48px + var(--sp-4) + 24px); }

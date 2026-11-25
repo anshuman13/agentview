@@ -266,17 +266,16 @@ export function Travel({ shown }: { shown: boolean }) {
   const [adding, setAdding] = useState(false);
   const [finding, setFinding] = useState(false);
   const [filing, setFiling] = useState(0);
+  const [held, setHeld] = useState<File[]>([]);
   const narrow = useNarrow();
   const trips = useRef<Trip[]>([]);
   trips.current = data?.trips ?? [];
-  const fileFromList = (list: FileList | null) => {
-    const picked = [...(list ?? [])];
-    if (!picked.length) return;
+  const fileFiles = (picked: File[], tripId: string) => {
     setFiling((n) => n + picked.length);
     void Promise.all(picked.map(async (f) => {
       try {
         const { blob, name } = await shrink(f);
-        const r = await uploadReceipt('', blob, name);
+        const r = await uploadReceipt(tripId, blob, name);
         notice(`Added to ${trips.current.find((t) => t.id === r.tripId)?.name ?? 'a trip'}${r.read === 'failed' ? ', could not read it' : ''}`);
       } catch (e) {
         notice(`Receipt not added: ${errText(e)}`);
@@ -285,7 +284,20 @@ export function Travel({ shown }: { shown: boolean }) {
       }
     })).then(reload);
   };
+  const fileFromList = (list: FileList | null) => {
+    const picked = [...(list ?? [])];
+    if (!picked.length) return;
+    if (trips.current.length) return fileFiles(picked, '');
+    setHeld(picked);
+    setAdding(true);
+  };
   const cap = useCapture(fileFromList);
+  const saved = (t: Trip) => {
+    setAdding(false);
+    if (held.length) fileFiles(held, t.id);
+    setHeld([]);
+    void reload().then(() => setOpen(t.id));
+  };
   const findTrips = () => {
     setFinding(true);
     scanCalendar().then((r) => { notice(scanText(r.added, r.updated)); return reload(); }, (e) => notice(`Calendar not read: ${errText(e)}`)).finally(() => setFinding(false));
@@ -297,7 +309,11 @@ export function Travel({ shown }: { shown: boolean }) {
   ) : data?.trips.length ? (
     <TripList trips={data.trips} receipts={data.receipts} filing={filing} cap={cap} narrow={narrow} archivedOpen={archivedOpen} onArchived={() => setArchivedOpen(!archivedOpen)} onOpen={setOpen} onNew={() => setAdding(true)} find={find} />
   ) : data ? (
-    <EmptyState icon="briefcase" title="No trips yet" hint="Find your trips in the calendar, or add one, then its receipts, bookings and notes" action={<>{find}<Button size="sm" onClick={() => setAdding(true)}>New trip</Button></>} />
+    <div className="tv-empty">
+      {cap.inputs}
+      <EmptyState icon="briefcase" title="No trips yet. Add one, or start with a receipt" action={<span className="tv-empty-actions">{find}<Button size="sm" icon="add" onClick={() => setAdding(true)}>New trip</Button></span>} />
+      <CaptureRow cap={cap} narrow={narrow} />
+    </div>
   ) : error ? (
     <EmptyState size="sm" icon="briefcase" title="Could not load trips" hint={error} action={<Button size="sm" onClick={() => void reload()}>Retry</Button>} />
   ) : (
@@ -306,7 +322,7 @@ export function Travel({ shown }: { shown: boolean }) {
   return (
     <div className="wk"><div className="wk-scroll"><div className="mt-page tv-page">
       {body}
-      {adding && <TripSheet onClose={() => setAdding(false)} onSaved={(t) => { setAdding(false); void reload().then(() => setOpen(t.id)); }} />}
+      {adding && <TripSheet onClose={() => { setAdding(false); setHeld([]); }} onSaved={saved} />}
     </div></div></div>
   );
 }
