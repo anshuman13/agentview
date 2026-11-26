@@ -49,8 +49,15 @@
   .mcp-tr:not(.mcp-th) { min-height: 56px; }
 }
 @container (max-width: 360px) {
+  .mcp-bar { flex-wrap: wrap; row-gap: var(--sp-3); }
+  .mcp-bar .page-search { order: 9; flex: 1 0 100%; margin-left: 0; }
+  .mcp-tr { grid-template-columns: minmax(0, 1fr) auto 24px; gap: var(--sp-3); }
+  .mcp-tr .c-name { gap: var(--sp-3); }
+  .mcp-tr .c-st { font-size: var(--fs-xs); white-space: nowrap; }
+}
+@container (max-width: 300px) {
   .mcp-bar h2 { display: none; }
-  .mcp-bar .page-search { flex: 1 1 auto; margin-left: 0; }
+  .mcp-bar { justify-content: flex-end; }
 }
 .mcp-error {
   margin: 0 0 var(--sp-8); padding: var(--sp-4) var(--sp-6); display: flex; gap: var(--sp-3); align-items: center; color: var(--err);
