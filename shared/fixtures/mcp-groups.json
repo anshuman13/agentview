@@ -1,54 +1,53 @@
 [
-  {"name": "servers by scope first, then the chat account's connectors, then the others; connected first in each", "account": "alt", "rows": [
+  {"name": "one list by name without the claude.ai prefix; the same name follows servers, then accounts in order", "rows": [
     {"name": "zeta", "status": "disabled", "live": true, "scope": "user"},
+    {"name": "claude.ai Gmail", "status": "needs-auth", "type": "claudeai", "account": "alt2"},
     {"name": "beta", "status": "failed", "live": true, "scope": "user"},
-    {"name": "Alpha", "status": "connected", "live": true, "scope": "user"},
-    {"name": "omega", "status": "connected", "scope": "project"},
-    {"name": "claude.ai Slack", "status": "needs-auth", "type": "claudeai", "account": "main"},
-    {"name": "claude.ai Gmail", "status": "connected", "type": "claudeai", "account": "alt"},
-    {"name": "claude.ai Drive", "status": "needs-auth", "type": "claudeai", "account": "alt"}
-  ], "expected": [["Your servers", ["Alpha", "beta", "zeta"]], ["This repo", ["omega"]], ["Account 2 connectors", ["claude.ai Gmail", "claude.ai Drive"]], ["Account 1 connectors", ["claude.ai Slack"]]],
-  "counts": {"connected": 3, "total": 7, "needsYou": 3},
-  "chips": {"status": [["all", 7], ["Connected", 3], ["Needs login", 2], ["Failed", 1], ["Off", 1]], "where": [["all", 7], ["servers", 4], ["main", 1], ["alt", 2]]}},
-  {"name": "status filter keeps that status and the source chips count within it", "filter": {"status": "Needs login", "where": "all"}, "rows": [
+    {"name": "claude.ai Gmail", "status": "connected", "type": "claudeai", "account": "main"},
+    {"name": "gmail", "status": "connected", "scope": "project"},
+    {"name": "Alpha", "status": "connected", "live": true, "scope": "user"}
+  ], "expected": ["Alpha", "beta", "gmail", "claude.ai Gmail", "claude.ai Gmail", "zeta"],
+  "counts": {"connected": 3, "total": 6, "needsYou": 2},
+  "menu": {"show": [["all", 6], ["connected", 3], ["not-connected", 3], ["hidden", 0]], "where": [["all", 6], ["servers", 4], ["main", 1], ["alt2", 1]]}},
+  {"name": "Not connected keeps login, failed and off rows; the source counts follow it", "filter": {"show": "not-connected", "where": "all"}, "rows": [
     {"name": "linear", "status": "needs-auth", "live": true, "scope": "user"},
     {"name": "gamma", "status": "connected", "scope": "user"},
-    {"name": "claude.ai Slack", "status": "needs-auth", "type": "claudeai", "account": "main"}
-  ], "expected": [["Your servers", ["linear"]], ["Account 1 connectors", ["claude.ai Slack"]]],
-  "chips": {"status": [["all", 3], ["Connected", 1], ["Needs login", 2]], "where": [["all", 2], ["servers", 1], ["main", 1]]}},
-  {"name": "source filter keeps one account's connectors", "filter": {"status": "all", "where": "alt2"}, "rows": [
+    {"name": "b", "status": "pending", "live": true, "scope": "user"},
+    {"name": "claude.ai Slack", "status": "needs-auth", "type": "claudeai", "account": "main"},
+    {"name": "off", "status": "disabled", "scope": "user"}
+  ], "expected": ["linear", "off", "claude.ai Slack"],
+  "menu": {"show": [["all", 5], ["connected", 2], ["not-connected", 3], ["hidden", 0]], "where": [["all", 3], ["servers", 2], ["main", 1]]}},
+  {"name": "hidden rows show only under Hidden", "filter": {"show": "hidden", "where": "all"}, "hidden": ["grafana"], "rows": [
+    {"name": "grafana", "status": "connected", "scope": "user"},
+    {"name": "gamma", "status": "connected", "scope": "user"}
+  ], "expected": ["grafana"],
+  "menu": {"show": [["all", 1], ["connected", 1], ["not-connected", 0], ["hidden", 1]], "where": [["all", 1], ["servers", 1]]}},
+  {"name": "source keeps one account's connectors", "filter": {"show": "all", "where": "alt2"}, "rows": [
     {"name": "gamma", "status": "connected", "scope": "user"},
     {"name": "claude.ai Slack", "status": "connected", "type": "claudeai", "account": "alt2"},
     {"name": "claude.ai Slack", "status": "connected", "type": "claudeai", "account": "main"}
-  ], "expected": [["Account 3 connectors", ["claude.ai Slack"]]]},
-  {"name": "a filter whose chip has no rows falls back to All", "filter": {"status": "Failed", "where": "alt"}, "rows": [
+  ], "expected": ["claude.ai Slack"]},
+  {"name": "a source with no rows falls back to All", "filter": {"show": "all", "where": "alt"}, "rows": [
     {"name": "gamma", "status": "connected", "scope": "user"}
-  ], "expected": [["Your servers", ["gamma"]]]},
-  {"name": "pending and probing count as Connected, unknown as Off", "rows": [
-    {"name": "c", "status": "weird", "scope": "user"},
-    {"name": "b", "status": "pending", "live": true, "scope": "user"},
-    {"name": "a", "status": "probing", "scope": "user"}
-  ], "expected": [["Your servers", ["a", "b", "c"]]], "counts": {"connected": 2, "total": 3, "needsYou": 0}},
-  {"name": "no rows gives no groups", "rows": [], "expected": [], "counts": {"connected": 0, "total": 0, "needsYou": 0}},
-  {"name": "query filters by name", "query": "lin", "rows": [
+  ], "expected": ["gamma"]},
+  {"name": "no rows gives an empty list", "rows": [], "expected": [], "counts": {"connected": 0, "total": 0, "needsYou": 0}},
+  {"name": "query matches the name", "query": "lin", "rows": [
     {"name": "linear", "status": "needs-auth", "live": true, "scope": "user"},
     {"name": "Alpha", "status": "connected", "live": true, "scope": "user"},
     {"name": "Linkup", "status": "connected", "scope": "user"}
-  ], "expected": [["Your servers", ["Linkup", "linear"]]], "counts": {"connected": 1, "total": 2, "needsYou": 1}},
+  ], "expected": ["linear", "Linkup"], "counts": {"connected": 1, "total": 2, "needsYou": 1}},
   {"name": "query matches the account label", "query": "account 2", "rows": [
     {"name": "claude.ai Gmail", "status": "connected", "type": "claudeai", "account": "alt"},
     {"name": "claude.ai Drive", "status": "connected", "type": "claudeai", "account": "main"}
-  ], "expected": [["Account 2 connectors", ["claude.ai Gmail"]]]},
-  {"name": "query matches the line under the name, every word", "query": "ENOENT spawn", "rows": [
+  ], "expected": ["claude.ai Gmail"]},
+  {"name": "query matches the status note, every word", "query": "ENOENT spawn", "rows": [
     {"name": "beta", "status": "failed", "live": true, "error": "spawn npx ENOENT", "scope": "user"},
     {"name": "gamma", "status": "connected", "scope": "user"},
     {"name": "delta", "status": "failed", "live": true, "error": "timeout", "scope": "user"}
-  ], "expected": [["Your servers", ["beta"]]]},
-  {"name": "query matches the section label", "query": "your servers", "rows": [
-    {"name": "gamma", "status": "connected", "scope": "user"},
-    {"name": "omega", "status": "connected", "scope": "project"}
-  ], "expected": [["Your servers", ["gamma"]]]},
-  {"name": "no match gives no groups", "query": "zzz", "rows": [
-    {"name": "gamma", "status": "connected"}
-  ], "expected": [], "counts": {"connected": 0, "total": 0, "needsYou": 0}}
+  ], "expected": ["beta"]},
+  {"name": "query matches the Type and Source cells", "query": "local repo", "rows": [
+    {"name": "gamma", "status": "connected", "scope": "user", "type": "stdio"},
+    {"name": "omega", "status": "connected", "scope": "project", "type": "stdio"},
+    {"name": "web", "status": "connected", "scope": "project", "type": "http"}
+  ], "expected": ["omega"]}
 ]

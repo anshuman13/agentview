@@ -147,44 +147,43 @@ fun mcpStatusGroup(r: McpRow) = when (r.status) {
     else -> "Off"
 }
 
-// Filter chips (web McpFilter): a status group or "all", and where rows come from: "servers", an account id or "all".
-data class McpFilter(val status: String = "all", val where: String = "all")
-data class McpChips(val status: List<Pair<String, Int>>, val where: List<Pair<String, Int>>)
+// The filter menu (web McpFilter): Show is all, connected, not-connected or hidden; Source is "servers", an account id or "all".
+data class McpFilter(val show: String = "all", val where: String = "all")
+data class McpMenu(val show: List<Pair<String, Int>>, val where: List<Pair<String, Int>>)
 
+val MCP_SHOWS = listOf("all" to "All servers", "connected" to "Connected", "not-connected" to "Not connected", "hidden" to "Hidden")
 private val MCP_ACCOUNTS get() = ACCOUNT_LABEL.keys.toList()
 
 fun mcpWhere(r: McpRow) = if (r.server.type == "claudeai" && r.account != null) r.account else "servers"
-fun mcpWhereLabel(w: String) = when (w) { "all" -> "All"; "servers" -> "Servers"; else -> ACCOUNT_LABEL[w] ?: w }
+fun mcpWhereLabel(w: String) = when (w) { "all" -> "All sources"; "servers" -> "Configured servers"; else -> ACCOUNT_LABEL[w] ?: w }
 
-fun mcpSourceLabel(r: McpRow) = if (r.server.type == "claudeai") r.account?.let { "${ACCOUNT_LABEL[it] ?: it} connectors" } ?: "Claude.ai connectors" else mcpScope(r.server.scope).first
+// The Type and Source of a row, like Claude's Connectors page (web typeOf, tagOf, sourceOf).
+fun mcpType(r: McpRow) = if (r.server.type in listOf("claudeai", "http", "sse") || r.server.command?.startsWith("http") == true) "Web" else "Local"
+fun mcpTag(r: McpRow) = when (r.server.scope) { "plugin" -> "Plugin"; "project" -> "Repo"; "local" -> "Folder"; "codex" -> "Codex"; else -> null }
+fun mcpSource(r: McpRow) = if (r.server.type == "claudeai") r.account?.let { ACCOUNT_LABEL[it] ?: it } ?: "Claude.ai" else mcpScope(r.server.scope).first
 
-fun mcpFilter(rows: List<McpRow>, f: McpFilter) = rows.filter { (f.status == "all" || mcpStatusGroup(it) == f.status) && (f.where == "all" || mcpWhere(it) == f.where) }
+private fun mcpShows(r: McpRow, show: String, hidden: Boolean) =
+    if (show == "hidden") hidden else !hidden && (show == "all" || (show == "connected") == (mcpStatusGroup(r) == "Connected"))
 
-// The status chips count the rows the where chip lets through, and the other way round (web filterCounts).
-fun mcpFilterCounts(rows: List<McpRow>, f: McpFilter): McpChips {
-    val status = rows.filter { f.where == "all" || mcpWhere(it) == f.where }.groupingBy { mcpStatusGroup(it) }.eachCount()
-    val where = rows.filter { f.status == "all" || mcpStatusGroup(it) == f.status }.groupingBy { mcpWhere(it) }.eachCount()
-    return McpChips(
-        listOf("all" to status.values.sum()) + MCP_STATUS_GROUPS.mapNotNull { g -> status[g]?.let { g to it } },
-        listOf("all" to where.values.sum()) + (listOf("servers") + MCP_ACCOUNTS).mapNotNull { w -> where[w]?.let { w to it } },
-    )
+// The rows the filter lets through, by name; the same name from several accounts follows the Source order (web mcpList).
+fun mcpList(rows: List<McpRow>, f: McpFilter, isHidden: (McpRow) -> Boolean): List<McpRow> {
+    val order = listOf("servers") + MCP_ACCOUNTS
+    return rows.filter { mcpShows(it, f.show, isHidden(it)) && (f.where == "all" || mcpWhere(it) == f.where) }
+        .sortedWith(compareBy({ mcpShortName(it.name).lowercase() }, { order.indexOf(mcpWhere(it)) }))
 }
 
-// A saved filter whose chip has no rows left falls back to All.
-fun mcpValidFilter(f: McpFilter, chips: McpChips) = McpFilter(
-    if (chips.status.any { it.first == f.status }) f.status else "all",
-    if (chips.where.any { it.first == f.where }) f.where else "all",
+// Menu counts: the Show items count the rows the Source lets through, and the other way round; empty sources are left out (web filterCounts).
+fun mcpFilterCounts(rows: List<McpRow>, f: McpFilter, isHidden: (McpRow) -> Boolean) = McpMenu(
+    MCP_SHOWS.map { (k) -> k to rows.count { mcpShows(it, k, isHidden(it)) && (f.where == "all" || mcpWhere(it) == f.where) } },
+    (listOf("all", "servers") + MCP_ACCOUNTS).filter { k -> k == "all" || rows.any { mcpWhere(it) == k } }
+        .map { k -> k to rows.count { mcpShows(it, f.show, isHidden(it)) && (k == "all" || mcpWhere(it) == k) } },
 )
 
-private val MCP_SCOPE_ORDER = listOf("user", "project", "local", "codex", "claudeai", "plugin")
-
-// Rows by where they come from (web sourceGroups): configured servers first, then the chat account's connectors, then the others; connected rows first, then by name.
-fun mcpSourceGroups(rows: List<McpRow>, account: String?): List<Pair<String, List<McpRow>>> {
-    fun rank(r: McpRow) = if (r.server.type == "claudeai") 100 + (if (r.account == account) 0 else 1 + MCP_ACCOUNTS.indexOf(r.account))
-        else (MCP_SCOPE_ORDER.indexOf(r.server.scope) + 1).takeIf { it > 0 } ?: 50
-    return rows.groupBy(::mcpSourceLabel).entries.sortedBy { rank(it.value.first()) }
-        .map { (label, rs) -> label to rs.sortedWith(compareBy<McpRow>({ MCP_STATUS_GROUPS.indexOf(mcpStatusGroup(it)) }, { it.name.lowercase() })) }
-}
+// A saved Source that has no rows any more falls back to All.
+fun mcpValidFilter(f: McpFilter, menu: McpMenu) = McpFilter(
+    if (MCP_SHOWS.any { it.first == f.show }) f.show else "all",
+    if (menu.where.any { it.first == f.where }) f.where else "all",
+)
 
 // The page subtitle counts every row that is not hidden (web statusCounts).
 data class McpCounts(val connected: Int, val total: Int, val needsYou: Int)
@@ -221,20 +220,24 @@ fun mcpNote(r: McpRow): String? = when {
     else -> null
 }
 
-// A row matches when every word of the query is in its name, its account, its section or the line under its name (web mcpMatches).
+// A row matches when every word of the query is in its name, account, Type or Source, or its status note (web mcpMatches).
 fun mcpMatches(r: McpRow, query: String): Boolean {
-    val text = listOfNotNull(r.name, r.account, mcpSourceLabel(r), mcpNote(r)).joinToString(" ").lowercase()
+    val text = listOfNotNull(r.name, r.account, mcpSource(r), mcpType(r), mcpTag(r), mcpNote(r)).joinToString(" ").lowercase()
     return query.lowercase().split(Regex("\\s+")).filter { it.isNotEmpty() }.all { text.contains(it) }
 }
 
 fun mcpToolCount(r: McpRow): String? = r.server.tools?.let { if (it.isEmpty()) "No tools" else plural(it.size, "tool") }
 
-fun mcpMeta(r: McpRow, calls: Pair<Int, Int>?, personal: Boolean = false): String = listOfNotNull(
-    mcpNote(r),
-    "Personal".takeIf { personal && r.account == null },
+// The line under a row's name: the table's Type and Source cells, as "Web · Repo · Work".
+fun mcpMeta(r: McpRow, personal: Boolean = false): String = listOfNotNull(
+    mcpType(r), mcpTag(r), mcpSource(r), "Personal".takeIf { personal && r.account == null },
+).joinToString(" · ")
+
+// Calls and errors in this chat, for the detail page.
+fun mcpUsage(r: McpRow, calls: Pair<Int, Int>?): String? = listOfNotNull(
     r.server.ms?.let { "$it ms" },
     calls?.let { (n, e) -> plural(n, "call") + if (e > 0) " · ${plural(e, "error")}" else "" },
-).joinToString(" · ")
+).joinToString(" · ").ifEmpty { null }
 
 fun mcpReconnectCmd(name: String) = buildJsonObject { put("type", "mcp_reconnect"); put("name", name) }.toString()
 fun mcpToggleCmd(name: String, enabled: Boolean) = buildJsonObject { put("type", "mcp_toggle"); put("name", name); put("enabled", enabled) }.toString()

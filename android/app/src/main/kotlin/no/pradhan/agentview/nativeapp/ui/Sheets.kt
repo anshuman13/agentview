@@ -145,13 +145,14 @@ fun Menu(expanded: Boolean, onDismiss: () -> Unit, content: @Composable ColumnSc
 }
 
 @Composable
-fun MenuItem(text: String, icon: String, onClick: () -> Unit, danger: Boolean = false, enabled: Boolean = true, checked: Boolean = false) {
+fun MenuItem(text: String, icon: String, onClick: () -> Unit, danger: Boolean = false, enabled: Boolean = true, checked: Boolean = false, count: String? = null) {
     val color = if (danger) av.danger else av.fg
     DropdownMenuItem(
         text = {
             Row(horizontalArrangement = Arrangement.spacedBy(Tokens.sp4), verticalAlignment = Alignment.CenterVertically) {
-                AvIcon(if (checked) "check" else icon, null, Tokens.iconMd)
+                if (checked || icon.isNotEmpty()) AvIcon(if (checked) "check" else icon, null, Tokens.iconMd) else Spacer(Modifier.size(Tokens.iconMd))
                 Text(text, style = Type.body)
+                if (count != null) Text(count, style = Type.body, color = av.fgMuted)
             }
         },
         onClick = onClick,
@@ -161,6 +162,10 @@ fun MenuItem(text: String, icon: String, onClick: () -> Unit, danger: Boolean = 
         modifier = Modifier.heightIn(min = Tokens.touch),
     )
 }
+
+// A small heading over a group of menu items.
+@Composable
+fun MenuLabel(text: String) = Text(text, Modifier.padding(start = Tokens.sp6, end = Tokens.sp6, top = Tokens.sp3, bottom = Tokens.sp2), style = Type.label, color = av.fgMuted)
 
 @Composable
 fun MenuSeparator() = HorizontalDivider(Modifier.padding(vertical = Tokens.sp2), color = av.border, thickness = Tokens.hairline)

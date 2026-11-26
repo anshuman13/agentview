@@ -40,6 +40,7 @@ import no.pradhan.agentview.nativeapp.ops.mcpGroupBody
 import no.pradhan.agentview.nativeapp.ops.mcpKey
 import no.pradhan.agentview.nativeapp.ops.mcpLoggedInSince
 import no.pradhan.agentview.nativeapp.ops.mcpMeta
+import no.pradhan.agentview.nativeapp.ops.mcpUsage
 import no.pradhan.agentview.nativeapp.ops.mcpDot
 import no.pradhan.agentview.nativeapp.ops.mcpNote
 import no.pradhan.agentview.nativeapp.ops.McpLogin
@@ -231,8 +232,9 @@ class PagesLogicTest {
             ChatEvent("t2", "tool_use", name = "mcp__grafana_prod__q"), ChatEvent("t3", "tool_use", name = "Read"),
         )
         assertEquals(mapOf("grafana_prod" to (2 to 1)), mcpCalls(events))
-        assertEquals("40 ms · 2 calls · 1 error", mcpMeta(McpRow(probed[0]), 2 to 1))
-        assertEquals("boom · Personal · 40 ms", mcpMeta(rows[0], null, personal = true))
+        assertEquals("40 ms · 2 calls · 1 error", mcpUsage(McpRow(probed[0]), 2 to 1))
+        assertEquals("Local · Your servers · Personal", mcpMeta(rows[0], personal = true))
+        assertEquals("Web · Claude.ai", mcpMeta(rows[2]))
         assertEquals("1 tool", mcpToolCount(McpRow(probed[0])))
         assertNull(mcpToolCount(rows[1]))
         assertNull(mcpNote(rows[2]))

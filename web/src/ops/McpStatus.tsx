@@ -1,13 +1,13 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal, flushSync } from 'react-dom';
 import { getState, useStore } from '../app/store';
-import { Button, Chip, IconButton, ShowAll } from '../ui/Button';
+import { Button, IconButton } from '../ui/Button';
+import { Menu, MenuItem, MenuSeparator } from '../ui/Menu';
 import { Icon } from '../ui/Icon';
 import { EmptyState, SearchBox } from '../ui/Panel';
-import { Section } from '../ui/Section';
 import { useCan } from '../chat/useCan';
 import { ago, save, stored, useSlot, useTick } from '../ui/util';
-import { accountGroup, filterCounts, groupKey, hideKey, mcpCalls, mcpFilter, mcpMatches, rowKey, slug, sourceGroups, statusCounts, validFilter, whereLabel, type Group, type McpFilter, type Row } from './mcpHelpers';
+import { accountGroup, filterCounts, groupKey, hideKey, mcpCalls, mcpList, mcpMatches, rowKey, SHOWS, slug, statusCounts, validFilter, whereLabel, type Group, type McpFilter, type Row } from './mcpHelpers';
 import { mcpRows } from './mcpRows';
 import { mcpPageCounts } from '../app/shell/counts';
 import { useMcpGroups, useMcpProbe } from './useMcpPage';
@@ -32,19 +32,29 @@ function McpStats({ probed, busy, at, ok, total, attention, onCheck }: Stats) {
   );
 }
 
-const FOLD = 8;
 const FILTER = 'agentview.mcp.filter';
+const ALL: McpFilter = { show: 'all', where: 'all' };
 
-function FilterChips({ chips, filter, onChange }: { chips: ReturnType<typeof filterCounts>; filter: McpFilter; onChange: (f: McpFilter) => void }) {
+// The funnel menu of Claude's Connectors page: what to show, then where it comes from, each with a count and a check on the current one.
+function FilterMenu({ counts, filter, onChange }: { counts: ReturnType<typeof filterCounts>; filter: McpFilter; onChange: (f: McpFilter) => void }) {
+  const [open, setOpen] = useState(false);
+  const trigger = useRef<HTMLButtonElement>(null);
+  const narrowed = filter.show !== 'all' || filter.where !== 'all';
+  const item = (on: boolean, label: string, n: number, pick: () => void) => (
+    <MenuItem key={label} className="mcp-fitem" aria-checked={on} role="menuitemradio" onClick={() => { pick(); setOpen(false); }}>
+      <span className="l">{label}</span><span className="n">{n}</span>{on ? <Icon name="check" small /> : <span className="ck" />}
+    </MenuItem>
+  );
   return (
-    <div className="mcp-chips">
-      <div role="group" aria-label="Status">
-        {chips.status.map(([k, n]) => <Chip key={k} size="sm" on={filter.status === k} aria-pressed={filter.status === k} onClick={() => onChange({ ...filter, status: filter.status === k ? 'all' : k })}>{k === 'all' ? 'All' : k}<span className="n">{n}</span></Chip>)}
-      </div>
-      {chips.where.length > 2 && (
-        <div role="group" aria-label="Source">
-          {chips.where.map(([k, n]) => <Chip key={k} size="sm" on={filter.where === k} aria-pressed={filter.where === k} onClick={() => onChange({ ...filter, where: filter.where === k ? 'all' : k })}>{whereLabel(k)}<span className="n">{n}</span></Chip>)}
-        </div>
+    <div className="mcp-filter">
+      <IconButton ref={trigger} icon="filter" label="Filter" size="sm" on={narrowed} onClick={() => setOpen((v) => !v)} />
+      {open && (
+        <Menu trigger={trigger} onClose={() => setOpen(false)}>
+          <div className="mcp-fhead">Show</div>
+          {counts.show.map(([k, n]) => item(filter.show === k, SHOWS.find(([s]) => s === k)![1], n, () => onChange({ ...filter, show: k })))}
+          {counts.where.length > 2 && <><MenuSeparator /><div className="mcp-fhead">Source</div>
+            {counts.where.map(([k, n]) => item(filter.where === k, whereLabel(k), n, () => onChange({ ...filter, where: k })))}</>}
+        </Menu>
       )}
     </div>
   );
@@ -59,8 +69,6 @@ export function McpPage() {
   const { probed, busy, at, error, accounts, load } = useMcpProbe(account, id, connectors);
   const { groups, setGroup } = useMcpGroups();
   const [sel, setSel] = useState<string | null>(null);
-  const [showHidden, setShowHidden] = useState(false);
-  const [expanded, setExpanded] = useState<string[]>([]);
   const [query, setQuery] = useState('');
   useTick(15000);
 
@@ -70,64 +78,60 @@ export function McpPage() {
   const current = rows.find((r) => rowKey(r) === sel) ?? null;
   const groupOf = (r: Row): Group => (r.account ? accountGroup(r.account) : groups[groupKey(r)] === 'personal' ? 'personal' : 'work');
   const hidden = (r: Row) => groups[hideKey({ name: groupKey(r) })] === 'hidden';
-  const [saved, setSaved] = useState<McpFilter>(() => stored(FILTER, { status: 'all', where: 'all' }));
+  const [saved, setSaved] = useState<McpFilter>(() => ({ ...ALL, ...stored<Partial<McpFilter>>(FILTER, {}) }));
   const setFilter = (f: McpFilter) => { setSaved(f); save(FILTER, f); };
-  const shown = useMemo(() => rows.filter((r) => !hidden(r)), [rows, groups]);
-  const shownCounts = useMemo(() => statusCounts(shown), [shown]);
+  const shownCounts = useMemo(() => statusCounts(rows.filter((r) => !hidden(r))), [rows, groups]);
   useEffect(() => { if (probed !== null) mcpPageCounts.set(shownCounts); }, [probed, shownCounts]);
-  const searched = useMemo(() => shown.filter((r) => mcpMatches(r, query)), [shown, query]);
-  const chips = useMemo(() => filterCounts(searched, saved), [searched, saved]);
-  const filter = validFilter(saved, chips);
-  const matched = useMemo(() => sourceGroups(mcpFilter(searched, filter), account), [searched, filter.status, filter.where, account]);
-  const hiddenMatched = useMemo(() => sourceGroups(mcpFilter(rows.filter((r) => hidden(r) && mcpMatches(r, query)), filter), account).flatMap(([, rs]) => rs), [rows, groups, query, filter.status, filter.where, account]);
-  const narrowed = query.trim() !== '' || filter.status !== 'all' || filter.where !== 'all';
+  const searched = useMemo(() => rows.filter((r) => mcpMatches(r, query)), [rows, query]);
+  const counts = useMemo(() => filterCounts(searched, saved, hidden), [searched, saved, groups]);
+  const filter = validFilter(saved, counts);
+  const list = useMemo(() => mcpList(searched, filter, hidden), [searched, filter.show, filter.where, groups]);
+  const narrowed = query.trim() !== '' || filter.show !== 'all' || filter.where !== 'all';
   const extra = useSlot('page-mcp-extra');
   const action = useSlot('page-mcp-action');
-  const pick = (name: string) => setSel((s) => (s === name ? null : name));
-  const renderRow = (row: Row, isHidden: boolean) => (
-    <ServiceRow key={rowKey(row)} row={row} selected={rowKey(row) === sel} usage={usageOf(row)} onPick={() => pick(rowKey(row))} group={groupOf(row)} onGroup={(to) => setGroup(groupKey(row), to)} onHide={() => setGroup(hideKey({ name: groupKey(row) }), isHidden ? 'shown' : 'hidden')} isHidden={isHidden} />
-  );
+  const close = () => {
+    const key = sel;
+    flushSync(() => setSel(null));
+    const row = key ? document.querySelector<HTMLElement>(`[data-row="${CSS.escape(key)}"]`) : null;
+    row?.scrollIntoView({ block: 'nearest' });
+    row?.focus({ preventScroll: true });
+  };
 
   return (
-    <div className={`mcp-page ${current ? 'with-detail' : ''}`}>
+    <div className="mcp-page">
       <div className="mcp-main wk"><div className="wk-scroll"><div className="mt-page">
         {action && createPortal(<IconButton icon="refresh" label="Check" size="sm" spin={busy} disabled={busy} onClick={() => load(true)} />, action)}
         {extra && createPortal(<McpStats probed={probed !== null} busy={busy} at={at} ok={shownCounts.connected} total={shownCounts.total} attention={shownCounts.needsYou} onCheck={() => load(true)} />, extra)}
-        {error && <div className="mcp-error" role="alert"><Icon name="error" small /> {error}</div>}
-        {probed === null && !error && (
-          <div className="skeleton-list">{[0, 1, 2, 3, 4, 5].map((i) => <div key={i} className="skeleton mcp-skeleton" style={{ animationDelay: `${i * 80}ms` }} />)}</div>
-        )}
-        {probed !== null && rows.length === 0 && (
-          <EmptyState size="sm" icon="plug" title="No MCP servers yet" hint="Servers you add show here" action={<SetupButton kind="mcp" mcpCommand={connectors ? 'claude mcp add' : 'codex mcp add'} />} />
-        )}
-        {!connectors && <div className="muted">claude.ai connectors load in Claude chats only</div>}
-        {probed !== null && rows.length > 0 && (
-          <div className="mcp-filters">
-            <SearchBox value={query} onChange={setQuery} label="Filter servers" />
-            <FilterChips chips={chips} filter={filter} onChange={setFilter} />
-          </div>
-        )}
-        {narrowed && !matched.length && !hiddenMatched.length && (
-          <EmptyState size="sm" icon="search" title="No servers match" action={<Button size="sm" onClick={() => { setQuery(''); setFilter({ status: 'all', where: 'all' }); }}>Clear filters</Button>} />
-        )}
-        {matched.map(([g, rs]) => {
-          const folded = !query.trim() && !expanded.includes(g) && rs.length > FOLD;
-          return (
-            <section key={g}>
-              <Section label={g} count={rs.length} />
-              <div className="as-group mcp-group">{(folded ? rs.slice(0, FOLD) : rs).map((r) => renderRow(r, false))}</div>
-              {folded && <ShowAll count={rs.length} onClick={() => setExpanded((e) => [...e, g])} />}
-            </section>
-          );
-        })}
-        {hiddenMatched.length > 0 && (
-          <section>
-            <Section label="Hidden" count={hiddenMatched.length} open={showHidden} onToggle={() => setShowHidden((v) => !v)} />
-            {showHidden && <div className="as-group mcp-group">{hiddenMatched.map((r) => renderRow(r, true))}</div>}
-          </section>
-        )}
+        {current ? (
+          <Detail row={current} usage={usageOf(current)} group={groupOf(current)} onGroup={(to) => setGroup(groupKey(current), to)} hidden={hidden(current)} onHide={() => setGroup(hideKey({ name: groupKey(current) }), hidden(current) ? 'shown' : 'hidden')} onClose={close} />
+        ) : <>
+          {error && <div className="mcp-error" role="alert"><Icon name="error" small /> {error}</div>}
+          {probed === null && !error && (
+            <div className="skeleton-list">{[0, 1, 2, 3, 4, 5].map((i) => <div key={i} className="skeleton mcp-skeleton" style={{ animationDelay: `${i * 80}ms` }} />)}</div>
+          )}
+          {probed !== null && rows.length === 0 && (
+            <EmptyState size="sm" icon="plug" title="No MCP servers yet" hint="Servers you add show here" action={<SetupButton kind="mcp" mcpCommand={connectors ? 'claude mcp add' : 'codex mcp add'} />} />
+          )}
+          {!connectors && <div className="muted">claude.ai connectors load in Claude chats only</div>}
+          {probed !== null && rows.length > 0 && (
+            <div className="mcp-bar">
+              <SearchBox value={query} onChange={setQuery} label="Search" />
+              <FilterMenu counts={counts} filter={filter} onChange={setFilter} />
+            </div>
+          )}
+          {narrowed && !list.length && (
+            <EmptyState size="sm" icon="search" title="No servers match" action={<Button size="sm" onClick={() => { setQuery(''); setFilter(ALL); }}>Clear filters</Button>} />
+          )}
+          {list.length > 0 && (
+            <div className="mcp-table" role="table" aria-label="MCP servers">
+              <div className="mcp-tr mcp-th" role="row"><span role="columnheader">Server</span><span role="columnheader" className="c-type">Type</span><span role="columnheader" className="c-src">Source</span><span role="columnheader" className="c-st">Status</span><span /></div>
+              {list.map((r) => (
+                <ServiceRow key={rowKey(r)} row={r} usage={usageOf(r)} onPick={() => setSel(rowKey(r))} group={groupOf(r)} onGroup={(to) => setGroup(groupKey(r), to)} onHide={() => setGroup(hideKey({ name: groupKey(r) }), hidden(r) ? 'shown' : 'hidden')} isHidden={hidden(r)} />
+              ))}
+            </div>
+          )}
+        </>}
       </div></div></div>
-      {current && <Detail row={current} usage={usageOf(current)} group={groupOf(current)} onGroup={(to) => setGroup(groupKey(current), to)} onClose={() => { const row = document.querySelector<HTMLElement>(`[data-row="${CSS.escape(rowKey(current))}"]`); flushSync(() => setSel(null)); row?.scrollIntoView({ block: 'nearest' }); row?.focus({ preventScroll: true }); }} />}
     </div>
   );
 }

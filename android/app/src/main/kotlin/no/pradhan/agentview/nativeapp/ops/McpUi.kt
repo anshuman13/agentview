@@ -11,8 +11,6 @@ import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -52,9 +50,7 @@ import no.pradhan.agentview.nativeapp.app.saveMcpGroup
 import no.pradhan.agentview.nativeapp.ui.Badge
 import no.pradhan.agentview.nativeapp.ui.BadgeTone
 import no.pradhan.agentview.nativeapp.ui.Button
-import no.pradhan.agentview.nativeapp.ui.Chip
 import no.pradhan.agentview.nativeapp.ui.ButtonSize
-import no.pradhan.agentview.nativeapp.ui.ButtonVariant
 import no.pradhan.agentview.nativeapp.ui.StatusDot
 import no.pradhan.agentview.nativeapp.ui.EmptyState
 import no.pradhan.agentview.nativeapp.ui.Group
@@ -63,6 +59,13 @@ import no.pradhan.agentview.nativeapp.ui.IconBtn
 import no.pradhan.agentview.nativeapp.ui.ListRow
 import no.pradhan.agentview.nativeapp.ui.Loading
 import no.pradhan.agentview.nativeapp.ui.MenuItem
+import no.pradhan.agentview.nativeapp.ui.Menu
+import no.pradhan.agentview.nativeapp.ui.MenuLabel
+import no.pradhan.agentview.nativeapp.ui.MenuSeparator
+import no.pradhan.agentview.nativeapp.ui.AvIcon
+import no.pradhan.agentview.nativeapp.ui.DotState
+import no.pradhan.agentview.nativeapp.ui.av
+import androidx.compose.foundation.layout.Box
 import no.pradhan.agentview.nativeapp.ui.MoreButton
 import no.pradhan.agentview.nativeapp.ui.SearchField
 import no.pradhan.agentview.nativeapp.ui.SectionHeader
@@ -104,8 +107,6 @@ fun McpScreen(hub: Hub, onBack: () -> Unit) {
     val groups by hub.mcpGroups.collectAsState()
     LaunchedEffect(Unit) { hub.refreshMcpGroups() }
     var sel by rememberSaveable(chat) { mutableStateOf<String?>(null) }
-    var showHidden by rememberSaveable { mutableStateOf(false) }
-    var expanded by rememberSaveable { mutableStateOf(listOf<String>()) }
     var query by rememberSaveable { mutableStateOf("") }
     val live = session?.mcp ?: emptyList()
     val account = session?.account
@@ -114,15 +115,15 @@ fun McpScreen(hub: Hub, onBack: () -> Unit) {
     val sections = remember(rows, groups) { mcpSections(rows, groups) }
     val personal = remember(sections) { sections.personal.map(::mcpKey).toSet() }
     var saved by remember { mutableStateOf(hub.prefs.getString("mcpFilter", null)?.split("|")?.takeIf { it.size == 2 }?.let { McpFilter(it[0], it[1]) } ?: McpFilter()) }
-    fun setFilter(f: McpFilter) { saved = f; hub.prefs.edit().putString("mcpFilter", "${f.status}|${f.where}").apply() }
-    val filtering = query.isNotBlank()
+    fun setFilter(f: McpFilter) { saved = f; hub.prefs.edit().putString("mcpFilter", "${f.show}|${f.where}").apply() }
     val shownRows = remember(sections) { sections.work + sections.personal }
-    val searched = remember(shownRows, query) { shownRows.filter { mcpMatches(it, query) } }
-    val chips = remember(searched, saved) { mcpFilterCounts(searched, saved) }
-    val filter = mcpValidFilter(saved, chips)
-    val narrowed = filtering || filter != McpFilter()
-    val matched = remember(searched, filter, account) { mcpSourceGroups(mcpFilter(searched, filter), account) }
-    val hiddenMatched = remember(sections, query, filter, account) { mcpSourceGroups(mcpFilter(sections.hidden.filter { mcpMatches(it, query) }, filter), account).flatMap { it.second } }
+    val hidden = remember(sections) { sections.hidden.map(::mcpKey).toSet() }
+    val isHidden = { r: McpRow -> mcpKey(r) in hidden }
+    val searched = remember(rows, query) { rows.filter { mcpMatches(it, query) } }
+    val menu = remember(searched, saved, hidden) { mcpFilterCounts(searched, saved, isHidden) }
+    val filter = mcpValidFilter(saved, menu)
+    val narrowed = query.isNotBlank() || filter != McpFilter()
+    val list = remember(searched, filter, hidden) { mcpList(searched, filter, isHidden) }
 
     fun setGroup(service: String, group: String) {
         val before = groups
@@ -155,21 +156,14 @@ fun McpScreen(hub: Hub, onBack: () -> Unit) {
                 if (probe.data == null && probe.error.isEmpty()) item { Loading("Checking the servers…") }
                 if (probe.data != null && rows.isEmpty()) item { EmptyState("No MCP servers yet", "Servers you add show here", action = { SetupButton(hub, "mcp", mcpCommand = if (connectors) "claude mcp add" else "codex mcp add") }, icon = "plug") }
                 if (!connectors) item { Hint("claude.ai connectors load in Claude chats only") }
-                if (probe.data != null && rows.isNotEmpty()) {
-                    item { SearchField(query, { query = it }, "Filter servers") }
-                    item { McpFilterChips(chips, filter, ::setFilter) }
+                if (probe.data != null && rows.isNotEmpty()) item {
+                    Row(Modifier.padding(end = Tokens.sp4), verticalAlignment = Alignment.CenterVertically) {
+                        SearchField(query, { query = it }, "Search", Modifier.weight(1f))
+                        McpFilterMenu(menu, filter, ::setFilter)
+                    }
                 }
-                if (narrowed && matched.isEmpty() && hiddenMatched.isEmpty()) item { EmptyState("No servers match", icon = "search", action = { Button("Clear filters", { query = ""; setFilter(McpFilter()) }, size = ButtonSize.Sm) }) }
-                matched.forEach { (label, list) ->
-                    val folded = !filtering && label !in expanded && list.size > FOLD
-                    item(key = "head:$label") { SectionHeader(label, list.size.toString()) }
-                    item(key = "rows:$label") { McpGroup(if (folded) list.take(FOLD) else list, calls, personal) { sel = mcpKey(it) } }
-                    if (folded) item(key = "more:$label") { Button("Show all ${list.size}", { expanded = expanded + label }, Modifier.padding(start = Tokens.listPad), variant = ButtonVariant.Plain, size = ButtonSize.Sm) }
-                }
-                if (hiddenMatched.isNotEmpty()) {
-                    item(key = "head:hidden") { SectionHeader("Hidden", hiddenMatched.size.toString(), open = showHidden, onToggle = { showHidden = !showHidden }) }
-                    if (showHidden) item(key = "rows:hidden") { McpGroup(hiddenMatched, calls, personal) { sel = mcpKey(it) } }
-                }
+                if (narrowed && list.isEmpty()) item { EmptyState("No servers match", icon = "search", action = { Button("Clear filters", { query = ""; setFilter(McpFilter()) }, size = ButtonSize.Sm) }) }
+                if (list.isNotEmpty()) item(key = "rows") { McpGroup(list, personal) { sel = mcpKey(it) } }
                 item { Spacer(Modifier.padding(bottom = Tokens.sp16)) }
             }
         }
@@ -177,36 +171,48 @@ fun McpScreen(hub: Hub, onBack: () -> Unit) {
     }
 }
 
-private const val FOLD = 8
-
-// Status chips, then where-from chips (servers or a Claude account's connectors) when there is more than one source.
+// The funnel menu (web FilterMenu): Show, then Source when rows come from more than one place, each with its count and a check.
 @Composable
-private fun McpFilterChips(chips: McpChips, filter: McpFilter, onChange: (McpFilter) -> Unit) {
-    val row = Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = Tokens.listPad)
-    Column(Modifier.padding(vertical = Tokens.sp3), verticalArrangement = Arrangement.spacedBy(Tokens.sp3)) {
-        Row(row, horizontalArrangement = Arrangement.spacedBy(Tokens.sp3)) {
-            chips.status.forEach { (k, n) -> Chip("${if (k == "all") "All" else k} $n", { onChange(filter.copy(status = if (filter.status == k) "all" else k)) }, on = filter.status == k) }
-        }
-        if (chips.where.size > 2) Row(row, horizontalArrangement = Arrangement.spacedBy(Tokens.sp3)) {
-            chips.where.forEach { (k, n) -> Chip("${mcpWhereLabel(k)} $n", { onChange(filter.copy(where = if (filter.where == k) "all" else k)) }, on = filter.where == k) }
+private fun McpFilterMenu(menu: McpMenu, filter: McpFilter, onChange: (McpFilter) -> Unit) {
+    var open by remember { mutableStateOf(false) }
+    Box {
+        IconBtn("filter", "Filter", { open = true }, on = filter != McpFilter())
+        Menu(open, { open = false }) {
+            MenuLabel("Show")
+            menu.show.forEach { (k, n) -> MenuItem(MCP_SHOWS.first { it.first == k }.second, "", { open = false; onChange(filter.copy(show = k)) }, checked = filter.show == k, count = "$n") }
+            if (menu.where.size > 2) {
+                MenuSeparator()
+                MenuLabel("Source")
+                menu.where.forEach { (k, n) -> MenuItem(mcpWhereLabel(k), "", { open = false; onChange(filter.copy(where = k)) }, checked = filter.where == k, count = "$n") }
+            }
         }
     }
 }
 
-// One row per server: status dot, name, one meta line and the tool count; Off rows are greyed.
+// One row per server, by name (web ServiceRow): Web or Local icon, name, Type and Source under it, and the status at the end; Off rows are greyed.
 @Composable
-private fun McpGroup(rows: List<McpRow>, calls: Map<String, Pair<Int, Int>>, personal: Set<String>, onOpen: (McpRow) -> Unit) {
+private fun McpGroup(rows: List<McpRow>, personal: Set<String>, onOpen: (McpRow) -> Unit) {
     Group {
         rows.forEachIndexed { i, r ->
             if (i > 0) Hairline()
-            val count = mcpToolCount(r)
             ListRow(
-                mcpShortName(r.name), mcpMeta(r, calls[mcpSlug(r.name)], mcpKey(r) in personal).ifEmpty { null },
-                leading = { StatusDot(mcpDot(r), desc = mcpState(r).first) }, leadMin = Tokens.dot,
-                trailing = count?.let { { Badge(it, BadgeTone.Quiet) } },
+                mcpShortName(r.name), mcpMeta(r, mcpKey(r) in personal),
+                leading = { AvIcon(if (mcpType(r) == "Web") "globe" else "terminal", null, Tokens.iconMd, tint = av.fgMuted) },
+                trailing = { McpStatus(r) },
                 lines = 1, metaLines = 1, muted = mcpStatusGroup(r) == "Off", onClick = { onOpen(r) },
             )
         }
+    }
+}
+
+// The status at the end of a row (web StatusCell): a check when connected, a pulsing dot while connecting, else the reason.
+@Composable
+private fun McpStatus(r: McpRow) {
+    val (label, tone) = mcpState(r)
+    when {
+        r.status == "pending" || r.status == "probing" -> StatusDot(DotState.Busy, desc = label)
+        tone == BadgeTone.Done -> AvIcon("check", label, Tokens.iconMd, tint = av.fgMuted)
+        else -> Badge(label, tone)
     }
 }
 
@@ -278,7 +284,7 @@ private fun McpDetail(hub: Hub, r: McpRow, calls: Pair<Int, Int>?, groups: Map<S
                         Hairline(); ListRow("In chat", if (r.live) "Loaded" else "Not loaded")
                         Hairline(); ListRow(if (r.account != null) "Account" else "Group", if (r.account != null) ACCOUNT_LABEL[r.account] ?: r.account else if (group == "work") "Work" else "Personal")
                         if (!canEdit) { Hairline(); ListRow("Edit", "~/.codex/config.toml, then Reconnect") }
-                        calls?.let { (n, e) -> Hairline(); ListRow("Used in this chat", plural(n, "call") + if (e > 0) " · ${plural(e, "error")}" else "") }
+                        mcpUsage(r, calls)?.let { Hairline(); ListRow("Used in this chat", it) }
                     }
                 }
                 item { SectionHeader("Tools", (r.server.tools?.size ?: 0).toString()) }

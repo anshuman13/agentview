@@ -163,54 +163,45 @@ export const statusGroup = (r: Row): StatusGroup =>
   : r.status === 'needs-auth' ? 'Needs login' : r.status === 'failed' ? 'Failed' : 'Off';
 
 export type Where = 'all' | 'servers' | Account;
-export type McpFilter = { status: StatusGroup | 'all'; where: Where };
+export type Show = 'all' | 'connected' | 'not-connected' | 'hidden';
+export type McpFilter = { show: Show; where: Where };
+export const SHOWS: [Show, string][] = [['all', 'All servers'], ['connected', 'Connected'], ['not-connected', 'Not connected'], ['hidden', 'Hidden']];
 const ACCOUNTS = Object.keys(ACCOUNT_LABEL) as Account[];
 
-// Where a row comes from for the filter chips: a claude.ai account's connectors, or the configured servers.
+// Where a row comes from for the Source filter: a claude.ai account's connectors, or the configured servers.
 export const whereOf = (r: Row): Exclude<Where, 'all'> => (r.type === 'claudeai' && r.account ? (r.account as Account) : 'servers');
-export const whereLabel = (w: Where) => (w === 'all' ? 'All' : w === 'servers' ? 'Servers' : ACCOUNT_LABEL[w] ?? w);
+export const whereLabel = (w: Where) => (w === 'all' ? 'All sources' : w === 'servers' ? 'Configured servers' : ACCOUNT_LABEL[w] ?? w);
 
-export const sourceLabel = (r: Row) =>
-  r.type === 'claudeai' ? (r.account ? `${ACCOUNT_LABEL[r.account as Account] ?? r.account} connectors` : 'Claude.ai connectors') : scopeInfo(r.scope ?? 'other')[1];
+// The table's Type and Source cells, like Claude's Connectors page: Web or Local with a tag, and the account or config it comes from.
+export const typeOf = (r: Row) => (r.type === 'claudeai' || r.type === 'http' || r.type === 'sse' || r.command?.startsWith('http') ? 'Web' : 'Local');
+export const tagOf = (r: Row) => ({ plugin: 'Plugin', project: 'Repo', local: 'Folder', codex: 'Codex' })[r.scope ?? ''] as string | undefined;
+export const sourceOf = (r: Row) => (r.type === 'claudeai' ? (r.account ? ACCOUNT_LABEL[r.account as Account] ?? r.account : 'Claude.ai') : scopeInfo(r.scope ?? 'other')[1]);
 
-export const mcpFilter = (rows: Row[], f: McpFilter) =>
-  rows.filter((r) => (f.status === 'all' || statusGroup(r) === f.status) && (f.where === 'all' || whereOf(r) === f.where));
+const shows = (r: Row, show: Show, hidden: boolean) =>
+  show === 'hidden' ? hidden : !hidden && (show === 'all' || (show === 'connected') === (statusGroup(r) === 'Connected'));
 
-// Chip counts: the status chips count the rows the where chip lets through, and the other way round.
-export function filterCounts(rows: Row[], f: McpFilter) {
-  const status: Record<string, number> = { all: 0 };
-  const where: Record<string, number> = { all: 0 };
-  for (const r of rows) {
-    if (f.where === 'all' || whereOf(r) === f.where) { status.all++; status[statusGroup(r)] = (status[statusGroup(r)] ?? 0) + 1; }
-    if (f.status === 'all' || statusGroup(r) === f.status) { where.all++; where[whereOf(r)] = (where[whereOf(r)] ?? 0) + 1; }
-  }
+// The rows the filter lets through, by name; the same name from several accounts follows the Source order.
+export function mcpList(rows: Row[], f: McpFilter, isHidden: (r: Row) => boolean): Row[] {
+  const order = (r: Row) => ['servers', ...ACCOUNTS].indexOf(whereOf(r));
+  return rows.filter((r) => shows(r, f.show, isHidden(r)) && (f.where === 'all' || whereOf(r) === f.where))
+    .sort((a, b) => shortName(a.name).toLowerCase().localeCompare(shortName(b.name).toLowerCase()) || order(a) - order(b));
+}
+
+// Menu counts: the Show items count the rows the Source lets through, and the other way round. Empty sources are left out.
+export function filterCounts(rows: Row[], f: McpFilter, isHidden: (r: Row) => boolean) {
+  const show = (k: Show) => rows.filter((r) => shows(r, k, isHidden(r)) && (f.where === 'all' || whereOf(r) === f.where)).length;
+  const where = (k: Where) => rows.filter((r) => shows(r, f.show, isHidden(r)) && (k === 'all' || whereOf(r) === k)).length;
   return {
-    status: (['all', ...STATUS_GROUPS] as const).filter((k) => k === 'all' || status[k]).map((k) => [k, status[k]] as [McpFilter['status'], number]),
-    where: (['all', 'servers', ...ACCOUNTS] as Where[]).filter((k) => k === 'all' || where[k]).map((k) => [k, where[k]] as [Where, number]),
+    show: SHOWS.map(([k]): [Show, number] => [k, show(k)]),
+    where: (['all', 'servers', ...ACCOUNTS] as Where[]).filter((k) => k === 'all' || rows.some((r) => whereOf(r) === k)).map((k): [Where, number] => [k, where(k)]),
   };
 }
 
-// A saved filter whose chip has no rows left falls back to All.
-export const validFilter = (f: McpFilter, chips: ReturnType<typeof filterCounts>): McpFilter => ({
-  status: chips.status.some(([k]) => k === f.status) ? f.status : 'all',
-  where: chips.where.some(([k]) => k === f.where) ? f.where : 'all',
+// A saved Source that has no rows any more falls back to All.
+export const validFilter = (f: McpFilter, counts: ReturnType<typeof filterCounts>): McpFilter => ({
+  show: SHOWS.some(([k]) => k === f.show) ? f.show : 'all',
+  where: counts.where.some(([k]) => k === f.where) ? f.where : 'all',
 });
-
-// Rows by where they come from: configured servers first, then the chat account's connectors, then the other accounts'.
-// Each section lists connected rows first, then Needs login, Failed and Off, by name.
-export function sourceGroups(rows: Row[], account?: string): [string, Row[]][] {
-  const rankOf = (r: Row) => (r.type === 'claudeai' ? 100 + (r.account === account ? 0 : 1 + ACCOUNTS.indexOf(r.account as Account)) : SCOPES.findIndex((s) => s[0] === r.scope) + 1 || 50);
-  const by = new Map<string, { rank: number; rows: Row[] }>();
-  for (const r of rows) {
-    const label = sourceLabel(r);
-    const g = by.get(label) ?? { rank: rankOf(r), rows: [] };
-    g.rows.push(r);
-    by.set(label, g);
-  }
-  const order = (r: Row) => STATUS_GROUPS.indexOf(statusGroup(r));
-  return [...by.entries()].sort((a, b) => a[1].rank - b[1].rank)
-    .map(([label, g]): [string, Row[]] => [label, g.rows.sort((a, b) => order(a) - order(b) || a.name.toLowerCase().localeCompare(b.name.toLowerCase()))]);
-}
 
 // The page subtitle counts every row that is not hidden.
 export const statusCounts = (rows: Row[]) => ({
@@ -234,8 +225,8 @@ export const rowNote = (r: Row) => {
   return status !== 'done' ? reason : undefined;
 };
 
-// A row matches when every word of the query is in its name, its account, its section or the line under its name.
+// A row matches when every word of the query is in its name, account, Type or Source cell, or its status note.
 export function mcpMatches(r: Row, query: string) {
-  const text = [r.name, r.account, sourceLabel(r), rowNote(r)].filter(Boolean).join(' ').toLowerCase();
+  const text = [r.name, r.account, sourceOf(r), typeOf(r), tagOf(r), rowNote(r)].filter(Boolean).join(' ').toLowerCase();
   return query.toLowerCase().split(/\s+/).filter(Boolean).every((w) => text.includes(w));
 }
