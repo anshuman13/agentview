@@ -17,6 +17,13 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.ui.text.TextLayoutResult
+import androidx.compose.ui.text.TextRange
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -25,6 +32,8 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextOverflow
+
+private const val CARET_BAND = 120f
 
 // Text field (web input): sunken fill, hairline border that turns accent on focus.
 @Composable
@@ -47,9 +56,20 @@ fun TextField(
     val c = av
     val interaction = remember { MutableInteractionSource() }
     val focused by interaction.collectIsFocusedAsState()
+    val bring = remember { BringIntoViewRequester() }
+    // The field keeps its own caret so a multi-line field can bring the caret line into view while typing, above the keyboard.
+    var held by remember { mutableStateOf(TextFieldValue(value, TextRange(value.length))) }
+    val shown = if (held.text == value) held else TextFieldValue(value, TextRange(value.length))
+    var layout by remember { mutableStateOf<TextLayoutResult?>(null) }
+    LaunchedEffect(shown.selection, layout, focused) {
+        val l = layout ?: return@LaunchedEffect
+        if (singleLine || !focused || l.layoutInput.text.length != shown.text.length) return@LaunchedEffect
+        bring.bringIntoView(l.getCursorRect(shown.selection.end).inflate(CARET_BAND))
+    }
     BasicTextField(
-        value, onValueChange,
-        modifier.fillMaxWidth(),
+        shown, { held = it; if (it.text != value) onValueChange(it.text) },
+        modifier.fillMaxWidth().bringIntoViewRequester(bring),
+        onTextLayout = { layout = it },
         enabled = enabled,
         textStyle = style.copy(color = if (enabled) c.fg else c.fgMuted),
         cursorBrush = SolidColor(c.accent),

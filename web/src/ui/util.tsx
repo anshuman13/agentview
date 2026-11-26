@@ -167,6 +167,14 @@ export function weekPace(resetsAt: number, now = Date.now()) {
 // The phone keyboard covers the lower half, so a focused field moves into view once it is up.
 export const reveal = (e: { currentTarget: HTMLElement }) => { const el = e.currentTarget; setTimeout(() => el.scrollIntoView({ block: 'nearest', behavior: 'smooth' }), 300); };
 
+// A growing textarea typed at its end keeps that end in view: it grows past the bottom of its scroll area (or the keyboard) otherwise.
+export function keepEndInView(el: HTMLTextAreaElement | null) {
+  if (!el || document.activeElement !== el || el.selectionEnd !== el.value.length) return;
+  let box = el.parentElement;
+  while (box && !/(auto|scroll)/.test(getComputedStyle(box).overflowY)) box = box.parentElement;
+  if (el.getBoundingClientRect().bottom > (box ? box.getBoundingClientRect().bottom : innerHeight)) el.scrollIntoView({ block: 'end' });
+}
+
 export { money };
 
 export const modelLabel = (id: string, models: Array<{ value: string; displayName: string }>) =>

@@ -5,7 +5,7 @@ import type { ItemRow } from '../../data/sync';
 import { Button, IconButton } from '../../../ui/Button';
 import { Row } from '../../../ui/Row';
 import { Section } from '../../../ui/Section';
-import { fitHeight, reveal } from '../../../ui/util';
+import { fitHeight, keepEndInView, reveal } from '../../../ui/util';
 import { useActions } from '../../useActions';
 import { Back } from '../../../app/touch/back';
 import { haptic } from '../../../ui/haptic';
@@ -113,12 +113,13 @@ export function TaskEditor({ row, onClose, onAsk }: Props) {
 type FocusTargets = { titleRef: RefObject<HTMLTextAreaElement | null>; textRef: RefObject<HTMLTextAreaElement | null>; editing: boolean; showArea: boolean; title: string; text: string };
 
 function useTaskEditorFocus(row: ItemRow, onClose: () => void, { titleRef, textRef, editing, showArea, title, text }: FocusTargets) {
-  useLayoutEffect(() => { fitHeight(titleRef.current); fitHeight(textRef.current); }, [title, text, showArea]);
+  useLayoutEffect(() => { fitHeight(titleRef.current); fitHeight(textRef.current); keepEndInView(textRef.current); }, [title, text, showArea]);
   useEffect(() => {
     const el = textRef.current;
     if (!editing || !el || document.activeElement === el) return;
     el.focus({ preventScroll: true });
     el.setSelectionRange(el.value.length, el.value.length);
+    keepEndInView(el);
   }, [editing]);
   // On desktop the title takes focus, so keys go to the task; the phone keeps its keyboard down until a tap.
   useEffect(() => { if (matchMedia('(hover: hover)').matches) titleRef.current?.focus({ preventScroll: true }); }, []);
