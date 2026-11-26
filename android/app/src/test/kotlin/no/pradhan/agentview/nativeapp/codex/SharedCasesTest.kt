@@ -95,6 +95,9 @@ import no.pradhan.agentview.nativeapp.chat.memoryMark
 import no.pradhan.agentview.nativeapp.chat.leftOutPreferences
 import no.pradhan.agentview.nativeapp.chat.ALARM_TOOL
 import no.pradhan.agentview.nativeapp.chat.alarmCard
+import no.pradhan.agentview.nativeapp.chat.BuildCardOpen
+import no.pradhan.agentview.nativeapp.chat.buildCard
+import no.pradhan.agentview.nativeapp.net.SpawnedBuild
 import no.pradhan.agentview.nativeapp.chat.rememberedOf
 import no.pradhan.agentview.nativeapp.chat.Proposal
 import no.pradhan.agentview.nativeapp.chat.StatusStep
@@ -337,6 +340,18 @@ class SharedCasesTest {
             val want = c.getValue("expected").jsonObject
             val got = alarmCard(use, result, c.getValue("running").jsonPrimitive.boolean)
             assertEquals(c.str("name"), listOf(want.str("time"), want.str("label"), want.str("status"), want.str("tone")), listOf(got.time, got.label, got.status, got.tone.name.lowercase()))
+        }
+    }
+
+    @Test fun buildCards() {
+        for (c in cases("build-card")) {
+            val input = c.getValue("input").jsonObject
+            fun opt(k: String) = (input[k] as? JsonPrimitive)?.contentOrNull ?: ""
+            val builds = c.getValue("builds").jsonArray.map { it.decode<SpawnedBuild>() }
+            val got = buildCard(opt("spec"), opt("request"), c.nullable("result")?.jsonPrimitive?.content, c.getValue("index").jsonPrimitive.int, builds)
+            val want = c.getValue("expected").jsonObject
+            val open = (want["open"] as? JsonObject)?.let { o -> o["chat"]?.let { BuildCardOpen.Chat(it.jsonPrimitive.content) } ?: BuildCardOpen.Session(o.str("session")) }
+            assertEquals(c.str("name"), listOf(want.str("title"), want.str("status"), want.str("tasks"), want.str("round"), open, want.getValue("found").jsonPrimitive.boolean), listOf(got.title, got.status, got.tasks, got.round, got.open, got.found))
         }
     }
 

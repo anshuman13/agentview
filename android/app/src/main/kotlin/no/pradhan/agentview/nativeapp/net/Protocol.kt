@@ -155,6 +155,10 @@ data class SubChatCommit(val hash: String = "", val subject: String = "")
 @Serializable
 data class SubChat(val sessionId: String, val title: String = "", val startedAt: Long = 0, val round: Round? = null, val commit: SubChatCommit? = null)
 
+// shared/protocol.ts SpawnedBuild: one build a chat started, as /api/chat/spawned returns it.
+@Serializable
+data class SpawnedBuild(val chatId: String? = null, val sessionId: String = "", val title: String = "", val state: String = "spec", val done: Int = 0, val total: Int = 0, val round: String? = null)
+
 // shared/protocol.ts Try: one chat of a /tries run.
 @Serializable
 data class RunTry(val n: Int = 0, val chatId: String = "", val sessionId: String = "", val branch: String = "", val dropped: Boolean = false)
