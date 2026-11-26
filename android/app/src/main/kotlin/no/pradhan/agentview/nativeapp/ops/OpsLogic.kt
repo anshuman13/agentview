@@ -1,14 +1,9 @@
 package no.pradhan.agentview.nativeapp.ops
 
-import kotlin.math.abs
-import kotlin.math.roundToLong
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.builtins.MapSerializer
 import kotlinx.serialization.builtins.serializer
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonElement
-import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonObject
@@ -22,64 +17,6 @@ import no.pradhan.agentview.nativeapp.ui.DotState
 import no.pradhan.agentview.nativeapp.ui.agoShort
 import no.pradhan.agentview.nativeapp.ui.isoMillis
 import no.pradhan.agentview.nativeapp.ui.plural
-
-// shared/observe.ts, the parts web/src/ops/Observe.tsx shows.
-@Serializable
-data class SnowflakeInfo(val account: String = "", val user: String = "", val database: String = "", val schema: String = "", val auth: String = "pat", val hasSecret: Boolean = false)
-
-@Serializable
-data class ObserveInfo(
-    val repo: String,
-    val config: JsonElement? = null,
-    val guess: JsonElement? = null,
-    val repos: List<String> = emptyList(),
-    val file: String = "",
-    val grafanaServer: Boolean = false,
-    val serversFile: String = "~/.claude.json",
-    val snowflake: SnowflakeInfo = SnowflakeInfo(),
-    val local: Boolean = false,
-)
-
-@Serializable data class GrafanaDashboard(val uid: String = "", val title: String, val url: String = "", val folder: String? = null)
-@Serializable data class GrafanaDashboards(val dashboards: List<GrafanaDashboard> = emptyList(), val link: String? = null)
-@Serializable data class GrafanaPanel(val title: String, val unit: String? = null, val points: List<List<Double>> = emptyList(), val last: Double? = null, val error: String? = null, val link: String? = null)
-@Serializable data class GrafanaPanels(val panels: List<GrafanaPanel> = emptyList())
-@Serializable data class LogLine(val ts: String = "", val line: String = "", val level: String? = null)
-@Serializable data class GrafanaLogs(val logs: List<LogLine> = emptyList(), val link: String? = null, val scanned: Int = 0)
-@Serializable data class LogPattern(val pattern: String, val count: Int = 0)
-@Serializable data class GrafanaPatterns(val patterns: List<LogPattern> = emptyList(), val source: String = "", val link: String? = null)
-
-private val pretty = Json { prettyPrint = true; prettyPrintIndent = "  " }
-
-fun parseObserve(body: String): ObserveInfo = protocolJson.decodeFromString(ObserveInfo.serializer(), body)
-
-// The settings shown in the field: the saved config, else the guess.
-fun observeDraft(info: ObserveInfo): String = (info.config?.takeIf { it !is JsonNull } ?: info.guess)?.let { pretty.encodeToString(JsonElement.serializer(), it) } ?: ""
-
-// The body of POST /api/observe/config; throws on JSON that does not parse, an empty field clears the config.
-fun observeConfigBody(repo: String, draft: String): String {
-    val config = if (draft.isBlank()) JsonNull else protocolJson.parseToJsonElement(draft)
-    return buildJsonObject { put("repo", repo); put("config", config) }.toString()
-}
-
-fun observeRepos(names: List<String>, info: ObserveInfo?): List<String> = (names + (info?.repos ?: emptyList())).toSet().filter { it != "example" }.sorted()
-
-// web Observe num: whole numbers past 1000 with separators, else two decimals at most.
-fun panelNum(v: Double): String = if (abs(v) >= 1000) String.format(java.util.Locale.US, "%,d", v.roundToLong())
-else (Math.round(v * 100) / 100.0).let { if (it == Math.floor(it)) it.toLong().toString() else it.toString() }
-
-// The y positions of a sparkline from 0 (bottom) to 1 (top); a flat series sits in the middle.
-fun sparkline(points: List<List<Double>>): List<Float> {
-    val vs = points.mapNotNull { it.getOrNull(1) }
-    if (vs.isEmpty()) return emptyList()
-    val min = vs.min()
-    val max = vs.max()
-    return vs.map { if (max == min) 0.5f else ((it - min) / (max - min)).toFloat() }
-}
-
-fun logClock(iso: String): String = runCatching {
-    java.time.format.DateTimeFormatter.ofPattern("HH:mm:ss").withZone(java.time.ZoneId.systemDefault()).format(java.time.Instant.parse(iso))
-}.getOrDefault(iso)
 
 // shared/protocol.ts Deploy types, read by web/src/ops/Deploy.tsx.
 @Serializable data class DeployRecord(val id: Long = 0, val sha: String = "", val ref: String = "", val state: String = "", val description: String = "", val at: String = "", val by: String = "", val url: String = "")
@@ -210,17 +147,52 @@ fun mcpStatusGroup(r: McpRow) = when (r.status) {
     else -> "Off"
 }
 
-// Rows by status group in page order, each sorted by name; empty groups are left out.
-fun mcpStatusGroups(rows: List<McpRow>): List<Pair<String, List<McpRow>>> =
-    MCP_STATUS_GROUPS.map { g -> g to rows.filter { mcpStatusGroup(it) == g }.sortedBy { it.name.lowercase() } }.filter { it.second.isNotEmpty() }
+// Filter chips (web McpFilter): a status group or "all", and where rows come from: "servers", an account id or "all".
+data class McpFilter(val status: String = "all", val where: String = "all")
+data class McpChips(val status: List<Pair<String, Int>>, val where: List<Pair<String, Int>>)
 
-// The page subtitle counts the same rows as the sections under it (web statusCounts).
+private val MCP_ACCOUNTS get() = ACCOUNT_LABEL.keys.toList()
+
+fun mcpWhere(r: McpRow) = if (r.server.type == "claudeai" && r.account != null) r.account else "servers"
+fun mcpWhereLabel(w: String) = when (w) { "all" -> "All"; "servers" -> "Servers"; else -> ACCOUNT_LABEL[w] ?: w }
+
+fun mcpSourceLabel(r: McpRow) = if (r.server.type == "claudeai") r.account?.let { "${ACCOUNT_LABEL[it] ?: it} connectors" } ?: "Claude.ai connectors" else mcpScope(r.server.scope).first
+
+fun mcpFilter(rows: List<McpRow>, f: McpFilter) = rows.filter { (f.status == "all" || mcpStatusGroup(it) == f.status) && (f.where == "all" || mcpWhere(it) == f.where) }
+
+// The status chips count the rows the where chip lets through, and the other way round (web filterCounts).
+fun mcpFilterCounts(rows: List<McpRow>, f: McpFilter): McpChips {
+    val status = rows.filter { f.where == "all" || mcpWhere(it) == f.where }.groupingBy { mcpStatusGroup(it) }.eachCount()
+    val where = rows.filter { f.status == "all" || mcpStatusGroup(it) == f.status }.groupingBy { mcpWhere(it) }.eachCount()
+    return McpChips(
+        listOf("all" to status.values.sum()) + MCP_STATUS_GROUPS.mapNotNull { g -> status[g]?.let { g to it } },
+        listOf("all" to where.values.sum()) + (listOf("servers") + MCP_ACCOUNTS).mapNotNull { w -> where[w]?.let { w to it } },
+    )
+}
+
+// A saved filter whose chip has no rows left falls back to All.
+fun mcpValidFilter(f: McpFilter, chips: McpChips) = McpFilter(
+    if (chips.status.any { it.first == f.status }) f.status else "all",
+    if (chips.where.any { it.first == f.where }) f.where else "all",
+)
+
+private val MCP_SCOPE_ORDER = listOf("user", "project", "local", "codex", "claudeai", "plugin")
+
+// Rows by where they come from (web sourceGroups): configured servers first, then the chat account's connectors, then the others; connected rows first, then by name.
+fun mcpSourceGroups(rows: List<McpRow>, account: String?): List<Pair<String, List<McpRow>>> {
+    fun rank(r: McpRow) = if (r.server.type == "claudeai") 100 + (if (r.account == account) 0 else 1 + MCP_ACCOUNTS.indexOf(r.account))
+        else (MCP_SCOPE_ORDER.indexOf(r.server.scope) + 1).takeIf { it > 0 } ?: 50
+    return rows.groupBy(::mcpSourceLabel).entries.sortedBy { rank(it.value.first()) }
+        .map { (label, rs) -> label to rs.sortedWith(compareBy<McpRow>({ MCP_STATUS_GROUPS.indexOf(mcpStatusGroup(it)) }, { it.name.lowercase() })) }
+}
+
+// The page subtitle counts every row that is not hidden (web statusCounts).
 data class McpCounts(val connected: Int, val total: Int, val needsYou: Int)
 
-fun mcpStatusCounts(groups: List<Pair<String, List<McpRow>>>): McpCounts {
-    fun n(g: String) = groups.firstOrNull { it.first == g }?.second?.size ?: 0
-    return McpCounts(n("Connected"), groups.sumOf { it.second.size }, n("Needs login") + n("Failed"))
-}
+fun mcpStatusCounts(rows: List<McpRow>) = McpCounts(
+    rows.count { mcpStatusGroup(it) == "Connected" }, rows.size,
+    rows.count { mcpStatusGroup(it) == "Needs login" || mcpStatusGroup(it) == "Failed" },
+)
 
 fun mcpGroupBody(service: String, group: String) = buildJsonObject { put("service", service); put("group", group) }.toString()
 
@@ -242,17 +214,16 @@ fun mcpDot(r: McpRow): DotState = if (r.status == "pending" || r.status == "prob
     else -> DotState.Faint
 }
 
-// One line under the name (web rowNote): the error or reason when not connected, else where the server is configured.
+// One line under the name (web rowNote): the error or reason when not connected; connected rows need none, their section says where they come from.
 fun mcpNote(r: McpRow): String? = when {
     r.status == "failed" && r.server.error != null -> r.server.error
     r.status != "connected" -> mcpState(r).first
-    r.server.type == "claudeai" -> "Claude.ai connector"
-    else -> r.server.scope?.let { mcpScope(it).first }
+    else -> null
 }
 
-// A row matches when every word of the query is in its name, its account or the line under its name (web mcpMatches).
+// A row matches when every word of the query is in its name, its account, its section or the line under its name (web mcpMatches).
 fun mcpMatches(r: McpRow, query: String): Boolean {
-    val text = listOfNotNull(r.name, r.account, r.account?.let { ACCOUNT_LABEL[it] }, mcpNote(r)).joinToString(" ").lowercase()
+    val text = listOfNotNull(r.name, r.account, mcpSourceLabel(r), mcpNote(r)).joinToString(" ").lowercase()
     return query.lowercase().split(Regex("\\s+")).filter { it.isNotEmpty() }.all { text.contains(it) }
 }
 
@@ -260,7 +231,7 @@ fun mcpToolCount(r: McpRow): String? = r.server.tools?.let { if (it.isEmpty()) "
 
 fun mcpMeta(r: McpRow, calls: Pair<Int, Int>?, personal: Boolean = false): String = listOfNotNull(
     mcpNote(r),
-    r.account?.let { ACCOUNT_LABEL[it] ?: it } ?: "Personal".takeIf { personal },
+    "Personal".takeIf { personal && r.account == null },
     r.server.ms?.let { "$it ms" },
     calls?.let { (n, e) -> plural(n, "call") + if (e > 0) " · ${plural(e, "error")}" else "" },
 ).joinToString(" · ")
@@ -312,7 +283,6 @@ fun mcpKey(r: McpRow) = r.name + "\n" + (r.account ?: "")
 
 // shared/setupPrompt.ts: what the setup button asks the chat's agent for.
 fun setupPrompt(kind: String, repo: String, mcpCommand: String) = when (kind) {
-    "observe" -> "Set up Observe for $repo: use the Grafana MCP to find its dashboards and Loki selector, then save them as the Grafana settings for this repo."
     "deploy" -> "Set up deploys for $repo: add a .deploy/app.yaml that names the app and its environments."
     else -> "Help me add an MCP server: run `$mcpCommand` with the right arguments, then check the list again."
 }

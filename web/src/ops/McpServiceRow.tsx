@@ -1,4 +1,3 @@
-import { ACCOUNT_LABEL, type Account } from '../../../shared/protocol';
 import { MenuItem } from '../ui/Menu';
 import { Row as ListRow } from '../ui/Row';
 import { dotTone, rowNote, plural, rowKey, shortName, statusGroup, usageText, type Group, type Row, type Usage } from './mcpHelpers';
@@ -7,7 +6,7 @@ export function ServiceRow({ row, selected, usage, onPick, group, onGroup, onHid
   const other: Group = group === 'work' ? 'personal' : 'work';
   const meta = [
     rowNote(row),
-    row.account ? ACCOUNT_LABEL[row.account as Account] ?? row.account : group === 'personal' && 'Personal',
+    !row.account && group === 'personal' && 'Personal',
     row.ms != null && `${row.ms} ms`,
     usage && usageText(usage),
   ].filter(Boolean).join(' · ');

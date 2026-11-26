@@ -69,7 +69,7 @@ import { sourceLink } from './codex/tasks/taskSource';
 import { taskMetaParts } from './codex/tasks/taskMeta';
 import type { ItemRow } from './codex/data/sync';
 import { agendaMarkdown, draftFor, followUpText, hasContent, linearIssue, personMarkdown, toMarkdown } from './codex/data/meetings/meetingMarkdown';
-import { mcpMatches, statusCounts, statusGroups, toggleConnector, type Row as McpRow } from './ops/mcpHelpers';
+import { filterCounts, mcpFilter, mcpMatches, sourceGroups, statusCounts, toggleConnector, validFilter, type McpFilter, type Row as McpRow } from './ops/mcpHelpers';
 import { actionCount, displayName, filterMeetings, groupMeetings, inSeries, isEvent, meetingEmpty, meetingState, sameName, seriesTitle, type MeetingChip, type MeetingState, type Question } from './codex/data/meetings/meetings';
 import { dismissedKeys, mergeDismissed } from '../../shared/dismissed';
 import { isOld } from '../../shared/claimAge';
@@ -544,10 +544,14 @@ describe('cases shared with the Android app', () => {
     it(`toggleConnector: ${c.name}`, () => expect(toggleConnector(c.tools, c.id)).toBe(c.expected));
   }
 
-  for (const c of cases<{ name: string; rows: McpRow[]; query?: string; expected: [string, string[]][]; counts?: object }>('mcp-groups')) {
+  type McpCase = { name: string; rows: McpRow[]; account?: string; query?: string; filter?: McpFilter; expected: [string, string[]][]; counts?: object; chips?: object };
+  for (const c of cases<McpCase>('mcp-groups')) {
     const rows = c.rows.filter((r) => mcpMatches(r, c.query ?? ''));
-    it(`statusGroups: ${c.name}`, () => expect(statusGroups(rows).map(([g, rs]) => [g, rs.map((r) => r.name)])).toEqual(c.expected));
-    if (c.counts) it(`statusCounts: ${c.name}`, () => expect(statusCounts(statusGroups(rows))).toEqual(c.counts));
+    const chips = filterCounts(rows, c.filter ?? { status: 'all', where: 'all' });
+    const filter = validFilter(c.filter ?? { status: 'all', where: 'all' }, chips);
+    it(`sourceGroups: ${c.name}`, () => expect(sourceGroups(mcpFilter(rows, filter), c.account).map(([g, rs]) => [g, rs.map((r) => r.name)])).toEqual(c.expected));
+    if (c.counts) it(`statusCounts: ${c.name}`, () => expect(statusCounts(rows)).toEqual(c.counts));
+    if (c.chips) it(`filterCounts: ${c.name}`, () => expect(chips).toEqual(c.chips));
   }
 
   type AgendaCase = { name: string; meeting: Record<string, unknown>; points: { people: string | null; title: string }[]; actions: string[]; questions: string[]; markdown: string };

@@ -1,13 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
 import { createPortal, flushSync } from 'react-dom';
 import { getState, useStore } from '../app/store';
-import { Button, IconButton, ShowAll } from '../ui/Button';
+import { Button, Chip, IconButton, ShowAll } from '../ui/Button';
 import { Icon } from '../ui/Icon';
 import { EmptyState, SearchBox } from '../ui/Panel';
 import { Section } from '../ui/Section';
 import { useCan } from '../chat/useCan';
-import { ago, useSlot, useTick } from '../ui/util';
-import { accountGroup, groupKey, hideKey, mcpCalls, mcpMatches, rowKey, slug, statusCounts, statusGroups, type Group, type Row, type StatusGroup } from './mcpHelpers';
+import { ago, save, stored, useSlot, useTick } from '../ui/util';
+import { accountGroup, filterCounts, groupKey, hideKey, mcpCalls, mcpFilter, mcpMatches, rowKey, slug, sourceGroups, statusCounts, validFilter, whereLabel, type Group, type McpFilter, type Row } from './mcpHelpers';
 import { mcpRows } from './mcpRows';
 import { mcpPageCounts } from '../app/shell/counts';
 import { useMcpGroups, useMcpProbe } from './useMcpPage';
@@ -32,7 +32,23 @@ function McpStats({ probed, busy, at, ok, total, attention, onCheck }: Stats) {
   );
 }
 
-const FOLD = 5;
+const FOLD = 8;
+const FILTER = 'agentview.mcp.filter';
+
+function FilterChips({ chips, filter, onChange }: { chips: ReturnType<typeof filterCounts>; filter: McpFilter; onChange: (f: McpFilter) => void }) {
+  return (
+    <div className="mcp-chips">
+      <div role="group" aria-label="Status">
+        {chips.status.map(([k, n]) => <Chip key={k} size="sm" on={filter.status === k} aria-pressed={filter.status === k} onClick={() => onChange({ ...filter, status: filter.status === k ? 'all' : k })}>{k === 'all' ? 'All' : k}<span className="n">{n}</span></Chip>)}
+      </div>
+      {chips.where.length > 2 && (
+        <div role="group" aria-label="Source">
+          {chips.where.map(([k, n]) => <Chip key={k} size="sm" on={filter.where === k} aria-pressed={filter.where === k} onClick={() => onChange({ ...filter, where: filter.where === k ? 'all' : k })}>{whereLabel(k)}<span className="n">{n}</span></Chip>)}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export function McpPage() {
   const mcp = useStore((s) => s.session.mcp);
@@ -44,7 +60,7 @@ export function McpPage() {
   const { groups, setGroup } = useMcpGroups();
   const [sel, setSel] = useState<string | null>(null);
   const [showHidden, setShowHidden] = useState(false);
-  const [expanded, setExpanded] = useState<StatusGroup[]>([]);
+  const [expanded, setExpanded] = useState<string[]>([]);
   const [query, setQuery] = useState('');
   useTick(15000);
 
@@ -54,12 +70,17 @@ export function McpPage() {
   const current = rows.find((r) => rowKey(r) === sel) ?? null;
   const groupOf = (r: Row): Group => (r.account ? accountGroup(r.account) : groups[groupKey(r)] === 'personal' ? 'personal' : 'work');
   const hidden = (r: Row) => groups[hideKey({ name: groupKey(r) })] === 'hidden';
-  const sections = useMemo(() => statusGroups(rows.filter((r) => !hidden(r))), [rows, groups]);
-  const shownCounts = useMemo(() => statusCounts(sections), [sections]);
+  const [saved, setSaved] = useState<McpFilter>(() => stored(FILTER, { status: 'all', where: 'all' }));
+  const setFilter = (f: McpFilter) => { setSaved(f); save(FILTER, f); };
+  const shown = useMemo(() => rows.filter((r) => !hidden(r)), [rows, groups]);
+  const shownCounts = useMemo(() => statusCounts(shown), [shown]);
   useEffect(() => { if (probed !== null) mcpPageCounts.set(shownCounts); }, [probed, shownCounts]);
-  const hiddenList = useMemo(() => statusGroups(rows.filter(hidden)).flatMap(([, rs]) => rs), [rows, groups]);
-  const matched = useMemo(() => (query.trim() ? statusGroups(rows.filter((r) => !hidden(r) && mcpMatches(r, query))) : sections), [sections, query]);
-  const hiddenMatched = useMemo(() => hiddenList.filter((r) => mcpMatches(r, query)), [hiddenList, query]);
+  const searched = useMemo(() => shown.filter((r) => mcpMatches(r, query)), [shown, query]);
+  const chips = useMemo(() => filterCounts(searched, saved), [searched, saved]);
+  const filter = validFilter(saved, chips);
+  const matched = useMemo(() => sourceGroups(mcpFilter(searched, filter), account), [searched, filter.status, filter.where, account]);
+  const hiddenMatched = useMemo(() => sourceGroups(mcpFilter(rows.filter((r) => hidden(r) && mcpMatches(r, query)), filter), account).flatMap(([, rs]) => rs), [rows, groups, query, filter.status, filter.where, account]);
+  const narrowed = query.trim() !== '' || filter.status !== 'all' || filter.where !== 'all';
   const extra = useSlot('page-mcp-extra');
   const action = useSlot('page-mcp-action');
   const pick = (name: string) => setSel((s) => (s === name ? null : name));
@@ -80,9 +101,14 @@ export function McpPage() {
           <EmptyState size="sm" icon="plug" title="No MCP servers yet" hint="Servers you add show here" action={<SetupButton kind="mcp" mcpCommand={connectors ? 'claude mcp add' : 'codex mcp add'} />} />
         )}
         {!connectors && <div className="muted">claude.ai connectors load in Claude chats only</div>}
-        {probed !== null && rows.length > 0 && <SearchBox value={query} onChange={setQuery} label="Filter servers" />}
-        {query.trim() && !matched.length && !hiddenMatched.length && (
-          <EmptyState size="sm" icon="search" title="No servers match" action={<Button size="sm" onClick={() => setQuery('')}>Clear filter</Button>} />
+        {probed !== null && rows.length > 0 && (
+          <div className="mcp-filters">
+            <SearchBox value={query} onChange={setQuery} label="Filter servers" />
+            <FilterChips chips={chips} filter={filter} onChange={setFilter} />
+          </div>
+        )}
+        {narrowed && !matched.length && !hiddenMatched.length && (
+          <EmptyState size="sm" icon="search" title="No servers match" action={<Button size="sm" onClick={() => { setQuery(''); setFilter({ status: 'all', where: 'all' }); }}>Clear filters</Button>} />
         )}
         {matched.map(([g, rs]) => {
           const folded = !query.trim() && !expanded.includes(g) && rs.length > FOLD;

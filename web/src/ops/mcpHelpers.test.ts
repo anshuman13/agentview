@@ -89,8 +89,7 @@ describe('row dot and note', () => {
     expect(dotTone({ name: 'a', status: 'disabled' })).toBe('');
     expect(rowNote({ name: 'a', status: 'failed', error: 'spawn ENOENT' })).toBe('spawn ENOENT');
     expect(rowNote({ name: 'a', status: 'disabled' })).toBe('Disabled');
-    expect(rowNote({ name: 'a', status: 'connected', scope: 'project' })).toBe('This repo');
-    expect(rowNote({ name: 'claude.ai Slack', status: 'connected', type: 'claudeai' })).toBe('Claude.ai connector');
+    expect(rowNote({ name: 'a', status: 'connected', scope: 'project' })).toBeUndefined();
   });
 });
 

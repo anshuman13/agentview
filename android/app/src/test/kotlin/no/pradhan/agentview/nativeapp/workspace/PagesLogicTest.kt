@@ -56,17 +56,11 @@ import no.pradhan.agentview.nativeapp.ops.mcpShortName
 import no.pradhan.agentview.nativeapp.ops.mcpState
 import no.pradhan.agentview.nativeapp.ops.mcpWithAccounts
 import no.pradhan.agentview.nativeapp.ops.mergeMcp
-import no.pradhan.agentview.nativeapp.ops.observeConfigBody
-import no.pradhan.agentview.nativeapp.ops.observeDraft
-import no.pradhan.agentview.nativeapp.ops.observeRepos
-import no.pradhan.agentview.nativeapp.ops.panelNum
 import no.pradhan.agentview.nativeapp.ops.parseConnectors
 import no.pradhan.agentview.nativeapp.ops.parseDeploy
 import no.pradhan.agentview.nativeapp.ops.parseDeployJob
 import no.pradhan.agentview.nativeapp.ops.parseMcp
-import no.pradhan.agentview.nativeapp.ops.parseObserve
 import no.pradhan.agentview.nativeapp.ops.reportText
-import no.pradhan.agentview.nativeapp.ops.sparkline
 import no.pradhan.agentview.nativeapp.ops.tokensText
 import no.pradhan.agentview.nativeapp.ui.BadgeTone
 import no.pradhan.agentview.nativeapp.ui.DotState
@@ -176,20 +170,6 @@ class PagesLogicTest {
         assertEquals("2w", agoShort(t, t + 14 * 86_400_000L))
     }
 
-    @Test fun observeSettingsAndPanels() {
-        val info = parseObserve("""{"repo":"shop","config":null,"guess":{"grafana":{"lokiSelector":"{app=\"shop\"}"}},"repos":["x","example"],"file":"~/.agentview/observe.json","grafanaServer":true,"snowflake":{"account":"","user":"","hasSecret":false}}""")
-        assertTrue(observeDraft(info).contains("\"lokiSelector\""))
-        assertEquals("""{"repo":"shop","config":{"a":1}}""", observeConfigBody("shop", """{ "a": 1 }"""))
-        assertEquals("""{"repo":"shop","config":null}""", observeConfigBody("shop", " "))
-        assertTrue(runCatching { observeConfigBody("shop", "{bad") }.isFailure)
-        assertEquals(listOf("a", "shop", "x"), observeRepos(listOf("shop", "a"), info))
-        assertEquals("1,234", panelNum(1234.4))
-        assertEquals("0.12", panelNum(0.1234))
-        assertEquals("5", panelNum(5.0))
-        assertEquals(listOf(0f, 1f, 0.5f), sparkline(listOf(listOf(0.0, 2.0), listOf(1.0, 4.0), listOf(2.0, 3.0))))
-        assertEquals(listOf(0.5f), sparkline(listOf(listOf(0.0, 2.0))))
-    }
-
     @Test fun deployRowsShowWhatRunsWhere() {
         val s = parseDeploy("""{"apps":["a"],"app":"a","repo":"o/r","serviceUrl":"v","head":{"sha":"abcdef123","branch":"main"},"envs":[
             {"name":"prod","label":"Production","deployed":{"id":1,"sha":"abcdef123","ref":"main","state":"success","at":"2026-11-07T10:00:00Z","by":"ann"},"latest":{"id":2,"state":"in_progress"}},
@@ -251,11 +231,11 @@ class PagesLogicTest {
             ChatEvent("t2", "tool_use", name = "mcp__grafana_prod__q"), ChatEvent("t3", "tool_use", name = "Read"),
         )
         assertEquals(mapOf("grafana_prod" to (2 to 1)), mcpCalls(events))
-        assertEquals("Your servers · 40 ms · 2 calls · 1 error", mcpMeta(McpRow(probed[0]), 2 to 1))
+        assertEquals("40 ms · 2 calls · 1 error", mcpMeta(McpRow(probed[0]), 2 to 1))
         assertEquals("boom · Personal · 40 ms", mcpMeta(rows[0], null, personal = true))
         assertEquals("1 tool", mcpToolCount(McpRow(probed[0])))
         assertNull(mcpToolCount(rows[1]))
-        assertEquals("Claude.ai connector", mcpNote(rows[2]))
+        assertNull(mcpNote(rows[2]))
         assertEquals("Disabled", mcpNote(McpRow(McpServer("x", "disabled"))))
         assertEquals(listOf(DotState.Bad, DotState.Faint, DotState.Ok, DotState.Busy, DotState.Warn), listOf(rows[0], rows[1], rows[2], McpRow(McpServer("x", "pending")), McpRow(McpServer("x", "needs-auth"), live = true)).map(::mcpDot))
         assertEquals("Linear", mcpShortName("claude.ai Linear"))

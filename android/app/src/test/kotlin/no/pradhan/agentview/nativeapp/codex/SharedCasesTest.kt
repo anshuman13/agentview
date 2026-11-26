@@ -212,7 +212,12 @@ import no.pradhan.agentview.nativeapp.ops.McpRow
 import no.pradhan.agentview.nativeapp.ops.McpCounts
 import no.pradhan.agentview.nativeapp.ops.mcpStatusCounts
 import no.pradhan.agentview.nativeapp.ops.mcpMatches
-import no.pradhan.agentview.nativeapp.ops.mcpStatusGroups
+import no.pradhan.agentview.nativeapp.ops.mcpSourceGroups
+import no.pradhan.agentview.nativeapp.ops.mcpFilter
+import no.pradhan.agentview.nativeapp.ops.mcpFilterCounts
+import no.pradhan.agentview.nativeapp.ops.mcpValidFilter
+import no.pradhan.agentview.nativeapp.ops.McpFilter
+import no.pradhan.agentview.nativeapp.ops.McpChips
 import no.pradhan.agentview.nativeapp.ops.setupPrompt
 import no.pradhan.agentview.nativeapp.workspace.Finding
 import no.pradhan.agentview.nativeapp.workspace.findingFixPrompt
@@ -1251,11 +1256,17 @@ class SharedCasesTest {
             val rows = c.getValue("rows").jsonArray.map { it.jsonObject }.map { r ->
                 McpRow(McpServer(r.str("name"), r.str("status"), scope = r.prim("scope")?.contentOrNull, type = r.prim("type")?.contentOrNull, error = r.prim("error")?.contentOrNull), live = r["live"]?.jsonPrimitive?.boolean == true, account = r.prim("account")?.contentOrNull)
             }.filter { mcpMatches(it, c.prim("query")?.contentOrNull ?: "") }
+            val f = c["filter"]?.jsonObject?.let { McpFilter(it.str("status"), it.str("where")) } ?: McpFilter()
+            val chips = mcpFilterCounts(rows, f)
             val expected = c.getValue("expected").jsonArray.map { g -> g.jsonArray[0].jsonPrimitive.content to g.jsonArray[1].jsonArray.map { it.jsonPrimitive.content } }
-            assertEquals(c.str("name"), expected, mcpStatusGroups(rows).map { (g, rs) -> g to rs.map { it.name } })
+            assertEquals(c.str("name"), expected, mcpSourceGroups(mcpFilter(rows, mcpValidFilter(f, chips)), c.prim("account")?.contentOrNull).map { (g, rs) -> g to rs.map { it.name } })
             c["counts"]?.jsonObject?.let { n ->
                 fun i(k: String) = n.getValue(k).jsonPrimitive.content.toInt()
-                assertEquals(c.str("name"), McpCounts(i("connected"), i("total"), i("needsYou")), mcpStatusCounts(mcpStatusGroups(rows)))
+                assertEquals(c.str("name"), McpCounts(i("connected"), i("total"), i("needsYou")), mcpStatusCounts(rows))
+            }
+            c["chips"]?.jsonObject?.let { n ->
+                fun pairs(k: String) = n.getValue(k).jsonArray.map { it.jsonArray[0].jsonPrimitive.content to it.jsonArray[1].jsonPrimitive.content.toInt() }
+                assertEquals(c.str("name"), McpChips(pairs("status"), pairs("where")), chips)
             }
         }
     }

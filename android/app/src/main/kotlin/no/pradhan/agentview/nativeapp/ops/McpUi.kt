@@ -11,6 +11,8 @@ import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -50,6 +52,7 @@ import no.pradhan.agentview.nativeapp.app.saveMcpGroup
 import no.pradhan.agentview.nativeapp.ui.Badge
 import no.pradhan.agentview.nativeapp.ui.BadgeTone
 import no.pradhan.agentview.nativeapp.ui.Button
+import no.pradhan.agentview.nativeapp.ui.Chip
 import no.pradhan.agentview.nativeapp.ui.ButtonSize
 import no.pradhan.agentview.nativeapp.ui.ButtonVariant
 import no.pradhan.agentview.nativeapp.ui.StatusDot
@@ -74,7 +77,7 @@ import no.pradhan.agentview.nativeapp.ui.rememberLoad
 import no.pradhan.agentview.nativeapp.ui.select
 import no.pradhan.agentview.nativeapp.ui.plural
 
-// MCP Servers (web/src/ops/McpStatus.tsx): the probed servers with the chat's live state, in status groups (Connected, Needs login, Failed, Off), and a detail page.
+// MCP Servers (web/src/ops/McpStatus.tsx): the probed servers with the chat's live state, grouped by where they come from, with status and source filter chips, and a detail page.
 @Composable
 fun McpScreen(hub: Hub, onBack: () -> Unit) {
     val chat by hub.store.state.select { it.shownId }
@@ -109,11 +112,17 @@ fun McpScreen(hub: Hub, onBack: () -> Unit) {
     val rows = remember(probe.data, live, account, accounts, connectors) { mergeMcp(probe.data ?: emptyList(), live).let { if (connectors) mcpWithAccounts(it, account, accounts) else it } }
     val calls = remember(events) { mcpCalls(events) }
     val sections = remember(rows, groups) { mcpSections(rows, groups) }
-    val byStatus = remember(sections) { mcpStatusGroups(sections.work + sections.personal) }
     val personal = remember(sections) { sections.personal.map(::mcpKey).toSet() }
+    var saved by remember { mutableStateOf(hub.prefs.getString("mcpFilter", null)?.split("|")?.takeIf { it.size == 2 }?.let { McpFilter(it[0], it[1]) } ?: McpFilter()) }
+    fun setFilter(f: McpFilter) { saved = f; hub.prefs.edit().putString("mcpFilter", "${f.status}|${f.where}").apply() }
     val filtering = query.isNotBlank()
-    val matched = remember(byStatus, query) { if (filtering) byStatus.map { (g, rs) -> g to rs.filter { mcpMatches(it, query) } }.filter { it.second.isNotEmpty() } else byStatus }
-    val hiddenMatched = remember(sections, query) { mcpStatusGroups(sections.hidden).flatMap { it.second }.filter { mcpMatches(it, query) } }
+    val shownRows = remember(sections) { sections.work + sections.personal }
+    val searched = remember(shownRows, query) { shownRows.filter { mcpMatches(it, query) } }
+    val chips = remember(searched, saved) { mcpFilterCounts(searched, saved) }
+    val filter = mcpValidFilter(saved, chips)
+    val narrowed = filtering || filter != McpFilter()
+    val matched = remember(searched, filter, account) { mcpSourceGroups(mcpFilter(searched, filter), account) }
+    val hiddenMatched = remember(sections, query, filter, account) { mcpSourceGroups(mcpFilter(sections.hidden.filter { mcpMatches(it, query) }, filter), account).flatMap { it.second } }
 
     fun setGroup(service: String, group: String) {
         val before = groups
@@ -123,7 +132,7 @@ fun McpScreen(hub: Hub, onBack: () -> Unit) {
 
     val shown = sel?.takeIf { s -> rows.any { mcpKey(it) == s } }
     val still = motionOff()
-    val mcp = remember(byStatus) { mcpStatusCounts(byStatus) }
+    val mcp = remember(shownRows) { mcpStatusCounts(shownRows) }
     val listState = rememberLazyListState()
     AnimatedContent(shown, Modifier.fillMaxSize(), transitionSpec = {
         val ease = if (targetState != null) Tokens.motionEaseIn else Tokens.motionEaseOut
@@ -146,8 +155,11 @@ fun McpScreen(hub: Hub, onBack: () -> Unit) {
                 if (probe.data == null && probe.error.isEmpty()) item { Loading("Checking the servers…") }
                 if (probe.data != null && rows.isEmpty()) item { EmptyState("No MCP servers yet", "Servers you add show here", action = { SetupButton(hub, "mcp", mcpCommand = if (connectors) "claude mcp add" else "codex mcp add") }, icon = "plug") }
                 if (!connectors) item { Hint("claude.ai connectors load in Claude chats only") }
-                if (probe.data != null && rows.isNotEmpty()) item { SearchField(query, { query = it }, "Filter servers") }
-                if (filtering && matched.isEmpty() && hiddenMatched.isEmpty()) item { EmptyState("No servers match", icon = "search", action = { Button("Clear filter", { query = "" }, size = ButtonSize.Sm) }) }
+                if (probe.data != null && rows.isNotEmpty()) {
+                    item { SearchField(query, { query = it }, "Filter servers") }
+                    item { McpFilterChips(chips, filter, ::setFilter) }
+                }
+                if (narrowed && matched.isEmpty() && hiddenMatched.isEmpty()) item { EmptyState("No servers match", icon = "search", action = { Button("Clear filters", { query = ""; setFilter(McpFilter()) }, size = ButtonSize.Sm) }) }
                 matched.forEach { (label, list) ->
                     val folded = !filtering && label !in expanded && list.size > FOLD
                     item(key = "head:$label") { SectionHeader(label, list.size.toString()) }
@@ -165,7 +177,21 @@ fun McpScreen(hub: Hub, onBack: () -> Unit) {
     }
 }
 
-private const val FOLD = 5
+private const val FOLD = 8
+
+// Status chips, then where-from chips (servers or a Claude account's connectors) when there is more than one source.
+@Composable
+private fun McpFilterChips(chips: McpChips, filter: McpFilter, onChange: (McpFilter) -> Unit) {
+    val row = Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = Tokens.listPad)
+    Column(Modifier.padding(vertical = Tokens.sp3), verticalArrangement = Arrangement.spacedBy(Tokens.sp3)) {
+        Row(row, horizontalArrangement = Arrangement.spacedBy(Tokens.sp3)) {
+            chips.status.forEach { (k, n) -> Chip("${if (k == "all") "All" else k} $n", { onChange(filter.copy(status = if (filter.status == k) "all" else k)) }, on = filter.status == k) }
+        }
+        if (chips.where.size > 2) Row(row, horizontalArrangement = Arrangement.spacedBy(Tokens.sp3)) {
+            chips.where.forEach { (k, n) -> Chip("${mcpWhereLabel(k)} $n", { onChange(filter.copy(where = if (filter.where == k) "all" else k)) }, on = filter.where == k) }
+        }
+    }
+}
 
 // One row per server: status dot, name, one meta line and the tool count; Off rows are greyed.
 @Composable

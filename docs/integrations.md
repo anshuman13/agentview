@@ -22,38 +22,8 @@ Claude in Chrome is not needed there: chats on that Mac can drive the laptop's C
 
 The MCP Servers page reads the same config as the Claude CLI (`~/.claude.json`, the repo's `.mcp.json`) and connects
 to every server itself, like `claude mcp list`: each card shows the connection status, transport, command or URL, version
-and tool count, grouped by where the server comes from. Click a card for the env variable names, the error text and the
+and tool count, grouped by where the server comes from, with status and source (servers or a Claude account) filter chips. Click a card for the env variable names, the error text and the
 tool list with descriptions. Servers that log in through OAuth show "OAuth via Claude" until Claude starts in the chat;
 from then on the page shows the live status from the chat, with reconnect and disable actions, and claude.ai connectors
 and plugin servers appear too. "Check" connects to everything again; results are cached for a minute.
 
-## Grafana and Snowflake
-
-The Observe page (pulse icon) reads Grafana and Snowflake through MCP servers, the same ones Claude uses:
-
-- Grafana comes first and loads right away, using the `grafana` server from `~/.claude.json`. An "Ask about <repo> in
-  Grafana" box sends your question to Claude with the repo's Loki selector and dashboards, and Claude answers through
-  the grafana MCP with links to the dashboards and Explore queries it used. Below it are the dashboards matching the
-  repo (`search_dashboards` plus any pinned in the settings) as links, error lines from Loki for the last hour
-  (`query_loki_logs`) and error patterns (`query_loki_patterns`, Sift, or grouped locally when neither is available),
-  each with an "Open in Grafana" deep link and an "Ask Claude" button.
-- Snowflake (collapsed by default) runs the official server with `uvx snowflake-labs-mcp` and a read-only service
-  config written to `~/.agentview/snowflake.yaml` (SELECT, SHOW and DESCRIBE only). The section has a connection form
-  (account, user, warehouse, role, database, schema, access token or password), a database/schema/table picker, a SQL
-  box (Cmd+Enter runs) and a result table capped at 200 rows.
-
-"Add to Claude" writes the Snowflake server entry into `~/.claude.json` (after a backup copy) so Claude gets the same
-MCP. Settings live in `~/.agentview/observe.json`, created with an example on first use and editable in the view:
-
-```json
-{
-  "snowflake": { "account": "org-account", "user": "me", "warehouse": "WH", "database": "DB", "schema": "PUBLIC", "role": "", "auth": "pat", "secret": "" },
-  "repos": {
-    "example": {
-      "grafana": { "url": "https://org.grafana.net", "query": "example", "dashboards": [{ "title": "Overview", "url": "https://..." }], "lokiSelector": "{app=\"example\"}" }
-    }
-  }
-}
-```
-
-Repos without settings get a guess from `catalog-info.yaml` and the other repos' Grafana URL.

@@ -6,6 +6,12 @@
 .mcp-stats .warn b { color: var(--warn); }
 .mcp-stats .bad b { color: var(--err); }
 .mcp-refresh { align-self: center; }
+.mcp-filters { display: flex; flex-direction: column; gap: var(--sp-4); margin-bottom: var(--sp-6); }
+.mcp-filters .page-search { margin: 0; }
+.mcp-chips { display: flex; flex-wrap: wrap; gap: var(--sp-3) var(--sp-8); }
+.mcp-chips > div { display: flex; flex-wrap: wrap; gap: var(--sp-2); }
+.mcp-chips .n { margin-left: var(--sp-2); color: var(--fg-muted); font-variant-numeric: tabular-nums; }
+.mcp-chips .on .n { color: inherit; opacity: .8; }
 .mcp-error {
   margin: 0 0 var(--sp-8); padding: var(--sp-4) var(--sp-6); display: flex; gap: var(--sp-3); align-items: center; color: var(--err);
   background: color-mix(in srgb, var(--err) 12%, transparent); border: 1px solid color-mix(in srgb, var(--err) 40%, transparent); border-radius: var(--radius-sm);
