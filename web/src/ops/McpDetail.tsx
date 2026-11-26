@@ -85,7 +85,7 @@ export function Detail({ row, usage, group, onGroup, hidden, onHide, onClose }: 
         </>
       )}
       <div className="mcp-tools">
-        {(row.tools?.length ?? 0) > 6 && <input className="mcp-tool-filter" placeholder="Filter tools" aria-label="Filter tools" value={q} onChange={(e) => setQ(e.target.value)} spellCheck={false} />}
+        {row.tools?.length ? <div className="mcp-tools-head"><h3>Tools</h3>{row.tools.length > 6 && <input className="mcp-tool-filter" placeholder="Filter tools" aria-label="Filter tools" value={q} onChange={(e) => setQ(e.target.value)} spellCheck={false} />}</div> : null}
         {tools.length > 0 && toolGroups(tools).map(([name, list]) => (
           <div key={name} className="mcp-tool-group">
             <Section label={name} count={list.length} open={!shut.has(name)} onToggle={() => setShut((s) => { const n = new Set(s); if (!n.delete(name)) n.add(name); return n; })} />

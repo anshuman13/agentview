@@ -98,7 +98,9 @@
 .mcp-act-error { align-self: center; font-size: var(--fs-sm); }
 .mcp-login { display: flex; flex-direction: column; gap: var(--sp-3); align-items: flex-start; }
 
-.mcp-tool-filter { align-self: flex-end; width: 160px; height: 28px; margin-bottom: var(--sp-2); padding: 0 var(--sp-4); border: 0; border-radius: var(--radius-sm); background: var(--sunken); color: var(--fg); font: inherit; font-size: var(--fs-sm); }
+.mcp-tools-head { display: flex; align-items: center; gap: var(--sp-4); min-height: 28px; margin-bottom: var(--sp-2); }
+.mcp-tools-head h3 { flex: 1; margin: 0; font-size: var(--fs-md); font-weight: 500; }
+.mcp-tool-filter { flex: 0 1 160px; min-width: 0; width: 160px; height: 28px; padding: 0 var(--sp-4); border: 0; border-radius: var(--radius-sm); background: var(--sunken); color: var(--fg); font: inherit; font-size: var(--fs-sm); }
 .mcp-tool-group + .mcp-tool-group { margin-top: var(--sp-6); }
 .mcp-tool-group .mcp-tool { padding-left: var(--sp-10); }
 .mcp-tools, .mcp-calls { display: flex; flex-direction: column; gap: var(--sp-1); }
