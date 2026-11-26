@@ -21,7 +21,9 @@ import { askChat } from '../../chat/chatActions';
 import { useMacName } from '../../app/shell/macName';
 import { useUsage } from '../../app/shell/StatusItems';
 import { RenameInput } from '../RenameInput';
-import { renameChat } from '../folders';
+import { renameChat, useWorkspace } from '../folders';
+import { showChat } from '../openChat';
+import { startedFrom } from './startedFrom';
 import { useLongPress } from '../../ui/longPress';
 import { ChatDetailsMenu } from './ChatDetailsMenu';
 import { HeadState } from './HeadState';
@@ -43,6 +45,8 @@ export function Brief() {
   const chatTitle = live?.title;
   const savedId = rootOf(live?.sessionId);
   const [renaming, setRenaming] = useState(false);
+  const { saved } = useWorkspace(savedId);
+  const from = useMemo(() => startedFrom(saved, savedId), [saved, savedId]);
   const pending = useStore((s) => s.pending);
   const waiting = pending.length > 0;
   const [build] = useState(createTurnsBuilder);
@@ -132,6 +136,7 @@ export function Brief() {
           {phone && <IconButton icon="edit" label="New chat" onClick={() => newChat({ cwd })} />}
           <ChatDetailsMenu icon={phone ? 'kebab-vertical' : undefined} waitingElsewhere={waitingElsewhere} usage={usage} macName={macName} extras={extras} running={running} hasChanges={uncommitted || turns.some((t) => t.files.length > 0)} review={() => askChat(REVIEW_LOCAL)} rename={startRename} />
         </div>
+        {from && <button className="tl-from" onClick={() => showChat({ sessionId: from.sessionId })}>{from.text}</button>}
         <div className="tl-line">
           <HeadState state={state} status={status} chat={live} pending={pending.length} lastReply={lastReply} lastTool={lastTool} done={doneSteps} next={next} />
           {side && (phone || railClosed) && <button className="tl-agents" onClick={() => { if (phone) { setShowAgents(true); setAgentSel(null); } else setRailClosed(false); }}>{agentCount > 0 ? plural(agentCount, 'agent') : 'Run'}<Icon name="chevron-right" small /></button>}

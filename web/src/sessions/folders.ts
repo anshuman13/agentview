@@ -122,7 +122,7 @@ export function useWorkspace(key: unknown) {
   const folders = useMemo(() => buildFolders(repos, trees, grouped), [repos, trees, grouped]);
   const edit = <T,>(k: 'trees' | 'chats', set: (f: (l: T[]) => T[]) => void) => (f: (l: T[]) => T[]) =>
     set((l) => ((cached as Record<string, unknown>)[k] = f(l)) as T[]);
-  return { folders, chats: grouped, setTrees: edit<Worktree>('trees', setTrees), setChats: edit<SavedSession>('chats', setChats) };
+  return { folders, chats: grouped, saved: chats, setTrees: edit<Worktree>('trees', setTrees), setChats: edit<SavedSession>('chats', setChats) };
 }
 
 export function worktreeRequest(d: Folder, track: (branch: string | null, error?: string) => void): ConfirmRequest {
