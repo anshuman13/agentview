@@ -329,10 +329,27 @@ export type SavedSession = {
   parentId?: string;
   via?: SubVia;
   startedAt?: number;
+  spawnedBy?: string;
 };
 
 // How a sub-chat started: a /clear typed in the chat, or one sent by the chat's build run.
 export type SubVia = 'clear' | 'build';
+
+// A chat started by another chat (a build from the start_build tool), keyed by the child's Claude session id.
+export type SpawnLink = { parent: string; kind: 'build'; at: number };
+
+export type BuildCardState = 'spec' | 'approval' | 'running' | 'paused' | 'needs' | 'done' | 'stopped';
+
+// One build a chat started, as GET /api/chat/spawned returns it for the transcript's build card.
+export type SpawnedBuild = {
+  chatId?: string;
+  sessionId: string;
+  title: string;
+  state: BuildCardState;
+  done: number;
+  total: number;
+  round?: string;
+};
 
 export const COMPACT_AT = 200_000;
 
