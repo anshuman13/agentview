@@ -17,6 +17,7 @@ import { startSummaries } from './agent/claude/summaries.js';
 import { startAutoArchive } from './agent/claude/autoArchive.js';
 import { startSubChatScan } from './agent/claude/subChatScan.js';
 import { startBackupPull } from './integrations/backupPull.js';
+import { startSampler } from './usage/sampler.js';
 import { thisMac } from './http/macs.js';
 import type { AttentionItem, ClientMessage, ServerMessage } from '../../shared/protocol.js';
 import type { HostLine } from './socket.js';
@@ -137,6 +138,7 @@ function attentionSources(extra: string[] = []) {
 const fixChat = (item: AttentionItem) => host.req<string>({ op: 'ask', cwd: item.cwd, prompt: item.prompt, fresh: true });
 startAttention(attentionSources, fixChat);
 startBackupPull();
+startSampler();
 startAutoArchive(
   () => new Set([...live.chats.values()].filter((c) => (c.running || c.pending > 0) && c.sessionId).map((c) => c.sessionId!)),
   async (sessionId) => { const id = bySession(sessionId); if (id) await closeByUser(id); },
