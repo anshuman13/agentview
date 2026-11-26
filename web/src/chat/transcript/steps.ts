@@ -64,6 +64,7 @@ export function stepLabel(name: string, input: Record<string, unknown>, cwd = ''
     case 'Skill': return { verb: 'Loaded', object: `the ${s('skill')} skill` };
     case 'ToolSearch': return { verb: 'Looked up', object: `tools for "${s('query')}"` };
     case ALARM_TOOL: return { verb: 'Set', object: 'an alarm' };
+    case BUILD_TOOL: return { verb: 'Started', object: 'a build' };
     case 'Advisor': return { verb: 'Consulted', object: 'the advisor' };
     case 'ExitPlanMode': return { verb: 'Proposed', object: 'a plan' };
     case 'EnterPlanMode': return { verb: 'Entered', object: 'plan mode' };
@@ -86,6 +87,7 @@ const TONES: Record<string, Tone> = {
 export const stepTone = (name: string): Tone => TONES[name] ?? (name.startsWith('mcp__') ? 'mcp' : 'other');
 
 export const ALARM_TOOL = 'mcp__agentview__phone_alarm';
+export const BUILD_TOOL = 'mcp__agentview__start_build';
 
 export type AlarmCard = { time: string; label: string; status: string; tone: 'pending' | 'ok' | 'error' };
 

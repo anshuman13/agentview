@@ -9,6 +9,7 @@ import { ReviewCard } from '../cards/ReviewCard';
 import { CopyPathItems } from '../../workspace/CopyPathItems';
 import { FileIcon } from '../../workspace/FileIcon';
 import { AlarmCard } from './AlarmCard';
+import { BuildCard } from './BuildCard';
 import { SketchCard } from './SketchCard';
 import { DocCard } from './DocCard';
 import { SubChatRows } from './SubChatRows';
@@ -24,7 +25,7 @@ import { MEMORY } from '../../codex/wiki/shared';
 import { replaceTarget } from '../../../../shared/claimActions';
 import { Badge } from '../../ui/Badge';
 import { agentSummary } from '../../sessions/agents';
-import { ALARM_TOOL, createTranscriptBuilder, denied, exploreLabel, exploreRuns, dayDividers, duration, newMarker, newReplies, openAtNew, rewindReplies, turnAnswers, firstLine, relPath, docCards, isDocFile, stepLabel, stepTone, type Item, type Rewind, type StepItem, type ToolResult, type ToolUse } from './steps';
+import { ALARM_TOOL, BUILD_TOOL, createTranscriptBuilder, denied, exploreLabel, exploreRuns, dayDividers, duration, newMarker, newReplies, openAtNew, rewindReplies, turnAnswers, firstLine, relPath, docCards, isDocFile, stepLabel, stepTone, type Item, type Rewind, type StepItem, type ToolResult, type ToolUse } from './steps';
 import { clickOnKey, command, plural, pressable } from '../../ui/util';
 import { useCan } from '../useCan';
 import { copyPrompt, copyReply } from '../chatActions';
@@ -538,6 +539,7 @@ function RowImpl({ it, cwd, settled, card, answer, rewind, readOnly }: { it: Ite
       return <div className={`tr-system${it.error ? ' err' : ''}`}>{it.text}</div>;
     case 'step':
       if (it.use.name === ALARM_TOOL) return <AlarmCard use={it.use} result={it.result} running={!settled} />;
+      if (it.use.name === BUILD_TOOL) return <BuildCard use={it.use} result={it.result} />;
       return <Step use={it.use} result={it.result} cwd={cwd} settled={settled} />;
     case 'file':
       if (isSketchPath(it.path) && !it.error) return <SketchCard path={it.path} meta={fileMeta(it, 'Sketch')} />;
