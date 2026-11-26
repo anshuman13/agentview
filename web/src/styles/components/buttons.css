@@ -13,8 +13,8 @@ button.primary { background: var(--accent-fill); color: var(--on-accent); }
 @media (hover: hover) { button.primary:hover { background: var(--accent-hover); } }
 button.primary:disabled { opacity: 0.5; cursor: default; }
 button.active { color: var(--fg); }
-button.destructive { background: color-mix(in srgb, var(--err) 18%, transparent); color: var(--err); }
-@media (hover: hover) { button.destructive:hover { background: color-mix(in srgb, var(--err) 28%, transparent); } }
+button.destructive { background: color-mix(in srgb, var(--err) 18%, transparent); color: color-mix(in srgb, var(--err) 65%, var(--fg)); }
+@media (hover: hover) { button.destructive:hover { background: color-mix(in srgb, var(--err) 22%, transparent); } }
 
 .icon-btn {
   width: var(--size-md); height: var(--size-md); padding: 0; flex: none; border: 0; border-radius: var(--radius-sm);

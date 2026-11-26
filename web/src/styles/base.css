@@ -20,6 +20,10 @@ pre.wrap { white-space: pre-wrap; word-break: break-word; font-family: inherit; 
 .mono { font-family: var(--mono); font-size: var(--fs-sm); }
 .small { font-size: var(--fs-sm); }
 .muted { color: var(--fg-muted); }
+:is(.ui-row[aria-current='true'], .ui-row[aria-selected='true'], .ui-row.selected, .as-nav button.active, .tk-row.selected, .scm-row.selected, .tree .row.selected, .palette li.active, .cp-pop li.active, .switcher li.active, .more-sheet > button.active, .side-switch button.active) {
+  --fg-muted: var(--fg-muted-selected);
+  --fg-faint: var(--fg-muted-selected);
+}
 .spacer { flex: 1; }
 .row { display: flex; gap: var(--sp-3); flex-wrap: wrap; }
 .icon { flex: none; }
