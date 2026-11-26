@@ -82,7 +82,7 @@ internal fun TranscriptBox(
         }
         return
     }
-    Column(Modifier.fillMaxWidth().background(av.surface, shape).border(BorderStroke(Tokens.hairline, av.border), shape).clip(shape)) {
+    Column(Modifier.fillMaxWidth().border(BorderStroke(Tokens.hairline, av.border), shape).clip(shape)) {
         Row(
             Modifier.fillMaxWidth().heightIn(min = Tokens.rowOne).let { if (onLongClick != null) it.combinedClickable(onLongClick = onLongClick, onClick = onOpen ?: toggle) else it.clickable(onClick = onOpen ?: toggle) }.padding(start = Tokens.listPad, end = Tokens.sp4, top = Tokens.sp3, bottom = Tokens.sp3),
             verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Tokens.sp6),
