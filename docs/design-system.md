@@ -224,12 +224,12 @@ Testing: Row, Section, Chip and AskRow are tested by rendering to static markup 
 Accessibility: a Row that opens something (button or link) takes its name from title and meta, so both must be real text. An IconButton always has `label` (it becomes `aria-label` and `title`). Menu items are `role="menuitem"` inside `role="menu"`. `web/src/design/a11y.test.tsx` checks the `/design` markup, so a new story must pass it.
 
 ### Panel (EuiPanel)
-`<Panel title action padding>`; `.ui-panel`. Elevation 1 on `--surface`, `--shape-lg`.
+`<Panel title action padding>`; `.ui-panel`. Claude's list card (26 Nov 2026): `--group-card` fill (#F7F7F7 / #202020), `--shape-lg`, no shadow, hairline border in dark only. Android `Panel` uses `groupCard` with its hairline.
 Padding md `--sp-8`, sm `--sp-2 --sp-6` for panels holding rows. Optional header: title role
 on the left, an action (IconButton sm or Button quiet sm) on the right. No nested panels.
 
 ### Card
-`<Card cover title meta selected>` and `<CardGrid>` in `ui/Card.tsx`; `.ui-card`, components/cards.css. A preview card for Travel trips and Sketches: `--hairline` border, `--shape-lg` (12px), `--surface`, no shadow. Cover on top (16:10, an img or iframe fills it), then the title (one line) and a meta caption; children (a state chip, totals) follow in the body. `selected` draws a thin accent outline and sets `aria-pressed`. `CardGrid` fills columns of at least 220px and is one column at 600px and below. Tested in `web/src/ui/Card.test.ts`. Android: `Card` and `CardGrid` in `ui/Cards.kt` (selected is a 2dp accent ring), columns from `cardColumns`, tested in `CardsTest.kt`.
+`<Card cover title meta selected>` and `<CardGrid>` in `ui/Card.tsx`; `.ui-card`, components/cards.css. A preview card for Travel trips and Sketches, styled as Claude's list card (26 Nov 2026): `--group-card` fill, `--shape-lg` (12px), no shadow, hairline border in dark only; hover and press a 3% `--fg` layer (#F0F0F0 vs Claude #F1F1F1). Cover on top (16:10, an img or iframe fills it), then the title (one line) and a meta caption; children (a state chip, totals) follow in the body. `selected` lays the neutral `--state-selected` layer with a `--border-strong` edge and sets `aria-pressed`. `CardGrid` fills columns of at least 220px and is one column at 600px and below. Tested in `web/src/ui/Card.test.ts`. Android: `Card` and `CardGrid` in `ui/Cards.kt` (`groupCard` fill with a hairline; selected is `av.selected` with a `borderStrong` hairline), columns from `cardColumns`, tested in `CardsTest.kt`.
 
 ### Badge
 `<Badge status label? reason? count?>` in `ui/Badge.tsx`; `.badge`. Pill, `--size-2xs` high, `--fs-2xs` 600, foreground `--bg`.

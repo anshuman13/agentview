@@ -21,6 +21,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
@@ -29,7 +30,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
-// Hairline preview card (web ui/Card.tsx) for Travel trips and Sketches: 16:10 cover on top, title and caption below.
+// Grey list card (web ui/Card.tsx) for Travel trips and Sketches: 16:10 cover on top, title and caption below.
 @Composable
 fun Card(
     title: String,
@@ -42,9 +43,9 @@ fun Card(
     content: (@Composable ColumnScope.() -> Unit)? = null,
 ) {
     val shape = RoundedCornerShape(Tokens.shapeLg)
-    val ring = if (selected) BorderStroke(2.dp, av.accent) else BorderStroke(Tokens.hairline, av.border)
+    val ring = BorderStroke(Tokens.hairline, if (selected) av.borderStrong else av.border)
     val click = if (onClick != null) Modifier.clickable(role = Role.Button, onClick = onClick) else Modifier
-    Column(modifier.fillMaxWidth().clip(shape).background(av.surface).border(ring, shape).semantics { this.selected = selected }.then(click)) {
+    Column(modifier.fillMaxWidth().clip(shape).background(av.groupCard).background(if (selected) av.selected else Color.Transparent).border(ring, shape).semantics { this.selected = selected }.then(click)) {
         if (cover != null) {
             Box(Modifier.fillMaxWidth().aspectRatio(16f / 10f).background(av.groupCard)) { cover() }
             HorizontalDivider(color = av.border, thickness = Tokens.hairline)

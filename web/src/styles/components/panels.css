@@ -51,7 +51,8 @@
 }
 
 /* Design system Panel and EmptyState (web/src/ui/Panel.tsx). */
-.ui-panel { background: var(--surface); box-shadow: var(--elev-1); border-radius: var(--shape-lg); }
+.ui-panel { background: var(--group-card); border: var(--hairline); border-radius: var(--shape-lg); }
+:root[data-theme='light'] .ui-panel { border-color: transparent; }
 .ui-panel-sm { padding: var(--sp-2) var(--sp-6); }
 .ui-panel-md { padding: var(--sp-8); }
 .ui-panel-head { display: flex; align-items: center; gap: var(--sp-4); min-height: var(--control-sm); margin-bottom: var(--sp-4); }

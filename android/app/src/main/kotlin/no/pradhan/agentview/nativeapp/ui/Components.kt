@@ -258,11 +258,11 @@ fun EmptyState(title: String, hint: String? = null, icon: String? = null, small:
     }
 }
 
-// Panel (web Panel): surface card with a hairline ring.
+// Panel (web Panel): grey list card with a hairline ring.
 @Composable
 fun Panel(modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> Unit) {
     val shape = RoundedCornerShape(Tokens.shapeLg)
-    Column(modifier.fillMaxWidth().clip(shape).background(av.surface).border(BorderStroke(Tokens.hairline, av.border), shape).padding(Tokens.sp7), verticalArrangement = Arrangement.spacedBy(Tokens.sp6), content = content)
+    Column(modifier.fillMaxWidth().clip(shape).background(av.groupCard).border(BorderStroke(Tokens.hairline, av.border), shape).padding(Tokens.sp7), verticalArrangement = Arrangement.spacedBy(Tokens.sp6), content = content)
 }
 
 // Inset well for code, output and diffs.
