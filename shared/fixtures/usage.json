@@ -1,0 +1,123 @@
+{
+  "now": 1795694400000,
+  "report": {
+    "accounts": [
+      {
+        "account": "main",
+        "name": "Personal",
+        "latest": {
+          "at": 1795694400000,
+          "fiveHour": {
+            "pct": 30,
+            "resetsAt": 1795703400000
+          },
+          "week": {
+            "pct": 55,
+            "resetsAt": 1796025600000
+          },
+          "models": [
+            {
+              "name": "Opus",
+              "pct": 62,
+              "resetsAt": 1796025600000
+            },
+            {
+              "name": "seven_day_sonnet",
+              "pct": 12,
+              "resetsAt": null
+            }
+          ]
+        },
+        "series": [
+          {
+            "at": 1795435200000,
+            "fiveHour": 5,
+            "week": 40
+          },
+          {
+            "at": 1795687200000,
+            "fiveHour": 10,
+            "week": 50
+          },
+          {
+            "at": 1795690800000
+          },
+          {
+            "at": 1795694400000,
+            "fiveHour": 30,
+            "week": 55
+          }
+        ],
+        "days": [
+          {
+            "day": "2026-11-24",
+            "input": 1200,
+            "output": 3400,
+            "cacheWrite": 50000,
+            "cacheRead": 900000
+          },
+          {
+            "day": "2026-11-25",
+            "input": 0,
+            "output": 0,
+            "cacheWrite": 0,
+            "cacheRead": 0
+          },
+          {
+            "day": "2026-11-26",
+            "input": 800,
+            "output": 2100,
+            "cacheWrite": 30000,
+            "cacheRead": 600000
+          }
+        ]
+      },
+      {
+        "account": "alt2",
+        "name": "Enterprise",
+        "latest": {
+          "at": 1795694400000,
+          "models": [],
+          "extra": {
+            "enabled": true,
+            "limit": 500,
+            "used": 125,
+            "pct": 25,
+            "currency": "USD"
+          }
+        },
+        "series": [
+          {
+            "at": 1795690800000
+          },
+          {
+            "at": 1795694400000
+          }
+        ],
+        "days": [
+          {
+            "day": "2026-11-24",
+            "input": 0,
+            "output": 0,
+            "cacheWrite": 0,
+            "cacheRead": 0
+          },
+          {
+            "day": "2026-11-25",
+            "input": 300,
+            "output": 700,
+            "cacheWrite": 10000,
+            "cacheRead": 150000
+          },
+          {
+            "day": "2026-11-26",
+            "input": 0,
+            "output": 0,
+            "cacheWrite": 0,
+            "cacheRead": 0
+          }
+        ]
+      }
+    ]
+  }
+}

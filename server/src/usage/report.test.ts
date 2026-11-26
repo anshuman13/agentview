@@ -1,7 +1,7 @@
-import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'bun:test';
-import type { Account } from '../../../shared/protocol.js';
+import { ACCOUNT_NAME, type Account, type UsageReport } from '../../../shared/protocol.js';
 import { configDir, STATE_DIR } from '../agent/claude/accounts.js';
 import { usageReport } from './report.js';
 import { closeStore, saveCall, saveSample, type RawUsage } from './store.js';
@@ -90,5 +90,19 @@ describe('usage report', () => {
     expect(accounts[0].latest).toBe(null);
     expect(accounts[0].series).toEqual([]);
     expect(accounts[0].days).toHaveLength(7);
+  });
+
+  it('matches the shape of the shared fixture', () => {
+    const fixture = JSON.parse(readFileSync(new URL('../../../shared/fixtures/usage.json', import.meta.url), 'utf8')) as { report: UsageReport };
+    saveSample('main', max(30, 55), now);
+    call('main', now, 1);
+    const real = usageReport(3, now).accounts[0];
+    const keys = (o: object) => Object.keys(o).sort();
+    for (const a of fixture.report.accounts) {
+      expect(keys(a)).toEqual(keys(real));
+      expect(a.name).toBe(ACCOUNT_NAME[a.account]);
+      for (const d of a.days) expect(keys(d)).toEqual(keys(real.days[0]));
+    }
+    expect(keys(fixture.report.accounts[0].latest!)).toEqual(keys(real.latest!));
   });
 });
