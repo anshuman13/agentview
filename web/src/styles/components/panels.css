@@ -22,20 +22,23 @@
 .overlay.anchored .switcher li .detail { margin-left: auto; text-align: right; color: var(--fg-muted); }
 .overlay.anchored .switcher li > span:first-child { min-width: 0; }
 
-.overlay.dialog-overlay { align-items: center; padding: var(--sp-8); background: var(--scrim); }
+.overlay.dialog-overlay { align-items: center; padding: var(--sp-8); background: var(--scrim); animation: dialog-fade var(--dur-dialog) var(--motion-ease-in); }
 .dialog {
-  width: min(420px, 100%); background: var(--raised); border: 1px solid var(--border-strong); border-radius: var(--radius);
+  width: min(420px, 100%); background: var(--raised); border: 1px solid var(--border-strong); border-radius: var(--radius-sheet);
   box-shadow: var(--shadow-lg); padding: var(--sp-8) var(--sp-8) var(--sp-6); display: grid;
-  grid-template-columns: auto 1fr; gap: var(--sp-2) var(--sp-6);
+  grid-template-columns: auto 1fr; gap: var(--sp-2) var(--sp-6); animation: dialog-in var(--dur-dialog) var(--motion-ease-in);
 }
+:root[data-theme='light'] .dialog { border-color: transparent; }
+@keyframes dialog-fade { from { opacity: 0; } }
+@keyframes dialog-in { from { transform: scale(.99); } }
 .dialog-icon .codicon { font-size: var(--fs-6xl); color: var(--warn); }
 .dialog-icon.neutral .codicon { color: var(--accent-text); }
-.dialog-title { color: var(--fg); font-size: var(--fs-lg); font-weight: 600; margin-bottom: var(--sp-2); }
+.dialog-title { color: var(--fg); font-size: var(--fs-xl); font-weight: 500; margin-bottom: var(--sp-2); }
 .dialog-detail { color: var(--fg-muted); overflow-wrap: anywhere; white-space: pre-line; }
 .dialog-warning { color: var(--fg-muted); font-size: var(--fs-sm); margin-top: var(--sp-3); }
 .dialog-input { height: var(--size-lg); margin-top: var(--sp-5); padding: 0 var(--sp-4); font-family: var(--mono); font-size: var(--fs-sm); }
 .dialog-actions { grid-column: 1 / -1; display: flex; justify-content: flex-end; gap: var(--sp-4); margin-top: var(--sp-8); }
-.dialog-actions button { min-width: 76px; border-radius: var(--radius-sm); }
+.dialog-actions button { min-width: 76px; }
 
 
 @media (max-width: 900px) {
