@@ -117,6 +117,7 @@
 .mcp-more { margin-top: var(--sp-1); padding: 0; border: 0; background: none; color: var(--fg-muted); font: inherit; font-size: var(--fs-sm); cursor: pointer; }
 .mcp-more:hover { color: var(--fg); }
 .mcp-inputs { margin-top: var(--sp-3); font-size: var(--fs-sm); color: var(--fg-muted); }
+.mcp-inputs code { font-family: var(--mono); font-size: .92em; color: var(--fg); }
 @media (hover: hover) { .mcp-tool.open:hover { background: transparent; } }
 .mcp-tool.open .d { -webkit-line-clamp: unset; }
 .mcp-calls { margin: var(--sp-2) 0 var(--sp-7); }

@@ -237,11 +237,20 @@ export function toolGroups<T extends { readOnly?: boolean }>(tools: T[]): [strin
   return ([['Interactive tools', tools.filter((t) => !t.readOnly)], ['Read-only tools', tools.filter((t) => t.readOnly)]] as [string, T[]][]).filter(([, l]) => l.length);
 }
 
-// Claude's line under a tool: "Takes 3 inputs: a, b, and c", naming the first three.
-export function toolInputs(schema?: { properties?: Record<string, unknown> }): string | null {
+// Claude's line under a tool: "Takes 3 inputs: a, b, and c", naming the first three. Names are { name } parts.
+export function toolInputParts(schema?: { properties?: Record<string, unknown> }): (string | { name: string })[] | null {
   const names = Object.keys(schema?.properties ?? {});
   if (!names.length) return null;
   const shown = names.slice(0, 3);
-  const list = names.length > 3 ? `${shown.join(', ')}, and ${names.length - 3} more` : shown.length > 1 ? `${shown.slice(0, -1).join(', ')}${shown.length > 2 ? ',' : ''} and ${shown.at(-1)}` : shown[0];
-  return `Takes ${names.length} input${names.length > 1 ? 's' : ''}: ${list}`;
+  const parts: (string | { name: string })[] = [`Takes ${names.length} input${names.length > 1 ? 's' : ''}: `];
+  shown.forEach((n, i) => {
+    if (i) parts.push(names.length > 3 || i < shown.length - 1 ? ', ' : shown.length > 2 ? ', and ' : ' and ');
+    parts.push({ name: n });
+  });
+  if (names.length > 3) parts.push(`, and ${names.length - 3} more`);
+  return parts;
+}
+
+export function toolInputs(schema?: { properties?: Record<string, unknown> }): string | null {
+  return toolInputParts(schema)?.map((p) => (typeof p === 'string' ? p : p.name)).join('') ?? null;
 }
