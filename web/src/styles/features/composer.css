@@ -2,8 +2,8 @@
 .cp[data-mode='plan'] { --cp-ring: var(--accent); }
 .cp[data-mode='acceptEdits'] { --cp-ring: var(--fg-muted); }
 .cp-card {
-  position: relative; display: flex; flex-direction: column; transition: border-color var(--dur-hover);
-  background: var(--raised); border: 1px solid var(--border); border-radius: var(--radius);
+  position: relative; display: flex; flex-direction: column;
+  background: var(--raised); border: 1px solid var(--border); border-radius: var(--shape-lg); box-shadow: var(--elev-2);
 }
 .cp-card:focus-within { border-color: var(--cp-ring); }
 
