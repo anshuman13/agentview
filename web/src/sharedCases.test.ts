@@ -695,8 +695,8 @@ describe('cases shared with the Android app', () => {
     it(`findStart: ${c.name}`, () => expect(findStart(c.events, c.hits, c.at)).toBe(c.expected));
   }
 
-  for (const c of cases<{ name: string; text: string; expected: { path: string; line?: number } | null }>('file-path')) {
-    it(`filePath: ${c.name}`, () => expect(filePath(c.text)).toEqual(c.expected));
+  for (const c of cases<{ name: string; text: string; link?: boolean; expected: { path: string; line?: number } | null }>('file-path')) {
+    it(`filePath: ${c.name}`, () => expect(filePath(c.text, c.link)).toEqual(c.expected));
   }
 
   for (const c of cases<{ name: string; query: string; title: string; saved: Parameters<typeof chatMatches>[2]; repo: string | null; expected: boolean }>('chat-search')) {

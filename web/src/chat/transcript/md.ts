@@ -5,9 +5,13 @@ import { shellLine } from '../../../../shared/composerText';
 export type { Token };
 
 // A file path a reply names: absolute, home or relative, with an extension and an optional :line.
-// Relative paths need a folder unless they are Markdown or CSV, so `x.ts` alone stays code.
-export function filePath(text: string): { path: string; line?: number } | null {
-  const m = /^((?:~|\.{1,2})?\/?[^\s:*?"<>|`]*\.[A-Za-z][A-Za-z0-9]{0,7})(?::(\d+)(?::\d+)?|#L(\d+))?$/.exec(text.trim());
+// Relative paths need a folder unless they are Markdown or CSV, so `x.ts` alone stays code. A link target may hold spaces.
+const pathRe = (chars: string) => new RegExp(`^((?:~|\\.{1,2})?\\/?[^${chars}:*?"<>|\`]*\\.[A-Za-z][A-Za-z0-9]{0,7})(?::(\\d+)(?::\\d+)?|#L(\\d+))?$`);
+const CODE_PATH = pathRe('\\s');
+const LINK_PATH = pathRe('\\n');
+
+export function filePath(text: string, link = false): { path: string; line?: number } | null {
+  const m = (link ? LINK_PATH : CODE_PATH).exec(text.trim());
   if (!m || /^[a-z][a-z0-9+.-]*:/i.test(text) || m[1].includes('//')) return null;
   if (!m[1].includes('/') && !/\.(md|markdown|mdx|csv|tsv)$/i.test(m[1])) return null;
   const line = Number(m[2] ?? m[3]) || undefined;
@@ -39,7 +43,7 @@ const markdown = (files: boolean) => new Marked({
       return f ? `<a class="md-file" ${openAttrs(f)}><code>${text}</code></a>` : `<code>${text}</code>`;
     },
     link({ href, tokens }) {
-      const f = files && filePath(decoded(href));
+      const f = files && filePath(decoded(href), true);
       if (f) return `<a class="md-file" ${openAttrs(f)}>${this.parser.parseInline(tokens)}</a>`;
       const safe = /^(https?:|mailto:)/i.test(href) ? href : '#';
       return `<a href="${escapeHtml(safe)}" target="_blank" rel="noreferrer">${this.parser.parseInline(tokens)}</a>`;

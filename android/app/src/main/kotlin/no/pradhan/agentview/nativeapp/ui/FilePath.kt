@@ -4,13 +4,15 @@ import java.net.URLDecoder
 
 data class FilePath(val path: String, val line: Int? = null)
 
-private val FILE_PATH = Regex("""((?:~|\.{1,2})?/?[^\s:*?"<>|`]*\.[A-Za-z][A-Za-z0-9]{0,7})(?::(\d+)(?::\d+)?|#L(\d+))?""")
+private fun pathRegex(chars: String) = Regex("""((?:~|\.{1,2})?/?[^$chars:*?"<>|`]*\.[A-Za-z][A-Za-z0-9]{0,7})(?::(\d+)(?::\d+)?|#L(\d+))?""")
+private val CODE_PATH = pathRegex("\\s")
+private val LINK_PATH = pathRegex("\\n")
 private val URL_SCHEME = Regex("^[a-z][a-z0-9+.-]*:", RegexOption.IGNORE_CASE)
 private val BARE_FILE = Regex("""\.(md|markdown|mdx|csv|tsv)$""", RegexOption.IGNORE_CASE)
 
-// A file path a reply names (web filePath in md.ts), checked by shared/fixtures/file-path.json.
-fun filePath(text: String): FilePath? {
-    val m = FILE_PATH.matchEntire(text.trim()) ?: return null
+// A file path a reply names (web filePath in md.ts), checked by shared/fixtures/file-path.json. A link target may hold spaces.
+fun filePath(text: String, link: Boolean = false): FilePath? {
+    val m = (if (link) LINK_PATH else CODE_PATH).matchEntire(text.trim()) ?: return null
     val path = m.groupValues[1]
     if (URL_SCHEME.containsMatchIn(text) || "//" in path) return null
     if ('/' !in path && !BARE_FILE.containsMatchIn(path)) return null

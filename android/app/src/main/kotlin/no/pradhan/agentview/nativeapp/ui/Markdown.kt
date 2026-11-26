@@ -56,7 +56,7 @@ fun inlineText(inlines: List<Inline>): AnnotatedString {
     val link = TextLinkStyles(SpanStyle(color = c.link))
     val open = LocalOpenFile.current
     return remember(inlines, c, open) {
-        fun fileLink(target: String) = open?.let { o -> filePath(target)?.let { f -> LinkAnnotation.Clickable(target, link) { o(f.path, f.line) } } }
+        fun fileLink(target: String, isLink: Boolean = false) = open?.let { o -> filePath(target, isLink)?.let { f -> LinkAnnotation.Clickable(target, link) { o(f.path, f.line) } } }
         buildAnnotatedString {
             fun walk(list: List<Inline>) {
                 for (i in list) when (i) {
@@ -65,7 +65,7 @@ fun inlineText(inlines: List<Inline>): AnnotatedString {
                     is Inline.Strong -> withStyle(SpanStyle(fontWeight = FontWeight.Bold)) { walk(i.children) }
                     is Inline.Emph -> withStyle(SpanStyle(fontStyle = FontStyle.Italic)) { walk(i.children) }
                     is Inline.Strike -> withStyle(SpanStyle(textDecoration = TextDecoration.LineThrough)) { walk(i.children) }
-                    is Inline.Link -> withLink(fileLink(decodedTarget(i.url)) ?: LinkAnnotation.Url(i.url, link)) { walk(i.children) }
+                    is Inline.Link -> withLink(fileLink(decodedTarget(i.url), true) ?: LinkAnnotation.Url(i.url, link)) { walk(i.children) }
                     Inline.Break -> append('\n')
                 }
             }

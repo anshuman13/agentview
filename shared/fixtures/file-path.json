@@ -7,5 +7,7 @@
   { "name": "Markdown alone", "text": "README.md", "expected": { "path": "README.md" } },
   { "name": "code file alone", "text": "x.ts", "expected": null },
   { "name": "URL", "text": "https://a.b/c.ts", "expected": null },
-  { "name": "home", "text": "~/x/y.md", "expected": { "path": "~/x/y.md" } }
+  { "name": "home", "text": "~/x/y.md", "expected": { "path": "~/x/y.md" } },
+  { "name": "spaces in a link target", "text": "/Users/me/reports/Shared pieces.md", "link": true, "expected": { "path": "/Users/me/reports/Shared pieces.md" } },
+  { "name": "spaces in code stay code", "text": "cat docs/a.md", "expected": null }
 ]

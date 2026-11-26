@@ -630,7 +630,7 @@ class SharedCasesTest {
     @Test fun filePathCases() {
         for (c in cases("file-path")) {
             val expected = c.getValue("expected").takeIf { it !is JsonNull }?.jsonObject?.let { FilePath(it.str("path"), it["line"]?.jsonPrimitive?.int) }
-            assertEquals(c.str("name"), expected, filePath(c.str("text")))
+            assertEquals(c.str("name"), expected, filePath(c.str("text"), c["link"]?.jsonPrimitive?.booleanOrNull == true))
         }
     }
 
