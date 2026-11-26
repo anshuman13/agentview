@@ -1,9 +1,9 @@
 .tr-host { position: relative; flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
-.tr-jump { position: absolute; left: 50%; bottom: var(--sp-5); transform: translateX(-50%); display: flex; align-items: center; gap: var(--sp-2); padding: var(--sp-2) var(--sp-6); border: 1px solid var(--border-card); border-radius: var(--shape-full); background: var(--raised); color: var(--fg); font-size: var(--fs-sm); box-shadow: var(--elev-2); cursor: pointer; }
+.tr-jump { position: absolute; left: 50%; bottom: var(--sp-5); transform: translateX(-50%); display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; padding: 0; border: 1px solid var(--border-card); border-radius: var(--radius-pill); background: var(--raised); color: var(--fg); box-shadow: var(--elev-2); cursor: pointer; }
+.tr-jump .badge { position: absolute; top: -6px; right: -6px; pointer-events: none; }
 @media (max-width: 900px) {
-  .tr-jump { left: auto; right: var(--sp-5); transform: none; justify-content: center; width: var(--touch); height: var(--touch); padding: 0; border-radius: var(--radius-pill); box-shadow: var(--elev-2); }
-  .tr-jump-text { display: none; }
-  .tr-jump .badge { position: absolute; top: 0; right: 0; pointer-events: none; }
+  .tr-jump { left: auto; right: var(--sp-5); transform: none; width: var(--touch); height: var(--touch); }
+  .tr-jump .badge { top: 0; right: 0; }
 }
 .tr-find { display: flex; align-items: center; gap: var(--sp-3); padding: var(--sp-3) var(--sp-8); border-bottom: 1px solid var(--border); }
 .tr-find .jb-search { flex: 1 1 240px; max-width: 360px; }

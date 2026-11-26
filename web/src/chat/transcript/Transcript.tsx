@@ -377,7 +377,7 @@ function TranscriptView({ sessionId, events, earlier, cwd, running, bill, failed
     </div>
     {!stuck && (behind || running) && (
       <button className="tr-jump" aria-label={jumpLabel} title={jumpLabel} onClick={jump}>
-        <Icon name="arrow-down" small /><span className="tr-jump-text">Jump to latest</span>
+        <Icon name="arrow-down" small />
         {replies > 0 && <span className="badge quiet">{replies > 9 ? '9+' : replies}</span>}
       </button>
     )}
