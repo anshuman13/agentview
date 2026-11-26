@@ -531,6 +531,12 @@ Before a new chat starts, a limit mark is checked against the account's live usa
 without sending a prompt. The mark is cleared when the 5-hour and weekly windows are under 100% and no per-model
 weekly window is full; a failed check keeps it.
 
+## Usage
+
+Usage is a page (activity bar `graph`, `?page=usage`; on the phone in the More sheet after Travel) with one card per logged-in Claude account, shown only by its display name: Personal (main), Work (alt) and Enterprise (alt2). Organization names and ids are never read or shown, and accounts are never merged. A card shows the 5-hour and weekly bars with percent and "resets in …", the per-model weekly windows when present, and for an account with only extra usage (Enterprise) the monthly credits as used of limit with the currency, or "off". Below are a 7-day line chart of the 5-hour and weekly percent and a 30-day stacked bar chart of tokens per local day split into input, output, cache write and cache read, with a legend and a total per kind. Web draws the charts as inline SVG (`ops/Usage.tsx`, `ops/usageLogic.ts`), Android with Compose `Canvas` (`ops/UsageUi.kt`, `ops/UsageLogic.kt`); both derive the same values, checked against `shared/fixtures/usage.json`.
+
+The data comes from `GET /api/usage?days=30` (days 1 to 366), built by `usageReport` from the store `~/.agentview/usage.db` (`server/src/usage/`). The server fills it three ways: every 5 minutes, and once at start, it reads each logged-in account's live usage without a prompt and saves one sample (each window's percent and reset time, extra usage, and the raw answer), skipping an account whose read fails; every assistant message in a Claude chat or subagent stores its tokens, model, chat and account, keyed by the API message id so repeats are stored once (OpenRouter and Codex chats are not stored); and on the first start a background job reads every transcript under `~/.claude/projects` once, one file at a time, taking the account from `chat-accounts.json` or, for an unknown chat, from its folder's profile (marked as guessed). Old samples are not pruned.
+
 ## Runs
 
 Every `/tries` and every coding job of the hub ([autopilot.md](autopilot.md)) is a run, kept in the host in

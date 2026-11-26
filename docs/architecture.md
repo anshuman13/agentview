@@ -29,6 +29,8 @@ host owns every chat and its Claude CLI process and listens on `~/.agentview/hos
   each chat with stopped work to resume it.
 - Tries and jobs are runs (`session/runs.ts`) in `~/.agentview/runs.json`. The host broadcasts them as `runs` messages, the API
   server caches them like the chats and sends them to clients (last 10 rounds each).
+- Claude usage lives in `~/.agentview/usage.db` (SQLite, WAL): limit samples every 5 minutes per logged-in account and the
+  tokens of every model call, read by the Usage page through `GET /api/usage` (see [features.md](features.md#usage)).
 - With no API server for five minutes and nothing running, the host saves and exits.
 
 ## Server folders
@@ -42,6 +44,7 @@ host owns every chat and its Claude CLI process and listens on `~/.agentview/hos
 | `workspace/` | Files, git, worktrees, terminals |
 | `integrations/` | GitHub, attention inbox, notifications, Observe, Deploy, MCP client, the assistant hub proxy (`/api/assistant/*`) |
 | `chrome/` | Chrome connection and relay |
+| `usage/` | Claude usage store (`~/.agentview/usage.db`, SQLite): the 5-minute limit sampler, per-call token recording from the Claude driver, the one-time transcript backfill and the `GET /api/usage` report |
 
 `shared/` holds the wire protocol, the hub table list (`tables.ts`) and helpers used by server, web and the hub.
 
