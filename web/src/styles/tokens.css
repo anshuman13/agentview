@@ -224,23 +224,23 @@
   --syn-invalid: var(--hue-red);
 }
 
-/* Light: KiroCrew's kiro-light. Status and kind hues are darkened where they also colour text. */
+/* Light: Claude desktop's neutral greys, sampled 26 Nov 2026. Status and kind hues are darkened where they also colour text. */
 :root[data-theme='light'] {
   color-scheme: light;
-  --group-page: #faf9f5;
-  --group-card: #f3f1eb;
-  --sunken: #edeae2;
-  --bg: #faf9f5;
-  --surface: #f3f1eb;
+  --group-page: #ffffff;
+  --group-card: #f7f7f7;
+  --sunken: #f3f3f3;
+  --bg: #ffffff;
+  --surface: #fcfcfc;
   --raised: #ffffff;
   --hover: rgba(31, 30, 28, 0.06);
-  --border: #e3e0d8;
-  --border-strong: #cfcbc1;
-  --border-card: #e3e0d8;
-  --fg-faint: #6b675f;
-  --fg-muted: #57544d;
-  --fg: #1f1e1c;
-  --fg-strong: #141311;
+  --border: #e2e2e3;
+  --border-strong: #cfcfcf;
+  --border-card: #e2e2e3;
+  --fg-faint: #6b6b6b;
+  --fg-muted: #656565;
+  --fg: #191919;
+  --fg-strong: #0f0f0f;
   --hue-violet: #8041e6;
   --hue-amber: #b25000;
   --hue-teal: #007385;
