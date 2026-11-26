@@ -150,13 +150,13 @@ fun McpScreen(hub: Hub, onBack: () -> Unit) {
                 if (filtering && matched.isEmpty() && hiddenMatched.isEmpty()) item { EmptyState("No servers match", icon = "search", action = { Button("Clear filter", { query = "" }, size = ButtonSize.Sm) }) }
                 matched.forEach { (label, list) ->
                     val folded = !filtering && label !in expanded && list.size > FOLD
-                    item { SectionHeader(label, list.size.toString()) }
-                    item { McpGroup(if (folded) list.take(FOLD) else list, calls, personal) { sel = mcpKey(it) } }
-                    if (folded) item { Button("Show all ${list.size}", { expanded = expanded + label }, Modifier.padding(start = Tokens.listPad), variant = ButtonVariant.Plain, size = ButtonSize.Sm) }
+                    item(key = "head:$label") { SectionHeader(label, list.size.toString()) }
+                    item(key = "rows:$label") { McpGroup(if (folded) list.take(FOLD) else list, calls, personal) { sel = mcpKey(it) } }
+                    if (folded) item(key = "more:$label") { Button("Show all ${list.size}", { expanded = expanded + label }, Modifier.padding(start = Tokens.listPad), variant = ButtonVariant.Plain, size = ButtonSize.Sm) }
                 }
                 if (hiddenMatched.isNotEmpty()) {
-                    item { SectionHeader("Hidden", hiddenMatched.size.toString(), open = showHidden, onToggle = { showHidden = !showHidden }) }
-                    if (showHidden) item { McpGroup(hiddenMatched, calls, personal) { sel = mcpKey(it) } }
+                    item(key = "head:hidden") { SectionHeader("Hidden", hiddenMatched.size.toString(), open = showHidden, onToggle = { showHidden = !showHidden }) }
+                    if (showHidden) item(key = "rows:hidden") { McpGroup(hiddenMatched, calls, personal) { sel = mcpKey(it) } }
                 }
                 item { Spacer(Modifier.padding(bottom = Tokens.sp16)) }
             }

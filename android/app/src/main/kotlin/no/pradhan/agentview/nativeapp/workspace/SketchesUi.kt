@@ -205,16 +205,17 @@ private fun newSketch(hub: Hub) {
     hub.link.value = DeepLink(chat = hub.pageChat)
 }
 
-// The card cover: the sketch at desktop width in a script-free WebView, created once the card is on screen. The overlay takes the taps.
+// The card cover: the sketch at desktop width in a script-free WebView, live only while the card is on screen, so a long list keeps a few WebViews. The overlay takes the taps.
 @Composable
 private fun SketchThumb(hub: Hub, file: SketchFile, onClick: () -> Unit) {
     var seen by remember { mutableStateOf(false) }
-    Box(Modifier.fillMaxSize().onGloballyPositioned { if (!seen && it.boundsInWindow().height > 0f) seen = true }) {
+    var onScreen by remember { mutableStateOf(false) }
+    Box(Modifier.fillMaxSize().onGloballyPositioned { onScreen = it.boundsInWindow().height > 0f; if (onScreen) seen = true }) {
         if (seen) {
             val (load) = rememberLoad(file.path, file.mtime) { hub.readFile(file.path) }
             val f = load.data
             val dark = when (hub.theme.collectAsState().value) { "dark" -> true; "light" -> false; else -> isSystemInDarkTheme() }
-            if (f != null && !f.binary && f.error == null && f.content.length <= MAX_SKETCH) {
+            if (onScreen && f != null && !f.binary && f.error == null && f.content.length <= MAX_SKETCH) {
                 SketchFrame(remember(f.content, dark) { sketchPage(f.content, if (dark) "dark" else "light", true) }, true, Modifier.fillMaxSize(), thumb = true)
             }
         }
