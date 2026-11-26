@@ -49,6 +49,7 @@ import no.pradhan.agentview.nativeapp.app.refreshMcpGroups
 import no.pradhan.agentview.nativeapp.app.saveMcpGroup
 import no.pradhan.agentview.nativeapp.ui.Badge
 import no.pradhan.agentview.nativeapp.ui.BadgeTone
+import no.pradhan.agentview.nativeapp.workspace.pageRepo
 import no.pradhan.agentview.nativeapp.ui.Button
 import no.pradhan.agentview.nativeapp.ui.ButtonSize
 import no.pradhan.agentview.nativeapp.ui.StatusDot
@@ -152,6 +153,8 @@ fun McpScreen(hub: Hub, onBack: () -> Unit) {
     else Column(Modifier.fillMaxSize()) {
         WorkspaceHeader(hub, "MCP Servers", onBack, sub = if (probe.data != null) "${mcp.connected} connected of ${mcp.total}" + if (mcp.needsYou > 0) " · ${mcp.needsYou} need you" else "" else null) {
             IconBtn("refresh", "Check", { refresh = true; reprobe() }, enabled = !probe.busy)
+            val addPrompt = setupPrompt("mcp", pageRepo(hub), if (connectors) "claude mcp add" else "codex mcp add")
+            if (!hub.readOnly) IconBtn("add", "Add server", { hub.askChat(addPrompt) })
         }
         PageBody {
             LazyColumn(Modifier.fillMaxSize(), listState) {

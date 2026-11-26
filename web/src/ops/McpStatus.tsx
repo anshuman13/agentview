@@ -103,6 +103,7 @@ export function McpPage() {
               <SearchBox value={query} onChange={setQuery} label="Search" />
               <FilterMenu counts={counts} filter={filter} onChange={setFilter} />
               <IconButton icon="refresh" label={busy ? 'Checking' : at ? `Check again (checked ${ago(at, ' ago')})` : 'Check'} size="sm" spin={busy} disabled={busy} onClick={() => load(true)} />
+              <SetupButton kind="mcp" mcpCommand={connectors ? 'claude mcp add' : 'codex mcp add'} label="Add" />
             </div>
           )}
           {narrowed && !list.length && (
