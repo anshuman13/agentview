@@ -2,7 +2,7 @@ import { eachChunk, eachLine } from '../exec.js';
 import { RpcCalls } from '../rpcCalls.js';
 
 export type McpServerDef = { type?: string; command?: string; args?: string[]; env?: Record<string, string>; url?: string; headers?: Record<string, string> };
-export type McpTool = { name: string; description?: string; inputSchema?: unknown; annotations?: { readOnlyHint?: boolean; destructiveHint?: boolean } };
+export type McpTool = { name: string; title?: string; description?: string; inputSchema?: unknown; annotations?: { title?: string; readOnlyHint?: boolean; destructiveHint?: boolean } };
 type McpInfo = { name?: string; version?: string };
 type McpContent = { type: string; text?: string; [k: string]: unknown };
 export type McpResult = { content?: McpContent[]; structuredContent?: unknown; isError?: boolean };

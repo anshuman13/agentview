@@ -37,7 +37,7 @@ export function Detail({ row, usage, group, onGroup, hidden, onHide, onClose }: 
     return () => window.removeEventListener('keydown', onKey);
   }, [onClose]);
   const url = row.command?.startsWith('http');
-  const tools = (row.tools ?? []).filter((t) => !q || t.name.toLowerCase().includes(q.toLowerCase()) || t.description?.toLowerCase().includes(q.toLowerCase()));
+  const tools = (row.tools ?? []).filter((t) => !q || t.name.toLowerCase().includes(q.toLowerCase()) || t.title?.toLowerCase().includes(q.toLowerCase()) || t.description?.toLowerCase().includes(q.toLowerCase()));
   return (
     <section className="mcp-detail" aria-label={shortName(row.name)}>
       <Button variant="quiet" size="sm" icon="arrow-left" className="mcp-back" onClick={onClose}>MCP servers</Button>
@@ -92,7 +92,7 @@ export function Detail({ row, usage, group, onGroup, hidden, onHide, onClose }: 
             {!shut.has(name) && <>
               {list.map((t) => (
                 <div key={t.name} className={`mcp-tool ${run === t.name ? 'open' : ''}`}>
-                  <div className="t"><span className="n">{t.name}</span><span className="spacer" />{t.inputSchema && runnable(row) && <IconButton icon={run === t.name ? 'close' : 'play'} small className="mcp-insert" on={run === t.name} label={run === t.name ? 'Close' : 'Run this tool'} onClick={() => setRun((r) => (r === t.name ? null : t.name))} />}{row.live && <IconButton icon="comment" small className="mcp-insert" label="Add to chat" title={`Ask ${label} to use ${t.name} in your next message`} onClick={() => use(row.name, t.name)} />}</div>
+                  <div className="t"><span className="n" title={t.title ? t.name : undefined}>{t.title || t.name}</span><span className="spacer" />{t.inputSchema && runnable(row) && <IconButton icon={run === t.name ? 'close' : 'play'} small className="mcp-insert" on={run === t.name} label={run === t.name ? 'Close' : 'Run this tool'} onClick={() => setRun((r) => (r === t.name ? null : t.name))} />}{row.live && <IconButton icon="comment" small className="mcp-insert" label="Add to chat" title={`Ask ${label} to use ${t.name} in your next message`} onClick={() => use(row.name, t.name)} />}</div>
                   {t.description && <div className={`d ${expanded.has(t.name) ? 'all' : ''}`}>{t.description}</div>}
                   {t.description && t.description.length > 140 && !expanded.has(t.name) && <button type="button" className="mcp-more" onClick={() => setExpanded((m) => new Set(m).add(t.name))}>Show more</button>}
                   <ToolInputs schema={t.inputSchema} />

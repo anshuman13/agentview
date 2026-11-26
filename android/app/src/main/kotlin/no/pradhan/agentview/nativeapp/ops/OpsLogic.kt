@@ -58,7 +58,7 @@ fun deployBody(app: String, env: String, ref: String) = buildJsonObject { put("a
 fun rollbackBody(app: String, env: String, sha: String) = buildJsonObject { put("app", app); put("env", env); put("sha", sha) }.toString()
 
 // shared/protocol.ts McpServer and web/src/ops/mcpHelpers.ts.
-@Serializable data class McpTool(val name: String, val description: String = "", val readOnly: Boolean = false, val destructive: Boolean = false, val inputSchema: JsonObject? = null)
+@Serializable data class McpTool(val name: String, val title: String? = null, val description: String = "", val readOnly: Boolean = false, val destructive: Boolean = false, val inputSchema: JsonObject? = null)
 
 @Serializable
 data class McpServer(

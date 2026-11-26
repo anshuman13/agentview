@@ -191,7 +191,7 @@ export type ChatRun = {
 
 export type McpProp = { type?: string | string[]; description?: string; enum?: unknown[]; default?: unknown; title?: string; maxLength?: number };
 export type McpSchema = { type?: string; properties?: Record<string, McpProp>; required?: string[] };
-export type McpTool = { name: string; description?: string; readOnly?: boolean; destructive?: boolean; inputSchema?: McpSchema };
+export type McpTool = { name: string; title?: string; description?: string; readOnly?: boolean; destructive?: boolean; inputSchema?: McpSchema };
 
 export type McpServer = {
   name: string;

@@ -287,7 +287,7 @@ private fun McpDetail(hub: Hub, r: McpRow, calls: Pair<Int, Int>?, groups: Map<S
     val link = openLink()
     val hidden = groups[mcpHideKey(r)] == "hidden"
     val group = if (r.account != null) (if (r.account == "main") "personal" else "work") else if (groups[mcpGroupKey(r)] == "personal") "personal" else "work"
-    val tools = (r.server.tools ?: emptyList()).filter { q.isEmpty() || it.name.contains(q, true) || it.description.contains(q, true) }
+    val tools = (r.server.tools ?: emptyList()).filter { q.isEmpty() || it.name.contains(q, true) || it.title?.contains(q, true) == true || it.description.contains(q, true) }
     val url = r.server.command?.startsWith("http") == true
     Column(Modifier.fillMaxSize()) {
         WorkspaceHeader(hub, mcpShortName(r.name), onBack, sub = label) {
@@ -334,7 +334,7 @@ private fun McpDetail(hub: Hub, r: McpRow, calls: Pair<Int, Int>?, groups: Map<S
                         Group {
                             list.forEachIndexed { i, t ->
                                 if (i > 0) Hairline()
-                                ListRow(t.name, firstLine(t.description).ifEmpty { null }, metaLines = 2, below = mcpToolInputs(t.inputSchema)?.let { ins -> { Text(ins, style = Type.footnote, color = av.fgMuted, maxLines = 1, overflow = TextOverflow.Ellipsis) } }, trailing = if (canUse) ({ IconBtn("comment", "Add ${t.name} to chat", { use(Use(r.name, t.name)) }) }) else null)
+                                ListRow(t.title ?: t.name, firstLine(t.description).ifEmpty { null }, metaLines = 2, below = mcpToolInputs(t.inputSchema)?.let { ins -> { Text(ins, style = Type.footnote, color = av.fgMuted, maxLines = 1, overflow = TextOverflow.Ellipsis) } }, trailing = if (canUse) ({ IconBtn("comment", "Add ${t.name} to chat", { use(Use(r.name, t.name)) }) }) else null)
                             }
                         }
                     }
