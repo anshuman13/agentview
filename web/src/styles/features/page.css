@@ -34,7 +34,7 @@
 .sk-cell .ui-card { width: 100%; }
 .sk-cell .ui-card-body { padding-right: calc(var(--sp-6) + 28px); }
 .sk-menu { position: absolute; right: var(--sp-3); bottom: var(--sp-4); }
-.page-search { display: flex; align-items: center; gap: var(--sp-3); max-width: 360px; height: 36px; margin-bottom: var(--sp-6); padding: 0 var(--sp-6); border: 1px solid var(--border); border-radius: var(--radius-pill); background: var(--wk-card); color: var(--fg-faint); transition: border-color var(--dur); }
+.page-search { display: flex; align-items: center; gap: var(--sp-3); max-width: 360px; height: 36px; margin-bottom: var(--sp-6); padding: 0 var(--sp-6); border: 1px solid transparent; border-radius: var(--radius); background: var(--field); color: var(--fg-faint); transition: border-color var(--dur); }
 .page-search:focus-within { border-color: var(--border-strong); color: var(--fg-muted); }
 .page-search input { flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; color: var(--fg); font: inherit; font-size: var(--fs-md); }
 .page-search input::-webkit-search-cancel-button { display: none; }

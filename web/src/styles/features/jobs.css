@@ -10,12 +10,13 @@
 .jb-fields { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-4); padding: var(--sp-4) var(--list-pad); }
 .jb-fields > input:not([type='date']) { flex: 1 1 100%; }
 .jb-wrap .ui-row-meta { white-space: normal; }
-.jb-fields input:not([type='date']) { height: 34px; padding: 0 var(--sp-5); border: 1px solid var(--border-strong); border-radius: var(--radius-md); background: var(--sunken); color: var(--fg); font: inherit; font-size: 16px; }
+.jb-fields input:not([type='date']) { height: 34px; padding: 0 var(--sp-5); border: 1px solid transparent; border-radius: var(--radius); background: var(--field); color: var(--fg); font: inherit; font-size: 16px; }
+.jb-fields input:not([type='date']):focus, .jb-when select:focus, .jb-when input:focus { border-color: var(--border-strong); }
 .mt-page > .ui-section { padding-right: 0; }
 .mt-page > .ui-section .ui-section-head { padding-left: 0; }
 .jb-name { display: block; width: 100%; padding: 0; border: 0; background: transparent; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .jb-when { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-4); }
-.jb-when select, .jb-when input { flex: none; width: auto; height: 34px; padding: 0 var(--sp-5); border: 1px solid var(--border-strong); border-radius: var(--radius-md); background: var(--sunken); color: var(--fg); font: inherit; font-size: 16px; }
+.jb-when select, .jb-when input { flex: none; width: auto; height: 34px; padding: 0 var(--sp-5); border: 1px solid transparent; border-radius: var(--radius); background: var(--field); color: var(--fg); font: inherit; font-size: 16px; }
 .jb-when .jb-custom { flex: 1 1 180px; font-family: var(--font-mono, monospace); }
 .jb-when .jb-custom[aria-invalid='true'] { border-color: var(--err); }
 .jb-tools { display: flex; flex-wrap: wrap; gap: var(--sp-3); margin: var(--sp-4) 0; }

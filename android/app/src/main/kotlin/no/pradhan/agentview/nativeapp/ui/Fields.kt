@@ -28,6 +28,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.TextFieldValue
@@ -35,7 +36,7 @@ import androidx.compose.ui.text.style.TextOverflow
 
 private const val CARET_BAND = 120f
 
-// Text field (web input): sunken fill, hairline border that turns accent on focus.
+// Text field (web input): sunken fill, radius 8, hairline border only on focus.
 @Composable
 fun TextField(
     value: String,
@@ -110,9 +111,9 @@ private fun FieldFrame(
     inner: @Composable () -> Unit,
 ) {
     val c = av
-    val shape = RoundedCornerShape(if (pill) Tokens.radiusPill else Tokens.radiusSm)
+    val shape = RoundedCornerShape(if (pill) Tokens.radiusPill else Tokens.radius)
     Row(
-        Modifier.fillMaxWidth().heightIn(min = Tokens.touch).clip(shape).background(c.sunken).border(Tokens.hairline, if (focused) c.accent else c.border, shape)
+        Modifier.fillMaxWidth().heightIn(min = Tokens.touch).clip(shape).background(c.sunken).border(Tokens.hairline, if (focused) c.borderStrong else Color.Transparent, shape)
             .padding(start = if (leading != null) Tokens.sp4 else Tokens.sp6, end = if (trailing != null) Tokens.sp1 else Tokens.sp6),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(Tokens.sp3),

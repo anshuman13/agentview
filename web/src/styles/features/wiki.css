@@ -131,7 +131,7 @@
 .wk-contest-btns { display: flex; justify-content: flex-end; gap: var(--sp-4); }
 @keyframes wk-flash { 0%, 40% { background: color-mix(in srgb, var(--accent) 16%, transparent); } }
 
-.wk-search { display: flex; align-items: center; gap: var(--sp-3); width: 240px; height: 34px; padding: 0 var(--sp-3) 0 var(--sp-6); border: 1px solid var(--border); border-radius: var(--radius-pill); background: var(--wk-card); color: var(--fg-faint); transition: border-color var(--dur), width var(--dur) var(--ease); }
+.wk-search { display: flex; align-items: center; gap: var(--sp-3); width: 240px; height: 34px; padding: 0 var(--sp-3) 0 var(--sp-6); border: 1px solid transparent; border-radius: var(--radius); background: var(--field); color: var(--fg-faint); transition: border-color var(--dur), width var(--dur) var(--ease); }
 .wk-search:focus-within { width: 300px; border-color: var(--border-strong); color: var(--fg-muted); }
 .wk-search input { flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; color: var(--fg); font: inherit; font-size: var(--fs-md); }
 .wk-search .icon-btn { width: 24px; height: 24px; }

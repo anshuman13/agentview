@@ -4,7 +4,7 @@
 .page-mcp .mt-page { padding-top: var(--sp-10); }
 .mcp-bar { display: flex; align-items: center; gap: var(--sp-2); margin-bottom: var(--sp-4); }
 .mcp-bar h2 { flex: 1 0 auto; min-width: 0; margin: 0; font-size: var(--fs-md); font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.mcp-bar .page-search { flex: 0 1 220px; min-width: 0; margin: 0 0 0 var(--sp-4); max-width: none; height: 28px; padding: 0 var(--sp-4); border: 0; border-radius: var(--radius-sm); background: var(--sunken); }
+.mcp-bar .page-search { flex: 0 1 220px; min-width: 0; margin: 0 0 0 var(--sp-4); max-width: none; height: 28px; padding: 0 var(--sp-4); border: 0; border-radius: var(--radius); background: var(--field); }
 .mcp-bar .page-search input { font-size: var(--fs-sm); }
 .mcp-filter { position: relative; }
 .mcp-fhead { padding: var(--sp-2) var(--sp-4) var(--sp-1); font-size: var(--fs-xs); color: var(--fg-muted); }

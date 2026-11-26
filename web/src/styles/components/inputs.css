@@ -1,16 +1,17 @@
 input, textarea {
-  background: var(--sunken);
+  background: var(--field);
   color: var(--fg);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  border-radius: var(--radius);
   padding: var(--sp-2) var(--sp-4);
   font: inherit;
   width: 100%;
 }
 input::placeholder, textarea::placeholder { color: var(--fg-faint); }
+input:focus, textarea:focus, select:focus { border-color: var(--border-strong); }
 input:focus-visible, textarea:focus-visible, select:focus-visible { outline: var(--focus-ring); outline-offset: var(--focus-offset); }
 textarea { resize: none; }
 select {
-  background: var(--sunken); color: var(--fg); border: 1px solid var(--border); border-radius: var(--radius-sm);
+  background: var(--field); color: var(--fg); border: 1px solid transparent; border-radius: var(--radius);
   font: inherit; font-size: var(--fs-xs); padding: 1px var(--sp-2);
 }

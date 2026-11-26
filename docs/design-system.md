@@ -184,8 +184,11 @@ Height `--size-2xl`, padding `--sp-4`, label type, `--radius` (8px). Quiet: `--f
 On: `--fg` over neutral `--selected` (Claude segmented tab, 26 Nov 2026; Android `av.selected`, radius 8dp). Accent chips keep `--accent-soft`. Late: `--danger`. Static `.chip` is a read-only tag. 44px hit area at max-width 480px.
 
 ### Field
-Fill `--sunken`, border `--border` (focus ring on keyboard focus only), `--shape-sm`, padding `--sp-2 --sp-4`,
-placeholder `--on-surface-faint`. Borderless only where the field is the page content.
+Fill `--field` (#F3F3F3 light, #2A2A2A dark, Claude desktop settings fields sampled 26 Nov 2026), no border at rest,
+`--border-strong` border while focused plus the focus ring on keyboard focus, `--radius` 8px, padding `--sp-2 --sp-4`,
+placeholder `--fg-faint`. Search boxes (`.page-search`, `.wk-search`, `.jb-search`, `.as-search`) use the same fill,
+radius and focus border. Android `TextField`: `sunken` fill, 8dp radius, `borderStrong` hairline only when focused;
+`SearchField` stays a pill (touch). Borderless only where the field is the page content.
 
 ### Menu
 Elevation 3 on `--raised`, `--shape-lg`, padding `--sp-2`. Items 40px, padding 0 `--sp-6`, gap
