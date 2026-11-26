@@ -194,8 +194,8 @@ fun McpScreen(hub: Hub, onBack: () -> Unit) {
 private fun McpToolSheet(t: McpTool, onDismiss: () -> Unit) {
     val props = (t.inputSchema?.get("properties") as? JsonObject).orEmpty()
     val required = (t.inputSchema?.get("required") as? JsonArray)?.mapNotNull { (it as? JsonPrimitive)?.contentOrNull }.orEmpty()
-    Sheet(onDismiss, t.title ?: t.name, full = false) {
-        if (t.description.isNotBlank()) Text(t.description, style = Type.body, color = av.fgMuted)
+    Sheet(onDismiss, t.title ?: t.name, padded = false, full = false) {
+        if (t.description.isNotBlank()) Text(t.description, Modifier.padding(start = Tokens.listPad, end = Tokens.listPad, bottom = Tokens.sp4), style = Type.body, color = av.fgMuted)
         if (props.isNotEmpty()) {
             SectionHeader("Inputs", props.size.toString())
             Group {
