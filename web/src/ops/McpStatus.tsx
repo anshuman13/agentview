@@ -90,14 +90,11 @@ export function McpPage() {
           <Detail row={current} usage={usageOf(current)} group={groupOf(current)} onGroup={(to) => setGroup(groupKey(current), to)} hidden={hidden(current)} onHide={() => setGroup(hideKey({ name: groupKey(current) }), hidden(current) ? 'shown' : 'hidden')} onClose={close} />
         ) : <>
           {error && <div className="mcp-error" role="alert"><Icon name="error" small /> {error}</div>}
-          {probed === null && !error && (
-            <div className="skeleton-list">{[0, 1, 2, 3, 4, 5].map((i) => <div key={i} className="skeleton mcp-skeleton" style={{ animationDelay: `${i * 80}ms` }} />)}</div>
-          )}
           {probed !== null && rows.length === 0 && (
             <EmptyState size="sm" icon="plug" title="No MCP servers yet" hint="Servers you add show here" action={<SetupButton kind="mcp" mcpCommand={connectors ? 'claude mcp add' : 'codex mcp add'} />} />
           )}
           {!connectors && <div className="muted">claude.ai connectors load in Claude chats only</div>}
-          {probed !== null && rows.length > 0 && (
+          {(rows.length > 0 || (probed === null && !error)) && (
             <div className="mcp-bar">
               <h2>MCP servers</h2>
               <SearchBox value={query} onChange={setQuery} label="Search" />
@@ -105,6 +102,9 @@ export function McpPage() {
               <IconButton icon="refresh" label={busy ? 'Checking' : at ? `Check again (checked ${ago(at, ' ago')})` : 'Check'} size="sm" spin={busy} disabled={busy} onClick={() => load(true)} />
               <SetupButton kind="mcp" mcpCommand={connectors ? 'claude mcp add' : 'codex mcp add'} label="Add" />
             </div>
+          )}
+          {probed === null && !error && !rows.length && (
+            <div className="mcp-table" aria-busy="true" aria-label="Loading servers">{[0, 1, 2, 3, 4, 5].map((i) => <div key={i} className="mcp-skel-row"><span className="skeleton mcp-skel-ico" style={{ animationDelay: `${i * 80}ms` }} /><span className="skeleton mcp-skel-bar" style={{ animationDelay: `${i * 80}ms`, width: `${[38, 26, 44, 30, 34, 22][i]}%` }} /></div>)}</div>
           )}
           {narrowed && !list.length && (
             <EmptyState size="sm" icon="search" title="No servers match" action={<Button size="sm" onClick={() => { setQuery(''); setFilter(ALL); }}>Clear filters</Button>} />

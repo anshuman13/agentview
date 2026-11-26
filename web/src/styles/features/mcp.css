@@ -57,7 +57,9 @@
 }
 :is(.mcp-kv, .ui-empty-hint) code { font-family: var(--mono); font-size: var(--fs-xs); padding: 1px var(--sp-2); background: var(--sunken); border: 1px solid var(--border); border-radius: var(--radius-xs); }
 
-.mcp-skeleton { height: 48px; border-radius: var(--radius-md); }
+.mcp-skel-row { display: flex; align-items: center; gap: var(--sp-5); min-height: 45px; padding: 0 var(--sp-3); border-bottom: var(--hairline); }
+.mcp-skel-ico { width: 24px; height: 24px; border-radius: var(--radius-sm); flex: none; }
+.mcp-skel-bar { height: 12px; border-radius: var(--radius-sm); }
 .mcp-main .ui-row-trail { position: relative; z-index: 1; gap: var(--sp-3); }
 .mcp-hit { max-width: 100%; padding: 0; border: 0; background: none; color: inherit; font: inherit; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: top; cursor: pointer; }
 .mcp-hit::after { content: ''; position: absolute; inset: 0; }
