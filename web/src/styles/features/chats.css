@@ -6,7 +6,7 @@
 .sessions .tree .hint { padding: var(--sp-3) var(--sp-6) var(--sp-3) var(--sp-12); }
 
 .side-switch { display: flex; gap: var(--sp-2); padding: 0 var(--sp-6) var(--sp-4) var(--sp-4); }
-.side-switch button { flex: 1; height: var(--size-2xl); font-size: var(--fs-md); color: var(--fg-muted); background: transparent; border: 1px solid var(--border-strong); border-radius: var(--radius-sm); }
+.side-switch button { flex: 1; height: var(--size-2xl); font-size: var(--fs-md); color: var(--fg-muted); background: transparent; border: 1px solid var(--border-strong); border-radius: var(--radius); }
 .side-switch button.active { color: var(--fg); background: var(--selected); border-color: var(--border-strong); }
 .sessions .side-switch button { height: var(--size-md); font-size: var(--fs-sm); }
 .side-switch .seg-count { margin-left: var(--sp-2); font-size: var(--fs-xs); color: var(--fg-muted); }

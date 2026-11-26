@@ -196,7 +196,7 @@ private fun AllSessions(rows: ChatRows, filters: SessionsFilters, hits: List<Mes
     val refresh = { scope.launch { refreshing = true; hub.loadBin(); hub.refreshWorkspace(force = true)?.join(); refreshing = false }; Unit }
     Box(Modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize()) {
-            PageHeader("Sessions") {
+            PageHeader("Sessions", serif = true) {
                 IconBtn("mic", "Ask by voice", { hub.voiceRequest.tryEmit(Unit) })
                 MoreButton { close ->
                     if (done.isNotEmpty()) MenuItem("Mark all read", "check-all", { close(); hub.markRead(done) })

@@ -84,6 +84,7 @@ body.resizing .chrome-frame, body.resizing-v .chrome-frame { pointer-events: non
   .workbench:is([data-tab='code'], [data-tab='browser'], [data-tab='term'], [data-tab='agents'], [data-tab='assistant']) .pane.code { display: flex; }
   .workbench:is([data-tab='agents'], [data-tab='assistant'], [data-tab='code']) .editor-group > .tabs { display: none; }
   .sidebar-title.headed { display: none; }
+  .sidebar-title { height: auto; padding: var(--sp-6) var(--sp-8) var(--sp-4); font-family: var(--font-serif); font-size: var(--fs-4xl); font-weight: 400; line-height: var(--lh-tight); color: var(--fg); }
 
   .tabbar {
     position: fixed; z-index: var(--z-float); left: calc(var(--sp-4) + env(safe-area-inset-left)); right: calc(var(--sp-4) + env(safe-area-inset-right)); bottom: calc(var(--safe-bottom) + var(--sp-2));

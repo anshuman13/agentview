@@ -62,7 +62,7 @@ val Mono = TextStyle(fontFamily = MonoFont, fontSize = Tokens.fsSubheadline, lin
 
 // Page header with an optional back or Lists button: 64dp, a one-line title ending in an ellipsis, optional muted text right after it and an optional muted subtitle.
 @Composable
-fun PageHeader(title: String, onBack: (() -> Unit)? = null, subtitle: (@Composable () -> Unit)? = null, greeting: Boolean = false, onMenu: (() -> Unit)? = null, trailing: String? = null, actions: @Composable RowScope.() -> Unit = {}) {
+fun PageHeader(title: String, onBack: (() -> Unit)? = null, subtitle: (@Composable () -> Unit)? = null, greeting: Boolean = false, serif: Boolean = false, onMenu: (() -> Unit)? = null, trailing: String? = null, actions: @Composable RowScope.() -> Unit = {}) {
     Row(
         Modifier.fillMaxWidth().height(Tokens.tabbarH).padding(start = if (onBack == null && onMenu == null) Tokens.listPad else Tokens.sp2, end = Tokens.sp2),
         verticalAlignment = Alignment.CenterVertically,
@@ -74,7 +74,7 @@ fun PageHeader(title: String, onBack: (() -> Unit)? = null, subtitle: (@Composab
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
                 // A greeting reads as the Claude apps' home: serif type after the accent spark.
                 if (greeting) AvIcon("sparkle", null, tint = av.accent)
-                Text(title, style = if (greeting) Type.title.copy(fontFamily = ReadingFont, fontWeight = FontWeight.Normal) else Type.title, color = av.fg, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
+                Text(title, style = if (greeting || serif) Type.title.copy(fontFamily = ReadingFont, fontWeight = FontWeight.Normal) else Type.title, color = av.fg, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
                 if (trailing != null) Text(trailing, style = Type.subheadline, color = av.fgMuted, maxLines = 1)
             }
             if (subtitle != null) CompositionLocalProvider(LocalContentColor provides av.fgMuted) { ProvideTextStyle(Type.subheadline, subtitle) }
