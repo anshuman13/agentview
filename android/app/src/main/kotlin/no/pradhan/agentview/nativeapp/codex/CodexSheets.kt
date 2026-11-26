@@ -305,6 +305,7 @@ fun AddSheet(hub: Hub, profile: String?, items: List<Row>, goal: String?, now: L
     var goalId by remember { mutableStateOf(goal) }
     val linked = goalToLink(items, goalId, now)
     var pickDue by remember { mutableStateOf(false) }
+    var added by remember { mutableStateOf<String?>(null) }
     val focus = remember { FocusRequester() }
     LaunchedEffect(Unit) { focus.requestFocus() }
     val parsed = remember(title, picked, due) { parseCapture(title, if (picked) due else null, picked, now) }
@@ -316,7 +317,9 @@ fun AddSheet(hub: Hub, profile: String?, items: List<Row>, goal: String?, now: L
             val extra = buildMap<String, Any?> { if (priority > 0) put("priority", priority); if (c.tags.isNotEmpty()) put("tags", c.tags.joinToString(" ")); pick?.remind?.let { put("remind", it) }; if (linked != null) put("goal", linked.id) }
             if (hub.codex.capture(if (body.isNotEmpty()) "${c.title}\n$body" else c.title, "open", linked?.profile ?: target, c.at, extra) != null) {
                 if (profile == null && linked == null) hub.codexProfile = target
-                onAdded(c.title + (c.at?.let { " · ${whenText(it, now)}" } ?: ""))
+                val line = c.title + (c.at?.let { " · ${whenText(it, now)}" } ?: "")
+                onAdded(line)
+                added = line
                 title = ""; notes = ""; pick = null; priority = 0
             }
         }
@@ -327,6 +330,7 @@ fun AddSheet(hub: Hub, profile: String?, items: List<Row>, goal: String?, now: L
             TextField(notes, { notes = it }, placeholder = "Description", minLines = 2)
             val hint = listOfNotNull(parsed.at?.let { "Due ${whenText(it, now)}" }, parsed.repeat?.substringAfter("Repeats: "), parsed.tags.takeIf { it.isNotEmpty() }?.joinToString(" ") { "#$it" }).joinToString(" · ")
             if (hint.isNotEmpty()) Text(hint, style = Type.subheadline, color = av.fgMuted)
+            else added?.let { Text("Added: $it", style = Type.subheadline, color = av.fgMuted) }
             FlowRow(horizontalArrangement = Arrangement.spacedBy(Tokens.sp4), verticalArrangement = Arrangement.spacedBy(Tokens.sp2)) {
                 val p = pick
                 Chip(if (p == null) "Date" else listOfNotNull(if (p.at == null) "Today" else dueLabel(p.at, now), repeatLabel(p.cadence).takeIf { p.cadence != "never" }, p.remind?.let(::remindLabel)).joinToString(" · "), { pickDue = true }, icon = "calendar", on = picked, quiet = !picked)

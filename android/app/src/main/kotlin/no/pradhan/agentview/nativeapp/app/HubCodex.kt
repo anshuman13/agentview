@@ -80,6 +80,7 @@ fun Hub.askCodex(question: String, profile: String): Boolean {
     if (readOnly) { notice.value = "Read-only check, nothing was sent"; return false }
     if (asking) return false
     asking = true
+    notice.value = "Opening the Codex chat"
     viewModelScope.launch {
         try {
             val id = sendCodex(question, profile)?.first

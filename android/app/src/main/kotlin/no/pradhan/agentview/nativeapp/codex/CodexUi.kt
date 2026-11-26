@@ -17,14 +17,15 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.SwipeToDismissBox
-import androidx.compose.material3.SwipeToDismissBoxState
 import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -32,8 +33,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import kotlinx.coroutines.launch
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.withStyle
@@ -100,7 +108,8 @@ fun taskMeta(row: Row, now: Long, inDay: Boolean): androidx.compose.ui.text.Anno
     }
 }
 
-// A left swipe past this share of the row deletes instead of snoozing.
+// A swipe acts past SWIPE (web/src/codex/gestures/Swipe.tsx); a left swipe past SWIPE_DELETE of the row deletes instead of snoozing.
+private val SWIPE = 80.dp
 private const val SWIPE_DELETE = 0.55f
 fun deletesOnSwipe(dx: Float, width: Float) = -dx > width * SWIPE_DELETE
 
@@ -117,15 +126,18 @@ fun TaskRowView(row: Row, now: Long, actions: TaskActions, inDay: Boolean = fals
     val swipeable = row.status == "open" && !picking
     val current by rememberUpdatedState(row)
     var width by remember { mutableFloatStateOf(1f) }
-    lateinit var state: SwipeToDismissBoxState
-    state = rememberSwipeToDismissBoxState(confirmValueChange = { v ->
-        when (v) {
-            SwipeToDismissBoxValue.StartToEnd -> { haptic.performHapticFeedback(HapticFeedbackType.Confirm); actions.done(current) }
-            SwipeToDismissBoxValue.EndToStart -> if (deletesOnSwipe(state.requireOffset(), width)) actions.delete(current) else actions.snooze(current, nextNine(now, current.profile))
-            else -> {}
+    val swipeAt = with(LocalDensity.current) { SWIPE.toPx() }
+    val state = rememberSwipeToDismissBoxState(positionalThreshold = { it / 2 })
+    val scope = rememberCoroutineScope()
+    // Where the finger let go, which picks the action; the row only slides back or off after.
+    var released by remember { mutableFloatStateOf(0f) }
+    var pressed by remember { mutableStateOf(false) }
+    val onRelease by rememberUpdatedState { dx: Float ->
+        when {
+            dx >= swipeAt -> { haptic.performHapticFeedback(HapticFeedbackType.Confirm); actions.done(current) }
+            dx <= -swipeAt -> if (deletesOnSwipe(dx, width)) actions.delete(current) else actions.snooze(current, nextNine(now, current.profile))
         }
-        false
-    })
+    }
     val later = nextNine(now, row.profile)
     val ring = if (isDone) null else if (row.profile == WORK) av.work else av.personal
     val body = @Composable {
@@ -147,10 +159,20 @@ fun TaskRowView(row: Row, now: Long, actions: TaskActions, inDay: Boolean = fals
     if (!swipeable) { body(); return }
     SwipeToDismissBox(
         state = state,
-        modifier = Modifier.onSizeChanged { width = it.width.toFloat() },
+        modifier = Modifier.onSizeChanged { width = it.width.toFloat() }.pointerInput(Unit) {
+            awaitEachGesture {
+                awaitFirstDown(requireUnconsumed = false)
+                pressed = true
+                while (awaitPointerEvent(PointerEventPass.Initial).changes.any { it.pressed }) Unit
+                released = state.requireOffset()
+                pressed = false
+                onRelease(released)
+            }
+        },
+        onDismiss = { scope.launch { state.reset() } },
         backgroundContent = {
             val dir = state.dismissDirection
-            val deleting = dir == SwipeToDismissBoxValue.EndToStart && deletesOnSwipe(state.requireOffset(), width)
+            val deleting = dir == SwipeToDismissBoxValue.EndToStart && deletesOnSwipe(if (pressed) state.requireOffset() else released, width)
             when {
                 dir == SwipeToDismissBoxValue.StartToEnd -> SwipeLabel(av.okContainer, "check", "Done", av.onOkContainer, start = true)
                 deleting -> SwipeLabel(av.errContainer, "trash", "Delete", av.onErrContainer)

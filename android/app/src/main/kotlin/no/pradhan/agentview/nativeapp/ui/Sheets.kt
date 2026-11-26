@@ -66,7 +66,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.unit.dp
 
 // Bottom sheet (web Sheet): a card that rises over a scrim, with a drag handle and a title row. With `onBack`, system Back calls it instead of closing the sheet.
@@ -231,7 +236,10 @@ fun ConfirmDialog(title: String, detail: String, action: String, onConfirm: () -
 
 @Composable
 fun TextDialog(title: String, initial: String, action: String, onSave: (String) -> Unit, onDismiss: () -> Unit, maxLength: Int = Int.MAX_VALUE, detail: String? = null) {
-    var text by remember { mutableStateOf(initial) }
+    var field by remember { mutableStateOf(TextFieldValue(initial, TextRange(initial.length))) }
+    val text = field.text
+    val focus = remember { FocusRequester() }
+    LaunchedEffect(Unit) { focus.requestFocus() }
     AlertDialog(
         onDismissRequest = onDismiss,
         containerColor = av.raised,
@@ -240,7 +248,7 @@ fun TextDialog(title: String, initial: String, action: String, onSave: (String) 
         text = {
             DisableSelection { Column(verticalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
                 if (!detail.isNullOrEmpty()) Text(detail, style = Type.body, color = av.fgMuted)
-                TextField(text, { if (it.length <= maxLength) text = it }, singleLine = true)
+                TextField(field, { if (it.text.length <= maxLength) field = it }, Modifier.focusRequester(focus), singleLine = true)
             } }
         },
         confirmButton = { DisableSelection { Button(action, { onSave(text); onDismiss() }, variant = ButtonVariant.Filled) } },

@@ -33,7 +33,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -377,7 +379,11 @@ private val NOW = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm", Locale.ROOT)
 private fun Notes(hub: Hub, trip: Trip, reload: () -> Unit) {
     var text by rememberSaveable(trip.id, trip.notes) { mutableStateOf(trip.notes) }
     val scope = rememberCoroutineScope()
-    val save = { scope.launch { if (hub.travelWrite { api.post("/api/travel/trip", tripJson(trip, notes = text)) }) { hub.notice.value = "Notes saved"; reload() } } }
+    val write = suspend { if (hub.travelWrite { api.post("/api/travel/trip", tripJson(trip, notes = text)) }) { hub.notice.value = "Notes saved"; reload() } }
+    val save = { scope.launch { write() } }
+    // Leaving the trip saves unsaved notes, as the web saves on blur.
+    val latest by rememberUpdatedState(text to trip.notes)
+    DisposableEffect(trip.id) { onDispose { if (latest.first != latest.second && !hub.readOnly) hub.viewModelScope.launch { write() } } }
     SectionHeader("Notes", action = if (text != trip.notes) ({ Button("Save", { save() }, size = ButtonSize.Sm, variant = ButtonVariant.Filled) }) else null)
     Group(Modifier.padding(horizontal = Tokens.listPad)) {
         TextField(text, { text = it }, Modifier.fillMaxWidth().padding(Tokens.sp4), placeholder = "Booking codes, addresses", minLines = 3)

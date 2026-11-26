@@ -154,6 +154,21 @@ private fun short(d: String) = runCatching { LocalDate.parse(d).format(SHORT) }.
 
 fun dayLabel(day: String, today: String) = runCatching { LocalDate.parse(day).format(SHORT_DAY) }.getOrDefault(day) + if (day == today) " · Today" else ""
 
+// A typed item time as HH:MM: the number keyboard has no colon, so "930" and "0930" mean 09:30 and "9" means 09:00.
+fun clockTime(s: String): String {
+    val t = s.trim()
+    val d = t.filter { it.isDigit() }
+    val (h, m) = when {
+        t.contains(':') -> t.substringBefore(':') to t.substringAfter(':')
+        d.length <= 2 -> d to "00"
+        d.length <= 4 -> d.dropLast(2) to d.takeLast(2)
+        else -> return t
+    }
+    val hh = h.toIntOrNull() ?: return t
+    val mm = m.toIntOrNull() ?: return t
+    return if (hh in 0..23 && mm in 0..59 && m.length == 2) String.format(Locale.ROOT, "%02d:%02d", hh, mm) else t
+}
+
 fun itemMeta(i: PlanItem) = listOf(i.ref, i.place).filter { it.isNotEmpty() }.joinToString(" · ")
 
 fun tripDates(t: Trip): String = when {

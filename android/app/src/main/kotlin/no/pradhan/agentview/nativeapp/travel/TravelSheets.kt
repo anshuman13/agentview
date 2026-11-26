@@ -3,6 +3,7 @@ package no.pradhan.agentview.nativeapp.travel
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
@@ -13,6 +14,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
@@ -20,6 +22,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.input.KeyboardType
@@ -36,7 +40,6 @@ import no.pradhan.agentview.nativeapp.ui.ButtonSize
 import no.pradhan.agentview.nativeapp.ui.ButtonVariant
 import no.pradhan.agentview.nativeapp.ui.Chip
 import no.pradhan.agentview.nativeapp.ui.DateDialog
-import no.pradhan.agentview.nativeapp.ui.FieldLabel
 import no.pradhan.agentview.nativeapp.ui.ListRow
 import no.pradhan.agentview.nativeapp.ui.Sheet
 import no.pradhan.agentview.nativeapp.ui.TextField
@@ -58,7 +61,7 @@ internal fun tripJson(t: Trip, notes: String? = null, plan: List<PlanItem>? = nu
 @Composable
 private fun DateRow(label: String, value: String, onPick: (String) -> Unit) {
     var picking by remember { mutableStateOf(false) }
-    ListRow(label, value.ifEmpty { "Pick a date" }, onClick = { picking = true })
+    ListRow(label, if (value.isEmpty()) "Pick a date" else dayLabel(value, ""), onClick = { picking = true })
     if (picking) DateDialog(
         runCatching { LocalDate.parse(value) }.getOrDefault(LocalDate.now()), "OK", "Clear",
         onConfirm = { d -> onPick(d?.toString() ?: ""); picking = false },
@@ -86,8 +89,10 @@ fun TripSheet(hub: Hub, trip: Trip?, onDismiss: () -> Unit, onSaved: (String) ->
             if (ok) onSaved(id)
         }
     }
+    val focus = remember { FocusRequester() }
+    if (trip == null) LaunchedEffect(Unit) { focus.requestFocus() }
     Sheet(onDismiss, if (trip == null) "New trip" else "Edit trip", full = false, motion = true) {
-        TextField(name, { name = it }, Modifier.fillMaxWidth(), placeholder = "Trip, such as Stockholm offsite", singleLine = true)
+        TextField(name, { name = it }, Modifier.fillMaxWidth().focusRequester(focus), placeholder = "Trip, such as Stockholm offsite", singleLine = true)
         DateRow("From", from) { from = it; if (to.isEmpty() || to < it) to = it }
         DateRow("To", to) { to = it }
         Button("Save", { save() }, Modifier.fillMaxWidth().padding(top = Tokens.sp4), variant = ButtonVariant.Filled, enabled = !busy && name.isNotBlank(), fill = true)
@@ -137,7 +142,7 @@ fun PlanItemSheet(hub: Hub, trip: Trip, item: PlanItem?, today: String, onDismis
         Unit
     }
     val save = {
-        val next = PlanItem(item?.id ?: "", day, start.trim(), end.trim(), kind, title.trim(), place.trim(), ref.trim())
+        val next = PlanItem(item?.id ?: "", day, clockTime(start), clockTime(end), kind, title.trim(), place.trim(), ref.trim())
         write(if (item == null) trip.plan + next else trip.plan.map { if (it.id == item.id) next else it }) {}
     }
     Sheet(onDismiss, if (item == null) "Add item" else "Edit item", motion = true) {
@@ -146,12 +151,14 @@ fun PlanItemSheet(hub: Hub, trip: Trip, item: PlanItem?, today: String, onDismis
         }
         TextField(title, { title = it }, Modifier.fillMaxWidth(), placeholder = "Title, such as OSL to ARN", singleLine = true)
         DateRow("Day", day) { day = it }
-        Row(horizontalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
-            TextField(start, { start = it.take(5) }, Modifier.weight(1f), placeholder = "Start HH:MM", singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
-            TextField(end, { end = it.take(5) }, Modifier.weight(1f), placeholder = "End HH:MM", singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
+        Column(verticalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
+            Row(horizontalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
+                TextField(start, { start = it.take(5) }, Modifier.weight(1f), placeholder = "Start HH:MM", singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
+                TextField(end, { end = it.take(5) }, Modifier.weight(1f), placeholder = "End HH:MM", singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
+            }
+            TextField(place, { place = it }, Modifier.fillMaxWidth(), placeholder = "Place", singleLine = true)
+            TextField(ref, { ref = it }, Modifier.fillMaxWidth(), placeholder = "Booking or flight number", singleLine = true)
         }
-        TextField(place, { place = it }, Modifier.fillMaxWidth(), placeholder = "Place", singleLine = true)
-        TextField(ref, { ref = it }, Modifier.fillMaxWidth(), placeholder = "Booking or flight number", singleLine = true)
         Row(Modifier.fillMaxWidth().padding(top = Tokens.sp4), horizontalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
             if (item != null) Button("Delete", { write(trip.plan.filter { it.id != item.id }) { hub.notice.value = "Item deleted" } }, Modifier.weight(1f), variant = ButtonVariant.Danger, icon = "trash", enabled = !busy, fill = true)
             Button("Save", { save() }, Modifier.weight(1f), variant = ButtonVariant.Filled, enabled = !busy && title.isNotBlank() && day.isNotEmpty(), fill = true)
@@ -187,11 +194,12 @@ fun ReceiptSheet(hub: Hub, r: Receipt, onOpen: () -> Unit, onDismiss: () -> Unit
             val img by produceState<ImageBitmap?>(null, r.id) { value = receiptImage(hub, r.id, 1600) }
             img?.let { Image(it, r.name, Modifier.fillMaxWidth().heightIn(max = 360.dp).clickable(onClick = onOpen), contentScale = ContentScale.Fit) }
         } else Button("Open ${r.name}", onOpen, Modifier.fillMaxWidth(), icon = if (r.mime == "application/pdf") "file-pdf" else "file", fill = true)
-        FieldLabel("Merchant")
-        TextField(merchant, { merchant = it }, Modifier.fillMaxWidth(), placeholder = "Merchant", singleLine = true)
-        Row(horizontalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
-            TextField(amount, { amount = it }, Modifier.weight(1f), placeholder = "Amount", singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal))
-            TextField(currency, { currency = it.uppercase().take(3) }, Modifier.width(88.dp), placeholder = "NOK", singleLine = true)
+        Column(Modifier.padding(top = Tokens.sp4), verticalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
+            TextField(merchant, { merchant = it }, Modifier.fillMaxWidth(), placeholder = "Merchant", singleLine = true)
+            Row(horizontalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
+                TextField(amount, { amount = it }, Modifier.weight(1f), placeholder = "Amount", singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal))
+                TextField(currency, { currency = it.uppercase().take(3) }, Modifier.width(88.dp), placeholder = "NOK", singleLine = true)
+            }
         }
         DateRow("Date", date) { date = it }
         FlowRow(horizontalArrangement = Arrangement.spacedBy(Tokens.sp2), verticalArrangement = Arrangement.spacedBy(Tokens.sp2)) {

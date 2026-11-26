@@ -27,6 +27,10 @@ class TravelLogicTest {
         }
     }
 
+    @Test fun typedTimesBecomeClockTimes() {
+        assertEquals(listOf("09:30", "09:30", "09:00", "21:05", "09:30", "", "25:00", "abc"), listOf("930", "0930", "9", "2105", "9:30", "", "25:00", "abc").map(::clockTime))
+    }
+
     @Test fun tripsSortLikeWeb() {
         fx["sortTrips"]!!.jsonArray.forEach { c ->
             val o = c.jsonObject

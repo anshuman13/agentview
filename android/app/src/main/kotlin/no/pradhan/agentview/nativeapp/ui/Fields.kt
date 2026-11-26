@@ -60,9 +60,9 @@ fun TextField(
     )
 }
 
-// A multi-line text field whose caret the caller sets, which the plain String field cannot do. Typing moves the caret as usual.
+// A text field whose caret the caller sets, which the plain String field cannot do. Typing moves the caret as usual.
 @Composable
-fun TextField(value: TextFieldValue, onValueChange: (TextFieldValue) -> Unit, modifier: Modifier = Modifier, placeholder: String = "", minLines: Int = 1) {
+fun TextField(value: TextFieldValue, onValueChange: (TextFieldValue) -> Unit, modifier: Modifier = Modifier, placeholder: String = "", minLines: Int = 1, singleLine: Boolean = false) {
     val c = av
     val interaction = remember { MutableInteractionSource() }
     val focused by interaction.collectIsFocusedAsState()
@@ -71,9 +71,9 @@ fun TextField(value: TextFieldValue, onValueChange: (TextFieldValue) -> Unit, mo
         modifier.fillMaxWidth(),
         textStyle = Type.body.copy(color = c.fg),
         cursorBrush = SolidColor(c.accent),
-        minLines = minLines,
+        singleLine = singleLine, minLines = minLines,
         interactionSource = interaction,
-        decorationBox = { inner -> FieldFrame(value.text.isEmpty(), focused, placeholder, false, false, Type.body, null, null, inner) },
+        decorationBox = { inner -> FieldFrame(value.text.isEmpty(), focused, placeholder, singleLine, false, Type.body, null, null, inner) },
     )
 }
 
