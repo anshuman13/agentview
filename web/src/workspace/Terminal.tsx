@@ -145,7 +145,7 @@ export function Terminal({ chat, project, open, onToggle }: Props) {
         {open && tabs && (
           <TermBar tabs={tabs} active={active} pick={pick} close={close} add={add} clear={() => clears.current.get(active)?.()} max={max} toggleMax={() => setMax((m) => !m)} />
         )}
-        <IconButton icon={open ? 'chevron-down' : 'chevron-up'} small label="Terminal" className="term-toggle" aria-expanded={open} onClick={(e) => { e.stopPropagation(); onToggle(); }} />
+        <IconButton icon={open ? 'chevron-down' : 'chevron-up'} small size="sm" label="Terminal" className="term-toggle" aria-expanded={open} onClick={(e) => { e.stopPropagation(); onToggle(); }} />
       </div>
       {chat && tabs && (
         <div className="panel-body" hidden={!open}>
