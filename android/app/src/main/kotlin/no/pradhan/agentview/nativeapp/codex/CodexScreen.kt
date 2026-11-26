@@ -325,7 +325,7 @@ private fun CodexSheetsHost(hub: Hub, st: CodexState, nav: CodexNav, profile: St
 
 @Composable
 private fun CodexTopBar(title: String, back: (() -> Unit)?, onMenu: (() -> Unit)?, profileLabel: String?, onSearch: (() -> Unit)?, menu: (@Composable (() -> Unit) -> Unit)?, greeting: Boolean = false) {
-    PageHeader(title, back, greeting = greeting, onMenu = onMenu, trailing = profileLabel) {
+    PageHeader(title, back, greeting = greeting, serif = true, onMenu = onMenu, trailing = profileLabel) {
         if (onSearch != null) IconBtn("search", "Search tasks", onSearch)
         if (menu != null) MoreButton { close -> menu(close) }
     }

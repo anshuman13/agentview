@@ -11,13 +11,13 @@
 .tasks-head { flex: none; display: flex; align-items: center; gap: var(--sp-4); padding: var(--sp-8) var(--sp-8) var(--sp-4); }
 .tasks-head > .ui-section { flex: 1; min-width: 0; padding-right: 0; }
 .tasks-head .ui-section-head { padding-left: 0; }
-.tasks-head [role='heading'] { font-size: var(--fs-4xl); font-weight: 600; letter-spacing: -0.01em; color: var(--fg); }
+.tasks-head [role='heading'] { font-family: var(--font-serif); font-size: var(--fs-4xl); font-weight: 400; letter-spacing: 0; color: var(--fg); }
 .tasks-head .as-greeting { display: inline-flex; align-items: center; gap: var(--sp-4); font-family: var(--font-serif); font-weight: 400; letter-spacing: 0; }
 .as-greeting > .icon { color: var(--accent-text); }
 .codex-head { position: relative; flex: none; display: flex; align-items: center; gap: var(--sp-4); width: 100%; padding: var(--sp-10) var(--sp-8) var(--sp-6); }
 .tasks .codex-head { padding: var(--sp-10) var(--tk-pad) var(--sp-6); }
 .wk .codex-head { max-width: calc(var(--wk-max) + 2 * var(--wk-pad)); margin: 0 auto; padding: var(--sp-10) var(--wk-pad) var(--sp-6); }
-.codex-head [role='heading'] { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--fs-5xl); font-weight: 650; letter-spacing: -0.02em; color: var(--fg); }
+.codex-head [role='heading'] { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: var(--font-serif); font-size: var(--fs-5xl); font-weight: 400; letter-spacing: 0; color: var(--fg); }
 .codex-head .as-greeting { display: inline-flex; align-items: center; gap: var(--sp-4); font-family: var(--font-serif); letter-spacing: 0; white-space: normal; }
 .codex-head > .muted { flex: none; }
 .codex-head-end { flex: 1; min-width: 0; display: flex; align-items: center; justify-content: flex-end; gap: var(--sp-3); }
@@ -39,9 +39,10 @@
 .as-section.done, .as-section.later { color: var(--fg-muted); }
 .as-group-all { display: flex; gap: var(--sp-3); padding: var(--sp-3); border-top: 1px solid var(--border); }
 .as-group > .as-swipe + :is(.as-swipe, .ui-row) { border-top: 1px solid var(--border); }
-.as-group .as-swipe:is(.right, .left) .as-swipe-row { background: var(--raised); }
+.as-group .as-swipe:is(.right, .left) .as-swipe-row { background: var(--group-card); }
 
-.as-group { display: flex; flex-direction: column; border: 1px solid var(--border); border-radius: 12px; background: var(--raised); overflow: hidden; }
+.as-group { display: flex; flex-direction: column; border: var(--hairline); border-radius: var(--shape-lg); background: var(--group-card); overflow: hidden; }
+:root[data-theme='light'] .as-group { border-color: transparent; }
 .as-group:has(.ui-menu) { overflow: visible; }
 
 
@@ -128,7 +129,7 @@
 .as-nav-label { flex: none; padding: var(--sp-8) var(--sp-6) var(--sp-2); font-size: var(--fs-sm); font-weight: 500; color: var(--fg-faint); }
 .as-seg { display: flex; gap: 2px; margin: 0 var(--sp-4); padding: 2px; border-radius: var(--radius-md); background: var(--sunken); }
 .as-nav .as-seg button { flex: 1; height: var(--size-xl); justify-content: center; padding: 0; border-radius: calc(var(--radius-md) - 2px); color: var(--fg-muted); font-size: var(--fs-sm); }
-.as-nav .as-seg button.on { background: var(--accent-soft); color: var(--fg); }
+.as-nav .as-seg button.on { background: var(--selected); color: var(--fg); }
 @media (hover: hover) { .as-nav .as-seg button:not(.on):hover { background: color-mix(in srgb, currentColor var(--state-hover), transparent); } }
 .as-nav .as-nav-sync { margin-top: var(--sp-4); color: var(--fg-muted); font-size: var(--fs-sm); }
 .as-dot { flex: none !important; width: 8px; height: 8px; border-radius: 50%; background: var(--fg-faint); }
@@ -186,7 +187,7 @@
 /* Tasks page: same layout and card language as Meetings. */
 .assistant.tasks { --tk-pad: var(--sp-16); --tk-indent: 44px; max-width: calc(732px + 2 * var(--tk-pad)); container: tasks / inline-size; }
 .tasks .tasks-head { padding: var(--sp-10) var(--tk-pad) var(--sp-6); }
-.tasks .tasks-head [role='heading'] { font-size: var(--fs-5xl); font-weight: 650; letter-spacing: -0.02em; }
+.tasks .tasks-head [role='heading'] { font-size: var(--fs-5xl); }
 .as-error.muted { color: var(--fg-muted); background: var(--raised); }
 .tasks .as-error { margin: 0 var(--tk-pad) var(--sp-4); }
 .as-error > span { display: inline-flex; }
