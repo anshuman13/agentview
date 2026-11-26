@@ -50,8 +50,9 @@ button.destructive { background: color-mix(in srgb, var(--err) 18%, transparent)
 
 /* State layers: a tint of --layer (the content colour, or --fg on neutral controls) over the fill; pressed equals hover. */
 .icon-btn, .chip.chip-btn { --fill: transparent; }
-:is(.btn.btn-gray, .btn.btn-plain, .icon-btn) { --layer: var(--fg); --layer-hover: var(--state-hover-control); }
-.chip.chip-btn.on, .chip.chip-btn.chip-accent { --fill: var(--accent-soft); }
+:is(.btn.btn-gray, .btn.btn-plain, .icon-btn, .chip.chip-btn:not(.chip-accent)) { --layer: var(--fg); --layer-hover: var(--state-hover-control); }
+.chip.chip-btn.on { --fill: var(--selected); }
+.chip.chip-btn.chip-accent { --fill: var(--accent-soft); }
 .chip.chip-btn.chip-accent.on { --fill: var(--accent-fill); }
 :is(.btn.btn-filled, .btn.btn-tinted, .btn.btn-gray, .btn.btn-plain, .btn.btn-danger, .icon-btn, .chip.chip-btn) {
   --state: 0%;

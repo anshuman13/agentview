@@ -82,7 +82,7 @@ pre.wrap { white-space: pre-wrap; word-break: break-word; font-family: inherit; 
   :is(.mcp-tool, .scm-row, .tree .row, .section-head, .sessions .row, .palette li, .switcher li, .cp-pop li, .ov-stat, .pd-option, .tab, .term-tab, .statusbar .item, .tabbar button, .more-sheet > button, .more-project, .icon-btn):not(:disabled):active { background: var(--hover); transition: background-color 80ms, transform 80ms; }
 }
 @media (pointer: coarse) and (prefers-reduced-motion: no-preference) {
-  :is(.wk-card, .wk-overview, .as-card, .ov-card, .cp-card, .mt-tile, .wk-tile, .chip, .obs-chip, .tabbar button, .more-sheet > button):is(button, a, [role='button'], [tabindex], [href], .click):not(:disabled):active { transform: scale(.98); transition: background-color 80ms, transform 80ms; }
+  :is(.wk-card, .wk-overview, .as-card, .ov-card, .cp-card, .mt-tile, .wk-tile, .tabbar button, .more-sheet > button):is(button, a, [role='button'], [tabindex], [href], .click):not(:disabled):active { transform: scale(.98); transition: background-color 80ms, transform 80ms; }
 }
 
 .sheet-handle { flex: none; align-self: stretch; height: 24px; display: flex; align-items: center; justify-content: center; touch-action: none; cursor: grab; }

@@ -111,7 +111,7 @@ fun IconBtn(icon: String, label: String, onClick: () -> Unit, modifier: Modifier
 
 enum class ChipTone { Default, Work, Personal }
 
-// Chip (web Chip): quiet by default, filled when on, red when late, warn-coloured when warn, dashed-quiet for an unset value. A profile tone adds a leading dot.
+// Chip (web Chip): quiet by default, neutral selected fill when on, red when late, warn-coloured when warn, dashed-quiet for an unset value. A profile tone adds a leading dot.
 @Composable
 fun Chip(
     text: String,
@@ -130,14 +130,14 @@ fun Chip(
     val fg = when {
         late -> c.err
         warn -> c.warn
-        on -> c.onSecondaryContainer
+        on -> c.fg
         else -> c.fgMuted
     }
-    val bg = if (on) c.accentSoft else Color.Transparent
+    val bg = if (on) c.selected else Color.Transparent
     val dot = when (tone) { ChipTone.Work -> c.work; ChipTone.Personal -> c.personal; ChipTone.Default -> null }
-    val shape = RoundedCornerShape(Tokens.radiusMd)
+    val shape = RoundedCornerShape(Tokens.radius)
     val outline = when {
-        quiet -> Modifier.dashedBorder(Tokens.hairline, c.borderStrong, Tokens.radiusMd)
+        quiet -> Modifier.dashedBorder(Tokens.hairline, c.borderStrong, Tokens.radius)
         !on -> Modifier.border(Tokens.hairline, c.border, shape)
         else -> Modifier
     }

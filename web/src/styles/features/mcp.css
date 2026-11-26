@@ -80,7 +80,7 @@
 .mcp-main .badge.warn { color: var(--warn); }
 .mcp-seg { display: inline-flex; justify-self: start; gap: 2px; padding: 2px; border-radius: var(--radius-sm); background: var(--sunken); }
 .mcp-seg .chip { height: 24px; border: 0; border-radius: var(--radius-xs); background: transparent; color: var(--fg-muted); }
-.mcp-seg .chip.on { background: var(--raised); color: var(--fg); box-shadow: var(--elev-1); }
+.mcp-seg .chip.on { background: var(--selected); color: var(--fg); }
 
 
 .mcp-detail { display: flex; flex-direction: column; min-width: 0; }

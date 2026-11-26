@@ -180,8 +180,8 @@ is `--accent-text`. 28 / 36px, 44px on touch (Material 48dp target, sized to iOS
 
 ### Chip
 `<Chip on late size icon href>`; `.chip.chip-btn`. Filters and quick picks (Material filter chip). With `href` (plus `target`, `rel`) it renders an `<a>` with the same classes, for chips that open a link.
-Height `--size-2xl`, padding `--sp-4`, label type, `--shape-md`. Quiet: `--fg-muted`, no fill.
-On: `--fg` over `--accent-soft`. Late: `--danger`. Static `.chip` is a read-only tag. 44px hit area at max-width 480px.
+Height `--size-2xl`, padding `--sp-4`, label type, `--radius` (8px). Quiet: `--fg-muted`, no fill; hover and press lay `--fg` at `--state-hover-control` like IconButton, with no press scale.
+On: `--fg` over neutral `--selected` (Claude segmented tab, 26 Nov 2026; Android `av.selected`, radius 8dp). Accent chips keep `--accent-soft`. Late: `--danger`. Static `.chip` is a read-only tag. 44px hit area at max-width 480px.
 
 ### Field
 Fill `--sunken`, border `--border` (focus ring on keyboard focus only), `--shape-sm`, padding `--sp-2 --sp-4`,
