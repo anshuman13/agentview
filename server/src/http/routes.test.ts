@@ -212,4 +212,14 @@ describe('routes', () => {
       });
     });
   });
+
+  it('serves the usage report for logged-in accounts', async () => {
+    const logged = vi.spyOn(accounts, 'loggedInAccounts').mockReturnValue(['main']);
+    const r = await call('GET', '/api/usage?days=3');
+    const bad = await call('GET', '/api/usage?days=0');
+    logged.mockRestore();
+    expect(r.code).toBe(200);
+    expect(r.json.accounts.map((a: { account: string; name: string; days: unknown[] }) => [a.account, a.name, a.days.length])).toEqual([['main', 'Personal', 3]]);
+    expect(bad.code).toBe(400);
+  });
 });
