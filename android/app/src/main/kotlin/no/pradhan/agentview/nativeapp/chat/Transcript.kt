@@ -460,7 +460,11 @@ internal fun ItemRow(hub: Hub, it: Item, chat: String, cwd: String, settled: Boo
             if (!it.streaming && (answer || rewind != null)) ReplyActions(hub, if (answer) it.text.trim() else null, rewind)
         }
         is Item.System -> Text(it.text, style = Type.footnote, color = if (it.error) av.err else av.fgMuted)
-        is Item.Step -> if (it.use.name == ALARM_TOOL) AlarmCard(it, !settled) else StepRow(it, cwd, settled)
+        is Item.Step -> when (it.use.name) {
+            ALARM_TOOL -> AlarmCard(it, !settled)
+            BUILD_TOOL -> BuildCard(hub, it)
+            else -> StepRow(it, cwd, settled)
+        }
         is Item.File -> if (it.error != null) FileCard(hub, it, cwd)
             else if (card && isDocFile(it.path)) DocCard(hub, it, cwd)
             else if (isSketchPath(it.path)) SketchCard(hub, sketchName(it.path), if (it.uses.first().name == "Write") "Sketch written" else "Sketch edited \u00B7 +${it.add} -${it.del}")

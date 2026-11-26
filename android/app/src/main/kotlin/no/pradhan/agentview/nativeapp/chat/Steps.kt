@@ -110,6 +110,7 @@ fun stepLabel(name: String, input: JsonObject, cwd: String = ""): Label {
         "ToolSearch" -> return Label("Looked up", "tools for \"${input.s("query")}\"")
         "Advisor" -> return Label("Consulted", "the advisor")
         ALARM_TOOL -> return Label("Set", "an alarm")
+        BUILD_TOOL -> return Label("Started", "a build")
         "ExitPlanMode" -> return Label("Proposed", "a plan")
         "EnterPlanMode" -> return Label("Entered", "plan mode")
     }
