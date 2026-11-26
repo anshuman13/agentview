@@ -13,6 +13,7 @@
 :is(.tr, .tr-rows) > * + * { margin-top: var(--sp-6); }
 :is(.tr, .tr-rows) > .tr-act + .tr-act { margin-top: 0; }
 :is(.tr, .tr-rows) > .tr-act + .tr-box, :is(.tr, .tr-rows) > .tr-box + .tr-act { margin-top: var(--sp-2); }
+:is(.tr, .tr-rows) > .tr-user + * { margin-top: var(--sp-12); }
 .tr-rows { position: relative; }
 .tr-rows > .tr-quote { position: absolute; z-index: 5; margin: 0; box-shadow: var(--elev-3); transform: translateY(-100%); }
 
@@ -26,7 +27,7 @@
 .tr-image[hidden] { display: none; }
 .tr-image-tag { display: inline-block; margin: var(--sp-2) 0; padding: var(--sp-2) var(--sp-4); border-radius: var(--shape-sm); background: var(--surface); color: var(--fg-muted); font-size: var(--fs-xs); }
 .tr-user .tr-acts { position: absolute; right: 0; top: 100%; display: flex; gap: var(--sp-1); padding-top: var(--sp-1); color: var(--fg-muted); visibility: hidden; }
-.tr-user:has(> .tr-acts) { margin-bottom: calc(var(--size-md) + var(--sp-6)); }
+.tr-user:has(> .tr-acts) { margin-bottom: calc(var(--size-md) + var(--sp-12)); }
 .tr-user:hover .tr-acts,.tr-user .tr-acts:focus-within { visibility: visible; }
 .tr-user.unsent .tr-user-text { color: var(--fg-muted); }
 .tr-user:is(.stopping, .queued, .unsent) .tr-stop { position: static; justify-content: flex-end; margin-top: var(--sp-2); }
