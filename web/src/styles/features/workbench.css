@@ -20,10 +20,11 @@
 
 .sidebar { width: var(--sidebar-w); flex: none; background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; min-height: 0; }
 .workbench[data-sidebar='false'] :is(.sidebar, .side-sash) { display: none; }
-.sidebar :is(.ui-row, .tree .row) { width: auto; margin-inline: var(--sp-2); border-radius: var(--shape-sm); }
+.sidebar :is(.ui-row, .tree .row) { width: auto; margin-inline: var(--sp-4); border-radius: var(--radius); }
+.sidebar .chat-row .ui-row { margin-inline: 0; }
 .sidebar-title {
   height: var(--size-bar); flex: none; display: flex; align-items: center; padding: 0 var(--sp-10);
-  font-size: var(--type-section-size); font-weight: 500; color: var(--fg-muted);
+  font-size: var(--type-section-size); font-weight: var(--type-section-weight); color: var(--fg-muted);
 }
 .status-text { font-size: var(--fs-md); color: var(--fg); margin-bottom: var(--sp-2); }
 
