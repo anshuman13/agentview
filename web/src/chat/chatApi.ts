@@ -2,7 +2,7 @@ import { api, getState, notice } from '../app/store';
 import { apiUrl, fetchJson, wsUrl } from '../app/api';
 import type { MemoryFile } from './cards/memoryLogic';
 import type { SubChat } from './transcript/subChatsLogic';
-import type { ChatEvent } from '../../../shared/protocol';
+import type { ChatEvent, SpawnedBuild } from '../../../shared/protocol';
 import { createTerm, listTerms } from '../workspace/termApi';
 
 async function terminalId(chat: string): Promise<string | null> {
@@ -52,6 +52,9 @@ export const restoreMemory = (path: string, removed: RemovedMemory) =>
   fetchJson(api('/api/memory/restore'), { method: 'POST', body: JSON.stringify({ path, ...removed }) });
 
 export const fetchSavedSessions = () => fetch(api('/api/sessions')).then((r) => r.json());
+
+// The builds this session's chat started, oldest first, for the transcript's build cards.
+export const fetchSpawnedBuilds = (session: string) => fetchJson<SpawnedBuild[]>(api(`/api/chat/spawned?session=${encodeURIComponent(session)}`));
 
 // The earlier sessions of the chat that holds this session, oldest first.
 export const fetchSubChats = (session: string) => fetchJson<SubChat[]>(api(`/api/chat/subchats?session=${encodeURIComponent(session)}`));

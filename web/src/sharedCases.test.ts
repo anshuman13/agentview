@@ -10,7 +10,7 @@ import { TABLES } from '../../shared/tables';
 import { editCount, stripRound } from '../../shared/edits';
 import { exploreLabelOf, exploreRunsOf, type ExploreRow } from '../../shared/explore';
 import { FEATURES, featureRows, paletteFeature, shownFeature, type UseDays } from '../../shared/featureUse';
-import type { Capabilities, ChatEvent, Finding, ChatRun, LiveChat, Provider, SavedSession, Try } from '../../shared/protocol';
+import type { Capabilities, ChatEvent, Finding, ChatRun, LiveChat, Provider, SavedSession, SpawnedBuild, Try } from '../../shared/protocol';
 import { START_MODES, billing, checkedModel, menuModes, modeSteps, newestModels, providerLabel, providerMark, providerModes, shortModel, startModeFor, startTexts, type Billing } from '../../shared/providers';
 import { recentInRepo } from './app/newChat';
 import { binLeft, buildFolders, chatPlace, since } from './sessions/folders';
@@ -31,6 +31,7 @@ import { latestTodos, todoCount, todoCurrent, todoProgress, type TodoItem } from
 import { mergeTail, trimHeld } from './app/runtime/pageEvents';
 import { alarmCard, buildTranscript, openAtNew, rewindReplies, turnAnswers, type Item } from './chat/transcript/steps';
 import { filePath } from './chat/transcript/md';
+import { buildCard, type BuildCardInput } from './chat/transcript/buildCardLogic';
 import { unreadOrder, type UnreadChat } from './sessions/chatNav';
 import { foldTurns, proposalState, rememberedOf, usedClaimState, workTitle } from './chat/transcript/workFold';
 import { memoryMark, type MemoryFile, type MemoryMark } from './chat/cards/memoryLogic';
@@ -129,6 +130,10 @@ describe('cases shared with the Android app', () => {
       const result = c.result === null ? undefined : ({ id: 'r', kind: 'tool_result', toolUseId: 'u', text: c.result, isError: false, at: 1 } as never);
       expect(alarmCard(use, result, c.running)).toEqual(c.expected);
     });
+  }
+
+  for (const c of cases<{ name: string; input: BuildCardInput; result: string | null; index: number; builds: SpawnedBuild[]; expected: object }>('build-card')) {
+    it(`buildCard: ${c.name}`, () => expect(buildCard(c.input, c.result, c.index, c.builds)).toEqual(c.expected));
   }
 
   for (const c of cases<{ name: string; events: ChatEvent[]; expected: string[] }>('remembered')) {
