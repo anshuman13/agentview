@@ -11,6 +11,7 @@
 @media (hover: hover) { .ui-row:hover { --state: var(--state-hover); } }
 .ui-row:focus-visible { --state: var(--state-focus); outline: var(--focus-ring); outline-offset: var(--focus-offset-inset); }
 .ui-row:active { --state: var(--state-press); }
+.ui-row:is([aria-current='true'], [aria-selected='true'], .selected) { --state: var(--state-selected); }
 .ui-row::after { content: ''; position: absolute; right: 0; bottom: 0; left: var(--list-pad); border-bottom: var(--hairline); }
 .ui-row.has-lead::after { left: calc(var(--list-pad) + var(--lead-w) + var(--sp-6)); }
 .ui-row:last-child::after { display: none; }
