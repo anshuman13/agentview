@@ -16,6 +16,7 @@ const mocks = {
   listBin: vi.fn(),
   listTerminals: vi.fn(),
   listLinks: vi.fn(async () => ({})),
+  listSpawned: vi.fn(async () => ({})),
   groupOf: vi.fn(async (id: string) => [id]),
   restoreSession: vi.fn(),
   searchMessages: vi.fn(),
@@ -30,6 +31,7 @@ vi.mock('../agent/claude/pins.js', () => ({ removeChat: mocks.removeChat, pinsRo
 vi.mock('../agent/claude/bin.js', () => ({ listBin: mocks.listBin, emptyBin: vi.fn(), restoreSession: mocks.restoreSession }));
 const realSub = await import('../session/subChats.js');
 vi.mock('../session/subChats.js', () => ({ listLinks: mocks.listLinks, groupOf: mocks.groupOf, latestOf: async (id: string) => (await mocks.groupOf(id)).at(-1), roundOf: realSub.roundOf }));
+vi.mock('../session/spawned.js', () => ({ listSpawned: mocks.listSpawned }));
 vi.mock('../agent/claude/savedChat.js', () => ({ savedEvents: mocks.savedEvents, firstCommit: mocks.firstCommit }));
 vi.mock('../agent/claude/search.js', () => ({ searchMessages: mocks.searchMessages }));
 vi.mock('../workspace/terminal.js', () => ({ listTerminals: mocks.listTerminals, createTerminal: vi.fn(), closeTerminal: vi.fn() }));
@@ -90,10 +92,12 @@ describe('routes', () => {
     mocks.listSessions.mockResolvedValue([{ sessionId: 'root', lastModified: 1, summary: 'Root', cwd: '/r' }, { sessionId: 'kid', lastModified: 2, summary: 'Kid', cwd: '/r' }]);
     mocks.listBin.mockResolvedValue([]);
     mocks.listLinks.mockResolvedValue({ kid: { parent: 'root', via: 'build', at: 5 } });
+    mocks.listSpawned.mockResolvedValue({ kid: { parent: 'other', kind: 'build', at: 6 } });
     expect((await call('GET', '/api/sessions')).json).toEqual([
-      { sessionId: 'kid', lastModified: 2, summary: 'Kid', cwd: '/r', parentId: 'root', via: 'build', startedAt: 5 },
+      { sessionId: 'kid', lastModified: 2, summary: 'Kid', cwd: '/r', parentId: 'root', via: 'build', startedAt: 5, spawnedBy: 'other' },
       { sessionId: 'root', lastModified: 1, summary: 'Root', cwd: '/r' },
     ]);
+    mocks.listSpawned.mockResolvedValue({});
     expect(mocks.listSessions).toHaveBeenCalledWith({ limit: 1000 });
     mocks.searchMessages.mockResolvedValue([{ sessionId: 'kid', role: 'user', text: 'x', at: '' }, { sessionId: 'root', role: 'user', text: 'y', at: '' }]);
     expect((await call('GET', '/api/sessions/search?q=x')).json).toEqual([

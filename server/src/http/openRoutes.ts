@@ -12,6 +12,7 @@ import { openRouterView, saveOpenRouter } from '../agent/claude/openrouter.js';
 import { resolvedRoute } from '../agent/claude/resolved.js';
 import { searchMessages } from '../agent/claude/search.js';
 import { seenRoute } from '../agent/claude/seen.js';
+import { listSpawned } from '../session/spawned.js';
 import { groupOf, listLinks, roundOf } from '../session/subChats.js';
 import { pageBefore } from '../session/eventLog.js';
 import { readSummaries } from '../agent/claude/summaryStore.js';
@@ -62,11 +63,12 @@ export function sessionRoutes(d: RouteDeps): Record<string, Entry<Ctx>> {
       return { ok: true };
     }),
     'ANY /api/sessions': entry(async () => {
-      const [list, codex, bin, summaries, links] = await Promise.all([listSessions({ limit: 1000 }), codexSessions(), listBin(), readSummaries(), listLinks()]);
+      const [list, codex, bin, summaries, links, spawned] = await Promise.all([listSessions({ limit: 1000 }), codexSessions(), listBin(), readSummaries(), listLinks(), listSpawned()]);
       const binned = new Set(bin.map((b) => b.sessionId));
       const linked = (s: SavedSession): SavedSession => {
         const l = links[s.sessionId];
-        return l ? { ...s, parentId: l.parent, via: l.via, startedAt: l.at } : s;
+        const by = spawned[s.sessionId]?.parent;
+        return { ...s, ...(l && { parentId: l.parent, via: l.via, startedAt: l.at }), ...(by && { spawnedBy: by }) };
       };
       return [...list.filter((x) => !binned.has(x.sessionId)).map((x) => linked(savedSession(x, summaries[x.sessionId]?.text))), ...codex].sort((a, b) => b.lastModified - a.lastModified);
     }),
