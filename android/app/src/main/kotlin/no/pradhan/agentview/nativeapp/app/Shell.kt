@@ -85,6 +85,7 @@ import no.pradhan.agentview.nativeapp.ops.DeployScreen
 import no.pradhan.agentview.nativeapp.ops.McpScreen
 import no.pradhan.agentview.nativeapp.ops.ObserveScreen
 import no.pradhan.agentview.nativeapp.ops.PullsScreen
+import no.pradhan.agentview.nativeapp.ops.UsageScreen
 import no.pradhan.agentview.nativeapp.sessions.SessionsScreen
 import no.pradhan.agentview.nativeapp.ui.AvIcon
 import no.pradhan.agentview.nativeapp.ui.Badge
@@ -375,5 +376,6 @@ private fun MorePage(m: MoreItem, hub: Hub, onBack: () -> Unit, onOrigin: () -> 
     "mcp" -> McpScreen(hub, onBack)
     "sketches" -> SketchesScreen(hub, onBack)
     "travel" -> TravelScreen(hub, onBack)
+    "usage" -> UsageScreen(hub, onBack)
     else -> SettingsScreen(hub, onBack, onOrigin)
 }
