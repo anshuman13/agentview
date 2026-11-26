@@ -35,18 +35,41 @@ class SubChatsTest {
         }
     }
 
-    @Test fun groupSessions() {
-        for (c in cases("groupSessions")) {
-            val saved = c.getValue("saved").jsonArray.map { json.decodeFromJsonElement<SavedSession>(it) }
-            val open = c.getValue("open").jsonArray.map { it.jsonObject }.map {
-                OpenSession(it.str("sessionId"), it.str("parentId"), it["lastActive"]?.jsonPrimitive?.longOrNull ?: 0)
-            }
+    @Test fun subChatLabelBuilds() {
+        for (c in cases("subChatLabelBuilds")) {
+            val count = c.getValue("count").jsonPrimitive.int
+            assertEquals(c.str("expected"), subChatLabel(count, c.getValue("allBuild").jsonPrimitive.boolean, c.getValue("builds").jsonPrimitive.int))
+        }
+    }
+
+    private fun saved(c: JsonObject) = c.getValue("saved").jsonArray.map { json.decodeFromJsonElement<SavedSession>(it) }
+    private fun open(c: JsonObject) = c.getValue("open").jsonArray.map { it.jsonObject }.map {
+        OpenSession(it.str("sessionId"), it.str("parentId"), it["lastActive"]?.jsonPrimitive?.longOrNull ?: 0)
+    }
+    private fun ids(o: JsonObject, key: String) = o.getValue(key).jsonArray.map { it.jsonPrimitive.content }
+
+    private fun checkGroups(key: String) {
+        for (c in cases(key)) {
             val expected = c.getValue("expected").jsonArray.map { it.jsonObject }.map {
                 listOf(it.str("root"), it.str("latest"), it.getValue("count").jsonPrimitive.int, it.str("label"),
-                    it.getValue("lastModified").jsonPrimitive.long, it.getValue("members").jsonArray.map { m -> m.jsonPrimitive.content })
+                    it.getValue("lastModified").jsonPrimitive.long, ids(it, "members"), it.getValue("builds").jsonPrimitive.int, ids(it, "buildMembers"))
             }
-            val actual = groupSessions(saved, open).map { listOf(it.root.sessionId, it.latest, it.count, it.label, it.lastModified, it.members) }
+            val actual = groupSessions(saved(c), open(c)).map {
+                listOf(it.root.sessionId, it.latest, it.count, it.label, it.lastModified, it.members, it.builds, it.buildMembers)
+            }
             assertEquals(c.str("name"), expected, actual)
+        }
+    }
+
+    @Test fun groupSessions() = checkGroups("groupSessions")
+
+    @Test fun groupSpawned() = checkGroups("groupSpawned")
+
+    @Test fun needsRows() {
+        for (c in cases("needsRows")) {
+            val needs = ids(c, "needs")
+            val actual = groupSessions(saved(c), open(c)).filter { r -> rowSessions(r).any { it in needs } }.map { it.root.sessionId }
+            assertEquals(c.str("name"), ids(c, "expected"), actual)
         }
     }
 

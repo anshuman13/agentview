@@ -22,12 +22,13 @@ data class SavedSession(
     val parentId: String? = null,
     val via: String? = null,
     val startedAt: Long? = null,
+    val spawnedBy: String? = null,
     val subs: String? = null,
     val members: List<String>? = null,
 )
 
 // web groupChats: one row per chat, the root session with the group's last activity, the count label and every member id when it has sub-chats.
-fun groupChats(saved: List<SavedSession>) = groupSessions(saved).map { r -> if (r.count > 0) r.root.copy(lastModified = r.lastModified, subs = r.label, members = r.members) else r.root }
+fun groupChats(saved: List<SavedSession>) = groupSessions(saved).map { r -> if (r.count > 0 || r.builds > 0) r.root.copy(lastModified = r.lastModified, subs = r.label, members = r.members) else r.root }
 
 // Each chat row by its root id and every member id, so an open chat on a sub-chat finds its row.
 fun rowsById(saved: List<SavedSession>): Map<String, SavedSession> = saved.flatMap { s -> (s.members ?: listOf(s.sessionId)).map { it to s } }.toMap()
