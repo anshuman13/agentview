@@ -151,3 +151,14 @@ export function getMeta(key: string) {
 export function setMeta(key: string, value: string) {
   store().query('INSERT OR REPLACE INTO meta(key, value) VALUES (?, ?)').run(key, value);
 }
+
+// The last `days` local days ending today (oldest first) and the start of the first, in SQLite's local zone like tokensByDay.
+export function localDays(days: number, now = Date.now()) {
+  const d = store();
+  const dayOf = d.query(`SELECT strftime('%Y-%m-%d', ? / 1000, 'unixepoch', 'localtime', ?) AS day`);
+  const list = Array.from({ length: days }, (_, i) => (dayOf.get(now, `-${days - 1 - i} days`) as { day: string }).day);
+  const start = d
+    .query(`SELECT CAST(strftime('%s', ? / 1000, 'unixepoch', 'localtime', 'start of day', ?, 'utc') AS INTEGER) * 1000 AS ms`)
+    .get(now, `-${days - 1} days`) as { ms: number };
+  return { list, since: start.ms };
+}
