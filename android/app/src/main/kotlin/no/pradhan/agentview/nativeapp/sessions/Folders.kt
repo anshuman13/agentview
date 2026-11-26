@@ -48,6 +48,19 @@ fun rowsById(saved: List<SavedSession>): Map<String, SavedSession> = saved.flatM
 // The row id (root session) of any member id; other ids stay as they are.
 fun Map<String, SavedSession>.rowId(id: String?) = id?.let { this[it]?.sessionId ?: it }
 
+data class StartedFrom(val text: String, val sessionId: String)
+
+// web startedFrom on the grouped rows: a build folded into a row links to that row; a build listed on its own links to its
+// spawnedBy row, or "another chat" when the parent is not listed.
+fun startedFrom(saved: List<SavedSession>, sessionId: String?): StartedFrom? {
+    if (sessionId == null) return null
+    saved.firstOrNull { sessionId in it.buildMembers.orEmpty() }?.let { return StartedFrom("Started from ${it.title.ifBlank { "another chat" }}", it.sessionId) }
+    val rows = rowsById(saved)
+    val parent = rows[sessionId]?.spawnedBy ?: return null
+    val row = rows[parent]
+    return StartedFrom("Started from ${row?.title?.ifBlank { null } ?: "another chat"}", row?.sessionId ?: parent)
+}
+
 @Serializable
 data class Repo(val name: String, val cwd: String, val root: String = "", val kind: String = "other", val branch: String = "", val dirty: Int = 0, val lastCommit: Double = 0.0)
 

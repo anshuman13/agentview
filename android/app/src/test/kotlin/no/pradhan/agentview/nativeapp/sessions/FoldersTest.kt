@@ -242,4 +242,21 @@ class FoldersTest {
         assertEquals(twelve.take(5) + twelve[8], shownChoices(twelve, "k9", false))
         assertEquals(twelve, shownChoices(twelve, null, true))
     }
+
+    @Test
+    fun startedFromLinksABuildToTheChatThatStartedIt() {
+        val rows = groupChats(listOf(
+            SavedSession("p", "Plan the trip", "/w"),
+            SavedSession("p1", "Plan the trip", "/w", parentId = "p"),
+            SavedSession("b", "Build: trip", "/w", spawnedBy = "p1"),
+            SavedSession("b1", "Build: trip", "/w", parentId = "b"),
+            SavedSession("x", "Other", "/w"),
+        ))
+        assertEquals(StartedFrom("Started from Plan the trip", "p"), startedFrom(rows, "b"))
+        assertEquals(StartedFrom("Started from Plan the trip", "p"), startedFrom(rows, "b1"))
+        assertNull(startedFrom(rows, "x"))
+        assertNull(startedFrom(rows, "p1"))
+        assertNull(startedFrom(rows, null))
+        assertEquals(StartedFrom("Started from another chat", "gone"), startedFrom(listOf(SavedSession("b", "B", "/w", spawnedBy = "gone")), "b"))
+    }
 }

@@ -15,6 +15,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.ui.text.style.TextAlign
+import kotlinx.coroutines.launch
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -72,6 +76,7 @@ import no.pradhan.agentview.nativeapp.sessions.chatPlace
 import no.pradhan.agentview.nativeapp.sessions.groupByRepo
 import no.pradhan.agentview.nativeapp.sessions.newChatChoices
 import no.pradhan.agentview.nativeapp.sessions.renameTitle
+import no.pradhan.agentview.nativeapp.sessions.startedFrom
 import no.pradhan.agentview.nativeapp.ui.AvIcon
 import no.pradhan.agentview.nativeapp.ui.Button
 import no.pradhan.agentview.nativeapp.ui.ButtonVariant
@@ -243,6 +248,12 @@ private fun ChatHeader(hub: Hub, live: LiveChat, session: SessionInfo?, cost: Do
         }
         IconBtn("edit", "New chat", { newChat = true }, tint = av.fg)
         ChatMenu(hub, live, session, hasReply, panels, canReview, running, cwd, onReview)
+    }
+    val from = remember(ws.saved, live.sessionId, session?.sessionId) { startedFrom(ws.saved, live.sessionId ?: session?.sessionId) }
+    if (from != null) {
+        val scope = rememberCoroutineScope()
+        Text(from.text, style = Type.footnote, color = av.fgMuted, maxLines = 1, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center,
+            modifier = Modifier.fillMaxWidth().heightIn(min = Tokens.touchSm).clickable { scope.launch { hub.openSaved(from.sessionId) } }.wrapContentHeight().padding(horizontal = Tokens.listPad))
     }
     if (newChat) NewChatFromHeader(hub, cwd) { newChat = false }
 }
