@@ -25,7 +25,10 @@ export function ServiceRow({ row, usage, onPick, group, onGroup, onHide, isHidde
     <div className={`mcp-tr ${off ? 'mcp-off' : ''}`} role="row">
       <span role="cell" className="c-name">
         <ServerIcon row={row} />
-        <button type="button" className="mcp-hit" data-row={rowKey(row)} onClick={onPick} title={usage ? usageText(usage) : undefined}>{shortName(row.name)}</button>
+        <span className="nm">
+          <button type="button" className="mcp-hit" data-row={rowKey(row)} onClick={onPick} title={usage ? usageText(usage) : undefined}>{shortName(row.name)}</button>
+          <span className="sub">{typeOf(row)} · {sourceOf(row)}</span>
+        </span>
       </span>
       <span role="cell" className="c-type"><span className="t">{typeOf(row)}</span>{tag && <span className="mcp-tag">{tag}</span>}</span>
       <span role="cell" className="c-src"><span className="t">{sourceOf(row)}</span>{!row.account && group === 'personal' && <span className="mcp-tag">Personal</span>}</span>
