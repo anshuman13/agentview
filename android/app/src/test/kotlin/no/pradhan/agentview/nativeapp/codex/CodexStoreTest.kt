@@ -271,6 +271,46 @@ class CodexStoreTest {
         file.parentFile.listFiles { f -> f.name.startsWith(file.name) }?.forEach { it.delete() }
     }
 
+    @Test fun aHubBehindTheCacheReplacesTheCachedRows() = runTest {
+        val file = File.createTempFile("codex", ".json").also { it.delete() }
+        store(this, Fake(mutableListOf(reply(500, change("a", "live", "open", 100, 500)))), cache = file).sync()
+        val s = store(this, Fake(mutableListOf(reply(3, change("b", "scratch", "open", 200, 3)))), cache = file)
+        s.restore()
+        s.sync()
+        assertEquals(listOf("scratch"), s.state.value.items.map { it.title })
+        val again = store(this, Fake(mutableListOf()), cache = file)
+        again.restore()
+        assertEquals(listOf("scratch"), again.state.value.items.map { it.title })
+        file.parentFile.listFiles { f -> f.name.startsWith(file.name) }?.forEach { it.delete() }
+    }
+
+    @Test fun anotherHubAheadOfTheCacheIsPulledInFull() = runTest {
+        val file = File.createTempFile("codex", ".json").also { it.delete() }
+        fun hubReply(hub: String, version: Int, vararg changes: String) = reply(version, *changes).replaceFirst("{", """{"hub":"$hub",""")
+        store(this, Fake(mutableListOf(hubReply("scratch", 3, change("a", "scratch", "open", 100, 3)))), cache = file).sync()
+        val fake = Fake(mutableListOf(hubReply("live", 500, change("b", "late", "open", 200, 500)), hubReply("live", 500, change("c", "live", "open", 200, 4), change("b", "late", "open", 200, 500))))
+        val s = store(this, fake, cache = file)
+        s.restore()
+        s.sync()
+        assertEquals(listOf(3L to false, 0L to true), fake.pulled)
+        assertEquals(setOf("live", "late"), s.state.value.items.map { it.title }.toSet())
+        file.parentFile.listFiles { f -> f.name.startsWith(file.name) }?.forEach { it.delete() }
+    }
+
+    @Test fun aFullPullDropsRowsTheHubNoLongerHas() = runTest {
+        val file = File.createTempFile("codex", ".json").also { it.delete() }
+        store(this, Fake(mutableListOf(reply(5, change("a", "old", "open", 100, 1)))), cache = file).sync()
+        file.writeText(file.readText().replace("\"columns\":\"", "\"columns\":\"x"))
+        val fake = Fake(mutableListOf(reply(3, change("b", "new", "open", 200, 3))))
+        val s = store(this, fake, cache = file)
+        s.restore()
+        assertEquals(listOf("old"), s.state.value.items.map { it.title })
+        s.sync()
+        assertEquals(listOf(0L to true), fake.pulled)
+        assertEquals(listOf("new"), s.state.value.items.map { it.title })
+        file.parentFile.listFiles { f -> f.name.startsWith(file.name) }?.forEach { it.delete() }
+    }
+
     @Test fun logTimeAddsToSpentAndUndoRestoresIt() = runTest {
         val fake = Fake(mutableListOf(reply(5, change("a", "one", "open", 100, 1))))
         val s = store(this, fake)

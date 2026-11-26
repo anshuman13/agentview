@@ -182,6 +182,8 @@ export function openDb(file: string = DB_PATH): Database {
   if (!versionRow) {
     db.prepare('INSERT INTO meta (key, value) VALUES (?, ?)').run('version', '0');
   }
+  // Names this hub, so a device that cached another hub's rows drops them.
+  db.prepare('INSERT OR IGNORE INTO meta (key, value) VALUES (?, ?)').run('hub', crypto.randomUUID());
 
   return db;
 }

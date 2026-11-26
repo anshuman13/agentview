@@ -1,6 +1,6 @@
 import { BadRequest } from '../../../server/src/json.js';
 import { pausedScans } from '../core/claude.js';
-import { currentVersion } from '../core/db.js';
+import { currentVersion, getMeta } from '../core/db.js';
 import { scanHealth } from '../core/scan.js';
 import { SCANNERS } from './scan.js';
 import { exchange, type Change } from '../core/sync.js';
@@ -24,7 +24,7 @@ function sendPulled({ res, device, getDb }: Ctx, since: number, changes: Change[
   const pulled = exchange(getDb(), since, changes);
   const idle = pulled.version === since && changes.length === 0 && !full;
   const health = idle ? {} : { paused: pausedScans(getDb()), scans: scanHealth(getDb(), unconfiguredScanners()) };
-  send(res, 200, { version: pulled.version, changes: pulled.changes, hasMore: pulled.hasMore, rejected: pulled.rejected, device, ...health });
+  send(res, 200, { version: pulled.version, changes: pulled.changes, hasMore: pulled.hasMore, rejected: pulled.rejected, device, hub: getMeta(getDb(), 'hub'), ...health });
 }
 
 export const syncRoutes: Routes = {

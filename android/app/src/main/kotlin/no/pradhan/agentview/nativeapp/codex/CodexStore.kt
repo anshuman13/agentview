@@ -118,6 +118,8 @@ class CodexStore(
     private val tables = SYNCED_FIELDS.keys.associateWith { LinkedHashMap<String, Row>() }
     private val lock = Mutex()
     private var since = 0L
+    // The id of the hub the rows came from; a reply from another hub starts over with a full pull.
+    private var hub: String? = null
     private var scans = emptyList<SyncScan>()
     private var paused = emptyList<SyncPaused>()
     private var timer: Job? = null
@@ -163,6 +165,7 @@ class CodexStore(
             saved.putAll(tables.mapValues { it.value.values.toList() })
             // A cache from a build with other columns lacks the new ones, so the next pull is full.
             if (meta["columns"]?.jsonPrimitive?.contentOrNull == COLUMNS) since = version
+            hub = meta["hub"]?.jsonPrimitive?.contentOrNull
             publish(loaded = true, lastSync = meta["synced"]?.jsonPrimitive?.content?.toLongOrNull() ?: 0)
         } catch (e: Exception) {
             clearCache()
@@ -179,7 +182,7 @@ class CodexStore(
         if (rows.values.any { l -> l.any { it.dirty && !parked(it) } }) return
         // Rows are immutable, so a table whose rows are the same objects as last time is unchanged.
         val changed = rows.filter { (t, l) -> saved[t]?.let { s -> s.size == l.size && s.indices.all { s[it] === l[it] } } != true }
-        val head = buildJsonObject { put("version", since); put("columns", COLUMNS); put("synced", state.value.lastSync) }.toString()
+        val head = buildJsonObject { put("version", since); put("columns", COLUMNS); put("hub", hub); put("synced", state.value.lastSync) }.toString()
         val bodies = withContext(parsing) { changed.mapValues { (_, l) -> JsonArray(l.map(::rowToCache)).toString() } }
         withContext(Dispatchers.IO) {
             runCatching {
@@ -216,7 +219,7 @@ class CodexStore(
         }
     }
 
-    private data class Page(val version: Long, val changes: List<Row?>, val hasMore: Boolean, val refused: List<JsonObject>, val scans: List<SyncScan>?, val paused: List<SyncPaused>?)
+    private data class Page(val version: Long, val changes: List<Row?>, val hasMore: Boolean, val refused: List<JsonObject>, val scans: List<SyncScan>?, val paused: List<SyncPaused>?, val hub: String?)
 
     private suspend fun parse(body: String): Page = withContext(parsing) {
         val reply = protocolJson.parseToJsonElement(body).jsonObject
@@ -224,7 +227,8 @@ class CodexStore(
         val changes = reply["changes"]?.jsonArray?.map { parseRow(it.jsonObject) } ?: error("Unexpected hub response")
         Page(version, changes, (reply["hasMore"] as? JsonPrimitive)?.content == "true", (reply["rejected"] as? JsonArray)?.map { it.jsonObject } ?: emptyList(),
             reply["scans"]?.let { runCatching { protocolJson.decodeFromJsonElement(ListSerializer(SyncScan.serializer()), it) }.getOrNull() },
-            reply["paused"]?.let { runCatching { protocolJson.decodeFromJsonElement(ListSerializer(SyncPaused.serializer()), it) }.getOrNull() })
+            reply["paused"]?.let { runCatching { protocolJson.decodeFromJsonElement(ListSerializer(SyncPaused.serializer()), it) }.getOrNull() },
+            (reply["hub"] as? JsonPrimitive)?.contentOrNull)
     }
 
     // A sync that cannot reach the hub waits here between retries, outside the lock, so the 30 s timer, an edit's sync or
@@ -275,7 +279,7 @@ class CodexStore(
                 val batch = queue.take(PUSH_BATCH)
                 queue = queue.drop(batch.size)
                 val body = if (batch.isEmpty() && queue.isEmpty()) pull(since, since == 0L) else push(pushBody(batch))
-                val (version, changes, hasMore, refused, health, held) = parse(body)
+                val (version, changes, hasMore, refused, health, held, from) = parse(body)
                 if (health != null) scans = health
                 if (held != null) paused = held
                 for (r in refused) {
@@ -292,6 +296,18 @@ class CodexStore(
                     if (cur != null && cur.updatedAt == sent.updatedAt && cur.times == sent.times) map[sent.key] = cur.copy(dirty = false)
                 }
                 if (queue.isNotEmpty()) continue
+                if (from != null && from != hub) {
+                    val known = hub != null
+                    hub = from
+                    // Another hub answered with changes since a version of the old one, so pull this one again in full.
+                    if (known && since != 0L) { since = 0; continue }
+                }
+                // A full pull, or a hub behind the cached version (another hub, or this one restored), sends all the hub's
+                // rows, so the cached ones it lacks are dropped (unsent edits stay).
+                if (since == 0L || version < since) {
+                    tables.values.forEach { t -> t.values.removeAll { !it.dirty } }
+                    saved.clear()
+                }
                 apply(changes)
                 more = hasMore && version != since
                 since = version
