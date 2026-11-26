@@ -74,7 +74,7 @@ const free = (r: Windows | null | undefined) =>
   !!r && under(r.five_hour) && under(r.seven_day) && ![r.seven_day_opus, r.seven_day_sonnet, r.seven_day_oauth_apps, ...(r.model_scoped ?? [])].some((w) => (w?.utilization ?? 0) >= 100);
 
 // The account's live usage, read from a CLI that gets no prompt, so the check itself uses none.
-async function liveUsage(a: Account): Promise<LiveUsage> {
+export async function liveUsage(a: Account) {
   const dir = configDir(a);
   let stop = () => {};
   const stopped = new Promise<void>((r) => (stop = r));
@@ -97,7 +97,7 @@ const checked = new Map<Account, number>();
 const checking = new Map<Account, Promise<boolean>>();
 
 // A limit mark can be wrong, so live usage confirms it at most every 5 minutes; a mark with every window under 100% is cleared. A failed check keeps the mark.
-export function verifyLimit(a: Account, check = liveUsage): Promise<boolean> {
+export function verifyLimit(a: Account, check: (a: Account) => Promise<LiveUsage> = liveUsage): Promise<boolean> {
   if (!isLimited(a)) return Promise.resolve(false);
   const now = Date.now();
   if (now - (checked.get(a) ?? -Infinity) < 5 * 60_000) return checking.get(a) ?? Promise.resolve(isLimited(a));
@@ -149,6 +149,8 @@ export const freshAccount = (cwd: string, now = Date.now()): Account => {
 
 // The account each chat was last on, so a reopened chat goes back to it.
 const chatAccounts: Record<string, Account> = readJsonSync<Record<string, Account> | null>(CHATS, null) ?? {};
+
+export const chatAccount = (sessionId: string): Account | undefined => chatAccounts[sessionId];
 
 export function rememberAccount(sessionId: string, a: Account) {
   if (chatAccounts[sessionId] === a) return;
