@@ -92,7 +92,7 @@ private fun SheetBody(onDismiss: () -> Unit, title: String, padded: Boolean, ful
         properties = ModalBottomSheetProperties(shouldDismissOnBackPress = onBack == null),
         containerColor = c.containerLow,
         contentColor = c.fg,
-        scrimColor = c.scrimStrong,
+        scrimColor = c.scrim,
         shape = RoundedCornerShape(topStart = Tokens.radiusSheet, topEnd = Tokens.radiusSheet),
         tonalElevation = 0.dp,
         dragHandle = {

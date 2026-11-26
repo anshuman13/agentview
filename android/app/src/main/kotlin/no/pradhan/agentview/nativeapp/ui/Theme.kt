@@ -53,7 +53,7 @@ fun AgentViewTheme(theme: String = "", content: @Composable () -> Unit) {
         surfaceContainerLowest = c.containerLowest, surfaceContainerLow = c.containerLow, surfaceContainer = c.surface,
         surfaceContainerHigh = c.raised, surfaceContainerHighest = c.sunken, surfaceBright = c.raised, surfaceDim = c.bg,
         inverseSurface = c.inverseSurface, inverseOnSurface = c.inverseOnSurface, inversePrimary = c.inversePrimary,
-        outline = c.borderStrong, outlineVariant = c.border, scrim = c.scrimStrong, surfaceTint = Color.Transparent,
+        outline = c.borderStrong, outlineVariant = c.border, scrim = c.scrim, surfaceTint = Color.Transparent,
     )
     val view = LocalView.current
     if (!view.isInEditMode) SideEffect {

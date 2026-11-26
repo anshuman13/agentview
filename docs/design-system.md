@@ -209,7 +209,7 @@ A menu's items either all carry an icon or none do; a list of choices (times, pe
 | Not mine | `circle-slash` | Open spec | `go-to-file` |
 
 ### Sheet
-`<Sheet label onClose onBack? className? overlayClassName? active? noSwipe?>` (web/src/ui/Sheet.tsx) is the bottom sheet. It provides the overlay (scrim, backdrop click closes with the slide-out), the drag handle, the Back entry, Escape and the `role="dialog"` card with `aria-label={label}`; children follow the handle. `className` is appended to `as-sheet`; `overlayClassName` replaces `as-sheet-overlay` (the More sheet uses `more-sheet-overlay mobile-only`). Mount it only while open (`{open && <Sheet>}`). Escape and Back close only the topmost active Sheet, one per press; with `onBack` (a sub-view such as a Memory file) they call it instead, while the scrim and drag still close. A sheet that stays mounted under another passes `active={false}` so it registers neither (quick add under the date sheet). `noSwipe` sets `data-no-swipe`. New sheets use Sheet instead of copying the overlay, handle and dialog markup.
+`<Sheet label onClose onBack? className? overlayClassName? active? noSwipe?>` (web/src/ui/Sheet.tsx) is the bottom sheet. It provides the overlay (`--scrim`: 60% black dark, 50% light, the same as dialogs and Claude's dialog scrim since 26 Nov 2026; backdrop click closes with the slide-out), the drag handle, the Back entry, Escape and the `role="dialog"` card with `aria-label={label}`; children follow the handle. `className` is appended to `as-sheet`; `overlayClassName` replaces `as-sheet-overlay` (the More sheet uses `more-sheet-overlay mobile-only`). Mount it only while open (`{open && <Sheet>}`). Escape and Back close only the topmost active Sheet, one per press; with `onBack` (a sub-view such as a Memory file) they call it instead, while the scrim and drag still close. A sheet that stays mounted under another passes `active={false}` so it registers neither (quick add under the date sheet). `noSwipe` sets `data-no-swipe`. New sheets use Sheet instead of copying the overlay, handle and dialog markup.
 
 ### Row
 Height `--row-h` 40px (`--touch` on coarse pointers), padding `--list-pad`. Leading check or
@@ -448,7 +448,7 @@ Status pairs: the colour is for text and icons on the surfaces; the container ho
 | agent (running, agents) | #43C9BD / #00696B | #00504A / #9FF2E7 | #9FF2E7 / #00201F (`onAgent` #003733 / #FFFFFF) |
 | info (new, unread, upcoming) | #76A0E6 / #285092 | #1E3A66 / #D6E3FF | #D6E3FF / #001A41 |
 
-Profile dots: work #6F9AE0 / #285092, personal #E8A3FF / #8E3FAA. Scrim is `scrimStrong`.
+Profile dots: work #6F9AE0 / #285092, personal #E8A3FF / #8E3FAA. Sheets and the Material scrim use `scrim` (60% black dark, 50% light, Claude's dialog scrim, 26 Nov 2026).
 
 Contrast ratios (worst case is text on `sunken`; `ContrastTest` checks them).
 

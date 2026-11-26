@@ -12,7 +12,6 @@ import androidx.compose.ui.unit.sp
 @Immutable
 class AvColors(
     val metaFg: Color,
-    val scrim: Color,
     val scrimStrong: Color,
     val white: Color,
     val fileBlue: Color,
@@ -29,6 +28,7 @@ class AvColors(
     val groupCard: Color,
     val sunken: Color,
     val field: Color,
+    val scrim: Color,
     val bg: Color,
     val surface: Color,
     val raised: Color,
@@ -126,7 +126,6 @@ class AvColors(
 
 val DarkColors = AvColors(
     metaFg = Color(0xFFA0A0A0),
-    scrim = Color(0x66000000),
     scrimStrong = Color(0x8C000000),
     white = Color(0xFFFFFFFF),
     fileBlue = Color(0xFF519ABA),
@@ -143,6 +142,7 @@ val DarkColors = AvColors(
     groupCard = Color(0xFF202020),
     sunken = Color(0xFF363636),
     field = Color(0xFF2A2A2A),
+    scrim = Color(0x99000000),
     bg = Color(0xFF191919),
     surface = Color(0xFF232424),
     raised = Color(0xFF303030),
@@ -240,7 +240,6 @@ val DarkColors = AvColors(
 
 val LightColors = AvColors(
     metaFg = Color(0xFF656565),
-    scrim = Color(0x66000000),
     scrimStrong = Color(0x8C000000),
     white = Color(0xFFFFFFFF),
     fileBlue = Color(0xFF519ABA),
@@ -257,6 +256,7 @@ val LightColors = AvColors(
     groupCard = Color(0xFFF7F7F7),
     sunken = Color(0xFFF3F3F3),
     field = Color(0xFFF3F3F3),
+    scrim = Color(0x80000000),
     bg = Color(0xFFFFFFFF),
     surface = Color(0xFFFCFCFC),
     raised = Color(0xFFFFFFFF),
