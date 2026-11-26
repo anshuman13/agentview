@@ -10,7 +10,7 @@ export type Page = 'deploy' | 'mcp' | 'sketches' | 'travel' | 'usage' | 'setting
 
 export const PAGES: { id: Page; icon: string; title: string }[] = [
   { id: 'deploy', icon: 'rocket', title: 'Deploy' },
-  { id: 'mcp', icon: 'plug', title: 'MCP Servers' },
+  { id: 'mcp', icon: 'plug', title: 'MCP servers' },
   { id: 'sketches', icon: 'paintcan', title: 'Sketches' },
   { id: 'travel', icon: 'briefcase', title: 'Travel' },
   { id: 'usage', icon: 'graph', title: 'Usage' },

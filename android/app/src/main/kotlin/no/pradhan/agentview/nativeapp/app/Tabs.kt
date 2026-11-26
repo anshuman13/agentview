@@ -13,14 +13,14 @@ val MORE_TOOLS = listOf(
     MoreItem("browser", "Browser", "globe"),
     MoreItem("terminal", "Terminal", "terminal"),
     MoreItem("changes", "Source control", "source-control"),
-    MoreItem("github", "Pull Requests", "git-pull-request"),
+    MoreItem("github", "Pull requests", "git-pull-request"),
 )
 val MORE_PAGES = listOf(
     MoreItem("sketches", "Sketches", "paintcan"),
     MoreItem("travel", "Travel", "briefcase"),
     MoreItem("usage", "Usage", "graph"),
     MoreItem("deploy", "Deploy", "rocket"),
-    MoreItem("mcp", "MCP Servers", "plug"),
+    MoreItem("mcp", "MCP servers", "plug"),
     MoreItem("settings", "Settings", "settings-gear"),
 )
 

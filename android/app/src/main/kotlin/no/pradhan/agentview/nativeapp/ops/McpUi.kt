@@ -184,7 +184,7 @@ fun McpScreen(hub: Hub, onBack: () -> Unit) {
     val current = rows.firstOrNull { mcpKey(it) == key }
     if (current != null) McpDetail(hub, current, calls[mcpSlug(current.name)], groups, ::setGroup, ::recheckConnectors, onBack = { sel = null })
     else Column(Modifier.fillMaxSize()) {
-        WorkspaceHeader(hub, "MCP Servers", onBack, sub = if (probe.data != null) "${mcp.connected} connected of ${mcp.total}" + if (mcp.needsYou > 0) " · ${mcp.needsYou} need you" else "" else null) {
+        WorkspaceHeader(hub, "MCP servers", onBack, sub = if (probe.data != null) "${mcp.connected} connected of ${mcp.total}" + if (mcp.needsYou > 0) " · ${mcp.needsYou} need you" else "" else null) {
             IconBtn("refresh", "Check", { refresh = true; reprobe() }, enabled = !probe.busy)
             if (!hub.readOnly) McpAddMenu(hub, connectors, account)
         }

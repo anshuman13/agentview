@@ -95,7 +95,7 @@ fun PullsScreen(hub: Hub, onBack: () -> Unit, initial: Int? = null) {
     val now = System.currentTimeMillis()
 
     Column(Modifier.fillMaxSize()) {
-        WorkspaceHeader(hub, "Pull Requests", onBack) { IconBtn("refresh", "Refresh", { fresh = true; reload() }, enabled = !load.busy) }
+        WorkspaceHeader(hub, "Pull requests", onBack) { IconBtn("refresh", "Refresh", { fresh = true; reload() }, enabled = !load.busy) }
         PageBody {
             LazyColumn(Modifier.fillMaxSize()) {
                 val problem = ghProblem(load.error)

@@ -5,7 +5,7 @@ import { VIEWS } from './ActivityBar';
 import { PhoneHeader } from './PhoneHeader';
 import type { Tab, View } from './TabBar';
 
-const PHONE_TITLE: Partial<Record<View, string>> = { changes: 'Source control', github: 'Pull Requests' };
+const PHONE_TITLE: Partial<Record<View, string>> = { changes: 'Source control', github: 'Pull requests' };
 
 function SidebarBody({ view }: { view: View }) {
   if (view === 'assistant') return <Guard><Suspense fallback={null}><AssistantNav /></Suspense></Guard>;

@@ -10,7 +10,7 @@ export const VIEWS: { id: View; icon: string; title: string }[] = [
   { id: 'assistant', icon: 'sparkle', title: 'Codex' },
   { id: 'explorer', icon: 'files', title: 'Explorer' },
   { id: 'changes', icon: 'source-control', title: 'Source control' },
-  { id: 'github', icon: 'github', title: 'GitHub Pull Requests' },
+  { id: 'github', icon: 'github', title: 'GitHub pull requests' },
   { id: 'chats', icon: 'comment-discussion', title: 'Sessions' },
   { id: 'sessions', icon: 'repo', title: 'Workspace' },
 ];

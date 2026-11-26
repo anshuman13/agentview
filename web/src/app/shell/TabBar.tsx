@@ -121,7 +121,7 @@ export function MoreSheet({ open, onClose, tab, view, showing, project, theme, t
       )}
       {shown('github') && (
         <button className={tab === 'repos' && view === 'github' ? 'active' : ''} onClick={() => { track('more:github'); goSide('github'); }}>
-          <Icon name="github" /><span>Pull Requests</span><GitHubBadge />
+          <Icon name="github" /><span>Pull requests</span><GitHubBadge />
         </button>
       )}
       <span className="more-label">Tools</span>
