@@ -18,7 +18,10 @@
 .switcher .tag { font-size: var(--fs-2xs); color: var(--warn); margin-left: auto; }
 .overlay.anchored .switcher { position: fixed; width: min(400px, calc(100vw - 16px)); }
 .overlay.anchored .switcher ul { padding: var(--sp-2); }
-.overlay.anchored .switcher li { height: 36px; padding: 0 var(--sp-5); gap: var(--sp-5); border-radius: var(--shape-sm); }
+.overlay.anchored .switcher li { height: 32px; padding: 0 var(--sp-6); gap: var(--sp-5); border-radius: var(--radius); font-size: var(--type-body-size); }
+@media (hover: hover) { .overlay.anchored .switcher li:hover { background: var(--selected); } }
+.overlay.anchored .switcher .check { flex: none; display: flex; }
+.overlay.anchored .switcher .check .icon { color: var(--accent); }
 .overlay.anchored .switcher li .detail { margin-left: auto; text-align: right; color: var(--fg-muted); }
 .overlay.anchored .switcher li > span:first-child { min-width: 0; }
 

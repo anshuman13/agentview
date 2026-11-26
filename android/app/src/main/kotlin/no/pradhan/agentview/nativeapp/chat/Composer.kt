@@ -104,7 +104,6 @@ import no.pradhan.agentview.nativeapp.ui.WordClamp
 import no.pradhan.agentview.nativeapp.ui.av
 import no.pradhan.agentview.nativeapp.ui.plural
 import no.pradhan.agentview.nativeapp.ui.select
-import no.pradhan.agentview.nativeapp.ui.well
 
 private class Choice(val value: String, val label: String, val detail: String = "")
 
@@ -309,9 +308,13 @@ private fun rememberSuggestions(s: ComposerState, trigger: Trigger?, session: Se
 @Composable
 private fun SuggestionList(suggestions: List<Suggestion>, onPick: (Suggestion) -> Unit) {
     val c = av
-    Column(Modifier.fillMaxWidth().heightIn(max = Tokens.imageMax).well(c).verticalScroll(rememberScrollState())) {
+    val shape = RoundedCornerShape(Tokens.shapeLg)
+    Column(
+        Modifier.fillMaxWidth().heightIn(max = Tokens.imageMax).clip(shape).background(c.raised).border(BorderStroke(Tokens.hairline, c.border), shape)
+            .verticalScroll(rememberScrollState()).padding(Tokens.sp2),
+    ) {
         for (s in suggestions) Column(
-            Modifier.fillMaxWidth().heightIn(min = Tokens.touch).clickable { onPick(s) }.padding(horizontal = Tokens.sp6, vertical = Tokens.sp3),
+            Modifier.fillMaxWidth().heightIn(min = Tokens.touch).clip(RoundedCornerShape(Tokens.radius)).clickable { onPick(s) }.padding(horizontal = Tokens.sp6, vertical = Tokens.sp3),
         ) {
             Text(s.label, style = Type.body.copy(fontFamily = FontFamily.Monospace), color = c.fg)
             if (s.detail.isNotEmpty()) Text(s.detail, style = Type.footnote, color = c.fgMuted, maxLines = 1, overflow = TextOverflow.Ellipsis)

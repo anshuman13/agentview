@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import { Back } from '../app/touch/back';
 import { touch } from '../app/touch/touch';
+import { Icon } from './Icon';
 import { listKeys, useReturnFocus } from './util';
 
 type PickItem = { value: string; label: string; detail?: string; disabled?: boolean };
@@ -51,7 +52,7 @@ export function QuickPick({ title, items, current, anchor, extra, onPick, onClos
             <li key={i.value} id={`${id}-${n}`} role="option" aria-selected={n === idx} aria-disabled={i.disabled} className={`${n === idx ? 'active' : ''}${i.disabled ? ' muted' : ''}`} onClick={() => !i.disabled && onPick(i.value)}>
               <span>{i.label}</span>
               {i.detail && <span className="muted small detail">{i.detail}</span>}
-              {i.value === current && <span className="tag">current</span>}
+              {i.value === current && (anchor ? <span className="check"><Icon name="check" /><span className="sr-only">current</span></span> : <span className="tag">current</span>)}
             </li>
           ))}
           {results.length === 0 && <li className="muted" role="presentation">No matches</li>}
