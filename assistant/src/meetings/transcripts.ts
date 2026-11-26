@@ -141,7 +141,8 @@ export function saveTranscripts(db: Database, profile: Profile, found: { id: str
 }
 
 export function transcriptText(db: Database, profile: Profile, id: string) {
-  return (db.prepare('SELECT text FROM transcripts WHERE profile = ? AND id = ?').get(profile, id) as { text: string } | null)?.text ?? null;
+  const row = db.prepare('SELECT text FROM transcripts WHERE profile = ? AND id = ?').get(profile, id) as { text: string } | null;
+  return row ? readable(row.text) : null;
 }
 
 // Meetings whose transcript holds every word, newest first, with a stretch around the first hit; only the profile's when given.
@@ -156,6 +157,20 @@ export function searchTranscripts(db: Database, query: string, profile?: Profile
 
 // Transcript markdown as read: links keep their text, and emphasis, heading and list marks go.
 const plain = (text: string) => text.replace(/\[([^\]]*)\]\([^)]*\)/g, '$1').replace(/\*+|^#+\s*|^\s*[-*]\s+/gm, '');
+
+// Transcript markdown for reading: links keep their text, list marks become bullets, emphasis, heading marks and
+// backslash escapes go, and runs of blank lines shrink to one.
+export function readable(text: string) {
+  const kept: string[] = [];
+  return text
+    .replace(/\\([\\`*_{}[\]()#+\-.!&>|~])/g, (_, c: string) => `\u0000${kept.push(c) - 1}\u0000`)
+    .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1')
+    .replace(/^(\s*)[-*+]\s+/gm, '$1• ')
+    .replace(/\*+|^#+\s*/gm, '')
+    .replace(/[ \t]+$/gm, '')
+    .replace(/\n{3,}/g, '\n\n')
+    .replace(/\u0000(\d+)\u0000/g, (_, i: string) => kept[Number(i)]);
+}
 
 const formatLines = (instructions: string) => (instructions.trim() ? [`Write the summary to this brief: ${instructions.trim().slice(0, 1000)}`] : []);
 

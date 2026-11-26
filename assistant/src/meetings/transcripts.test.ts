@@ -4,7 +4,7 @@ import path from 'node:path';
 import { openDb } from '../core/db.js';
 import { applyChanges } from '../core/sync.js';
 import { docReader, readSaved } from './transcriptDocs.js';
-import { TRIES, actionId, dueAt, dueMeetings, expireSuggested, markTried, pruneTried, saveNotes, saveTranscripts, searchTranscripts, transcriptText } from './transcripts.js';
+import { TRIES, actionId, readable, dueAt, dueMeetings, expireSuggested, markTried, pruneTried, saveNotes, saveTranscripts, searchTranscripts, transcriptText } from './transcripts.js';
 
 const MIN = 60_000;
 const tempRoot = () => {
@@ -160,6 +160,8 @@ describe('transcripts', () => {
     expect(searchTranscripts(db, 'budget', 'personal')[0].snippet).toBe('Budget Nov 24 Sara spoke');
     expect(transcriptText(db, 'work', 'cal:b')).toBe('Kim: rollout later');
     expect(transcriptText(db, 'personal', 'cal:b')).toBeNull();
+    expect(transcriptText(db, 'personal', 'cal:p')).toBe('Budget Nov 24\n• Sara spoke');
+    expect(readable('## **Notes**  \n\n\n\n  - [*survey*](https://x.y) \\[00:01\\] 2 \\* 3\n**Kim**: hi')).toBe('Notes\n\n  • survey [00:01] 2 * 3\nKim: hi');
   });
 });
 

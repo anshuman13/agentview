@@ -24,6 +24,15 @@ export function ClaimTextForm({ draft, setDraft, onSave, onCancel, rows }: { dra
   );
 }
 
+// A decided claim loses its buttons, so focus moves on to the next proposed claim, else to the claim's row or the one above.
+function keepFocus(from: HTMLElement, decide: () => void) {
+  const li = from.closest('li');
+  const next = [...document.querySelectorAll<HTMLElement>('.wk-item button[aria-label=Approve]')].find((b) => li && !li.contains(b) && li.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
+  const above = li?.previousElementSibling?.querySelector<HTMLElement>('button');
+  decide();
+  requestAnimationFrame(() => [next, li?.querySelector<HTMLElement>('button'), above].find((b) => b?.isConnected)?.focus());
+}
+
 export const Claim = memo(function Claim({ fact, old, page, flash, mentions, stale, ungiven }: { fact: Fact; old: Fact[]; page: string; flash: boolean; mentions?: Mentions; stale?: boolean; ungiven?: boolean }) {
   const review = useReview();
   const edits = useClaimEdits(fact, page);
@@ -48,8 +57,8 @@ export const Claim = memo(function Claim({ fact, old, page, flash, mentions, sta
   const { buttons, menu: items } = actionsFor(fact, { stale, editing, contesting });
   const actions = { ...edits, edit: startEdit, contest: () => setContesting(true) };
   const button: Record<ClaimButton, ReactNode> = {
-    reject: <IconButton key="reject" size="sm" icon="close" label="Reject" onClick={() => review.reject([fact])} />,
-    approve: <IconButton key="approve" size="sm" icon="check" label="Approve" onClick={() => review.approve([fact])} />,
+    reject: <IconButton key="reject" size="sm" icon="close" label="Reject" onClick={(e) => keepFocus(e.currentTarget, () => review.reject([fact]))} />,
+    approve: <IconButton key="approve" size="sm" icon="check" label="Approve" onClick={(e) => keepFocus(e.currentTarget, () => review.approve([fact]))} />,
     confirm: <Button key="confirm" variant="tinted" size="sm" onClick={edits.confirm}>Confirm</Button>,
     more: <ClaimMenu key="more" fact={fact} items={items} actions={actions} open={menu} setOpen={setMenu} mentions={mentions} stale={stale} />,
   };

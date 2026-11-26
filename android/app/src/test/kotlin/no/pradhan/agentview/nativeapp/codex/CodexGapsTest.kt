@@ -268,6 +268,8 @@ class CodexGapsTest {
         assertEquals(POINT, row.status)
         assertEquals("raise", row.source)
         assertEquals("Ada Lovelace", row.people)
+        assertTrue(acts.raise("Ask about budget", "Ada Lovelace", WORK))
+        assertEquals(1, st.state.value.items.size)
         acts.tick(row)
         assertEquals(RAISED, st.current(row).status)
         assertTrue(acts.pin("Decision: ship it", m))
@@ -276,7 +278,7 @@ class CodexGapsTest {
         assertEquals("note", pin.status)
         acts.unpin(pin)
         assertTrue(pinsOf(st.state.value.items, listOf(m)).isEmpty())
-        assertEquals(listOf("Raise with Ada next time", "Raised", "Pinned", "Unpinned"), snacks)
+        assertEquals(listOf("Raise with Ada next time", "Already raised with Ada", "Raised", "Pinned", "Unpinned"), snacks)
         writable = false
         assertFalse(acts.raise("x", "Ada", WORK))
         assertFalse(acts.pin("x", m))

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useAssistantData, useAssistantStore, useCodex } from '../data';
-import { POINT, RAISED, endedPoints, firstName, pointMeeting } from '../data/meetings/points';
+import { POINT, RAISED, endedPoints, firstName, pointMeeting, pointsOf } from '../data/meetings/points';
+import { splitTitle } from '../data/tasks/engine';
 import type { AssistantStore } from '../data/store';
 import type { ItemRow, Profile } from '../data/sync';
 import { Icon } from '../../ui/Icon';
@@ -11,6 +12,11 @@ import '../../styles/features/wiki.css';
 import '../../styles/features/meetings.css';
 
 export async function raise(store: AssistantStore, text: string, person: string, profile: Profile) {
+  const t = splitTitle(text);
+  if (pointsOf(store.snapshot().items, person).some((r) => r.profile === profile && r.title === t.title && (r.text ?? null) === t.text)) {
+    showSnack(`Already raised with ${firstName(person)}`);
+    return true;
+  }
   try {
     const row = await store.capture(text, 'note', profile);
     await store.update(row, { status: POINT, source: 'raise', people: person });

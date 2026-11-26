@@ -18,6 +18,7 @@ stubGlobal('window', {});
 
 const { MeetingPage } = await import('./MeetingPage');
 const { dismissTranscript } = await import('./MeetingPageParts');
+const { raise } = await import('./Raise');
 
 const start = Date.UTC(2026, 9, 29, 8);
 const meeting = (extra: Partial<Meeting>) =>
@@ -51,5 +52,19 @@ describe('MeetingPage', () => {
     expect(snacks.at(-1)?.text).toBe('Transcript dismissed');
     snacks.at(-1)?.undo?.();
     expect(render(m)).toContain('No transcript for this meeting');
+  });
+
+  it('raises a point once per person', async () => {
+    const items: Record<string, unknown>[] = [];
+    const store = {
+      snapshot: () => ({ items }),
+      capture: async (text: string, status: string, profile: string) => { const r = { id: `r${items.length}`, profile, title: text, text: null, status, deleted: 0 }; items.push(r); return r; },
+      update: async (r: Record<string, unknown>, patch: Record<string, unknown>) => { Object.assign(r, patch); },
+    };
+    await raise(store as never, 'Ship it', 'Sam Lee', 'work');
+    await raise(store as never, 'Ship it', 'Sam Lee', 'work');
+    await raise(store as never, 'Ship it', 'Kim', 'work');
+    expect(items.map((r) => r.people)).toEqual(['Sam Lee', 'Kim']);
+    expect(snacks.slice(-3).map((s) => s.text)).toEqual(['Raise with Sam next time', 'Already raised with Sam', 'Raise with Kim next time']);
   });
 });

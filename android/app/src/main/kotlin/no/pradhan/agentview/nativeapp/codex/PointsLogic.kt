@@ -54,6 +54,11 @@ fun pinsOf(items: List<Row>, meetings: List<Row>): List<Row> {
 // Raise and pin save a row through the store, each with one undo.
 class PointActions(private val store: CodexStore, private val snack: (String, (() -> Unit)?) -> Unit) {
     fun raise(text: String, person: String, profile: String): Boolean {
+        val (title, body) = splitTitle(text)
+        if (pointsOf(store.state.value.items, person).any { it.profile == profile && it.title == title && it.text == body }) {
+            snack("Already raised with ${firstName(person)}", null)
+            return true
+        }
         val row = store.capture(text, "note", profile, null, mapOf("status" to POINT, "source" to "raise", "people" to person)) ?: return false
         snack("Raise with ${firstName(person)} next time") { store.update(row, mapOf("deleted" to true)) }
         return true
