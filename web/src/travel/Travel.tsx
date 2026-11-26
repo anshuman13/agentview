@@ -116,6 +116,9 @@ function NotesField({ trip, onSaved }: { trip: Trip; onSaved: () => void }) {
     if (text === trip.notes) return;
     saveTrip({ id: trip.id, name: trip.name, from: trip.from, to: trip.to, notes: text }).then(onSaved, (e) => notice(`Notes not saved: ${errText(e)}`));
   };
+  const leave = useRef(save);
+  leave.current = save;
+  useEffect(() => () => leave.current(), []);
   return (
     <section>
       <Section label="Notes" />
