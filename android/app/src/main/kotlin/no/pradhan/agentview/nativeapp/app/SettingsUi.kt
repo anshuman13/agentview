@@ -30,6 +30,7 @@ import no.pradhan.agentview.nativeapp.ui.Menu
 import no.pradhan.agentview.nativeapp.ui.MenuItem
 import no.pradhan.agentview.nativeapp.ui.PageHeader
 import no.pradhan.agentview.nativeapp.ui.SectionHeader
+import no.pradhan.agentview.nativeapp.ui.av
 import no.pradhan.agentview.nativeapp.ui.Sheet
 import no.pradhan.agentview.nativeapp.ui.Toggle
 import no.pradhan.agentview.nativeapp.ui.Tokens
@@ -53,10 +54,10 @@ fun SettingsScreen(hub: Hub, onBack: () -> Unit, onOrigin: () -> Unit) {
     val version = runCatching { ctx.packageManager.getPackageInfo(ctx.packageName, 0).versionName }.getOrNull() ?: "Unknown"
     val dark = when (theme) { "dark" -> true; "light" -> false; else -> isSystemInDarkTheme() }
     Column(Modifier.fillMaxSize()) {
-        PageHeader("Settings", onBack)
+        PageHeader("Settings", onBack, serif = true)
         PageBody {
             Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(bottom = Tokens.sp16)) {
-                SectionHeader("Appearance")
+                SectionHeader("Appearance", color = av.fg)
                 Group {
                     val menu = remember { mutableStateOf(false) }
                     ListRow("Theme", (if (dark) "Dark" else "Light") + if (theme.isEmpty()) " (system)" else "", onClick = { menu.value = true }, trailing = {
@@ -71,7 +72,7 @@ fun SettingsScreen(hub: Hub, onBack: () -> Unit, onOrigin: () -> Unit) {
                     })
                 }
                 if (providers.size > 1) {
-                    SectionHeader("Providers")
+                    SectionHeader("Providers", color = av.fg)
                     Group {
                         providers.forEach { p ->
                             ListRow(p.label, if (p.enabled) "Ready" else p.note)
@@ -88,7 +89,7 @@ fun SettingsScreen(hub: Hub, onBack: () -> Unit, onOrigin: () -> Unit) {
                         })
                     }
                 }
-                SectionHeader("Phone")
+                SectionHeader("Phone", color = av.fg)
                 Group {
                     ListRow("Notifications", if (notify && granted) "On" else "Off", toggle = Toggle(notify && granted, onChange = hub::setNotify))
                     if (notify && granted) {
@@ -111,7 +112,7 @@ fun SettingsScreen(hub: Hub, onBack: () -> Unit, onOrigin: () -> Unit) {
                     Hairline()
                     ListRow("Mac address", origin, onClick = onOrigin, trailing = { Chevron() })
                 }
-                SectionHeader("Privacy", action = { IconBtn("info", "About feature analytics", { dialog = "info" }) })
+                SectionHeader("Privacy", color = av.fg, action = { IconBtn("info", "About feature analytics", { dialog = "info" }) })
                 Group {
                     ListRow("Feature analytics", if (analytics) "On" else "Off", toggle = Toggle(analytics, enabled = !hub.readOnly) { if (it) hub.setFeatureUse(true) else dialog = "off" })
                     if (analytics || anyHidden) {
@@ -119,7 +120,7 @@ fun SettingsScreen(hub: Hub, onBack: () -> Unit, onOrigin: () -> Unit) {
                         ListRow("Feature use", onClick = { dialog = "use" }, trailing = { Chevron() })
                     }
                 }
-                SectionHeader("About")
+                SectionHeader("About", color = av.fg)
                 Group {
                     ListRow("Installed version", version)
                     Hairline()
