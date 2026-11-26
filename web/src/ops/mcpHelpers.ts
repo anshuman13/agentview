@@ -254,3 +254,6 @@ export function toolInputParts(schema?: { properties?: Record<string, unknown> }
 export function toolInputs(schema?: { properties?: Record<string, unknown> }): string | null {
   return toolInputParts(schema)?.map((p) => (typeof p === 'string' ? p : p.name)).join('') ?? null;
 }
+
+// Claude's no-results line under the toolbar.
+export const noMatchText = (query: string) => (query.trim() ? `No results match \u201c${query.trim()}\u201d` : 'No servers match these filters');

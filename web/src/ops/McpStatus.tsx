@@ -7,7 +7,7 @@ import { Icon } from '../ui/Icon';
 import { EmptyState, SearchBox } from '../ui/Panel';
 import { useCan } from '../chat/useCan';
 import { ago, save, stored, useSlot, useTick } from '../ui/util';
-import { accountGroup, filterCounts, groupKey, hideKey, mcpCalls, mcpList, mcpMatches, rowKey, SHOWS, slug, statusCounts, validFilter, whereLabel, type Group, type McpFilter, type Row } from './mcpHelpers';
+import { accountGroup, filterCounts, groupKey, hideKey, mcpCalls, mcpList, mcpMatches, rowKey, noMatchText, SHOWS, slug, statusCounts, validFilter, whereLabel, type Group, type McpFilter, type Row } from './mcpHelpers';
 import { mcpRows } from './mcpRows';
 import { mcpPageCounts } from '../app/shell/counts';
 import { useMcpGroups, useMcpProbe } from './useMcpPage';
@@ -130,7 +130,7 @@ export function McpPage() {
             <div className="mcp-table" aria-busy="true" aria-label="Loading servers">{[0, 1, 2, 3, 4, 5].map((i) => <div key={i} className="mcp-skel-row"><span className="skeleton mcp-skel-ico" style={{ animationDelay: `${i * 80}ms` }} /><span className="skeleton mcp-skel-bar" style={{ animationDelay: `${i * 80}ms`, width: `${[38, 26, 44, 30, 34, 22][i]}%` }} /></div>)}</div>
           )}
           {narrowed && !list.length && (
-            <EmptyState size="sm" icon="search" title="No servers match" action={<Button size="sm" onClick={() => { setQuery(''); setFilter(ALL); }}>Clear filters</Button>} />
+            <div className="mcp-nomatch">{noMatchText(query)}{filter.show !== 'all' || filter.where !== 'all' ? <button type="button" className="mcp-more" onClick={() => { setQuery(''); setFilter(ALL); }}>Clear filters</button> : null}</div>
           )}
           {list.length > 0 && (
             <div className="mcp-table" role="table" aria-label="MCP servers">

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'bun:test';
 import type { ChatEvent } from '../../../shared/protocol';
-import { argsOf, dotTone, fieldsOf, initialValues, mcpCalls, merge, moreMcpCounts, rowNote, services, stateOf, toolGroups, toolId, toolInputs } from './mcpHelpers';
+import { argsOf, dotTone, fieldsOf, initialValues, mcpCalls, merge, moreMcpCounts, rowNote, services, stateOf, toolGroups, toolId, toolInputs, noMatchText } from './mcpHelpers';
 
 describe('merge', () => {
   it('drops the probe error once the chat has the server connected', () => {
@@ -120,4 +120,9 @@ describe('toolInputs', () => {
     expect(toolInputs(s('a', 'b', 'c'))).toBe('Takes 3 inputs: a, b, and c');
     expect(toolInputs(s('a', 'b', 'c', 'd', 'e'))).toBe('Takes 5 inputs: a, b, c, and 2 more');
   });
+});
+
+it('noMatchText', () => {
+  expect(noMatchText(' zz ')).toBe('No results match \u201czz\u201d');
+  expect(noMatchText('')).toBe('No servers match these filters');
 });

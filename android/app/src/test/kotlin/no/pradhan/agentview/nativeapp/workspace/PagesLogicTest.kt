@@ -1,6 +1,7 @@
 package no.pradhan.agentview.nativeapp.workspace
 
 import no.pradhan.agentview.nativeapp.ops.autoMergeBody
+import no.pradhan.agentview.nativeapp.ops.mcpNoMatchText
 import no.pradhan.agentview.nativeapp.ops.autoMergeMeta
 import no.pradhan.agentview.nativeapp.ops.autoMergeOn
 import no.pradhan.agentview.nativeapp.ops.checkDot
@@ -411,5 +412,10 @@ class ReviewDiffTest {
         assertEquals(-1, blockOf(lines, lines.first { it.text == "c" }))
         assertEquals("a\nB\nc\nd\ne\n", revertBlock(lines, 1))
         assertEquals("a\nb\nc\nd\nE\n", revertBlock(lines, 0))
+    }
+
+    @Test fun mcpNoMatchTextNamesTheQuery() {
+        assertEquals("No results match \u201czz\u201d", mcpNoMatchText(" zz "))
+        assertEquals("No servers match these filters", mcpNoMatchText(""))
     }
 }

@@ -84,6 +84,7 @@ import no.pradhan.agentview.nativeapp.ui.MoreButton
 import no.pradhan.agentview.nativeapp.ui.SearchField
 import no.pradhan.agentview.nativeapp.ui.SectionHeader
 import no.pradhan.agentview.nativeapp.ui.Sheet
+import no.pradhan.agentview.nativeapp.ui.ButtonVariant
 import no.pradhan.agentview.nativeapp.ui.Mono
 import no.pradhan.agentview.nativeapp.ui.Tokens
 import no.pradhan.agentview.nativeapp.ui.motionOff
@@ -180,7 +181,12 @@ fun McpScreen(hub: Hub, onBack: () -> Unit) {
                         McpFilterMenu(menu, filter, ::setFilter)
                     }
                 }
-                if (narrowed && list.isEmpty()) item { EmptyState("No servers match", icon = "search", action = { Button("Clear filters", { query = ""; setFilter(McpFilter()) }, size = ButtonSize.Sm) }) }
+                if (narrowed && list.isEmpty()) item {
+                    Row(Modifier.padding(horizontal = Tokens.listPad), verticalAlignment = Alignment.CenterVertically) {
+                        Text(mcpNoMatchText(query), Modifier.weight(1f), style = Type.footnote, color = av.fgMuted)
+                        if (filter != McpFilter()) Button("Clear filters", { query = ""; setFilter(McpFilter()) }, variant = ButtonVariant.Plain, size = ButtonSize.Sm)
+                    }
+                }
                 if (list.isNotEmpty()) item(key = "rows") { McpGroup(list, personal) { sel = mcpKey(it) } }
                 item { Spacer(Modifier.padding(bottom = Tokens.sp16)) }
             }

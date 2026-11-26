@@ -296,6 +296,9 @@ fun mcpToolGroups(tools: List<McpTool>): List<Pair<String, List<McpTool>>> =
     if (tools.none { it.readOnly }) listOf("Tools" to tools)
     else listOf("Interactive tools" to tools.filter { !it.readOnly }, "Read-only tools" to tools.filter { it.readOnly }).filter { it.second.isNotEmpty() }
 
+// web noMatchText: Claude's no-results line under the toolbar.
+fun mcpNoMatchText(query: String) = if (query.isNotBlank()) "No results match \u201c${query.trim()}\u201d" else "No servers match these filters"
+
 fun mcpToolInputs(schema: JsonObject?): String? {
     val names = (schema?.get("properties") as? JsonObject)?.keys?.toList().orEmpty()
     if (names.isEmpty()) return null

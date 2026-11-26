@@ -179,6 +179,7 @@
   @keyframes mcp-in { from { opacity: 0; transform: translateX(12px); } }
 }
 .mcp-bar .btn.btn-filled { --fill: var(--fg); height: 28px; border-radius: var(--radius-sm); color: var(--bg); }
+.mcp-nomatch { display: flex; gap: var(--sp-4); align-items: baseline; padding: var(--sp-4) var(--sp-3); font-size: var(--fs-sm); color: var(--fg-muted); }
 .mcp-add { display: inline-flex; flex: none; position: relative; }
 .mcp-add .ui-menu { white-space: nowrap; }
 .mcp-add .btn-filled .codicon:last-child { margin-left: 2px; opacity: .8; }
