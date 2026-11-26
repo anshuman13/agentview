@@ -47,6 +47,12 @@ describe('findHere', () => {
     expect(findHere(f, '/p/wt1')).toMatchObject({ label: 'dev/ast-1/shop', tree });
     expect(findHere(f, '/w/shop/src').label).toBe('main');
   });
+
+  it('picks the deepest folder, so a chat in a parent folder does not take over its repos', () => {
+    const f = buildFolders([repo('shop')], [], [chat('/w', 9)]);
+    expect(f[0].cwd).toBe('/w');
+    expect(findHere(f, '/w/shop/src').folder?.cwd).toBe('/w/shop');
+  });
 });
 
 describe('groupByKind', () => {

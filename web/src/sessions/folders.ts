@@ -221,7 +221,9 @@ export async function renameChat(sessionId: string, title: string) {
 }
 
 export function findHere(folders: Folder[], cwd: string) {
-  const folder = folders.find((f) => inside(cwd, f.cwd) || f.trees.some((w) => inside(cwd, w.cwd)));
+  const folder =
+    folders.find((f) => f.trees.some((w) => inside(cwd, w.cwd))) ??
+    folders.filter((f) => inside(cwd, f.cwd)).reduce<Folder | undefined>((best, f) => (f.cwd.length > (best?.cwd.length ?? -1) ? f : best), undefined);
   const tree = folder?.trees.find((w) => inside(cwd, w.cwd));
   return { folder, tree, label: tree ? tree.name : folder?.repo?.branch ?? '' };
 }
