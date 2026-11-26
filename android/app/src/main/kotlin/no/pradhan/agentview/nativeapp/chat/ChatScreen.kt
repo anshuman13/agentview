@@ -30,6 +30,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.unit.dp
@@ -272,7 +274,7 @@ private fun NewChatFromHeader(hub: Hub, cwd: String, onDismiss: () -> Unit) {
 private fun ChatStatus(live: LiveChat, session: SessionInfo?, viewCost: Double, replyAt: Long?, agents: Int?, onAgents: () -> Unit) {
     Row(Modifier.fillMaxWidth().padding(start = Tokens.listPad, end = Tokens.sp2, bottom = Tokens.sp2), verticalAlignment = Alignment.CenterVertically) {
         Column(Modifier.weight(1f, fill = false)) { ChatSubtitle(live, session, viewCost, replyAt) }
-        if (agents != null) Row(Modifier.heightIn(min = Tokens.touchSm).clickable(onClick = onAgents).padding(start = Tokens.sp4, end = Tokens.sp4), verticalAlignment = Alignment.CenterVertically) {
+        if (agents != null) Row(Modifier.heightIn(min = Tokens.touchSm).clip(RoundedCornerShape(Tokens.radius)).clickable(onClick = onAgents).padding(start = Tokens.sp4, end = Tokens.sp4), verticalAlignment = Alignment.CenterVertically) {
             Text(if (agents > 0) plural(agents, "agent") else "Run", style = Type.footnote, color = av.fgMuted, maxLines = 1)
             AvIcon("chevron-right", null, Tokens.iconSm, tint = av.fgMuted)
         }

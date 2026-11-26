@@ -37,7 +37,7 @@ button.rail-s { cursor: pointer; }
 .tl-line { flex: none; display: flex; align-items: center; gap: var(--sp-3); min-width: 0; padding-bottom: var(--sp-3); margin-bottom: var(--sp-2); border-bottom: 1px solid var(--border); }
 .tl-line > .tl-more:has(> .tl-state) { flex: 0 1 auto; max-width: 100%; }
 .tl-line .tl-state { max-width: 100%; padding: 0; }
-.tl-agents { flex: none; display: inline-flex; align-items: center; gap: var(--sp-1); padding: 0; border: 0; background: none; font: inherit; font-size: var(--fs-xs); color: var(--fg-muted); cursor: pointer; }
+.tl-agents { flex: none; display: inline-flex; align-items: center; gap: var(--sp-1); padding: 0; border: 0; background: none; font: inherit; font-size: var(--type-subheadline-size); color: var(--fg-muted); cursor: pointer; }
 
 .timeline-head {
   position: sticky; top: 0; z-index: var(--z-raised); background: var(--brief-bg); flex: none;
@@ -54,7 +54,7 @@ button.rail-s { cursor: pointer; }
 .tl-from { flex: none; align-self: flex-start; margin-bottom: var(--sp-2); font: inherit; max-width: 100%; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; padding: 0; border: 0; background: none; font-size: var(--fs-xs); color: var(--fg-muted); cursor: pointer; }
 .tl-from:hover { color: var(--fg); text-decoration: underline; }
 .tl-name small { flex: 0 0 auto; max-width: 40%; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: var(--fs-xs); color: var(--fg-muted); }
-.tl-state { flex: 0 1 auto; min-width: 0; max-width: 45%; display: inline-flex; align-items: center; gap: var(--sp-2); padding: 0 var(--sp-2); border: 0; border-radius: var(--radius-sm); background: transparent; font: inherit; font-size: var(--fs-xs); color: var(--fg-muted); white-space: nowrap; cursor: pointer; }
+.tl-state { flex: 0 1 auto; min-width: 0; max-width: 45%; display: inline-flex; align-items: center; gap: var(--sp-2); padding: 0 var(--sp-2); border: 0; border-radius: var(--radius); background: transparent; font: inherit; font-size: var(--type-subheadline-size); color: var(--fg-muted); white-space: nowrap; cursor: pointer; }
 @media (hover: hover) { .tl-state:hover { background: var(--hover); color: var(--fg); } }
 .tl-state .count { flex: none; font-variant-numeric: tabular-nums; }
 .tl-more:has(> .tl-state) { min-width: 0; flex: 0 1 auto; max-width: 45%; }
