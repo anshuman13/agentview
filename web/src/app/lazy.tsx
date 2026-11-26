@@ -39,6 +39,7 @@ export const BrowserPane = lazy(() => import('../workspace/BrowserPane').then((m
 export const Observe = lazy(() => import('../ops/Observe').then((m) => ({ default: m.Observe })));
 export const Deploy = lazy(() => import('../ops/Deploy').then((m) => ({ default: m.Deploy })));
 export const Travel = lazy(() => import('../travel/Travel').then((m) => ({ default: m.Travel })));
+export const Usage = lazy(() => import('../ops/Usage').then((m) => ({ default: m.Usage })));
 export const Sketches = lazy(() => import('../workspace/Sketches').then((m) => ({ default: m.Sketches })));
 export const McpPage = lazy(() => import('../ops/McpStatus').then((m) => ({ default: m.McpPage })));
 export const Settings = lazy(() => import('./shell/Settings').then((m) => ({ default: m.Settings })));

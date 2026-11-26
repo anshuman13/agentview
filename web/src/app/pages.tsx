@@ -1,12 +1,12 @@
 import { Suspense } from 'react';
 import { shownFeature } from '../../../shared/featureUse';
-import { Deploy, Loading, McpPage, Observe, Settings, Sketches, Travel } from './lazy';
+import { Deploy, Loading, McpPage, Observe, Settings, Sketches, Travel, Usage } from './lazy';
 import { appSettings } from './appSettings';
 import { PhoneHeader } from './shell/PhoneHeader';
 import { slotRef } from '../ui/util';
 import { mcpPageCounts } from './shell/counts';
 
-export type Page = 'observe' | 'deploy' | 'mcp' | 'sketches' | 'travel' | 'settings';
+export type Page = 'observe' | 'deploy' | 'mcp' | 'sketches' | 'travel' | 'usage' | 'settings';
 
 export const PAGES: { id: Page; icon: string; title: string }[] = [
   { id: 'observe', icon: 'pulse', title: 'Observe' },
@@ -14,6 +14,7 @@ export const PAGES: { id: Page; icon: string; title: string }[] = [
   { id: 'mcp', icon: 'plug', title: 'MCP Servers' },
   { id: 'sketches', icon: 'paintcan', title: 'Sketches' },
   { id: 'travel', icon: 'briefcase', title: 'Travel' },
+  { id: 'usage', icon: 'graph', title: 'Usage' },
   { id: 'settings', icon: 'settings-gear', title: 'Settings' },
 ];
 const available = (id: Page, deploy: boolean) => id !== 'deploy' || deploy;
@@ -37,7 +38,7 @@ export function PageView({ page, shown, project, back }: { page: Page; shown: bo
           <h1>{p.title}</h1>
           <div id={`page-${page}-extra`} ref={slotRef(`page-${page}-extra`)} className="page-extra" />
         </header>
-        <div className="page-body"><Suspense fallback={<Loading />}>{page === 'mcp' ? <McpPage /> : page === 'sketches' ? <Sketches shown={shown} /> : page === 'travel' ? <Travel shown={shown} /> : page === 'observe' ? <Observe /> : page === 'settings' ? <Settings /> : <Deploy />}</Suspense></div>
+        <div className="page-body"><Suspense fallback={<Loading />}>{page === 'mcp' ? <McpPage /> : page === 'sketches' ? <Sketches shown={shown} /> : page === 'travel' ? <Travel shown={shown} /> : page === 'observe' ? <Observe /> : page === 'usage' ? <Usage /> : page === 'settings' ? <Settings /> : <Deploy />}</Suspense></div>
       </div>
     </div>
   );
