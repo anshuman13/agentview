@@ -158,7 +158,7 @@ fun MenuItem(text: String, icon: String, onClick: () -> Unit, danger: Boolean = 
         enabled = enabled,
         colors = MenuDefaults.itemColors(textColor = color, leadingIconColor = color),
         contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = Tokens.sp6),
-        modifier = Modifier.heightIn(min = Tokens.touch),
+        modifier = Modifier.padding(horizontal = Tokens.sp2).clip(RoundedCornerShape(Tokens.radius)).heightIn(min = Tokens.touch),
     )
 }
 

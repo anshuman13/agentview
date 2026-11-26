@@ -5,16 +5,21 @@
 }
 .ui-menu-item {
   --state: 0%;
-  display: flex; align-items: center; gap: var(--sp-4); width: 100%; min-height: 40px; padding: 0 var(--sp-6); border: 0; border-radius: var(--shape-sm);
+  display: flex; align-items: center; gap: var(--sp-4); width: 100%; min-height: 32px; padding: 0 var(--sp-6); border: 0; border-radius: var(--radius);
   color: var(--on-surface); font: inherit; font-size: var(--type-body-size); line-height: var(--type-body-line); text-align: left; text-decoration: none; cursor: pointer;
   transition: background var(--dur-hover) var(--ease);
 }
+/* Claude menus: a neutral --fg layer at the selected strength (#E5E5E5 / #4F4F4F), red-tinted on danger items; focus and press look like hover. */
 .ui-menu-item, .ui-menu-item:is(:hover, :focus-visible, :active):not(:disabled) {
-  background: linear-gradient(color-mix(in srgb, currentColor var(--state), transparent) 0 0), transparent;
+  background: linear-gradient(color-mix(in srgb, var(--fg) var(--state), transparent) 0 0), transparent;
 }
-@media (hover: hover) { .ui-menu-item:hover:not(:disabled) { --state: var(--state-hover); } }
-.ui-menu-item:focus-visible:not(:disabled) { --state: var(--state-focus); outline: var(--focus-ring); outline-offset: var(--focus-offset-inset); }
-.ui-menu-item:active:not(:disabled) { --state: var(--state-press); }
+.ui-menu-item.danger, .ui-menu-item.danger:is(:hover, :focus-visible, :active):not(:disabled) {
+  background: linear-gradient(color-mix(in srgb, var(--err) var(--state), transparent) 0 0), transparent;
+}
+@media (hover: hover) { .ui-menu-item:hover:not(:disabled) { --state: var(--state-selected); } .ui-menu-item.danger:hover:not(:disabled) { --state: 10%; } }
+.ui-menu-item:focus-visible:not(:disabled) { --state: var(--state-selected); outline: var(--focus-ring); outline-offset: var(--focus-offset-inset); }
+.ui-menu-item:active:not(:disabled) { --state: var(--state-selected); }
+.ui-menu-item.danger:is(:focus-visible, :active):not(:disabled) { --state: 10%; }
 .ui-menu-item:disabled { opacity: 0.5; cursor: default; }
 .ui-menu-item.danger { color: var(--danger); }
 .ui-menu-sep { height: 0; margin: var(--sp-2) 0; border-top: var(--hairline); }

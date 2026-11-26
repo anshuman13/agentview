@@ -74,7 +74,7 @@ panel padding `--sp-8` (`--sp-2 --sp-6` for dense list panels); between sections
 
 | Token | Value | Use |
 | --- | --- | --- |
-| `--shape-sm` | 6px | fields, menu items, MCP logo tile |
+| `--shape-sm` | 6px | fields, MCP logo tile |
 | `--shape-md` | 6px | chips (buttons and icon buttons use `--radius` 8px) |
 | `--shape-lg` | 12px | panels, menus, sheets |
 | `--shape-full` | pill | badges, avatars, empty-state icon |
@@ -191,8 +191,8 @@ radius and focus border. Android `TextField`: `sunken` fill, 8dp radius, `border
 `SearchField` stays a pill (touch). Borderless only where the field is the page content.
 
 ### Menu
-Elevation 3 on `--raised`, `--shape-lg`, padding `--sp-2`. Items 40px, padding 0 `--sp-6`, gap
-`--sp-4`, body type, `--shape-sm`, state layers as buttons. Danger item last, in `--danger`.
+Elevation 3 on `--raised`, `--shape-lg`, padding `--sp-2`. Items 32px (44px on coarse pointers), padding 0 `--sp-6`, gap
+`--sp-4`, body type, `--radius` 8px. Since 26 Nov 2026 hover, focus and press lay a neutral `--fg` layer at `--state-selected` (Claude #E5E5E5 / #4F4F4F), instant; a danger item uses an `--err` layer at 10% (Claude #FAE7E7 / #523232). Danger item last, in `--danger`. Android `MenuItem` keeps 48dp rows; its ripple is inset `sp2` with `radius` corners.
 `<Menu trigger onClose>` with `<MenuItem icon danger href>` and `<MenuSeparator>` (web/src/ui/Menu.tsx,
 components/menus.css). Arrow keys, Home and End move, typing a letter focuses the next item starting with it (repeats cycle, a multi-letter buffer resets after 700ms), Esc closes and refocuses the trigger, a press
 outside closes. At max-width 480px the Menu is a bottom sheet portaled to the body (`--scrim` backdrop that closes it, 44px items, top radius `--radius-sheet`, `--safe-bottom` padding); the popover stays above 480px. Status: built; every menu uses it. cp-pop stays (it is a listbox), and `.as-menu` is the Lists button at the start of a Codex header (phone width only), not a menu.
