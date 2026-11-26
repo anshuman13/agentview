@@ -19,14 +19,13 @@ val MORE_PAGES = listOf(
     MoreItem("sketches", "Sketches", "paintcan"),
     MoreItem("travel", "Travel", "briefcase"),
     MoreItem("usage", "Usage", "graph"),
-    MoreItem("observe", "Observe", "pulse"),
     MoreItem("deploy", "Deploy", "rocket"),
     MoreItem("mcp", "MCP Servers", "plug"),
     MoreItem("settings", "Settings", "settings-gear"),
 )
 
 // The pages the shell keeps to a reading width; Codex caps its own content so its Add task button stays at the screen edge.
-private val CAPPED_ROUTES = setOf("settings", "mcp", "github", "observe", "deploy", "travel", "usage")
+private val CAPPED_ROUTES = setOf("settings", "mcp", "github", "deploy", "travel", "usage")
 
 fun cappedRoute(route: String) = route in CAPPED_ROUTES
 

@@ -36,7 +36,6 @@ export const GitHub = prefetch(() => withMd(import('../ops/GitHub')).then((m) =>
 export const Terminal = lazy(() => import('../workspace/Terminal').then((m) => ({ default: m.Terminal })));
 export const CodePane = lazy(() => import('../workspace/CodePane').then((m) => ({ default: m.CodePane })));
 export const BrowserPane = lazy(() => import('../workspace/BrowserPane').then((m) => ({ default: m.BrowserPane })));
-export const Observe = lazy(() => import('../ops/Observe').then((m) => ({ default: m.Observe })));
 export const Deploy = lazy(() => import('../ops/Deploy').then((m) => ({ default: m.Deploy })));
 export const Travel = lazy(() => import('../travel/Travel').then((m) => ({ default: m.Travel })));
 export const Usage = lazy(() => import('../ops/Usage').then((m) => ({ default: m.Usage })));

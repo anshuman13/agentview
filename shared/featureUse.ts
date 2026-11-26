@@ -16,7 +16,7 @@ const PALETTE = make('palette', [
 ], () => true);
 
 export const FEATURES: Feature[] = [
-  ...make('page', [['observe', 'Observe'], ['deploy', 'Deploy'], ['mcp', 'MCP Servers'], ['sketches', 'Sketches'], ['travel', 'Travel'], ['usage', 'Usage'], ['settings', 'Settings']], (id) => id !== 'settings'),
+  ...make('page', [['deploy', 'Deploy'], ['mcp', 'MCP Servers'], ['sketches', 'Sketches'], ['travel', 'Travel'], ['usage', 'Usage'], ['settings', 'Settings']], (id) => id !== 'settings'),
   ...make('tab', [['codex', 'Codex'], ['chat', 'Chat'], ['sessions', 'Sessions']]),
   ...make('list', [['overview', 'Overview'], ['tasks', 'Tasks'], ['meetings', 'Meetings'], ['jobs', 'Jobs'], ['wiki', 'Wiki']]),
   ...PALETTE,

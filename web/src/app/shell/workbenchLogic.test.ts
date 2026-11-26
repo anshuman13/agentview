@@ -9,7 +9,7 @@ describe('showingOf', () => {
     ['agents', 'settings', 'agents'],
     ['code', 'file', 'file'],
     ['code', 'browser', 'file'],
-    ['code', 'observe', 'observe'],
+    ['code', 'deploy', 'deploy'],
     ['chat', 'browser', 'browser'],
     ['repos', 'mcp', 'mcp'],
   ];

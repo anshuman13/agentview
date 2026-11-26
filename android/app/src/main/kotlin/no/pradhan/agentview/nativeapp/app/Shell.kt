@@ -83,7 +83,6 @@ import no.pradhan.agentview.nativeapp.ops.AgentScreen
 import no.pradhan.agentview.nativeapp.chat.WorkScreen
 import no.pradhan.agentview.nativeapp.ops.DeployScreen
 import no.pradhan.agentview.nativeapp.ops.McpScreen
-import no.pradhan.agentview.nativeapp.ops.ObserveScreen
 import no.pradhan.agentview.nativeapp.ops.PullsScreen
 import no.pradhan.agentview.nativeapp.ops.UsageScreen
 import no.pradhan.agentview.nativeapp.sessions.SessionsScreen
@@ -371,7 +370,6 @@ private fun MorePage(m: MoreItem, hub: Hub, onBack: () -> Unit, onOrigin: () -> 
     "github" -> PullsScreen(hub, onBack)
     "terminal" -> TerminalScreen(hub, onBack)
     "browser" -> BrowserScreen(hub, onBack)
-    "observe" -> ObserveScreen(hub, onBack)
     "deploy" -> DeployScreen(hub, onBack)
     "mcp" -> McpScreen(hub, onBack)
     "sketches" -> SketchesScreen(hub, onBack)

@@ -8,13 +8,8 @@ import kotlinx.coroutines.async
 import no.pradhan.agentview.nativeapp.ops.DeployJob
 import no.pradhan.agentview.nativeapp.ops.DeployStatus
 import no.pradhan.agentview.nativeapp.workspace.Finding
-import no.pradhan.agentview.nativeapp.ops.GrafanaDashboards
-import no.pradhan.agentview.nativeapp.ops.GrafanaLogs
-import no.pradhan.agentview.nativeapp.ops.GrafanaPanels
-import no.pradhan.agentview.nativeapp.ops.GrafanaPatterns
 import no.pradhan.agentview.nativeapp.ops.McpConnector
 import no.pradhan.agentview.nativeapp.ops.McpServer
-import no.pradhan.agentview.nativeapp.ops.ObserveInfo
 import no.pradhan.agentview.nativeapp.workspace.ReviewFindings
 import no.pradhan.agentview.nativeapp.ops.deployBody
 import no.pradhan.agentview.nativeapp.workspace.dismissBody
@@ -27,7 +22,6 @@ import no.pradhan.agentview.nativeapp.ops.parseDeploy
 import no.pradhan.agentview.nativeapp.ops.parseDeployJob
 import no.pradhan.agentview.nativeapp.workspace.parseFindings
 import no.pradhan.agentview.nativeapp.ops.parseMcp
-import no.pradhan.agentview.nativeapp.ops.parseObserve
 import no.pradhan.agentview.nativeapp.ops.rollbackBody
 import no.pradhan.agentview.nativeapp.ops.PullRequest
 import no.pradhan.agentview.nativeapp.ops.PullRequestDetail
@@ -84,22 +78,6 @@ fun Hub.fixPull(number: Int, check: PrCheck, done: (PullFix?) -> Unit) =
     write("/api/gh/pr/$number/fix", fixBody(check), "Could not start the fix", ::parsePullFix, done)
 
 suspend fun Hub.usage(days: Int = 30): UsageReport = parseUsage(read("/api/usage?days=$days"))
-
-suspend fun Hub.observe(repo: String): ObserveInfo = parseObserve(read("/api/observe" + if (repo.isNotEmpty()) "?repo=${enc(repo)}" else ""))
-
-fun Hub.saveObserveConfig(body: String, done: (Boolean) -> Unit) = write("/api/observe/config", body, "Could not save the settings", done)
-
-suspend fun Hub.grafanaDashboards(repo: String): GrafanaDashboards =
-    protocolJson.decodeFromString(GrafanaDashboards.serializer(), read("/api/observe/grafana/dashboards?repo=${enc(repo)}"))
-
-suspend fun Hub.grafanaPanels(repo: String): GrafanaPanels =
-    protocolJson.decodeFromString(GrafanaPanels.serializer(), read("/api/observe/grafana/panels?repo=${enc(repo)}"))
-
-suspend fun Hub.grafanaLogs(repo: String): GrafanaLogs =
-    protocolJson.decodeFromString(GrafanaLogs.serializer(), read("/api/observe/grafana/logs?repo=${enc(repo)}"))
-
-suspend fun Hub.grafanaPatterns(repo: String): GrafanaPatterns =
-    protocolJson.decodeFromString(GrafanaPatterns.serializer(), read("/api/observe/grafana/patterns?repo=${enc(repo)}"))
 
 suspend fun Hub.mcpConnectors(refresh: Boolean): Map<String, List<McpConnector>> = parseConnectors(read("/api/mcp/connectors" + if (refresh) "?refresh=1" else ""))
 

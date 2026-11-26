@@ -1,4 +1,3 @@
-import type { GrafanaDashboards, GrafanaLogs, GrafanaPanels, GrafanaPatterns, ObserveInfo, SnowflakeObjects, SnowflakeResult, SnowflakeTest } from '../../../shared/observe';
 import type { DeployJob, PullRequest, PullRequestDetail, Repo, ReviewFindings } from '../../../shared/protocol';
 import { apiUrl, fetchJson, SLOW_READ_MS } from '../app/api';
 import { api } from '../app/store';
@@ -34,28 +33,6 @@ export const pasteText = (name: string, text: string) =>
   fetchJson<{ path: string }>(api(`/api/paste?name=${q(name)}`), { method: 'POST', headers: { 'content-type': 'text/plain' }, body: text });
 
 export const fetchRepos = () => fetchJson<Repo[]>(apiUrl('/api/repos'));
-
-export const fetchObserve = (repo: string) => get<ObserveInfo>(`/api/observe${repo ? `?repo=${q(repo)}` : ''}`);
-
-export const saveObserveConfig = (repo: string, config: unknown) => post<ObserveInfo>('/api/observe/config', { repo, config });
-
-export const addToClaude = (server: string) => post<{ info: ObserveInfo }>('/api/observe/mcp/add', { server });
-
-export const fetchSnowflakeObjects = (kind: string, parent: string) => get<SnowflakeObjects>(`/api/observe/snowflake/objects?kind=${kind}&${parent}`);
-
-export const saveSnowflakeConfig = (snowflake: unknown) => post<ObserveInfo>('/api/observe/snowflake/config', { snowflake });
-
-export const testSnowflake = () => post<SnowflakeTest>('/api/observe/snowflake/test', {});
-
-export const querySnowflake = (sql: string) => post<SnowflakeResult>('/api/observe/snowflake/query', { sql });
-
-export const fetchGrafanaDashboards = (repo: string) => get<GrafanaDashboards>(`/api/observe/grafana/dashboards?repo=${q(repo)}`);
-
-export const fetchGrafanaPanels = (repo: string) => get<GrafanaPanels>(`/api/observe/grafana/panels?repo=${q(repo)}`);
-
-export const fetchGrafanaLogs = (repo: string) => get<GrafanaLogs>(`/api/observe/grafana/logs?repo=${q(repo)}`);
-
-export const fetchGrafanaPatterns = (repo: string) => get<GrafanaPatterns>(`/api/observe/grafana/patterns?repo=${q(repo)}`);
 
 export const runDeploy = (app: string, env: string, ref: string | undefined) => post<DeployJob>('/api/deploy/run', { app, env, ref });
 

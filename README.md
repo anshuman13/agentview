@@ -34,7 +34,7 @@ Restarting the server keeps running chats alive; see [architecture](docs/archite
   replies, changed files, commands, commits and subagents
 - Steering while Claude works, editable next steps, permission and question cards, rewind and fork
 - Editor with diffs, Source Control, GitHub pull requests with review findings, a terminal, and your Chrome
-- Observe (Grafana, Snowflake), Deploy and MCP server pages
+- Deploy and MCP server pages
 - Codex: Overview, Tasks, Meetings, Jobs and Wiki, synced with an assistant hub that scans Slack, Gmail, the calendar
   and meeting transcripts ([details](docs/features.md#codex)):
   - Overview with Up next, Needs you and the Today list
@@ -48,7 +48,7 @@ Restarting the server keeps running chats alive; see [architecture](docs/archite
 ## Docs
 
 - [Features](docs/features.md): layout, Codex, timeline, models, workspace, notifications, runs, shortcuts, keyboard
-- [Integrations](docs/integrations.md): Chrome, MCP servers, Grafana and Snowflake
+- [Integrations](docs/integrations.md): Chrome and MCP servers
 - [Phone and other Macs](docs/macs.md), including the [native Android app](docs/macs.md#native-android-app)
 - [Assistant plan](docs/assistant.md), [Codex flows](docs/codex-flows.md) and [Codex wiki and meetings](docs/codex-wiki.md)
 - [Architecture](docs/architecture.md) and [decisions](docs/decisions.md)

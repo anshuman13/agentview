@@ -35,7 +35,7 @@ class ShellTest {
     }
 
     @Test fun listPagesKeepAReadingWidth() {
-        val capped = setOf("settings", "mcp", "github", "observe", "deploy", "travel", "usage")
+        val capped = setOf("settings", "mcp", "github", "deploy", "travel", "usage")
         val routes = Tab.entries.map { it.route } + (MORE_TOOLS + MORE_PAGES).map { it.route }
         assertEquals(capped + setOf("assistant", "chat", "sessions", "files", "browser", "terminal", "changes", "sketches"), routes.toSet())
         routes.forEach { assertEquals(it, it in capped, cappedRoute(it)) }
@@ -45,7 +45,7 @@ class ShellTest {
     @Test fun parsesDeepLinks() {
         assertEquals(DeepLink(view = "github"), parseDeepLink("agentview://open?view=github"))
         assertEquals(DeepLink(chat = "a b"), parseDeepLink("agentview://open?chat=a%20b&beside=x"))
-        assertEquals(DeepLink(session = "s1", page = "observe"), parseDeepLink("http://h:7777/?session=s1&page=observe"))
+        assertEquals(DeepLink(session = "s1", page = "deploy"), parseDeepLink("http://h:7777/?session=s1&page=deploy"))
         assertEquals(DeepLink(chat = "c", slug = "s"), parseDeepLink("agentview://open?chat=c&slug=s&page=nope"))
         assertNull(parseDeepLink("agentview://open?page=nope"))
         assertNull(parseDeepLink("agentview://open"))

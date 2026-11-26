@@ -7,7 +7,7 @@ any that exit:
 
 | Process | Port | Role |
 | --- | --- | --- |
-| API server (`server/src/index.ts`) | :7777 | Web app (the `web/dist` build), event stream, files, git, terminals, GitHub, Observe, Deploy |
+| API server (`server/src/index.ts`) | :7777 | Web app (the `web/dist` build), event stream, files, git, terminals, GitHub, Deploy |
 | Chrome relay (`server/src/chrome/relay.ts`) | :7779 | Holds the Chrome DevTools connection across server restarts |
 
 The API server starts a fourth process, the agent host (`server/src/host/main.ts`), in its own process group. The
@@ -42,7 +42,7 @@ host owns every chat and its Claude CLI process and listens on `~/.agentview/hos
 | `host/` | Agent host process, socket protocol and the API server's client for it |
 | `http/` | Access control, request bodies, SSE ring buffer, static serving, Mac discovery |
 | `workspace/` | Files, git, worktrees, terminals |
-| `integrations/` | GitHub, attention inbox, notifications, Observe, Deploy, MCP client, the assistant hub proxy (`/api/assistant/*`) |
+| `integrations/` | GitHub, attention inbox, notifications, Deploy, MCP client, the assistant hub proxy (`/api/assistant/*`) |
 | `chrome/` | Chrome connection and relay |
 | `usage/` | Claude usage store (`~/.agentview/usage.db`, SQLite): the 5-minute limit sampler, per-call token recording from the Claude driver, the one-time transcript backfill and the `GET /api/usage` report |
 
@@ -82,7 +82,7 @@ default-branch tip in `session/builds.ts`, and the claude.ai connector status, w
 while one refresh runs in the background.
 
 `web/src` is grouped by feature: `app` (shell, store, API, palette), `ui` (shared widgets and helpers), `chat`,
-`sessions`, `workspace` (files, code, terminal, browser), `ops` (Observe, Deploy, GitHub, MCP), `codex` (with `data`, `jobs`,
+`sessions`, `workspace` (files, code, terminal, browser), `ops` (Deploy, GitHub, MCP), `codex` (with `data`, `jobs`,
 `meetings`, `summary`, `wiki`) and `styles`.
 
 Views, panes, pages and popovers load as their own chunks (`web/src/app/lazy.tsx`), and so does the markdown
@@ -162,4 +162,4 @@ anywhere else it is empty. Keys, all optional:
 
 The server reads the file on each request and the host process applies the labels at start, so restart the server after editing
 `accountLabels`, `roots` or `personalRoot`. The phone app starts on `http://localhost:7777` until a Mac address is saved in its Mac address screen.
-Grafana, Snowflake, ntfy and Sentry stay in `~/.agentview/observe.json` and show only when configured there.
+ntfy and Sentry stay in `~/.agentview/observe.json` and show only when configured there.

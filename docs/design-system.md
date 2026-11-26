@@ -223,7 +223,7 @@ The visible text is the status word in sentence case, or "N word" with `count` (
 then at most one action (a setup state names what is missing and its action is "Set up with <provider>", which asks the chat on screen). md for a whole view, sm inside a panel or report. The icon stays grey;
 the accent is for the action.
 Copy (Status language): the title is a sentence-case noun phrase with no trailing period ("No past meetings yet"), the hint is one short line with no period, and the one action is a Button sm directly under `.ui-empty`.
-Status: built; used in `app/App.tsx`, `app/Unreachable.tsx`, `codex/Codex.tsx`, `codex/GoalsPage.tsx`, `codex/Overview.tsx`, `codex/PlanPreview.tsx`, `codex/Search.tsx`, `codex/TagPage.tsx`, `codex/jobs/JobPage.tsx`, `codex/jobs/Jobs.tsx`, `codex/meetings/Decisions.tsx`, `codex/meetings/Load.tsx`, `codex/meetings/MeetingList.tsx`, `codex/meetings/Person.tsx`, `codex/meetings/Review.tsx`, `codex/meetings/SeriesPage.tsx`, `codex/meetings/Week.tsx`, `codex/summary/Summary.tsx`, `codex/wiki/Feed.tsx`, `codex/wiki/ReviewList.tsx`, `codex/wiki/WikiIndex.tsx`, `codex/wiki/WikiPage.tsx`, `ops/Deploy.tsx`, `ops/Findings.tsx`, `ops/GitHub.tsx`, `ops/McpDetail.tsx`, `ops/McpStatus.tsx`, `ops/Observe.tsx`, `sessions/AgentsPane.tsx`, `sessions/Sessions.tsx`, `workspace/BrowserPane.tsx`, `workspace/Explorer.tsx`.
+Status: built; used in `app/App.tsx`, `app/Unreachable.tsx`, `codex/Codex.tsx`, `codex/GoalsPage.tsx`, `codex/Overview.tsx`, `codex/PlanPreview.tsx`, `codex/Search.tsx`, `codex/TagPage.tsx`, `codex/jobs/JobPage.tsx`, `codex/jobs/Jobs.tsx`, `codex/meetings/Decisions.tsx`, `codex/meetings/Load.tsx`, `codex/meetings/MeetingList.tsx`, `codex/meetings/Person.tsx`, `codex/meetings/Review.tsx`, `codex/meetings/SeriesPage.tsx`, `codex/meetings/Week.tsx`, `codex/summary/Summary.tsx`, `codex/wiki/Feed.tsx`, `codex/wiki/ReviewList.tsx`, `codex/wiki/WikiIndex.tsx`, `codex/wiki/WikiPage.tsx`, `ops/Deploy.tsx`, `ops/Findings.tsx`, `ops/GitHub.tsx`, `ops/McpDetail.tsx`, `ops/McpStatus.tsx`, `sessions/AgentsPane.tsx`, `sessions/Sessions.tsx`, `workspace/BrowserPane.tsx`, `workspace/Explorer.tsx`.
 
 ### Loading
 `<Loading text="Loading…">` (`ui/Skeleton.tsx`); `.ui-loading`. A centred spinner above one line in body `--fg-muted`, `role="status"`; the web twin of Android `Loading`. Lists keep `Skeleton`. Inline loading text in a row meta ends in an ellipsis.
@@ -240,7 +240,7 @@ A header that heads a list of rows shows its full row count as the quiet Badge (
 Label type, `--fg-muted`, padding `--sp-4 --list-pad`, optional count Badge quiet and a
 trailing IconButton sm (a text Button sm plain is allowed too). 44px hit area at max-width 480px. Collapsible headers rotate a chevron; no fill, state layer on hover.
 `<Section label count action open onToggle>` (web/src/ui/Section.tsx, components/sections.css); with
-`onToggle` the header is a button with `aria-expanded`. At max-width 480px a header that heads a group in Tasks, Meetings or the Today block is sticky at the top of its scroll container, opaque `--bg`, `--z-raised`. Status: built; the Meetings day headers, the Codex page and tag page headers, the reply draft header, the Observe panes, the Deploy log, the MCP detail pane, every Fold, the report card and next-meeting card heads and the Week goals card and the Settings page use it.
+`onToggle` the header is a button with `aria-expanded`. At max-width 480px a header that heads a group in Tasks, Meetings or the Today block is sticky at the top of its scroll container, opaque `--bg`, `--z-raised`. Status: built; the Meetings day headers, the Codex page and tag page headers, the reply draft header, the Deploy log, the MCP detail pane, every Fold, the report card and next-meeting card heads and the Week goals card and the Settings page use it.
 
 ## Patterns
 
@@ -329,7 +329,7 @@ The page header is the title and the menu button only: with no count line. A run
 
 Job runs: a job page shows run history from one Row (Row density) inside a Grouped list, titled Runs, with the last run's time and Badge and a chevron; it opens a sheet (`as-sheet-overlay`, `Back`, `useSheetDrag`, role dialog) of the 10 latest runs, and focus returns to the row on close.
 
-Page shell: Codex pages and the Observe, Deploy, MCP and GitHub lists are `.wk` > `.wk-scroll` > `.mt-page` and add no wrapper, padding or background of their own. Their Page hero, the MCP grid and the GitHub detail keep their own layout. Agents keeps its fixed sidebar and takes only Row density and Grouped list styling.
+Page shell: Codex pages and the Deploy, MCP and GitHub lists are `.wk` > `.wk-scroll` > `.mt-page` and add no wrapper, padding or background of their own. Their Page hero, the MCP grid and the GitHub detail keep their own layout. Agents keeps its fixed sidebar and takes only Row density and Grouped list styling.
 
 ### Status language
 - Outcomes are nouns in sentence case: Sent, Failed, Skipped, Waiting, Edited. Counts as "1 sent", "2 failed".
@@ -379,13 +379,13 @@ Rules for the native app in `android/`. TokenGen applies `NATIVE_OVERRIDES`, `NA
 | Mono | 14/20 | 400 |
 
 - **Chat header** (`ChatHeader`) is 64dp: a hamburger that opens the Sessions tab, a centred one-line headline title over the muted repo, New chat (the Sessions New chat sheet for this chat's repo) and the chat menu. The Sessions tab bar (`PillTabBar` below 840dp) is a floating `surface` pill with a 1px `border`, icon above label and a neutral `raised` pill on the active tab; the rail from 840dp takes the same indicator. The composer is the same pill as the web phone: round Add, field, mic, SendAt when typed, and the round Send, Stop or Talk button (hold or tap; `HOLD_MS`).
-- **Header** is 64dp with a 22sp one-line title and an optional muted subheadline subtitle, and at most one action on a page (more go in a More menu). On the web phone the same header is `PhoneHeader` (`.wk-head`: Back, a one-line title, a muted subtitle and one trailing control) for Observe, Deploy, MCP, Settings, Files, Source Control and Pull Requests; a Section label that repeats that title is not rendered there. The scope chip shows only on tab roots, never on a page with a back button. Codex roots have no chip: a Lists button (`menu`, opening the drawer) replaces Back, and the profile label is muted text after the title (`PageHeader` `trailing`). On the web all eight Codex roots render `CodexHead` (`.codex-head`): Lists, one title size and weight, the muted profile label, then at most one search field and two controls; `.wk-head` and `.tasks-head` stay on sub-pages.
+- **Header** is 64dp with a 22sp one-line title and an optional muted subheadline subtitle, and at most one action on a page (more go in a More menu). On the web phone the same header is `PhoneHeader` (`.wk-head`: Back, a one-line title, a muted subtitle and one trailing control) for Deploy, MCP, Settings, Files, Source Control and Pull Requests; a Section label that repeats that title is not rendered there. The scope chip shows only on tab roots, never on a page with a back button. Codex roots have no chip: a Lists button (`menu`, opening the drawer) replaces Back, and the profile label is muted text after the title (`PageHeader` `trailing`). On the web all eight Codex roots render `CodexHead` (`.codex-head`): Lists, one title size and weight, the muted profile label, then at most one search field and two controls; `.wk-head` and `.tasks-head` stay on sub-pages.
 - **Sheet** opens with a title row (56dp, 22sp, an optional count and one trailing icon action), and its rows sit in Groups.
 - **Menu icons** are 24dp, and a menu opened from a kebab keeps 12dp from the screen edge.
 - **Loading and EmptyState**: a loading page shows `Loading` (spinner and one line). A page-level EmptyState has an icon and `small = false`. A section's EmptyState is small and sits under its SectionHeader, never inside a Group.
 
 - **Separation** is by tone (see Colour below): `bg` page, `surface` for bars and cards, `raised` for menus and dialogs. Hairlines only sit between rows of a group.
-- **Reading width**: the Codex tab and the list pages of More (Settings, MCP, Pull Requests, Observe, Deploy, Travel; `cappedRoute` in `app/Tabs.kt`) sit in a centred column of at most `pageMax` (760dp, as web's `.assistant`) on wider windows. Codex caps its content inside `CodexScreen`, so the Add task button and the snackbar keep the full width. Chat, Sessions, agent and work screens and the tools (Files, Source Control, Terminal, Browser, Sketches) use the full width.
+- **Reading width**: the Codex tab and the list pages of More (Settings, MCP, Pull Requests, Deploy, Travel; `cappedRoute` in `app/Tabs.kt`) sit in a centred column of at most `pageMax` (760dp, as web's `.assistant`) on wider windows. Codex caps its content inside `CodexScreen`, so the Add task button and the snackbar keep the full width. Chat, Sessions, agent and work screens and the tools (Files, Source Control, Terminal, Browser, Sketches) use the full width.
 
 ### Colour
 Colours are Material 3 roles. `NATIVE_COLORS` in TokenGen sets each value for both themes, and `Theme.kt` maps every `colorScheme` slot, so Switch, pickers, dialogs and sheets need no call-site colours.
@@ -499,9 +499,6 @@ Custom list-row and header classes still in web/src. Todo means no use has been 
 | mt-rows | none | Grouped list | Done |
 | mt-series-list | - | Grouped list | Done |
 | mt-up-head | - | Section header | Done |
-| obs-head, obs-subhead | none | Section header | Done |
-| obs-hint empty variants | ops/Observe.tsx | EmptyState | Partial (error, warn, ok, mono, loading stay as layout) |
-| obs-ask | ops/Observe.tsx | Button | Partial (Snowflake action stays) |
 | ov-ask-line | - | Row (AskRow) | Done |
 | settings-* | - | Section and Row | Done |
 | sm-line | codex/summary/Summary.tsx | Row | Done |

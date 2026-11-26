@@ -168,7 +168,7 @@ left" get answered from this week's numbers, not from memory.
 | Cost per department sheet | the cost per department sheet in Drive | weekly | refreshed rows from the spend check, as a new tab, never over the old one | never |
 | Access requests | `ai-help` and the request form thread | each scan | a task per request with what is missing | a request older than 2 workdays |
 | Usage limits | Settings → Usage for both of my accounts, through the hub's existing limit check | hourly | nothing | a limit that would pause the scans for more than an hour in work hours |
-| Grafana alerts | the alert rules the Observe page already reads | hourly in work hours | nothing | a firing alert in a dashboard I own |
+| Grafana alerts | the alert rules in the `grafana` MCP server | hourly in work hours | nothing | a firing alert in a dashboard I own |
 | Linear | issues assigned to me or mentioning me | weekdays 08:30 | a task per blocked issue, a drafted comment per question (approved like a Slack draft) | an issue marked urgent |
 
 Rules: a check only reads; the sheet update is the one write and goes to a new tab. Numbers go to the wiki as

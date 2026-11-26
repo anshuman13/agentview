@@ -4,7 +4,7 @@ import { RESUME_PAGE } from './store/view';
 const params = new URLSearchParams(location.search);
 const shellParam = params.get('shell');
 if (shellParam) try { localStorage.setItem('agentview.shell', shellParam); } catch {}
-// Deep links: ?view=github, ?page=observe, ?page=sketches&slug=<file name>, ?chat=<live id>, ?session=<saved id> or ?beside=<live id>. Consumed once, then dropped from the URL.
+// Deep links: ?view=github, ?page=deploy, ?page=sketches&slug=<file name>, ?chat=<live id>, ?session=<saved id> or ?beside=<live id>. Consumed once, then dropped from the URL.
 // A reload for a new server boot reopens the page that was on screen.
 const resumed = (() => {
   try {

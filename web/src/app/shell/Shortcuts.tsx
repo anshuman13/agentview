@@ -33,7 +33,7 @@ export const SHORTCUTS: { group: string; rows: { key: string; label: string }[] 
     { key: '⌘J', label: 'Toggle the terminal' },
     { key: '⌘K', label: 'Clear the terminal' },
     { key: '⇧⌘Space', label: 'Show the desktop window app with the composer focused (desktop window app only)' },
-    { key: '⌘Enter', label: 'Commit in Source Control; run the query in Observe' },
+    { key: '⌘Enter', label: 'Commit in Source Control' },
   ] },
   { group: 'Tasks', rows: [
     { key: 'j / k', label: 'Move between tasks; Enter or Space opens, Esc closes, x done, s snooze, Delete removes' },
