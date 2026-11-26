@@ -32,6 +32,7 @@ class AvColors(
     val surface: Color,
     val raised: Color,
     val hover: Color,
+    val selected: Color,
     val border: Color,
     val borderStrong: Color,
     val borderCard: Color,
@@ -95,6 +96,7 @@ class AvColors(
     val onSurfaceMuted: Color,
     val onSurfaceFaint: Color,
     val danger: Color,
+    val focus: Color,
     val diffAddSoft: Color,
     val diffDelSoft: Color,
     val containerLowest: Color,
@@ -142,6 +144,7 @@ val DarkColors = AvColors(
     surface = Color(0xFF262522),
     raised = Color(0xFF2E2D2A),
     hover = Color(0xFF33322E),
+    selected = Color(0x26FFFFFF),
     border = Color(0xFF3A3935),
     borderStrong = Color(0xFF85827B),
     borderCard = Color(0xFF3A3935),
@@ -205,6 +208,7 @@ val DarkColors = AvColors(
     onSurfaceMuted = Color(0xFFA9A69E),
     onSurfaceFaint = Color(0xFF9A978F),
     danger = Color(0xFFFF8A96),
+    focus = Color(0xFF257DE0),
     diffAddSoft = Color(0x1A22C55E),
     diffDelSoft = Color(0x1AFF6B7A),
     containerLowest = Color(0xFF171614),
@@ -252,6 +256,7 @@ val LightColors = AvColors(
     surface = Color(0xFFF3F1EB),
     raised = Color(0xFFFFFFFF),
     hover = Color(0xFFEDEAE2),
+    selected = Color(0x1C000000),
     border = Color(0xFFE3E0D8),
     borderStrong = Color(0xFF7A766E),
     borderCard = Color(0xFFE3E0D8),
@@ -315,6 +320,7 @@ val LightColors = AvColors(
     onSurfaceMuted = Color(0xFF57544D),
     onSurfaceFaint = Color(0xFF6B675F),
     danger = Color(0xFFC01D3E),
+    focus = Color(0xFF257DE0),
     diffAddSoft = Color(0x1A00703A),
     diffDelSoft = Color(0x1AC01D3E),
     containerLowest = Color(0xFFFFFFFF),
@@ -401,7 +407,7 @@ object Tokens {
     val iconXl = 24.dp
     val iconHero = 40.dp
     val radiusXs = 2.dp
-    val radiusSm = 4.dp
+    val radiusSm = 6.dp
     val radiusMd = 6.dp
     val radius = 8.dp
     val radiusSheet = 16.dp
@@ -431,16 +437,17 @@ object Tokens {
     const val motionDuration = 250
     val motionEaseIn = CubicBezierEasing(0.2f, 0f, 0f, 1f)
     val motionEaseOut = CubicBezierEasing(0.3f, 0f, 1f, 1f)
-    val shapeSm = 4.dp
+    val stateHover = 0.08f
+    val stateSelected = 0.15f
+    val shapeSm = 6.dp
     val shapeMd = 6.dp
     val shapeLg = 12.dp
     val shapeFull = 999.dp
     val elev2 = 6.dp
     val elev3 = 32.dp
-    val stateHover = 0.08f
     val stateFocus = 0.1f
-    val statePress = 0.12f
-    val focusRing = 2.dp
+    val statePress = 0.08f
+    val focusRing = 1.dp
     val focusOffset = 1.dp
     val focusOffsetInset = -2.dp
     // Sizes the web keeps in component CSS, not in tokens.css.

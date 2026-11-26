@@ -34,7 +34,7 @@
   --list-pad: var(--sp-8);
   --row-h: 40px;
   --row-state-w: 80px;
-  --row-title: var(--fs-md);
+  --row-title: var(--fs-lg);
   --row-meta: var(--fs-sm);
   --meta-fg: var(--fg-muted);
   --hairline: 1px solid var(--border);
@@ -101,7 +101,7 @@
   --icon-hero: 40px;
 
   --radius-xs: 2px;
-  --radius-sm: 4px;
+  --radius-sm: 6px;
   --radius-md: 6px;
   --radius: 8px;
   --radius-sheet: 16px;
@@ -353,6 +353,8 @@
   --type-label-size: var(--fs-sm);
   --type-label-weight: 500;
   --type-label-line: var(--lh-tight);
+  --type-section-size: var(--fs-sm);
+  --type-section-weight: 400;
 
   --shape-sm: var(--radius-sm);
   --shape-md: var(--radius-md);

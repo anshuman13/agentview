@@ -23,7 +23,7 @@
 .sidebar :is(.ui-row, .tree .row) { width: auto; margin-inline: var(--sp-2); border-radius: var(--shape-sm); }
 .sidebar-title {
   height: var(--size-bar); flex: none; display: flex; align-items: center; padding: 0 var(--sp-10);
-  font-size: var(--fs-xs); font-weight: 600; text-transform: uppercase; letter-spacing: var(--tracking-wide); color: var(--fg-muted);
+  font-size: var(--type-section-size); font-weight: 500; color: var(--fg-muted);
 }
 .status-text { font-size: var(--fs-md); color: var(--fg); margin-bottom: var(--sp-2); }
 
@@ -125,7 +125,7 @@ body.resizing .chrome-frame, body.resizing-v .chrome-frame { pointer-events: non
   .more-meta { display: inline-flex; align-items: center; gap: var(--sp-3); font-size: var(--fs-sm); color: var(--fg-muted); }
   .more-label {
     flex: none; padding: var(--sp-4) var(--sp-6) var(--sp-1); margin-top: var(--sp-2); border-top: 1px solid var(--border);
-    font-size: var(--fs-xs); text-transform: uppercase; letter-spacing: var(--tracking-wide); color: var(--fg-faint);
+    font-size: var(--type-section-size); font-weight: var(--type-section-weight); color: var(--fg-faint);
   }
   .more-divider { flex: none; height: 1px; margin: var(--sp-2) var(--sp-4); background: var(--border); }
   .more-status { flex: none; display: flex; align-items: center; gap: var(--sp-1); padding: 0 0 var(--sp-2); margin-bottom: var(--sp-2); border-bottom: 1px solid var(--border); }
