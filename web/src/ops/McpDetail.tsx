@@ -95,7 +95,7 @@ export function Detail({ row, usage, group, onGroup, hidden, onHide, onClose }: 
                   <div className="t"><span className="n">{t.name}</span><span className="spacer" />{t.inputSchema && runnable(row) && <IconButton icon={run === t.name ? 'close' : 'play'} small className="mcp-insert" on={run === t.name} label={run === t.name ? 'Close' : 'Run this tool'} onClick={() => setRun((r) => (r === t.name ? null : t.name))} />}{row.live && <IconButton icon="comment" small className="mcp-insert" label="Add to chat" title={`Ask ${label} to use ${t.name} in your next message`} onClick={() => use(row.name, t.name)} />}</div>
                   {t.description && <div className={`d ${expanded.has(t.name) ? 'all' : ''}`}>{t.description}</div>}
                   {t.description && t.description.length > 140 && !expanded.has(t.name) && <button type="button" className="mcp-more" onClick={() => setExpanded((m) => new Set(m).add(t.name))}>Show more</button>}
-                  {toolInputParts(t.inputSchema) && <div className="mcp-inputs">{toolInputParts(t.inputSchema)!.map((p, i) => (typeof p === 'string' ? p : <code key={i}>{p.name}</code>))}</div>}
+                  <ToolInputs schema={t.inputSchema} />
                   {run === t.name && <RunForm key={`${row.name}:${t.name}`} server={row.name} tool={t} />}
                 </div>
               ))}
@@ -106,5 +106,24 @@ export function Detail({ row, usage, group, onGroup, hidden, onHide, onClose }: 
         {!row.tools?.length && <EmptyState size="sm" title={row.status === 'connected' ? 'No tools reported' : 'No tools yet'} hint={row.status === 'connected' ? undefined : row.status === 'needs-auth' ? 'Connect to load them' : 'They load once the server connects'} />}
       </div>
     </section>
+  );
+}
+
+type Schema = { properties?: Record<string, { type?: unknown; description?: string }>; required?: string[] };
+
+// Claude's inputs line: "Takes 3 inputs: a, b, and c" opens to each input's type and description, then the raw schema.
+function ToolInputs({ schema }: { schema?: Schema }) {
+  const parts = toolInputParts(schema);
+  if (!parts) return null;
+  return (
+    <details className="mcp-inputs">
+      <summary><Icon name="chevron-right" small />{parts.map((p, i) => (typeof p === 'string' ? p : <code key={i}>{p.name}</code>))}</summary>
+      <dl className="mcp-input-list">
+        {Object.entries(schema?.properties ?? {}).map(([name, p]) => (
+          <div key={name}><dt><code>{name}</code>{typeof p?.type === 'string' && <span className="ty">{p.type}</span>}{schema?.required?.includes(name) && <span className="ty">required</span>}</dt>{p?.description && <dd>{p.description}</dd>}</div>
+        ))}
+      </dl>
+      <details className="mcp-raw"><summary><Icon name="chevron-right" small />Raw schema</summary><pre>{JSON.stringify(schema, null, 2)}</pre></details>
+    </details>
   );
 }

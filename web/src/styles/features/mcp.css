@@ -120,6 +120,17 @@
 .mcp-more:hover { color: var(--fg); }
 .mcp-inputs { margin-top: var(--sp-3); font-size: var(--fs-sm); color: var(--fg-muted); }
 .mcp-inputs code { font-family: var(--mono); font-size: .92em; color: var(--fg); }
+.mcp-inputs summary { display: block; list-style: none; cursor: pointer; }
+.mcp-inputs summary::-webkit-details-marker { display: none; }
+.mcp-inputs summary:hover { color: var(--fg); }
+.mcp-inputs summary .codicon { margin-right: var(--sp-1); vertical-align: -3px; transition: transform var(--dur) var(--ease); }
+.mcp-inputs[open] > summary > .codicon, .mcp-raw[open] > summary > .codicon { transform: rotate(90deg); }
+.mcp-input-list { margin: var(--sp-2) 0 0 var(--sp-8); display: flex; flex-direction: column; gap: var(--sp-2); }
+.mcp-input-list dt { display: flex; align-items: baseline; gap: var(--sp-3); }
+.mcp-input-list .ty { font-size: var(--fs-xs); color: var(--fg-muted); }
+.mcp-input-list dd { margin: 0; line-height: var(--lh-snug); }
+.mcp-raw { margin: var(--sp-2) 0 0 var(--sp-6); }
+.mcp-raw pre { margin: var(--sp-2) 0 0; padding: var(--sp-3) var(--sp-4); max-height: 320px; overflow: auto; border-radius: var(--radius-sm); background: var(--sunken); font-family: var(--mono); font-size: var(--fs-xs); color: var(--fg); white-space: pre; }
 @media (hover: hover) { .mcp-tool.open:hover { background: transparent; } }
 .mcp-tool.open .d { -webkit-line-clamp: unset; }
 .mcp-calls { margin: var(--sp-2) 0 var(--sp-7); }
