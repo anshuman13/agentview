@@ -177,6 +177,7 @@
   --selected: rgba(255, 255, 255, 0.15);
   --fg-muted-selected: #cccccc;
   --state-hover: 8%;
+  --state-hover-control: 8%;
   --state-selected: 15%;
   --border: #393a3a;
   --border-strong: #4a4a4a;
@@ -243,6 +244,7 @@
   --selected: rgba(0, 0, 0, 0.11);
   --fg-muted-selected: #575757;
   --state-hover: 6%;
+  --state-hover-control: 11%;
   --state-selected: 11%;
   --border: #e2e2e3;
   --border-strong: #cfcfcf;

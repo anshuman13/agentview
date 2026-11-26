@@ -1,14 +1,14 @@
 button {
-  background: var(--border);
+  background: var(--hover);
   color: var(--fg);
   border: 1px solid transparent;
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius);
   padding: 3px var(--sp-5);
   cursor: pointer;
   font: inherit;
   line-height: var(--line-sm);
 }
-@media (hover: hover) { button:hover { background: var(--border-strong); } }
+@media (hover: hover) { button:hover { background: var(--selected); } }
 button.primary { background: var(--accent-fill); color: var(--on-accent); }
 @media (hover: hover) { button.primary:hover { background: var(--accent-hover); } }
 button.primary:disabled { opacity: 0.5; cursor: default; }
@@ -17,7 +17,7 @@ button.destructive { background: color-mix(in srgb, var(--err) 18%, transparent)
 @media (hover: hover) { button.destructive:hover { background: color-mix(in srgb, var(--err) 22%, transparent); } }
 
 .icon-btn {
-  width: var(--size-md); height: var(--size-md); padding: 0; flex: none; border: 0; border-radius: var(--radius-sm);
+  width: var(--size-md); height: var(--size-md); padding: 0; flex: none; border: 0; border-radius: var(--radius);
   position: relative; background: transparent; color: var(--fg-muted); display: inline-flex; align-items: center; justify-content: center;
 }
 @media (hover: hover) { .icon-btn:hover:not(:disabled) { color: var(--fg); } }
@@ -26,7 +26,7 @@ button.destructive { background: color-mix(in srgb, var(--err) 18%, transparent)
 .btn {
   display: inline-flex; align-items: center; justify-content: center; gap: var(--sp-2); height: var(--size-lg); padding: 0 var(--sp-5);
   font: inherit; font-size: var(--fs-sm); white-space: nowrap; text-decoration: none; cursor: pointer;
-  color: var(--fg); border: 1px solid var(--border-strong); border-radius: var(--radius-sm);
+  color: var(--fg); border: 1px solid var(--border-strong); border-radius: var(--radius);
 }
 .btn { background: transparent; }
 @media (hover: hover) { .btn:hover { background: transparent; } }
@@ -37,7 +37,7 @@ button.destructive { background: color-mix(in srgb, var(--err) 18%, transparent)
 }
 
 /* Design system (docs/design-system.md): Button stacks variant and size classes on .btn; IconButton on .icon-btn. iOS styles: filled, tinted, gray, plain. */
-.btn.btn-sm, .btn.btn-md, .btn.btn-lg { position: relative; border: 0; border-radius: var(--radius-pill); font-weight: 500; }
+.btn.btn-sm, .btn.btn-md, .btn.btn-lg { position: relative; border: 0; border-radius: var(--radius); font-weight: 500; }
 .btn.btn-sm { height: var(--control-sm); padding: 0 var(--sp-6); gap: var(--sp-2); font-size: var(--fs-sm); }
 .btn.btn-sm.show-toggle { padding: 0; align-self: flex-start; }
 .btn.btn-md { height: 34px; padding: 0 var(--sp-8); gap: var(--sp-3); font-size: var(--fs-md); }
@@ -48,8 +48,9 @@ button.destructive { background: color-mix(in srgb, var(--err) 18%, transparent)
 .btn.btn-plain { --fill: transparent; color: var(--accent-text); }
 .btn.btn-danger { --fill: color-mix(in srgb, var(--danger) 14%, transparent); color: var(--danger); }
 
-/* State layers: a tint of the content colour over the fill, 8% hover, 10% focus, 12% pressed. */
+/* State layers: a tint of --layer (the content colour, or --fg on neutral controls) over the fill; pressed equals hover. */
 .icon-btn, .chip.chip-btn { --fill: transparent; }
+:is(.btn.btn-gray, .btn.btn-plain, .icon-btn) { --layer: var(--fg); --layer-hover: var(--state-hover-control); }
 .chip.chip-btn.on, .chip.chip-btn.chip-accent { --fill: var(--accent-soft); }
 .chip.chip-btn.chip-accent.on { --fill: var(--accent-fill); }
 :is(.btn.btn-filled, .btn.btn-tinted, .btn.btn-gray, .btn.btn-plain, .btn.btn-danger, .icon-btn, .chip.chip-btn) {
@@ -58,14 +59,14 @@ button.destructive { background: color-mix(in srgb, var(--err) 18%, transparent)
 }
 :is(.btn.btn-filled, .btn.btn-tinted, .btn.btn-gray, .btn.btn-plain, .btn.btn-danger, .icon-btn, .chip.chip-btn),
 :is(.btn.btn-filled, .btn.btn-tinted, .btn.btn-gray, .btn.btn-plain, .btn.btn-danger, .icon-btn, .chip.chip-btn):is(:hover, :focus-visible, :active):not(:disabled) {
-  background: linear-gradient(color-mix(in srgb, currentColor var(--state), transparent) 0 0), var(--fill);
+  background: linear-gradient(color-mix(in srgb, var(--layer, currentColor) var(--state), transparent) 0 0), var(--fill);
 }
-@media (hover: hover) { :is(.btn, .icon-btn, .chip-btn):hover:not(:disabled) { --state: var(--state-hover); } }
+@media (hover: hover) { :is(.btn, .icon-btn, .chip-btn):hover:not(:disabled) { --state: var(--layer-hover, var(--state-hover)); } }
 :is(.btn, .icon-btn, .chip-btn):focus-visible:not(:disabled) { --state: var(--state-focus); }
-:is(.btn, .icon-btn, .chip-btn):active:not(:disabled) { --state: var(--state-press); }
+:is(.btn, .icon-btn, .chip-btn):active:not(:disabled) { --state: var(--layer-hover, var(--state-press)); }
 .icon-btn { cursor: pointer; text-decoration: none; }
-.icon-btn.icon-btn-sm { width: var(--control-sm); height: var(--control-sm); border-radius: var(--radius-md); }
-.icon-btn.icon-btn-md { width: var(--control-md); height: var(--control-md); border-radius: var(--radius-md); }
+.icon-btn.icon-btn-sm { width: var(--control-sm); height: var(--control-sm); border-radius: var(--radius); }
+.icon-btn.icon-btn-md { width: var(--control-md); height: var(--control-md); border-radius: var(--radius); }
 .icon-btn.on { color: var(--accent-text); }
 :is(.btn, .icon-btn, .chip-btn):focus-visible { outline: var(--focus-ring); outline-offset: var(--focus-offset); }
 @media (pointer: coarse) {

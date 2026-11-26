@@ -47,7 +47,7 @@ enum class ButtonVariant { Filled, Tinted, Gray, Plain, Danger }
 
 enum class ButtonSize { Sm, Md, Lg }
 
-// Button (web Button, iOS styles): a pill with a filled, tinted, gray, plain or danger fill.
+// Button (web Button, iOS styles): an 8 dp rounded rectangle with a filled, tinted, gray, plain or danger fill.
 @Composable
 fun Button(
     text: String,
@@ -73,7 +73,7 @@ fun Button(
         ButtonSize.Lg -> Triple(Tokens.buttonLg, Tokens.sp12, Type.body.copy(fontWeight = FontWeight.SemiBold))
     }
     val gap = when (size) { ButtonSize.Sm -> Tokens.sp2; ButtonSize.Md -> Tokens.sp3; ButtonSize.Lg -> Tokens.sp4 }
-    val shape = if (size == ButtonSize.Lg) RoundedCornerShape(Tokens.shapeLg) else RoundedCornerShape(Tokens.radiusPill)
+    val shape = if (size == ButtonSize.Lg) RoundedCornerShape(Tokens.shapeLg) else RoundedCornerShape(Tokens.radius)
     Row(
         modifier.minimumInteractiveComponentSize().then(if (fill) Modifier.fillMaxWidth() else Modifier).height(h).alpha(if (enabled) 1f else 0.38f).clip(shape).background(bg)
             .clickable(enabled = enabled, onClick = onClick).padding(horizontal = pad),

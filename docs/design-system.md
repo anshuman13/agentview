@@ -74,8 +74,8 @@ panel padding `--sp-8` (`--sp-2 --sp-6` for dense list panels); between sections
 
 | Token | Value | Use |
 | --- | --- | --- |
-| `--shape-sm` | 6px | buttons, fields, menu items, MCP logo tile |
-| `--shape-md` | 6px | icon buttons, chips |
+| `--shape-sm` | 6px | fields, menu items, MCP logo tile |
+| `--shape-md` | 6px | chips (buttons and icon buttons use `--radius` 8px) |
 | `--shape-lg` | 12px | panels, menus, sheets |
 | `--shape-full` | pill | badges, avatars, empty-state icon |
 
@@ -161,7 +161,8 @@ colour at 14% (`--warn-soft`). Selected is neutral `--selected`, not blue `--acc
 
 ### Button (iOS button styles)
 `<Button variant size icon href>`; `.btn .btn-{variant} .btn-{size}`. With `href` (plus `target`, `rel`) it renders an `<a>` with the same classes, for buttons that open a link. Variants filled, tinted, gray, plain,
-danger; sizes sm 28px and md 34px (capsule, `--radius-pill`), lg 50px (12px radius, 17px semibold).
+danger; sizes sm 28px and md 34px (`--radius` 8px, Claude desktop buttons, 26 Nov 2026), lg 50px (12px radius, 17px semibold).
+Gray and plain lay a neutral `--fg` layer at `--state-hover-control` (11% light, 8% dark: Claude #E5E5E5 / #3F3F3F) on hover and press; filled, tinted and danger keep their own colour at `--state-hover`. Pressed equals hover, with no scale. Android `Button` uses `Tokens.radius` for sm and md.
 On coarse pointers sm and md keep their look but get a 44px hit area (an `::after` layer).
 Old names still work: primary is filled, secondary (default) is gray, quiet is plain.
 
@@ -174,7 +175,7 @@ Old names still work: primary is filled, secondary (default) is gray, quiet is p
 | danger | `--danger` | `--danger` at 14% |
 
 ### IconButton
-`<IconButton icon label size on>`; square, `--shape-md`, `--fg-muted`, `--fg` on hover, `.on`
+`<IconButton icon label size on>`; square, `--radius` 8px, `--fg-muted`, `--fg` on hover over an `--fg` layer at `--state-hover-control` (pressed the same), `.on`
 is `--accent-text`. 28 / 36px, 44px on touch (Material 48dp target, sized to iOS 44pt). 44px hit area at max-width 480px.
 
 ### Chip

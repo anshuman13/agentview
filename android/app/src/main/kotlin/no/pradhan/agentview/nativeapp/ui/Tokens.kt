@@ -443,6 +443,7 @@ object Tokens {
     val motionEaseIn = CubicBezierEasing(0.2f, 0f, 0f, 1f)
     val motionEaseOut = CubicBezierEasing(0.3f, 0f, 1f, 1f)
     val stateHover = 0.08f
+    val stateHoverControl = 0.08f
     val stateSelected = 0.15f
     val shapeSm = 6.dp
     val shapeMd = 6.dp
