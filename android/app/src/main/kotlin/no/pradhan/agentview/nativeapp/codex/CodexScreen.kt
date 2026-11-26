@@ -38,6 +38,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -277,9 +278,14 @@ private fun CodexBody(hub: Hub, st: CodexState, nav: CodexNav, profile: String?,
     val openNeeds = { hub.track("sheet:needsYou"); nav.needsOpen = true }
     var searchQuery by rememberSaveable { mutableStateOf("") }
     var searchOpened by rememberSaveable { mutableStateOf(emptySet<String>()) }
+    val pages = rememberSaveableStateHolder()
+    val kept = remember { mutableSetOf<String>() }
+    val live = routesOf(nav.routeText) + page
+    (kept - live.toSet()).forEach { pages.removeState(it); kept.remove(it) }
+    extra?.let { kept += it }
     when {
         !st.loaded -> Loading("Loading Codex…")
-        extra != null -> ExtraContent(extra, hub, st, profile, now, actions, ops, nav.chips, nav.decisions, nav::toggleChip, nav::push, nav::pop, { nav.pop(); openNeeds() }, nav::openRow)
+        extra != null -> pages.SaveableStateProvider(extra) { ExtraContent(extra, hub, st, profile, now, actions, ops, nav.chips, nav.decisions, nav::toggleChip, nav::push, nav::pop, { nav.pop(); openNeeds() }, nav::openRow) }
         page == "overview" -> OverviewPage(hub, st, profile, now, actions, nav::openRow, openNeeds, { nav.page = "goals" }, { nav.adding = true }, meeting) { nav.push("meeting:${it.key}#notes") }
         page == "tasks" -> TasksPage(st, profile, now, actions, nav.searching, nav.query, { nav.query = it }, nav::openRow, { nav.page = "tag:$it" }, nav.picked, { nav.picked = it }, meeting)
         page == "goals" -> GoalsPage(st, profile, now, actions, ops.goals, nav::openRow) { nav.addingGoal = it.id; nav.adding = true }

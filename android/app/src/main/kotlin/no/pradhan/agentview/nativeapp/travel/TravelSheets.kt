@@ -124,8 +124,10 @@ fun HomeSheet(hub: Hub, home: String, onDismiss: () -> Unit, onSaved: () -> Unit
             if (ok) { hub.notice.value = "Home address saved"; onSaved(); onDismiss() }
         }
     }
+    val focus = remember { FocusRequester() }
+    LaunchedEffect(Unit) { focus.requestFocus() }
     Sheet(onDismiss, "Home address", full = false, motion = true) {
-        TextField(value, { value = it }, Modifier.fillMaxWidth(), placeholder = "Street, city", singleLine = true)
+        TextField(value, { value = it }, Modifier.fillMaxWidth().focusRequester(focus), placeholder = "Street, city", singleLine = true)
         SheetError(error)
         Button("Save", { save() }, Modifier.fillMaxWidth().padding(top = Tokens.sp4), variant = ButtonVariant.Filled, enabled = !busy, fill = true)
     }
@@ -159,11 +161,13 @@ fun PlanItemSheet(hub: Hub, trip: Trip, item: PlanItem?, today: String, onDismis
         val next = PlanItem(item?.id ?: "", day, clockTime(start), clockTime(end), kind, title.trim(), place.trim(), ref.trim())
         write(if (item == null) trip.plan + next else trip.plan.map { if (it.id == item.id) next else it }) {}
     }
+    val focus = remember { FocusRequester() }
+    if (item == null) LaunchedEffect(Unit) { focus.requestFocus() }
     Sheet(onDismiss, if (item == null) "Add item" else "Edit item", motion = true) {
         FlowRow(horizontalArrangement = Arrangement.spacedBy(Tokens.sp2), verticalArrangement = Arrangement.spacedBy(Tokens.sp2)) {
             PLAN_KINDS.forEach { k -> Chip(k.replaceFirstChar { it.uppercase() }, { kind = k }, on = kind == k) }
         }
-        TextField(title, { title = it }, Modifier.fillMaxWidth(), placeholder = "Title, such as OSL to ARN", singleLine = true)
+        TextField(title, { title = it }, Modifier.fillMaxWidth().focusRequester(focus), placeholder = "Title, such as OSL to ARN", singleLine = true)
         DateRow("Day", day) { day = it }
         Column(verticalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
             Row(horizontalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
