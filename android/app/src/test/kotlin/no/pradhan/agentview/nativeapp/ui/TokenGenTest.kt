@@ -73,7 +73,7 @@ class TokenGenTest {
         val out = TokenGen.generate(css, "x")
         assertTrue(out.contains("package x"))
         assertTrue(out.contains("    val bg: Color,"))
-        assertTrue(out.contains("val DarkColors = AvColors(\n    bg = Color(0xFF1C1B19),"))
+        assertTrue(out.contains("val DarkColors = AvColors(\n    bg = Color(0xFF191919),"))
         assertTrue(out.contains("    accentSoft = Color(0xFF2F3340),"))
         assertTrue(out.contains("    accentSoft = Color(0xFFE3E9F5),"))
         assertTrue(!out.contains("hover2"))
@@ -90,7 +90,7 @@ class TokenGenTest {
         assertTrue(dark.contains("    accentText = Color(0xFF7AA7F0),"))
         assertTrue(dark.contains("    link = Color(0xFF7AA7F0),"))
         assertTrue(light.contains("    link = Color(0xFF2B59A8),"))
-        assertTrue(dark.contains("    border = Color(0xFF3A3935),"))
+        assertTrue(dark.contains("    border = Color(0xFF393A3A),"))
     }
 
     @Test fun addsDiffTints() {
