@@ -13,6 +13,8 @@ vi.mock('../agent/claude/pins.js', () => ({ removeChat: vi.fn() }));
 const linkSubChat = vi.fn(async () => ({}));
 const latest: Record<string, string> = {};
 vi.mock('../session/subChats.js', () => ({ linkSubChat, latestOf: async (id: string) => latest[id] ?? id, rootOf: async (id: string) => id }));
+const linkSpawned = vi.fn(async () => ({}));
+vi.mock('../session/spawned.js', () => ({ linkSpawned }));
 vi.mock('./watchFiles.js', () => ({ watchFiles: () => ({ close() {} }) }));
 vi.mock('../agent/registry.js', () => {
   const real = realRegistry;
@@ -24,9 +26,9 @@ const { removeChat } = await import('../agent/claude/pins.js');
 const { markLimited } = await import('../agent/claude/accounts.js');
 const { UNATTENDED_INSTRUCTION } = await import('../session/prompts.js');
 const { jobRepo } = await import('../workspace/testRepo.js');
-const { createChat, endRun, jobChat, openSaved, reviewJob } = await import('./chats.js');
+const { buildChat, createChat, endRun, jobChat, openSaved, pendingSpawns, reviewJob } = await import('./chats.js');
 const { AgentSession } = await import('../session/session.js');
-const { live } = await import('./state.js');
+const { PROJECT, live } = await import('./state.js');
 
 const unattended = (chat: { driver: unknown }) => (chat.driver as { unattended: boolean }).unattended;
 
@@ -88,6 +90,25 @@ describe('createChat', () => {
     const chat = await createChat('/tmp');
     chat.onSubChat('b', 'a', 'build');
     expect(linkSubChat).toHaveBeenCalledWith('b', 'a', 'build');
+  });
+});
+
+describe('buildChat', () => {
+  it('links the build chat to the calling chat once its first session id is set', async () => {
+    linkSpawned.mockClear();
+    const id = await buildChat(PROJECT, '/build a small thing', 'parent-1');
+    const chat = live.get(id)!.chat;
+    chat.setSession({ sessionId: 'child-1' });
+    chat.setSession({ sessionId: 'child-2' });
+    expect(linkSpawned.mock.calls).toEqual([['child-1', 'parent-1']]);
+    expect(pendingSpawns.has(id)).toBe(false);
+  });
+
+  it('records nothing for a build without a calling chat', async () => {
+    linkSpawned.mockClear();
+    const chat = live.get(await buildChat(PROJECT, '/build a small thing'))!.chat;
+    chat.setSession({ sessionId: 'child-3' });
+    expect(linkSpawned).not.toHaveBeenCalled();
   });
 });
 

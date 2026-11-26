@@ -9,6 +9,7 @@ import { removeChat } from '../agent/claude/pins.js';
 import { AgentSession } from '../session/session.js';
 import { READY } from '../session/runs.js';
 import { latestOf, linkSubChat, rootOf } from '../session/subChats.js';
+import { linkSpawned } from '../session/spawned.js';
 import { UNATTENDED_INSTRUCTION } from '../session/prompts.js';
 import { hasWork } from '../workspace/git.js';
 import { runWorktree } from '../workspace/review.js';
@@ -34,12 +35,20 @@ function onChatMessage(chat: AgentSession, m: ServerMessage) {
   if (m.type === 'session' && chat.state.session.sessionId) {
     rememberAccount(chat.state.session.sessionId, chat.state.session.account);
     rememberProvider(chat.state.session.sessionId, chat.driver.provider);
+    linkPendingSpawn(chat.id, chat.state.session.sessionId);
   }
   if (m.type === 'session' && chat === hub.lastViewed) remember(chat);
   if (m.type === 'session') saveWhenNew(chat);
   const woke = seenRunning(chat, chat.state.session.running);
   const listed = m.type === 'event' ? m.event.kind === 'user' : m.type === 'session' ? listedChanged(chat) : m.type !== 'append';
   if (woke || listed) broadcastLive();
+}
+
+function linkPendingSpawn(chatId: string, sessionId: string) {
+  const parent = pendingSpawns.get(chatId);
+  if (!parent) return;
+  pendingSpawns.delete(chatId);
+  void linkSpawned(sessionId, parent).catch(() => {});
 }
 
 // The session fields the live list shows, so a session message that only moves context or cache does not rebuild the list.
