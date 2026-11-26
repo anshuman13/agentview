@@ -1,6 +1,7 @@
 import type { Account } from '../../../shared/protocol.js';
 import { errText } from '../../../shared/util.js';
 import { liveUsage, loggedInAccounts } from '../agent/claude/accounts.js';
+import { backfillOnce } from './backfill.js';
 import { saveSample, type RawUsage } from './store.js';
 
 const EVERY_MS = 5 * 60_000;
@@ -17,6 +18,7 @@ export async function sampleAll(read: (a: Account) => Promise<RawUsage> = (a) =>
 }
 
 export function startSampler() {
+  backfillOnce();
   const run = () => void sampleAll();
   run();
   setInterval(run, EVERY_MS).unref();
