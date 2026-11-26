@@ -261,7 +261,7 @@ fun mcpNoTools(r: McpRow): Pair<String, String?> = when (r.status) {
 
 // web openConnectors: the work accounts are signed in to claude.ai in Chrome on the Mac, the personal one in Firefox.
 fun connectorsBrowser(account: String?) = if (account != null && account != "main") "Chrome" else "Firefox"
-fun openConnectorsBody(account: String?) = buildJsonObject { put("url", "https://claude.ai/settings/connectors"); put("browser", connectorsBrowser(account).lowercase()) }.toString()
+fun openConnectorsBody(account: String?) = buildJsonObject { put("url", "https://claude.ai/customize/connectors"); put("browser", connectorsBrowser(account).lowercase()) }.toString()
 fun mcpAuthUrl(body: String): String? = runCatching { protocolJson.parseToJsonElement(body).jsonObject["authUrl"]?.jsonPrimitive?.contentOrNull }.getOrNull()
 
 @Serializable data class McpConnector(val name: String, val status: String = "")

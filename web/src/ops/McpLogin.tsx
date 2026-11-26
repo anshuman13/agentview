@@ -26,13 +26,22 @@ export function AddToChat({ name }: { name: string }) {
 export function ClaudeAiLogin({ name, live, account }: { name: string; live: boolean; account?: string }) {
   const [opened, setOpened] = useState(false);
   useEffect(() => setOpened(false), [name]);
+  useEffect(() => {
+    if (!opened) return;
+    const start = Date.now();
+    const t = setInterval(() => {
+      if (Date.now() - start > 10 * 60_000) clearInterval(t);
+      else if (!document.hidden) window.dispatchEvent(new Event('agentview:mcp-connectors'));
+    }, 5000);
+    return () => clearInterval(t);
+  }, [opened]);
   return (
     <div className="mcp-login">
       <div className="mcp-login-acts">
         <Button icon="link-external" onClick={() => { openConnectors(account); setOpened(true); }}>Connect</Button>
         {opened && live && <Button icon="debug-restart" onClick={() => send({ type: 'mcp_reconnect', name })}>Reconnect in chat</Button>}
       </div>
-      <div className="muted">{opened ? `Opened in ${account && account !== 'main' ? 'Chrome' : 'Firefox'} on the Mac. Once it says Connected there, reconnect it here.` : `Opens in ${account && account !== 'main' ? 'Chrome' : 'Firefox'} on the Mac.`}</div>
+      <div className="muted">{opened ? `Opened in ${account && account !== 'main' ? 'Chrome' : 'Firefox'} on the Mac. This page updates once you finish there.` : `Opens in ${account && account !== 'main' ? 'Chrome' : 'Firefox'} on the Mac.`}</div>
     </div>
   );
 }

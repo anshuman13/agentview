@@ -13,18 +13,19 @@ export function useMcpProbe(account: string, id: string, connectors: boolean) {
   const [error, setError] = useState('');
   const [accounts, setAccounts] = useState<AccountConnectors>({});
   const seq = useRef(0);
+  const loadConnectors = (refresh: boolean, current = () => true) => fetchMcpConnectors(refresh).then((a) => {
+    if (!current() || !a || a.error) return;
+    setAccounts(a);
+    // A connector logged in on claude.ai after the chat started only shows up once the chat reconnects it.
+    const loggedIn = new Set((a[account] ?? []).filter((c: { status: string }) => c.status === 'connected').map((c: { name: string }) => c.name));
+    for (const m of getState().session.mcp) if (m.type === 'claudeai' && m.status === 'needs-auth' && loggedIn.has(m.name)) send({ type: 'mcp_reconnect', name: m.name });
+  }, () => undefined);
   const load = (refresh = false) => {
     const n = ++seq.current;
     setBusy(true);
     setError('');
     send({ type: 'mcp_status' });
-    if (connectors) fetchMcpConnectors(refresh).then((a) => {
-      if (n !== seq.current || !a || a.error) return;
-      setAccounts(a);
-      // A connector logged in on claude.ai after the chat started only shows up once the chat reconnects it.
-      const loggedIn = new Set((a[account] ?? []).filter((c: { status: string }) => c.status === 'connected').map((c: { name: string }) => c.name));
-      for (const m of getState().session.mcp) if (m.type === 'claudeai' && m.status === 'needs-auth' && loggedIn.has(m.name)) send({ type: 'mcp_reconnect', name: m.name });
-    }, () => undefined);
+    if (connectors) loadConnectors(refresh, () => n === seq.current);
     fetchMcpProbe(refresh)
       .then((p) => {
         if (n !== seq.current) return;
@@ -33,6 +34,13 @@ export function useMcpProbe(account: string, id: string, connectors: boolean) {
       .finally(() => n === seq.current && setBusy(false));
   };
   useEffect(() => load(), [id]);
+  // After Connect opens claude.ai, ClaudeAiLogin asks for fresh connector lists until the login shows up.
+  useEffect(() => {
+    if (!connectors) return;
+    const recheck = () => void loadConnectors(true);
+    window.addEventListener('agentview:mcp-connectors', recheck);
+    return () => window.removeEventListener('agentview:mcp-connectors', recheck);
+  }, [connectors, account]);
   return { probed, busy, at, error, accounts, load };
 }
 

@@ -259,8 +259,8 @@ class PagesLogicTest {
         assertEquals(McpLogin.ClaudeAi, mcpLogin(McpRow(McpServer("claude.ai Slack", "needs-auth", type = "claudeai"), account = "alt")))
         assertEquals(McpLogin.OAuth, mcpLogin(McpRow(McpServer("grafana", "needs-auth", type = "http"))))
         assertNull(mcpLogin(rows[2]))
-        assertEquals("""{"url":"https://claude.ai/settings/connectors","browser":"chrome"}""", openConnectorsBody("alt"))
-        assertEquals("""{"url":"https://claude.ai/settings/connectors","browser":"firefox"}""", openConnectorsBody("main"))
+        assertEquals("""{"url":"https://claude.ai/customize/connectors","browser":"chrome"}""", openConnectorsBody("alt"))
+        assertEquals("""{"url":"https://claude.ai/customize/connectors","browser":"firefox"}""", openConnectorsBody("main"))
         assertEquals("https://x/auth", mcpAuthUrl("""{"authUrl":"https://x/auth"}"""))
         assertNull(mcpAuthUrl("{}"))
     }

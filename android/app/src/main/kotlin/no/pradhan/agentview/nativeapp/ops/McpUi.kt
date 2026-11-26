@@ -34,6 +34,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -43,6 +44,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.IntOffset
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
@@ -117,17 +119,19 @@ fun McpScreen(hub: Hub, onBack: () -> Unit) {
     val connectors = (session?.capabilities ?: Capabilities()).can("connectors")
     var refresh by remember { mutableStateOf(false) }
     var accounts by remember { mutableStateOf<Map<String, List<McpConnector>>>(emptyMap()) }
+    // A connector logged in on claude.ai after the chat started only shows up once the chat reconnects it.
+    fun useAccounts(a: Map<String, List<McpConnector>>) {
+        accounts = a
+        val s = hub.store.state.value.session
+        mcpLoggedInSince(s?.mcp ?: emptyList(), s?.account, a).forEach { hub.quietCommand(mcpReconnectCmd(it)) }
+    }
     val (probe, reprobe) = rememberLoad(chat) {
         val fresh = refresh
         refresh = false
         hub.quietCommand(mcpStatusCmd())
         coroutineScope {
             if (connectors) launch {
-                runCatching { hub.mcpConnectors(fresh) }.onSuccess { a ->
-                    accounts = a
-                    val s = hub.store.state.value.session
-                    mcpLoggedInSince(s?.mcp ?: emptyList(), s?.account, a).forEach { hub.quietCommand(mcpReconnectCmd(it)) }
-                }
+                runCatching { hub.mcpConnectors(fresh) }.onSuccess(::useAccounts)
             }
             hub.mcpProbe(fresh)
         }
@@ -153,6 +157,11 @@ fun McpScreen(hub: Hub, onBack: () -> Unit) {
     val narrowed = query.isNotBlank() || filter != McpFilter()
     val list = remember(searched, filter, hidden) { mcpList(searched, filter, isHidden) }
 
+    val scope = rememberCoroutineScope()
+    fun recheckConnectors() {
+        scope.launch { runCatching { hub.mcpConnectors(true) }.onSuccess(::useAccounts) }
+    }
+
     fun setGroup(service: String, group: String) {
         val before = groups
         hub.mcpGroups.value = if (group == "shown") groups - service else groups + (service to group)
@@ -173,7 +182,7 @@ fun McpScreen(hub: Hub, onBack: () -> Unit) {
             .apply { targetContentZIndex = if (targetState != null) 1f else -1f }
     }, label = "mcp") { key ->
     val current = rows.firstOrNull { mcpKey(it) == key }
-    if (current != null) McpDetail(hub, current, calls[mcpSlug(current.name)], groups, ::setGroup, onBack = { sel = null })
+    if (current != null) McpDetail(hub, current, calls[mcpSlug(current.name)], groups, ::setGroup, ::recheckConnectors, onBack = { sel = null })
     else Column(Modifier.fillMaxSize()) {
         WorkspaceHeader(hub, "MCP Servers", onBack, sub = if (probe.data != null) "${mcp.connected} connected of ${mcp.total}" + if (mcp.needsYou > 0) " · ${mcp.needsYou} need you" else "" else null) {
             IconBtn("refresh", "Check", { refresh = true; reprobe() }, enabled = !probe.busy)
@@ -312,11 +321,13 @@ private fun McpStatus(r: McpRow) {
 
 // web ClaudeAiLogin and Login: the login page opens in a browser on the Mac; the hint says which and what to do next.
 @Composable
-private fun McpLoginRow(hub: Hub, r: McpRow, kind: McpLogin) {
+private fun McpLoginRow(hub: Hub, r: McpRow, kind: McpLogin, recheck: () -> Unit) {
     var opened by remember(r.name, r.account) { mutableStateOf(false) }
     var busy by remember(r.name, r.account) { mutableStateOf(false) }
+    // web ClaudeAiLogin: after Connect opens claude.ai, fresh connector lists every 5 s for up to 10 min until the login shows up.
+    if (kind == McpLogin.ClaudeAi && opened) LaunchedEffect(r.name, r.account) { repeat(120) { delay(5000); recheck() } }
     val hint = when {
-        kind == McpLogin.ClaudeAi && opened -> "Opened in ${connectorsBrowser(r.account)} on the Mac. Reconnect once it says Connected."
+        kind == McpLogin.ClaudeAi && opened -> "Opened in ${connectorsBrowser(r.account)} on the Mac. This page updates once you finish there."
         kind == McpLogin.ClaudeAi -> "Opens in ${connectorsBrowser(r.account)} on the Mac."
         opened -> "Opened in Chrome on the Mac. Reconnect once you finish there."
         else -> "Opens the login page in Chrome on the Mac."
@@ -332,7 +343,7 @@ private fun McpLoginRow(hub: Hub, r: McpRow, kind: McpLogin) {
 }
 
 @Composable
-private fun McpDetail(hub: Hub, r: McpRow, calls: Pair<Int, Int>?, groups: Map<String, String>, setGroup: (String, String) -> Unit, onBack: () -> Unit) {
+private fun McpDetail(hub: Hub, r: McpRow, calls: Pair<Int, Int>?, groups: Map<String, String>, setGroup: (String, String) -> Unit, recheck: () -> Unit, onBack: () -> Unit) {
     BackHandler(onBack = onBack)
     val (label, tone) = mcpState(r)
     val (scope, where) = mcpScope(r.server.scope)
@@ -373,7 +384,7 @@ private fun McpDetail(hub: Hub, r: McpRow, calls: Pair<Int, Int>?, groups: Map<S
                             else Badge(label, tone)
                         })
                         r.server.error?.takeIf { r.live || r.status != "needs-auth" }?.let { Hairline(); ListRow("Error", it, lines = 3) }
-                        if (canEdit && !hub.readOnly) mcpLogin(r)?.let { kind -> Hairline(); McpLoginRow(hub, r, kind) }
+                        if (canEdit && !hub.readOnly) mcpLogin(r)?.let { kind -> Hairline(); McpLoginRow(hub, r, kind, recheck) }
                         r.server.command?.let { Hairline(); ListRow(if (url) "URL" else "Command", it) }
                         r.server.env?.takeIf { it.isNotEmpty() }?.let { Hairline(); ListRow("Env", it.joinToString("  ")) }
                         Hairline(); ListRow("From", scope + if (where.isNotEmpty()) " · $where" else "")

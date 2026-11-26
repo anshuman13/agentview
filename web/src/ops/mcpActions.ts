@@ -28,4 +28,4 @@ export const cite = (c: Call) => share(`Earlier mcp__${c.server}__${c.tool} call
 
 // The work Claude accounts are signed in to claude.ai in Chrome on the Mac, the personal one in Firefox.
 export const openConnectors = (account?: string) =>
-  openUrl('https://claude.ai/settings/connectors', account && account !== 'main' ? 'chrome' : 'firefox').catch((e) => showSnack(`Could not open claude.ai: ${loadErrorText(e.message)}`));
+  openUrl('https://claude.ai/customize/connectors', account && account !== 'main' ? 'chrome' : 'firefox').catch((e) => showSnack(`Could not open claude.ai: ${loadErrorText(e.message)}`));
