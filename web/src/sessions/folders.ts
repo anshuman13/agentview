@@ -13,11 +13,24 @@ import { groupSessions } from '../../../shared/subChats';
 
 export type Folder = { cwd: string; name: string; repo?: Repo; trees: Worktree[]; chats: ChatSession[]; last: number; hit?: boolean };
 
-// A chat row: the root session, with the group's last activity, the sub-chat count label and every member id when it has sub-chats.
-export type ChatSession = SavedSession & { subs?: string; members?: string[] };
+// A chat row: the root session, with the group's last activity, the sub-chat count label and every member id when it has
+// sub-chats or builds. buildMembers are the sessions of the builds started from the chat; the row never opens them.
+export type ChatSession = SavedSession & { subs?: string; members?: string[]; buildMembers?: string[] };
 
 export const groupChats = (chats: SavedSession[]): ChatSession[] =>
-  groupSessions(chats).map((r) => (r.count || r.builds ? { ...r.root, lastModified: r.lastModified, subs: r.label, members: r.members } : r.root));
+  groupSessions(chats).map((r) => (r.count || r.builds ? { ...r.root, lastModified: r.lastModified, subs: r.label, members: r.members, ...(r.builds ? { buildMembers: r.buildMembers } : {}) } : r.root));
+
+// The row id of each listed build session, so an open build chat folds into the row of the chat that started it.
+export const buildRows = (chats: ChatSession[]) => new Map(chats.flatMap((c) => (c.buildMembers ?? []).map((id) => [id, c.sessionId] as const)));
+
+export type BuildsState = 'needs' | 'running' | null;
+
+// Needs you or Running when an open build chat of the row is.
+export function buildsState(live: LiveChat[], ids: string[] | undefined): BuildsState {
+  if (!ids?.length) return null;
+  const mine = live.filter((c) => c.sessionId && ids.includes(c.sessionId));
+  return mine.some((c) => c.pending) ? 'needs' : mine.some((c) => c.running && !c.stalled) ? 'running' : null;
+}
 
 const roots = new WeakMap<ChatSession[], Map<string, string>>();
 // The row id (root session) of any member id of the listed chats; other ids map to themselves.
@@ -307,8 +320,11 @@ export function groupByRepo(live: LiveChat[], chats: ChatSession[], folders: Fol
     return g;
   };
   const root = rootLookup(chats);
+  const builds = buildRows(chats);
+  const folded = live.filter((c) => c.sessionId && builds.has(c.sessionId));
   const shown = new Set<string>();
   for (const c of [...live].sort(byUrgency)) {
+    if (folded.includes(c)) continue;
     const id = root(c.sessionId);
     if (id && (pinned.has(id) || shown.has(id))) continue;
     if (id) shown.add(id);
@@ -318,8 +334,14 @@ export function groupByRepo(live: LiveChat[], chats: ChatSession[], folders: Fol
     if (c.running) g.running++;
     if (c.pending) g.waiting++;
   }
-  const ids = new Set(live.map((c) => root(c.sessionId)));
+  const ids = new Set(live.filter((c) => !folded.includes(c)).map((c) => root(c.sessionId)));
   for (const s of chats) if (!ids.has(s.sessionId) && !pinned.has(s.sessionId)) add(s.cwd, s.title, s.sessionId, s.lastModified)?.recent.push(s);
+  for (const c of folded) {
+    const id = builds.get(c.sessionId!)!;
+    const g = [...m.values()].find((x) => x.recent.some((s) => s.sessionId === id) || x.open.some((o) => root(o.sessionId) === id));
+    if (g && c.running) g.running++;
+    if (g && c.pending) g.waiting++;
+  }
   for (const g of m.values()) {
     g.open.sort(byUrgency);
     g.recent.sort((a, b) => b.lastModified - a.lastModified);
@@ -355,20 +377,23 @@ export function holdOrder(prev: HeldOrder | null, groups: RepoGroup[], loaded: b
 
 export type ChatState = 'needs' | 'failed' | 'running' | 'done';
 
-// Needs you, Failed and Running come from the live chat; Done is activity newer than the last time the chat was opened.
-// A chat with sub-chats reads the latest seen time of its root and members; Mark as unread zeroes the root's.
-export function chatState({ live, saved }: { live?: LiveChat; saved?: ChatSession }, seen: Record<string, number>): ChatState | null {
-  if (live?.pending) return 'needs';
+// Needs you, Failed and Running come from the live chat and its open builds; Done is activity newer than the last time
+// the chat was opened. A chat with sub-chats or builds reads the latest seen time of its root and members; Mark as unread
+// zeroes the root's.
+export function chatState({ live, saved, builds = null }: { live?: LiveChat; saved?: ChatSession; builds?: BuildsState }, seen: Record<string, number>): ChatState | null {
+  if (live?.pending || builds === 'needs') return 'needs';
   if (live?.failed) return 'failed';
-  if (live?.running) return live.stalled ? null : 'running';
+  if (live?.running && !live.stalled) return 'running';
+  if (builds === 'running') return 'running';
+  if (live?.running) return null;
   const at = Math.max(live?.lastActive ?? 0, saved?.lastModified ?? 0);
   const id = saved?.members ? saved.sessionId : rootOf(live?.sessionId ?? saved?.sessionId);
-  const marks = [id, live?.sessionId, ...(saved?.members ?? [])].flatMap((x) => (x && seen[x] !== undefined ? [seen[x]] : []));
+  const marks = [id, live?.sessionId, ...(saved?.members ?? []), ...(saved?.buildMembers ?? [])].flatMap((x) => (x && seen[x] !== undefined ? [seen[x]] : []));
   const last = id && seen[id] === 0 ? 0 : marks.length ? Math.max(...marks) : undefined;
   return last !== undefined && at > last ? 'done' : null;
 }
 
-export function groupGlance(g: RepoGroup, seen: Record<string, number>) {
+export function groupGlance(g: RepoGroup, seen: Record<string, number>, live: LiveChat[] = []) {
   const n = { running: 0, needs: 0, unread: 0 };
   const count = (state: ChatState | null) => {
     if (state === 'running') n.running++;
@@ -376,7 +401,7 @@ export function groupGlance(g: RepoGroup, seen: Record<string, number>) {
     else if (state === 'done') n.unread++;
   };
   for (const c of g.open) count(chatState({ live: c }, seen));
-  for (const s of g.recent) count(chatState({ saved: s }, seen));
+  for (const s of g.recent) count(chatState({ saved: s, builds: buildsState(live, s.buildMembers) }, seen));
   return { ...n, last: g.last };
 }
 

@@ -30,4 +30,13 @@ describe('spawn links', () => {
     expect(await spawned.spawnedOf('q')).toEqual([]);
     expect(JSON.parse(fs.readFileSync(path.join(home, '.agentview', 'spawned.json'), 'utf8')).b.parent).toBe('p');
   });
+
+  it('puts the builds and their sub-chats in the row of the chat that started them', async () => {
+    const subs = await import('./subChats.js');
+    await subs.linkSubChat('p2', 'p', 'clear', 5);
+    await subs.linkSubChat('b2', 'b', 'build', 6);
+    await spawned.linkSpawned('d', 'p2', 7);
+    expect(await spawned.rowOf('p')).toEqual(['p', 'p2', 'b', 'b2', 'c', 'd']);
+    expect(await spawned.rowOf('b')).toEqual(['b', 'b2']);
+  });
 });

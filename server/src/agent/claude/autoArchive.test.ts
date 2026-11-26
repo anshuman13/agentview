@@ -24,4 +24,16 @@ describe('idleChats', () => {
     const links = { a1: { parent: 'a', via: 'build' as const, at: 1 }, b1: { parent: 'b', via: 'clear' as const, at: 1 }, c1: { parent: 'c', via: 'clear' as const, at: 1 } };
     expect(idleChats(list, new Set(['c1']), links, now)).toEqual(['b', 'b1']);
   });
+
+  it('archives a build with the chat that started it, going by the whole row', () => {
+    const now = 10 * ARCHIVE_MS;
+    const old = now - 3 * ARCHIVE_MS;
+    const list = [
+      { sessionId: 'p', lastModified: old }, { sessionId: 'b', lastModified: now - 1000 },
+      { sessionId: 'q', lastModified: old }, { sessionId: 'q1', lastModified: old }, { sessionId: 'c', lastModified: old },
+    ];
+    const links = { q1: { parent: 'q', via: 'clear' as const, at: 1 } };
+    const spawned = { b: { parent: 'p', kind: 'build' as const, at: 1 }, c: { parent: 'q1', kind: 'build' as const, at: 2 } };
+    expect(idleChats(list, new Set(), links, now, spawned)).toEqual(['q', 'q1', 'c']);
+  });
 });

@@ -9,7 +9,7 @@ import { providerMark, shortModel } from '../../../shared/providers';
 import { save } from '../ui/util';
 import { RenameInput } from './RenameInput';
 import { CheckIcon, prText, usePullRequests } from '../ops/pulls';
-import { archiveChat, chatMenuItems, chatSwipe, chatLine, chatState, closeChat, isDefault, renameChat, repoName, removeRequest, restoreChat, rootLookup, rowsById, since, type ChatSession, type ChatState, type Folder } from './folders';
+import { archiveChat, buildsState, chatMenuItems, chatSwipe, chatLine, chatState, closeChat, isDefault, renameChat, repoName, removeRequest, restoreChat, rootLookup, rowsById, since, type ChatSession, type ChatState, type Folder } from './folders';
 import { askLine } from './runLogic';
 import { Swipe } from '../codex/gestures/Swipe';
 import { copyText, showSnack } from '../codex/view';
@@ -28,7 +28,8 @@ type Actions = {
 
 export const chatActions = (setChats: SetChats, ask: (r: ConfirmRequest) => void): Actions => {
   const archived = (s: SavedSession, pinned: boolean, pin?: Pin) => () => {
-    setChats((l) => l.filter((x) => x.sessionId !== s.sessionId && x.parentId !== s.sessionId));
+    const builds = new Set((s as ChatSession).buildMembers);
+    setChats((l) => l.filter((x) => x.sessionId !== s.sessionId && x.parentId !== s.sessionId && !builds.has(x.sessionId)));
     showSnack('Archived', async () => {
       if (!(await restoreChat(s.sessionId))) return notice('Could not restore the chat. It is still in the bin.');
       setChats((l) => [s, ...l]);
@@ -170,8 +171,9 @@ const branchOf = (saved?: string | null, repoBranch?: string) => {
 
 export function SavedRow({ s, repo, branch, opening, pinned, actions, onOpen, onPin }: { s: ChatSession; repo?: string; branch?: string; opening: boolean; pinned: boolean; actions: Actions; onOpen: () => void; onPin: Pin }) {
   const seen = useStore((x) => x.seen);
+  const builds = useStore((x) => buildsState(x.live, s.buildMembers));
   const draft = draftLine(readDraft(s.sessionId));
-  return <ChatRow sessionId={s.sessionId} title={s.title} cwd={s.cwd} lastModified={s.lastModified} opening={opening} meta={draft ? draftMeta(draft) : s.summary ? metaLine(since(s.lastModified), s.subs, s.summary) : metaLine(repo, branchOf(s.gitBranch, branch), s.subs, providerMark(s.provider), since(s.lastModified))} state={chatState({ saved: s }, seen)} pinned={pinned} actions={actions} onOpen={onOpen} onPin={onPin} />;
+  return <ChatRow sessionId={s.sessionId} title={s.title} cwd={s.cwd} lastModified={s.lastModified} opening={opening} meta={draft ? draftMeta(draft) : s.summary ? metaLine(since(s.lastModified), s.subs, s.summary) : metaLine(repo, branchOf(s.gitBranch, branch), s.subs, providerMark(s.provider), since(s.lastModified))} state={chatState({ saved: s, builds }, seen)} pinned={pinned} actions={actions} onOpen={onOpen} onPin={onPin} />;
 }
 
 export function WaitingRows({ rows, chats, folders, viewing, ask, pins, setPin, setChats }: { rows: LiveChat[]; chats: ChatSession[]; folders: Folder[]; viewing: string; ask: (r: ConfirmRequest) => void; pins: string[]; setPin: (id: string, on: boolean) => Promise<boolean>; setChats: SetChats }) {
@@ -184,6 +186,7 @@ export function WaitingRows({ rows, chats, folders, viewing, ask, pins, setPin, 
 export function LiveRow({ c, saved, repo, branch, selected, pinned, actions, ask, onPin, onBeside }: { c: LiveChat; saved?: ChatSession; repo?: string; branch?: string; selected: boolean; pinned?: boolean; actions: Actions; ask: (r: ConfirmRequest) => void; onPin?: Pin; onBeside?: () => void }) {
   const events = useStore((s) => (s.session.id === c.id ? s.events : null));
   const seen = useStore((s) => s.seen);
+  const builds = useStore((s) => buildsState(s.live, saved?.buildMembers));
   const line = chatLine(c, events);
   const shownCwd = useStore((s) => s.session.cwd);
   const pr = usePullRequests(c.pr && c.cwd === shownCwd ? shownCwd : '').find((p) => p.number === c.pr);
@@ -202,7 +205,7 @@ export function LiveRow({ c, saved, repo, branch, selected, pinned, actions, ask
   );
   return (
     <>
-      <ChatRow sessionId={saved?.sessionId ?? rootOf(c.sessionId) ?? undefined} title={c.title} cwd={c.cwd} lastModified={saved?.lastModified ?? c.lastActive} live={c} meta={main} state={chatState({ live: c, saved }, seen)} selected={selected} pinned={pinned} actions={actions} onOpen={() => { if (!selected) send({ type: 'view', id: c.id }); }} onPin={onPin} onBeside={onBeside} onClose={() => closeChat(c, ask)} />
+      <ChatRow sessionId={saved?.sessionId ?? rootOf(c.sessionId) ?? undefined} title={c.title} cwd={c.cwd} lastModified={saved?.lastModified ?? c.lastActive} live={c} meta={main} state={chatState({ live: c, saved, builds }, seen)} selected={selected} pinned={pinned} actions={actions} onOpen={() => { if (!selected) send({ type: 'view', id: c.id }); }} onPin={onPin} onBeside={onBeside} onClose={() => closeChat(c, ask)} />
     </>
   );
 }

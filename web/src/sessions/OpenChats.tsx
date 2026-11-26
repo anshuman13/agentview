@@ -233,7 +233,8 @@ export function OpenChats() {
 }
 
 function GroupGlance({ g, seen }: { g: RepoGroup; seen: Record<string, number> }) {
-  const { running, needs, unread } = groupGlance(g, seen);
+  const live = useStore((s) => s.live);
+  const { running, needs, unread } = groupGlance(g, seen, live);
   if (needs > 0) return <span className="badge waiting" title={`${needs} need you`}>{needs}</span>;
   if (running > 0) return <span className="badge running" title={`${running} running`}>{running}</span>;
   if (unread > 0) return <span className="badge quiet" title={`${unread} unread`}>{unread}</span>;

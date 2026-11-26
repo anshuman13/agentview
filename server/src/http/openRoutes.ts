@@ -13,7 +13,7 @@ import { openRouterView, saveOpenRouter } from '../agent/claude/openrouter.js';
 import { resolvedRoute } from '../agent/claude/resolved.js';
 import { searchMessages } from '../agent/claude/search.js';
 import { seenRoute } from '../agent/claude/seen.js';
-import { listSpawned } from '../session/spawned.js';
+import { listSpawned, rowOf } from '../session/spawned.js';
 import { groupOf, listLinks, roundOf } from '../session/subChats.js';
 import { pageBefore } from '../session/eventLog.js';
 import { readSummaries } from '../agent/claude/summaryStore.js';
@@ -41,7 +41,7 @@ export function sessionRoutes(d: RouteDeps): Record<string, Entry<Ctx>> {
     'ANY /api/runs': entry(() => d.runs()),
     'DELETE /api/sessions': entry(async ({ url }) => {
       const results = [];
-      for (const id of await groupOf(url.searchParams.get('id') ?? '')) {
+      for (const id of await rowOf(url.searchParams.get('id') ?? '')) {
         const opened = d.bySession(id);
         if (opened) await d.closeByUser(opened);
         results.push(await removeChat(id, url.searchParams.has('purge'), url.searchParams.has('archive')));
@@ -63,7 +63,7 @@ export function sessionRoutes(d: RouteDeps): Record<string, Entry<Ctx>> {
     }),
     'ANY /api/sessions/bin': entry(() => listBin()),
     'POST /api/sessions/restore': entry(async ({ url }) => {
-      for (const id of await groupOf(url.searchParams.get('id') ?? '')) await restoreSession(id);
+      for (const id of await rowOf(url.searchParams.get('id') ?? '')) await restoreSession(id);
       return { ok: true };
     }),
     'ANY /api/sessions': entry(async () => {

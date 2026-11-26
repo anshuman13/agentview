@@ -1,7 +1,7 @@
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'bun:test';
-import { buildFolders, type Folder, type RepoGroup, chatFinder, chatMenuItems, chatState, doneChats, findHere, groupByRepo, groupChats, rowsById, groupByKind, groupGlance, holdOrder, newChatGroups, orderGroups, renameTitle, segmentOf, since, staleKeys, unreadCount, waitingChats } from './folders';
+import { buildFolders, buildsState, type Folder, type RepoGroup, chatFinder, chatMenuItems, chatState, doneChats, findHere, groupByRepo, groupChats, rowsById, groupByKind, groupGlance, holdOrder, newChatGroups, orderGroups, renameTitle, segmentOf, since, staleKeys, unreadCount, waitingChats } from './folders';
 import { RepoRow } from './RepoRow';
 import type { LiveChat, Repo, SavedSession, Worktree } from '../../../shared/protocol';
 import { WORKSPACE } from '../../../shared/workspace';
@@ -202,6 +202,35 @@ describe('sub-chats', () => {
     expect(chatState({ live: live('s2', { lastActive: 50 }) }, { r: 0, s2: 60 })).toBe('done');
     expect(chatState({ live: live('s2', { lastActive: 50 }) }, { r: 60 })).toBe(null);
     setRoots([]);
+  });
+});
+
+describe('builds', () => {
+  const live = (id: string, extra: Partial<LiveChat> = {}): LiveChat => ({ id: `live-${id}`, sessionId: id, cwd: '/w/shop', title: id, running: false, pending: 0, status: '', lastActive: 1, ...extra });
+  const saved = groupChats([
+    chat('/w/shop', 10, 'p'),
+    { ...chat('/w/shop', 20, 'b'), spawnedBy: 'p', startedAt: 15 },
+    { ...chat('/w/shop', 30, 'b1'), parentId: 'b', via: 'build', startedAt: 25 },
+  ]);
+  const f = buildFolders([repo('shop')], [], saved);
+  it('folds an open build chat into its parent row with its running and Needs you state', () => {
+    expect(saved.map((s) => [s.sessionId, s.subs, s.members, s.buildMembers])).toEqual([['p', '1 build', ['p'], ['b', 'b1']]]);
+    const g = groupByRepo([live('b1', { pending: 1 })], saved, f);
+    expect(g[0].open).toEqual([]);
+    expect(g[0].recent.map((s) => s.sessionId)).toEqual(['p']);
+    expect(g[0].waiting).toBe(1);
+    const both = groupByRepo([live('p'), live('b1', { running: true })], saved, f);
+    expect(both[0].open.map((c) => c.sessionId)).toEqual(['p']);
+    expect(both[0].running).toBe(1);
+  });
+  it('lifts the parent row into Needs you or Running and reads unread from the builds too', () => {
+    expect(buildsState([live('b1', { pending: 1 })], saved[0].buildMembers)).toBe('needs');
+    expect(buildsState([live('b', { running: true })], saved[0].buildMembers)).toBe('running');
+    expect(buildsState([live('x', { pending: 1 })], saved[0].buildMembers)).toBe(null);
+    expect(chatState({ saved: saved[0], builds: 'needs' }, {})).toBe('needs');
+    expect(chatState({ live: live('p'), saved: saved[0], builds: 'running' }, {})).toBe('running');
+    expect(chatState({ saved: saved[0] }, { p: 5, b1: 40 })).toBe(null);
+    expect(chatState({ saved: saved[0] }, { p: 5 })).toBe('done');
   });
 });
 
