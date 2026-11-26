@@ -1,5 +1,5 @@
 import { useRef, useState, type DragEvent } from 'react';
-import { notice } from '../app/store';
+import { showSnack } from '../codex/view';
 import { dragsFiles, receiptFiles } from './travelLogic';
 
 // Drop target for receipt files. `over` is true only while files are dragged over it; an inner target
@@ -31,7 +31,7 @@ export function useFileDrop(onFiles: (files: File[]) => void, enabled = true) {
         e.preventDefault();
         const files = receiptFiles([...e.dataTransfer.files]);
         if (files.length) onFiles(files);
-        else notice('Only images and PDFs can be added as receipts');
+        else showSnack('Only images and PDFs can be added as receipts');
       },
     },
   };

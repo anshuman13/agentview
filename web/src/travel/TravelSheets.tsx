@@ -1,12 +1,13 @@
 import { useState } from 'react';
-import { notice } from '../app/store';
+import { showSnack } from '../codex/view';
+import { loadErrorText } from '../../../shared/loadError';
 import { Button, Chip } from '../ui/Button';
 import { Sheet } from '../ui/Sheet';
 import { CATEGORIES, PLAN_KINDS, tripState, type PlanItem, type Receipt, type Trip } from '../../../shared/travel';
 import { deleteReceipt, receiptUrl, saveHome, saveTrip, updateReceipt } from './travelApi';
 import { isImage } from './travelLogic';
 
-const errText = (e: unknown) => (e instanceof Error ? e.message : String(e));
+const errText = (e: unknown) => loadErrorText(e instanceof Error ? e.message : String(e));
 
 export function TripSheet({ trip, onClose, onSaved }: { trip?: Trip; onClose: () => void; onSaved: (t: Trip) => void }) {
   const [name, setName] = useState(trip?.name ?? '');
@@ -16,7 +17,7 @@ export function TripSheet({ trip, onClose, onSaved }: { trip?: Trip; onClose: ()
   const save = () => {
     if (!name.trim()) return;
     setBusy(true);
-    saveTrip({ id: trip?.id, name, from, to: to || from }).then(onSaved, (e) => { notice(errText(e)); setBusy(false); });
+    saveTrip({ id: trip?.id, name, from, to: to || from }).then(onSaved, (e) => { showSnack(errText(e)); setBusy(false); });
   };
   return (
     <Sheet label={trip ? 'Edit trip' : 'New trip'} onClose={onClose} className="ui-motion">
@@ -40,7 +41,7 @@ export function HomeSheet({ home, onClose, onSaved }: { home: string; onClose: (
   const [busy, setBusy] = useState(false);
   const save = () => {
     setBusy(true);
-    saveHome(value).then(() => { notice('Home address saved'); onSaved(); }, (e) => { notice(errText(e)); setBusy(false); });
+    saveHome(value).then(() => { showSnack('Home address saved'); onSaved(); }, (e) => { showSnack(errText(e)); setBusy(false); });
   };
   return (
     <Sheet label="Home address" onClose={onClose} className="ui-motion">
@@ -68,11 +69,11 @@ export function PlanItemSheet({ trip, item, today, onClose, onSaved }: { trip: T
   const set = (k: keyof typeof f) => (e: { target: { value: string } }) => setF({ ...f, [k]: e.target.value });
   const write = (plan: NonNullable<Parameters<typeof saveTrip>[0]['plan']>, done: () => void) => {
     setBusy(true);
-    saveTrip({ id: trip.id, name: trip.name, from: trip.from, to: trip.to, plan }).then(() => { done(); onSaved(); }, () => { notice('Could not save the item. Your text is still here.'); setBusy(false); });
+    saveTrip({ id: trip.id, name: trip.name, from: trip.from, to: trip.to, plan }).then(() => { done(); onSaved(); }, () => { showSnack('Could not save the item. Your text is still here.'); setBusy(false); });
   };
   const plan = trip.plan ?? [];
   const save = () => write(item ? plan.map((p) => (p.id === item.id ? { ...p, ...f } : p)) : [...plan, f], onClose);
-  const remove = () => write(plan.filter((p) => p.id !== item?.id), () => { notice('Item deleted'); onClose(); });
+  const remove = () => write(plan.filter((p) => p.id !== item?.id), () => { showSnack('Item deleted'); onClose(); });
   return (
     <Sheet label={item ? 'Edit item' : 'Add item'} onClose={onClose} className="ui-motion">
       <h2 className="tv-sheet-title">{item ? 'Edit item' : 'Add item'}</h2>
@@ -102,9 +103,9 @@ export function ReceiptSheet({ receipt: r, onClose, onSaved }: { receipt: Receip
   const save = () => {
     setBusy(true);
     updateReceipt({ id: r.id, ...f, amount: f.amount as unknown as number })
-      .then(() => onSaved().then(onClose), (e) => { notice(errText(e)); setBusy(false); });
+      .then(() => onSaved().then(onClose), (e) => { showSnack(errText(e)); setBusy(false); });
   };
-  const remove = () => deleteReceipt(r.id).then(() => { notice('Receipt deleted'); onClose(); void onSaved(); }, (e) => notice(errText(e)));
+  const remove = () => deleteReceipt(r.id).then(() => { showSnack('Receipt deleted'); onClose(); void onSaved(); }, (e) => showSnack(errText(e)));
   return (
     <Sheet label="Receipt" onClose={onClose} className="tv-receipt ui-motion">
       <h2 className="tv-sheet-title">{r.read === 'pending' ? 'Claude is reading this receipt…' : r.merchant || r.name}</h2>

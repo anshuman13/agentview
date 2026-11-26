@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -27,6 +28,9 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.unit.dp
 import java.time.LocalDate
 import kotlinx.coroutines.launch
@@ -44,6 +48,8 @@ import no.pradhan.agentview.nativeapp.ui.ListRow
 import no.pradhan.agentview.nativeapp.ui.Sheet
 import no.pradhan.agentview.nativeapp.ui.TextField
 import no.pradhan.agentview.nativeapp.ui.Tokens
+import no.pradhan.agentview.nativeapp.ui.Type
+import no.pradhan.agentview.nativeapp.ui.av
 
 internal fun idJson(id: String) = buildJsonObject { put("id", id) }.toString()
 
@@ -76,12 +82,14 @@ fun TripSheet(hub: Hub, trip: Trip?, onDismiss: () -> Unit, onSaved: (String) ->
     var from by remember { mutableStateOf(trip?.from ?: "") }
     var to by remember { mutableStateOf(trip?.to ?: "") }
     var busy by remember { mutableStateOf(false) }
+    var error by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
     val save = {
         busy = true
+        error = null
         scope.launch {
             var id = ""
-            val ok = hub.travelWrite {
+            val ok = hub.travelWrite(onError = { error = it }) {
                 val body = api.post("/api/travel/trip", tripJson((trip ?: Trip("", "")).copy(name = name.trim(), from = from, to = to.ifEmpty { from })))
                 id = protocolJson.decodeFromString(Trip.serializer(), body).id
             }
@@ -95,6 +103,7 @@ fun TripSheet(hub: Hub, trip: Trip?, onDismiss: () -> Unit, onSaved: (String) ->
         TextField(name, { name = it }, Modifier.fillMaxWidth().focusRequester(focus), placeholder = "Trip, such as Stockholm offsite", singleLine = true)
         DateRow("From", from) { from = it; if (to.isEmpty() || to < it) to = it }
         DateRow("To", to) { to = it }
+        SheetError(error)
         Button("Save", { save() }, Modifier.fillMaxWidth().padding(top = Tokens.sp4), variant = ButtonVariant.Filled, enabled = !busy && name.isNotBlank(), fill = true)
     }
 }
@@ -104,17 +113,20 @@ fun TripSheet(hub: Hub, trip: Trip?, onDismiss: () -> Unit, onSaved: (String) ->
 fun HomeSheet(hub: Hub, home: String, onDismiss: () -> Unit, onSaved: () -> Unit) {
     var value by remember { mutableStateOf(home) }
     var busy by remember { mutableStateOf(false) }
+    var error by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
     val save = {
         busy = true
+        error = null
         scope.launch {
-            val ok = hub.travelWrite { api.post("/api/travel/home", buildJsonObject { put("home", value) }.toString()) }
+            val ok = hub.travelWrite(onError = { error = it }) { api.post("/api/travel/home", buildJsonObject { put("home", value) }.toString()) }
             busy = false
             if (ok) { hub.notice.value = "Home address saved"; onSaved(); onDismiss() }
         }
     }
     Sheet(onDismiss, "Home address", full = false, motion = true) {
         TextField(value, { value = it }, Modifier.fillMaxWidth(), placeholder = "Street, city", singleLine = true)
+        SheetError(error)
         Button("Save", { save() }, Modifier.fillMaxWidth().padding(top = Tokens.sp4), variant = ButtonVariant.Filled, enabled = !busy, fill = true)
     }
 }
@@ -131,11 +143,13 @@ fun PlanItemSheet(hub: Hub, trip: Trip, item: PlanItem?, today: String, onDismis
     var place by remember { mutableStateOf(item?.place ?: "") }
     var ref by remember { mutableStateOf(item?.ref ?: "") }
     var busy by remember { mutableStateOf(false) }
+    var error by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
     val write = { plan: List<PlanItem>, done: () -> Unit ->
         busy = true
+        error = null
         scope.launch {
-            val ok = hub.travelWrite("Could not save the item. Your text is still here.") { api.post("/api/travel/trip", tripJson(trip, plan = plan)) }
+            val ok = hub.travelWrite("Could not save the item. Your text is still here.", { error = it }) { api.post("/api/travel/trip", tripJson(trip, plan = plan)) }
             busy = false
             if (ok) { done(); onSaved(); onDismiss() }
         }
@@ -159,6 +173,7 @@ fun PlanItemSheet(hub: Hub, trip: Trip, item: PlanItem?, today: String, onDismis
             TextField(place, { place = it }, Modifier.fillMaxWidth(), placeholder = "Place", singleLine = true)
             TextField(ref, { ref = it }, Modifier.fillMaxWidth(), placeholder = "Booking or flight number", singleLine = true)
         }
+        SheetError(error)
         Row(Modifier.fillMaxWidth().padding(top = Tokens.sp4), horizontalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
             if (item != null) Button("Delete", { write(trip.plan.filter { it.id != item.id }) { hub.notice.value = "Item deleted" } }, Modifier.weight(1f), variant = ButtonVariant.Danger, icon = "trash", enabled = !busy, fill = true)
             Button("Save", { save() }, Modifier.weight(1f), variant = ButtonVariant.Filled, enabled = !busy && title.isNotBlank() && day.isNotEmpty(), fill = true)
@@ -176,6 +191,7 @@ fun ReceiptSheet(hub: Hub, r: Receipt, onOpen: () -> Unit, onDismiss: () -> Unit
     var date by remember(r.id, r.read) { mutableStateOf(r.date) }
     var category by remember(r.id, r.read) { mutableStateOf(r.category) }
     var note by remember(r.id, r.read) { mutableStateOf(r.note) }
+    var error by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
     val save = {
         scope.launch {
@@ -183,11 +199,12 @@ fun ReceiptSheet(hub: Hub, r: Receipt, onOpen: () -> Unit, onDismiss: () -> Unit
                 put("id", r.id); put("merchant", merchant); put("amount", amount); put("currency", currency)
                 put("date", date); put("category", category); put("note", note)
             }.toString()
-            if (hub.travelWrite { api.post("/api/travel/receipt/update", body) }) { onSaved(); onDismiss() }
+            error = null
+            if (hub.travelWrite(onError = { error = it }) { api.post("/api/travel/receipt/update", body) }) { onSaved(); onDismiss() }
         }
     }
     val remove = {
-        scope.launch { if (hub.travelWrite { api.post("/api/travel/receipt/delete", idJson(r.id)) }) { hub.notice.value = "Receipt deleted"; onSaved(); onDismiss() } }
+        scope.launch { error = null; if (hub.travelWrite(onError = { error = it }) { api.post("/api/travel/receipt/delete", idJson(r.id)) }) { hub.notice.value = "Receipt deleted"; onSaved(); onDismiss() } }
     }
     Sheet(onDismiss, if (r.read == "pending") "Claude is reading this receipt…" else r.merchant.ifEmpty { r.name }, motion = true) {
         if (isImage(r)) {
@@ -206,10 +223,17 @@ fun ReceiptSheet(hub: Hub, r: Receipt, onOpen: () -> Unit, onDismiss: () -> Unit
             CATEGORIES.forEach { c -> Chip(c, { category = c }, on = category == c) }
         }
         TextField(note, { note = it }, Modifier.fillMaxWidth(), placeholder = "Note, such as dinner with the Bergen team")
+        SheetError(error)
         Row(Modifier.fillMaxWidth().padding(top = Tokens.sp4), horizontalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
             Button("Delete", { remove() }, Modifier.weight(1f), variant = ButtonVariant.Danger, icon = "trash", fill = true)
             Button("Save", { save() }, Modifier.weight(1f), variant = ButtonVariant.Filled, fill = true)
         }
         Spacer(Modifier.padding(bottom = Tokens.sp8))
     }
+}
+
+// A failed save also shows in the sheet, since the app's snack sits behind the sheet's window.
+@Composable
+private fun SheetError(text: String?) {
+    if (text != null) Text(text, Modifier.fillMaxWidth().semantics { liveRegion = LiveRegionMode.Polite }, style = Type.subheadline, color = av.danger)
 }

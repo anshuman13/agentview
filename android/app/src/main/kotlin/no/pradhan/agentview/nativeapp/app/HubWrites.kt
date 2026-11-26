@@ -88,7 +88,11 @@ fun Hub.saveFile(path: String, content: String, failure: String = "Could not sav
 
 // web fileApi.ts renameSketch and deleteSketch: change a file in the chat's .claude/sketches; the notice carries the server's reason.
 private fun Hub.sketchWrite(failure: String, done: (Boolean) -> Unit, call: suspend () -> String) =
-    writes.run(failure, { try { call() } catch (e: ApiError) { throw ApiError("$failure: ${loadErrorText(e.message.orEmpty())}", e.code) } }, done)
+    writes.run(failure, {
+        try { call() }
+        catch (e: ApiError) { throw ApiError("$failure: ${loadErrorText(e.message.orEmpty())}", e.code) }
+        catch (e: java.io.IOException) { throw ApiError("$failure: ${loadErrorText(e.message.orEmpty())}") }
+    }, done)
 fun Hub.renameSketch(name: String, to: String, done: (Boolean) -> Unit) = sketchWrite("Not renamed", done) { api.post("/api/sketches/rename?name=${enc(name)}&to=${enc(to)}", "", pageChat) }
 fun Hub.deleteSketch(name: String, done: (Boolean) -> Unit) = sketchWrite("Not deleted", done) { api.delete("/api/sketches?name=${enc(name)}", pageChat) }
 

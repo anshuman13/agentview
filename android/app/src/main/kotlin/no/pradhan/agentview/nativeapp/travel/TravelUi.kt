@@ -73,6 +73,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import androidx.lifecycle.viewModelScope
 import no.pradhan.agentview.nativeapp.app.Hub
+import no.pradhan.agentview.nativeapp.net.loadErrorText
 import no.pradhan.agentview.nativeapp.app.askCodex
 import no.pradhan.agentview.nativeapp.chat.Attach
 import no.pradhan.agentview.nativeapp.chat.rememberAttach
@@ -107,10 +108,14 @@ import no.pradhan.agentview.nativeapp.ui.rememberLoad
 private const val FOLD = 5
 private const val POLL_MS = 2500L
 
-// A write to the Mac; false after a failure (shown as a notice) or in a read-only run.
-internal suspend fun Hub.travelWrite(failure: String? = null, block: suspend Hub.() -> Unit): Boolean =
+// A write to the Mac; false after a failure (shown as a notice, after lead when given, and passed to onError) or in a read-only run.
+internal suspend fun Hub.travelWrite(failure: String? = null, onError: (String) -> Unit = {}, lead: String? = null, block: suspend Hub.() -> Unit): Boolean =
     if (readOnly) { notice.value = READ_ONLY_SENT; false }
-    else runCatching { block() }.onFailure { notice.value = failure ?: it.message ?: "Request failed" }.isSuccess
+    else runCatching { block() }.onFailure {
+        val text = failure ?: (lead?.let { l -> "$l: " } ?: "") + loadErrorText(it.message ?: "Request failed")
+        notice.value = text
+        onError(text)
+    }.isSuccess
 
 private fun today() = LocalDate.now().toString()
 
@@ -379,7 +384,7 @@ private val NOW = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm", Locale.ROOT)
 private fun Notes(hub: Hub, trip: Trip, reload: () -> Unit) {
     var text by rememberSaveable(trip.id, trip.notes) { mutableStateOf(trip.notes) }
     val scope = rememberCoroutineScope()
-    val write = suspend { if (hub.travelWrite { api.post("/api/travel/trip", tripJson(trip, notes = text)) }) { hub.notice.value = "Notes saved"; reload() } }
+    val write = suspend { if (hub.travelWrite(lead = "Notes not saved") { api.post("/api/travel/trip", tripJson(trip, notes = text)) }) { hub.notice.value = "Notes saved"; reload() } }
     val save = { scope.launch { write() } }
     // Leaving the trip saves unsaved notes, as the web saves on blur.
     val latest by rememberUpdatedState(text to trip.notes)

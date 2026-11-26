@@ -1,4 +1,4 @@
-const NETWORK = /^(failed to fetch|load failed|networkerror|failed to connect|unable to resolve host)/i;
+const NETWORK = /^(failed to fetch|load failed|networkerror|failed to connect|unable to resolve host|unexpected end of stream|connection reset)/i;
 const TIMEOUT = /^(timeout|(read|connect) timed out|the operation timed out|signal timed out)/i;
 
 // A load or write error in plain words: a dropped link or a Mac that stopped answering; the server's own text is kept.

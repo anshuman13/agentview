@@ -10,7 +10,10 @@ export const cache = new Map<string, { events: ChatEvent[]; earlier: number }>()
 // boot is the server's start id. shownId is the chat the rows in `events` belong to; session.id still names the old chat after a cache hit.
 // settled is whether the shown chat's init has arrived. skew says how this code and the server's versions differ, or is empty.
 // atLatest is whether the transcript sits at its latest row with find closed, so new events may drop the oldest held ones.
-export const view = { boot: 0, shownId: '', settled: false, skew: '', atLatest: false };
+// page is the page on screen, which a reload for a new server boot opens again.
+export const view = { boot: 0, shownId: '', settled: false, skew: '', atLatest: false, page: '' };
+
+export const RESUME_PAGE = 'agentview.resumePage';
 
 export const setAtLatest = (on: boolean) => { view.atLatest = on; };
 

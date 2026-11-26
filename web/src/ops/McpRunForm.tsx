@@ -4,6 +4,7 @@ import { Icon } from '../ui/Icon';
 import { Button } from '../ui/Button';
 import { share } from './mcpActions';
 import { callMcp } from './opsApi';
+import { loadErrorText } from '../../../shared/loadError';
 import { argsOf, fieldsOf, initialValues, slug, toolId, type Field } from './mcpHelpers';
 
 type Out = { text: string; isError: boolean; args: Record<string, unknown> };
@@ -25,7 +26,7 @@ export function RunForm({ server, tool }: { server: string; tool: McpTool }) {
     setArmed(false);
     setBusy(true);
     callMcp(server, tool.name, args)
-      .then((r: Out) => setOut({ text: r.text, isError: r.isError, args }), (err) => setError(err.message))
+      .then((r: Out) => setOut({ text: r.text, isError: r.isError, args }), (err) => setError(loadErrorText(err.message)))
       .finally(() => setBusy(false));
   };
   const lead = (o: Out) => `${toolId(server, tool.name)} run from the MCP tab with ${JSON.stringify(o.args).slice(0, 200)} ${o.isError ? 'failed with' : 'returned'}`;

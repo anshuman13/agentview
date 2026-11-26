@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState, type ChangeEvent, type ReactNode } from 'react';
 import { flushSync } from 'react-dom';
-import { notice } from '../app/store';
+import { showSnack } from '../codex/view';
+import { loadErrorText } from '../../../shared/loadError';
 import { Back } from '../app/touch/back';
 import { useNarrow } from '../app/shell/useNarrow';
 import { Button, IconButton, ShowAll } from '../ui/Button';
@@ -26,7 +27,7 @@ import '../styles/features/travel.css';
 
 const FOLD = 5;
 const today = () => new Date().toLocaleDateString('sv-SE');
-const errText = (e: unknown) => (e instanceof Error ? e.message : String(e));
+const errText = (e: unknown) => loadErrorText(e instanceof Error ? e.message : String(e));
 
 // The hidden file inputs for taking a photo, choosing photos and choosing files; the buttons click them.
 function useCapture(onPick: (list: FileList | null) => void) {
@@ -114,7 +115,7 @@ function NotesField({ trip, onSaved }: { trip: Trip; onSaved: () => void }) {
   useEffect(() => setText(trip.notes), [trip.id, trip.notes]);
   const save = () => {
     if (text === trip.notes) return;
-    saveTrip({ id: trip.id, name: trip.name, from: trip.from, to: trip.to, notes: text }).then(onSaved, (e) => notice(`Notes not saved: ${errText(e)}`));
+    saveTrip({ id: trip.id, name: trip.name, from: trip.from, to: trip.to, notes: text }).then(onSaved, (e) => showSnack(`Notes not saved: ${errText(e)}`));
   };
   const leave = useRef(save);
   leave.current = save;
@@ -167,7 +168,7 @@ function Checklist({ trip }: { trip: Trip }) {
     setFlipped((f) => ({ ...f, [c.id]: !c.done }));
     setCheck(trip.id, c.id, !c.done).catch(() => {
       setFlipped((f) => ({ ...f, [c.id]: c.done }));
-      notice('Could not save the checklist');
+      showSnack('Could not save the checklist');
     });
   };
   return (
@@ -204,7 +205,7 @@ function TripView({ trip, receipts, home, onBack, reload }: { trip: Trip; receip
         const { blob, name } = await shrink(f);
         await uploadReceipt(trip.id, blob, name);
       } catch (e) {
-        notice(`${f.name} not added: ${errText(e)}`);
+        showSnack(`${f.name} not added: ${errText(e)}`);
       } finally {
         setUploading((n) => n - 1);
       }
@@ -235,7 +236,7 @@ function TripView({ trip, receipts, home, onBack, reload }: { trip: Trip; receip
               <MenuItem icon="home" onClick={() => { setMenu(false); setHoming(true); }}>Home address</MenuItem>
               <MenuItem icon="edit" onClick={() => { setMenu(false); setEditing(true); }}>Edit trip</MenuItem>
               <MenuItem icon="cloud-download" href={exportUrl(trip.id)} onClick={() => setMenu(false)}>Export receipts (CSV)</MenuItem>
-              <MenuItem icon="copy" onClick={() => { setMenu(false); copyText(summary()).then(() => notice('Summary copied'), () => notice('Copy failed')); }}>Copy summary</MenuItem>
+              <MenuItem icon="copy" onClick={() => { setMenu(false); copyText(summary()).then(() => showSnack('Summary copied'), () => showSnack('Copy failed')); }}>Copy summary</MenuItem>
               <MenuItem icon="trash" danger onClick={() => {
                 setMenu(false);
                 setConfirm({ title: `Delete ${trip.name}?`, detail: 'Its receipts and their files are deleted too.', action: 'Delete', run: async () => { await deleteTrip(trip.id); onBack(); await reload(); } });
@@ -295,9 +296,9 @@ export function Travel({ shown }: { shown: boolean }) {
       try {
         const { blob, name } = await shrink(f);
         const r = await uploadReceipt(tripId, blob, name);
-        notice(`Added to ${trips.current.find((t) => t.id === r.tripId)?.name ?? 'a trip'}${r.read === 'failed' ? ', could not read it' : ''}`);
+        showSnack(`Added to ${trips.current.find((t) => t.id === r.tripId)?.name ?? 'a trip'}${r.read === 'failed' ? ', could not read it' : ''}`);
       } catch (e) {
-        notice(`Receipt not added: ${errText(e)}`);
+        showSnack(`Receipt not added: ${errText(e)}`);
       } finally {
         setFiling((n) => n - 1);
       }
@@ -319,7 +320,7 @@ export function Travel({ shown }: { shown: boolean }) {
   };
   const findTrips = () => {
     setFinding(true);
-    scanCalendar().then((r) => { notice(scanText(r.added, r.updated)); return reload(); }, (e) => notice(`Calendar not read: ${errText(e)}`)).finally(() => setFinding(false));
+    scanCalendar().then((r) => { showSnack(scanText(r.added, r.updated)); return reload(); }, (e) => showSnack(`Calendar not read: ${errText(e)}`)).finally(() => setFinding(false));
   };
   const find = <Button size="sm" icon="calendar" disabled={finding} onClick={findTrips}>{finding ? 'Reading calendar…' : 'Find in calendar'}</Button>;
   const trip = data?.trips.find((t) => t.id === open);

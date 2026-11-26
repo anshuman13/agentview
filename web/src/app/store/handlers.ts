@@ -6,7 +6,7 @@ import { EMPTY_SESSION, embedded, getState, notice, set, setFindings, setUi } fr
 import { bundled } from '../api';
 import { markSeen } from './seen';
 import { flushOutbox, send } from './send';
-import { cache, cacheShown, view } from './view';
+import { cache, cacheShown, RESUME_PAGE, view } from './view';
 import { backgroundNotices } from '../../../../shared/notices';
 import { rememberModels } from '../newChat';
 
@@ -51,7 +51,12 @@ const protocolDiffers = (server: string | undefined) => Boolean(server) && !impo
 
 function onInit(m: Extract<ServerMessage, { type: 'init' }>) {
   // A new server boot means new code on the dev server too; reload so the client matches it.
-  if (m.boot && view.boot && m.boot !== view.boot) return location.reload();
+  if (m.boot && view.boot && m.boot !== view.boot) {
+    try {
+      if (view.page) sessionStorage.setItem(RESUME_PAGE, view.page);
+    } catch {}
+    return location.reload();
+  }
   // A server built from another protocol.ts can send state this code misreads. A page reloads once to get the server's build;
   // the desktop app bundles its UI, so there, and when the reload did not help, the chat and the crash screen say so.
   const differs = protocolDiffers(m.protocol);

@@ -1,5 +1,6 @@
-import { notice } from '../app/store';
+import { showSnack } from '../codex/view';
 import { showChat } from '../ui/util';
+import { loadErrorText } from '../../../shared/loadError';
 import { errText } from '../../../shared/util';
 import type { Call } from './mcpHelpers';
 import { openUrl, pasteText } from './opsApi';
@@ -19,7 +20,7 @@ export async function share(lead: string, text: string, file: string) {
     const body = await pasteText(file, text);
     insert(`${lead}: [File: ${body.path}] `);
   } catch (err) {
-    notice(`Could not attach the result: ${errText(err)}`);
+    showSnack(`Could not attach the result: ${loadErrorText(errText(err))}`);
   }
 }
 
@@ -27,4 +28,4 @@ export const cite = (c: Call) => share(`Earlier mcp__${c.server}__${c.tool} call
 
 // The work Claude accounts are signed in to claude.ai in Chrome on the Mac, the personal one in Firefox.
 export const openConnectors = (account?: string) =>
-  openUrl('https://claude.ai/settings/connectors', account && account !== 'main' ? 'chrome' : 'firefox').catch((e) => notice(`Could not open claude.ai: ${e.message}`));
+  openUrl('https://claude.ai/settings/connectors', account && account !== 'main' ? 'chrome' : 'firefox').catch((e) => showSnack(`Could not open claude.ai: ${loadErrorText(e.message)}`));

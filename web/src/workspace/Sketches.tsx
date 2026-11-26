@@ -1,6 +1,8 @@
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { flushSync } from 'react-dom';
-import { notice, setUi, useStore } from '../app/store';
+import { setUi, useStore } from '../app/store';
+import { showSnack } from '../codex/view';
+import { loadErrorText } from '../../../shared/loadError';
 import { useNarrow } from '../app/shell/useNarrow';
 import { useThemeName } from '../app/theme';
 import { Back } from '../app/touch/back';
@@ -42,14 +44,14 @@ export function SketchList({ sketches, onOpen, onChanged, zoomed }: { sketches: 
     input: { value: sketchTitle(s.name), placeholder: 'Sketch name', maxLength: 120 },
     run: (to) => {
       const file = sketchRename(to);
-      if (!file) return Promise.resolve(notice('Not a valid sketch name'));
+      if (!file) return Promise.resolve(showSnack('Not a valid sketch name'));
       if (file === s.name) return Promise.resolve();
-      return renameSketch(s.name, to).then(() => { focusAfter.current = file; changed(); }, (e) => notice(`Not renamed: ${errText(e)}`));
+      return renameSketch(s.name, to).then(() => { focusAfter.current = file; changed(); }, (e) => showSnack(`Not renamed: ${errText(e)}`));
     },
   });
   const remove = (s: SketchFile) => setAsk({
     title: `Delete ${sketchTitle(s.name)}?`, detail: 'The file is removed from .claude/sketches. This cannot be undone.', action: 'Delete', icon: 'trash',
-    run: () => deleteSketch(s.name).then(() => { const i = rows.indexOf(s); focusAfter.current = (rows[i + 1] ?? rows[i - 1])?.name ?? null; changed(); }, (e) => notice(`Not deleted: ${errText(e)}`)),
+    run: () => deleteSketch(s.name).then(() => { const i = rows.indexOf(s); focusAfter.current = (rows[i + 1] ?? rows[i - 1])?.name ?? null; changed(); }, (e) => showSnack(`Not deleted: ${errText(e)}`)),
   });
   return (
     <>
@@ -65,7 +67,7 @@ export function SketchList({ sketches, onOpen, onChanged, zoomed }: { sketches: 
               <CardMenu name={s.name} items={(close) => (
                 <>
                   <MenuItem icon="edit" onClick={() => { close(); rename(s); }}>Rename</MenuItem>
-                  <MenuItem icon="desktop-download" onClick={() => { close(); downloadSketch(s).catch((e) => notice(`Not downloaded: ${errText(e)}`)); }}>Download</MenuItem>
+                  <MenuItem icon="desktop-download" onClick={() => { close(); downloadSketch(s).catch((e) => showSnack(`Not downloaded: ${errText(e)}`)); }}>Download</MenuItem>
                   <MenuItem icon="trash" danger onClick={() => { close(); remove(s); }}>Delete</MenuItem>
                 </>
               )} />
@@ -93,7 +95,7 @@ function CardMenu({ name, items }: { name: string; items: (close: () => void) =>
   );
 }
 
-const errText = (e: unknown) => (e instanceof Error ? e.message : String(e));
+const errText = (e: unknown) => loadErrorText(e instanceof Error ? e.message : String(e));
 
 // The card's preview loads only once the card scrolls into view, so a long folder reads one file per visible card.
 function SketchThumb({ file, theme }: { file: SketchFile; theme: SketchTheme }) {

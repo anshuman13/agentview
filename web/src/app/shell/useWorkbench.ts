@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type MouseEvent } from 'react';
 import { getState, useStore } from '../store';
+import { view as storeView } from '../store/view';
 import { haptic } from '../../ui/haptic';
 import { slideFrom, useTabSwipe } from '../touch/tabSwipe';
 import { deepLink } from '../deepLinks';
@@ -55,6 +56,9 @@ export function useWorkbench() {
     else { setView('assistant'); setSidebar(true); }
     window.dispatchEvent(new Event('assistant:shown'));
   };
+
+  const shownPage = page && (narrow() ? tab === 'code' : editor === page) ? page : '';
+  useEffect(() => { storeView.page = shownPage; }, [shownPage]);
 
   useEffect(() => {
     if (pendingCount > 0) setTab('chat');
