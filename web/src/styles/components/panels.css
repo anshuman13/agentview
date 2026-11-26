@@ -32,7 +32,11 @@
   grid-template-columns: auto 1fr; gap: var(--sp-2) var(--sp-6); animation: dialog-in var(--dur-dialog) var(--motion-ease-in);
 }
 :root[data-theme='light'] .dialog { border-color: transparent; }
+.overlay.dialog-overlay.leaving { pointer-events: none; animation: dialog-fade-out var(--dur-dialog) var(--motion-ease-out) forwards; }
+.dialog-overlay.leaving .dialog { animation: dialog-out var(--dur-dialog) var(--motion-ease-out) forwards; }
 @keyframes dialog-fade { from { opacity: 0; } }
+@keyframes dialog-fade-out { to { opacity: 0; } }
+@keyframes dialog-out { to { transform: scale(.99); } }
 @keyframes dialog-in { from { transform: scale(.99); } }
 .dialog-icon .codicon { font-size: var(--fs-6xl); color: var(--warn); }
 .dialog-icon.neutral .codicon { color: var(--accent-text); }
