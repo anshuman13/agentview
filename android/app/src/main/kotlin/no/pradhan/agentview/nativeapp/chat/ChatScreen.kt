@@ -38,6 +38,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import no.pradhan.agentview.nativeapp.codex.autopilot.loopNow
@@ -245,7 +246,7 @@ private fun ChatHeader(hub: Hub, live: LiveChat, session: SessionInfo?, cost: Do
     Row(Modifier.fillMaxWidth().height(Tokens.tabbarH).padding(horizontal = Tokens.sp2), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Tokens.sp2)) {
         if (onChats != null) IconBtn("menu", "Chats", onChats, tint = av.fg) else Spacer(Modifier.width(Tokens.sp6))
         Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-            Text(live.title.ifBlank { UNTITLED }, style = Type.headline, color = av.fg, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(live.title.ifBlank { UNTITLED }, style = Type.headline.copy(fontWeight = FontWeight.Medium), color = av.fg, maxLines = 1, overflow = TextOverflow.Ellipsis)
             Text(chatPlace(ws, cwd), style = Type.footnote, color = av.fgMuted, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
         IconBtn("edit", "New chat", { newChat = true }, tint = av.fg)

@@ -47,13 +47,13 @@ button.rail-s { cursor: pointer; }
 .timeline-head .title { font-weight: 600; text-transform: uppercase; letter-spacing: var(--tracking-wide); color: var(--fg); }
 .timeline-head > .spacer { display: none; }
 .tl-name { flex: 1 1 0; min-width: 0; display: flex; align-items: baseline; gap: var(--sp-3); }
-.tl-name b { min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: var(--fs-md); font-weight: 600; color: var(--fg-strong); }
+.tl-name b { min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: var(--fs-lg); font-weight: 500; color: var(--fg-strong); }
 .tl-name b.editable { -webkit-touch-callout: none; }
 .tl-name .chat-rename { flex: 1 1 0; min-width: 0; height: var(--size-sm); }
 @media (max-width: 480px) { .tl-name b.editable { -webkit-user-select: none; user-select: none; } }
 .tl-from { flex: none; align-self: flex-start; margin-bottom: var(--sp-2); font: inherit; max-width: 100%; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; padding: 0; border: 0; background: none; font-size: var(--fs-xs); color: var(--fg-muted); cursor: pointer; }
 .tl-from:hover { color: var(--fg); text-decoration: underline; }
-.tl-name small { flex: 0 0 auto; max-width: 40%; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: var(--fs-xs); color: var(--fg-muted); }
+.tl-name small { flex: 0 0 auto; max-width: 40%; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: var(--fs-sm); color: var(--fg-muted); }
 .tl-state { flex: 0 1 auto; min-width: 0; max-width: 45%; display: inline-flex; align-items: center; gap: var(--sp-2); padding: 0 var(--sp-2); border: 0; border-radius: var(--radius); background: transparent; font: inherit; font-size: var(--type-subheadline-size); color: var(--fg-muted); white-space: nowrap; cursor: pointer; }
 @media (hover: hover) { .tl-state:hover { background: var(--hover); color: var(--fg); } }
 .tl-state .count { flex: none; font-variant-numeric: tabular-nums; }
@@ -70,7 +70,7 @@ button.rail-s { cursor: pointer; }
 .tl-state:is(.running, .stopping) .codicon { color: var(--accent-text); }
 .tl-state.waiting { color: var(--warn); }
 .tl-more { position: relative; flex: none; display: inline-flex; }
-.timeline-head .icon-btn { width: var(--size-sm); height: var(--size-sm); }
+.timeline-head .icon-btn { width: var(--control-sm); height: var(--control-sm); border-radius: var(--radius); }
 
 .tl-now .mark { position: relative; flex: none; width: var(--size-xs); height: var(--size-xs); display: flex; align-items: center; justify-content: center; color: var(--fg-muted); }
 
