@@ -289,20 +289,19 @@ private fun McpDetail(hub: Hub, r: McpRow, calls: Pair<Int, Int>?, groups: Map<S
                         mcpUsage(r, calls)?.let { Hairline(); ListRow("Used in this chat", it) }
                     }
                 }
-                item { SectionHeader("Tools", (r.server.tools?.size ?: 0).toString()) }
-                if ((r.server.tools?.size ?: 0) > 6) item { SearchField(q, { q = it }, "Filter") }
-                item {
-                    Group {
-                        if (tools.isEmpty()) mcpNoTools(r).let { (title, hint) -> EmptyState(if (r.server.tools.isNullOrEmpty()) title else "No tool matches", hint.takeIf { r.server.tools.isNullOrEmpty() }) }
-                        tools.forEachIndexed { i, t ->
-                            if (i > 0) Hairline()
-                            ListRow(t.name, firstLine(t.description).ifEmpty { null }, metaLines = 2, trailing = if (t.readOnly || t.destructive || canUse) ({
-                                Row(horizontalArrangement = Arrangement.spacedBy(Tokens.sp2), verticalAlignment = Alignment.CenterVertically) {
-                                    if (t.readOnly) Badge("Read only", BadgeTone.Quiet)
-                                    if (t.destructive) Badge("Destructive", BadgeTone.Waiting)
-                                    if (canUse) IconBtn("comment", "Add ${t.name} to chat", { use(Use(r.name, t.name)) })
-                                }
-                            }) else null)
+                if ((r.server.tools?.size ?: 0) > 6) item { SearchField(q, { q = it }, "Filter tools") }
+                if (tools.isEmpty()) item {
+                    SectionHeader("Tools", (r.server.tools?.size ?: 0).toString())
+                    Group { mcpNoTools(r).let { (title, hint) -> EmptyState(if (r.server.tools.isNullOrEmpty()) title else "No tool matches", hint.takeIf { r.server.tools.isNullOrEmpty() }) } }
+                }
+                mcpToolGroups(tools).filter { it.second.isNotEmpty() }.forEach { (name, list) ->
+                    item(key = name) { SectionHeader(name, list.size.toString()) }
+                    item(key = "$name-rows") {
+                        Group {
+                            list.forEachIndexed { i, t ->
+                                if (i > 0) Hairline()
+                                ListRow(t.name, firstLine(t.description).ifEmpty { null }, metaLines = 2, trailing = if (canUse) ({ IconBtn("comment", "Add ${t.name} to chat", { use(Use(r.name, t.name)) }) }) else null)
+                            }
                         }
                     }
                 }

@@ -90,7 +90,9 @@
 .mcp-act-error { align-self: center; font-size: var(--fs-sm); }
 .mcp-login { display: flex; flex-direction: column; gap: var(--sp-3); align-items: flex-start; }
 
-.mcp-tools .ui-section input { width: 120px; }
+.mcp-tool-filter { align-self: flex-end; width: 160px; height: 28px; margin-bottom: var(--sp-2); padding: 0 var(--sp-4); border: 0; border-radius: var(--radius-sm); background: var(--sunken); color: var(--fg); font: inherit; font-size: var(--fs-sm); }
+.mcp-tool-group + .mcp-tool-group { margin-top: var(--sp-6); }
+.mcp-tool-group .mcp-tool { padding-left: var(--sp-10); }
 .mcp-tools, .mcp-calls { display: flex; flex-direction: column; gap: var(--sp-1); }
 .mcp-tools { gap: 0; }
 .mcp-tools { margin-top: var(--sp-2); }
@@ -98,7 +100,6 @@
 .mcp-tool:last-child { border-bottom: 0; }
 @media (hover: hover) { .mcp-tool:hover { background: var(--hover); } }
 .mcp-tool .t { display: flex; align-items: center; gap: var(--sp-3); flex-wrap: wrap; font-size: var(--fs-md); }
-.mcp-tag.warn { color: var(--warn); }
 .mcp-tool .t .codicon, .mcp-call .t > .codicon { color: var(--fg-muted); }
 .mcp-tool .d { margin: var(--sp-2) 0 0; font-size: var(--fs-sm); color: var(--fg-muted); line-height: var(--lh-snug); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .mcp-tool.open { background: transparent; }

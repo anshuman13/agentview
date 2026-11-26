@@ -10,7 +10,7 @@ import { Menu, MenuItem } from '../ui/Menu';
 import { ServerIcon, StatusCell } from './McpServiceRow';
 import { Section } from '../ui/Section';
 import { openConnectors, use } from './mcpActions';
-import { runnable, scopeInfo, shortName, stateOf, usageText, type Group, type Row, type Usage } from './mcpHelpers';
+import { runnable, scopeInfo, shortName, stateOf, toolGroups, usageText, type Group, type Row, type Usage } from './mcpHelpers';
 import { CallRow } from './McpCallRow';
 import { AddToChat, ClaudeAiLogin, Login } from './McpLogin';
 import { RunForm } from './McpRunForm';
@@ -25,6 +25,7 @@ export function Detail({ row, usage, group, onGroup, hidden, onHide, onClose }: 
   const canEdit = useCan('mcpEdit');
   const connectors = useCan('connectors');
   const [q, setQ] = useState('');
+  const [shut, setShut] = useState<Set<string>>(() => new Set());
   const [run, setRun] = useState<string | null>(null);
   const [menu, setMenu] = useState(false);
   const more = useRef<HTMLButtonElement>(null);
@@ -89,16 +90,19 @@ export function Detail({ row, usage, group, onGroup, hidden, onHide, onClose }: 
         </>
       )}
       <div className="mcp-tools">
-        <Section
-          label="Tools"
-          count={row.tools?.length ?? 0}
-          action={(row.tools?.length ?? 0) > 6 && <input placeholder="Filter" aria-label="Filter tools" value={q} onChange={(e) => setQ(e.target.value)} spellCheck={false} />}
-        />
-        {tools.map((t) => (
-          <div key={t.name} className={`mcp-tool ${run === t.name ? 'open' : ''}`}>
-            <div className="t"><span className="n">{t.name}</span>{t.readOnly && <span className="mcp-tag">Read only</span>}{t.destructive && <span className="mcp-tag warn">Destructive</span>}<span className="spacer" />{t.inputSchema && runnable(row) && <IconButton icon={run === t.name ? 'close' : 'play'} small className="mcp-insert" on={run === t.name} label={run === t.name ? 'Close' : 'Run this tool'} onClick={() => setRun((r) => (r === t.name ? null : t.name))} />}{row.live && <IconButton icon="comment" small className="mcp-insert" label="Add to chat" title={`Ask ${label} to use ${t.name} in your next message`} onClick={() => use(row.name, t.name)} />}</div>
-            {t.description && <div className="d">{t.description}</div>}
-            {run === t.name && <RunForm key={`${row.name}:${t.name}`} server={row.name} tool={t} />}
+        {(row.tools?.length ?? 0) > 6 && <input className="mcp-tool-filter" placeholder="Filter tools" aria-label="Filter tools" value={q} onChange={(e) => setQ(e.target.value)} spellCheck={false} />}
+        {toolGroups(tools).map(([name, list]) => (
+          <div key={name} className="mcp-tool-group">
+            <Section label={name} count={list.length} open={!shut.has(name)} onToggle={() => setShut((s) => { const n = new Set(s); if (!n.delete(name)) n.add(name); return n; })} />
+            {!shut.has(name) && <>
+              {list.map((t) => (
+                <div key={t.name} className={`mcp-tool ${run === t.name ? 'open' : ''}`}>
+                  <div className="t"><span className="n">{t.name}</span><span className="spacer" />{t.inputSchema && runnable(row) && <IconButton icon={run === t.name ? 'close' : 'play'} small className="mcp-insert" on={run === t.name} label={run === t.name ? 'Close' : 'Run this tool'} onClick={() => setRun((r) => (r === t.name ? null : t.name))} />}{row.live && <IconButton icon="comment" small className="mcp-insert" label="Add to chat" title={`Ask ${label} to use ${t.name} in your next message`} onClick={() => use(row.name, t.name)} />}</div>
+                  {t.description && <div className="d">{t.description}</div>}
+                  {run === t.name && <RunForm key={`${row.name}:${t.name}`} server={row.name} tool={t} />}
+                </div>
+              ))}
+            </>}
           </div>
         ))}
         {row.tools && row.tools.length > 0 && tools.length === 0 && <EmptyState size="sm" title="No tool matches" />}

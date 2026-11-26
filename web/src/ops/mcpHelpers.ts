@@ -230,3 +230,9 @@ export function mcpMatches(r: Row, query: string) {
   const text = [r.name, r.account, sourceOf(r), typeOf(r), tagOf(r), rowNote(r)].filter(Boolean).join(' ').toLowerCase();
   return query.toLowerCase().split(/\s+/).filter(Boolean).every((w) => text.includes(w));
 }
+
+// Claude's connector page splits tools into Interactive and Read-only; a server without read-only hints keeps one Tools list.
+export function toolGroups<T extends { readOnly?: boolean }>(tools: T[]): [string, T[]][] {
+  if (!tools.some((t) => t.readOnly)) return [['Tools', tools]];
+  return ([['Interactive tools', tools.filter((t) => !t.readOnly)], ['Read-only tools', tools.filter((t) => t.readOnly)]] as [string, T[]][]).filter(([, l]) => l.length);
+}

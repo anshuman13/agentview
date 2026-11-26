@@ -289,3 +289,8 @@ fun setupPrompt(kind: String, repo: String, mcpCommand: String) = when (kind) {
     "deploy" -> "Set up deploys for $repo: add a .deploy/app.yaml that names the app and its environments."
     else -> "Help me add an MCP server: run `$mcpCommand` with the right arguments, then check the list again."
 }
+
+// Claude's connector page splits tools into Interactive and Read-only; a server without read-only hints keeps one Tools list (web toolGroups).
+fun mcpToolGroups(tools: List<McpTool>): List<Pair<String, List<McpTool>>> =
+    if (tools.none { it.readOnly }) listOf("Tools" to tools)
+    else listOf("Interactive tools" to tools.filter { !it.readOnly }, "Read-only tools" to tools.filter { it.readOnly }).filter { it.second.isNotEmpty() }

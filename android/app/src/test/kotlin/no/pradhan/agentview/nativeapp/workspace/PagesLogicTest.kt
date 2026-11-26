@@ -41,6 +41,8 @@ import no.pradhan.agentview.nativeapp.ops.mcpKey
 import no.pradhan.agentview.nativeapp.ops.mcpLoggedInSince
 import no.pradhan.agentview.nativeapp.ops.mcpMeta
 import no.pradhan.agentview.nativeapp.ops.mcpUsage
+import no.pradhan.agentview.nativeapp.ops.mcpToolGroups
+import no.pradhan.agentview.nativeapp.ops.McpTool
 import no.pradhan.agentview.nativeapp.ops.mcpDot
 import no.pradhan.agentview.nativeapp.ops.mcpNote
 import no.pradhan.agentview.nativeapp.ops.McpLogin
@@ -235,6 +237,9 @@ class PagesLogicTest {
         assertEquals("40 ms · 2 calls · 1 error", mcpUsage(McpRow(probed[0]), 2 to 1))
         assertEquals("Local · Your servers · Personal", mcpMeta(rows[0], personal = true))
         assertEquals("Web · Claude.ai", mcpMeta(rows[2]))
+        val ta = McpTool("a"); val tb = McpTool("b", readOnly = true)
+        assertEquals(listOf("Interactive tools" to listOf(ta), "Read-only tools" to listOf(tb)), mcpToolGroups(listOf(ta, tb)))
+        assertEquals(listOf("Tools" to listOf(ta)), mcpToolGroups(listOf(ta)))
         assertEquals("1 tool", mcpToolCount(McpRow(probed[0])))
         assertNull(mcpToolCount(rows[1]))
         assertNull(mcpNote(rows[2]))

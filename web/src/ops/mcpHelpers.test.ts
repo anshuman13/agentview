@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'bun:test';
 import type { ChatEvent } from '../../../shared/protocol';
-import { argsOf, dotTone, fieldsOf, initialValues, mcpCalls, merge, moreMcpCounts, rowNote, services, stateOf, toolId } from './mcpHelpers';
+import { argsOf, dotTone, fieldsOf, initialValues, mcpCalls, merge, moreMcpCounts, rowNote, services, stateOf, toolGroups, toolId } from './mcpHelpers';
 
 describe('merge', () => {
   it('drops the probe error once the chat has the server connected', () => {
@@ -99,5 +99,14 @@ describe('moreMcpCounts', () => {
   it('uses the page section counts once loaded', () => {
     const page = { connected: 46, total: 103, needsYou: 57 };
     expect(moreMcpCounts(page, chat)).toEqual(page);
+  });
+});
+
+describe('toolGroups', () => {
+  it('splits read-only tools out like Claude, else keeps one list', () => {
+    const a = { name: 'a' }, b = { name: 'b', readOnly: true };
+    expect(toolGroups([a, b])).toEqual([['Interactive tools', [a]], ['Read-only tools', [b]]]);
+    expect(toolGroups([b])).toEqual([['Read-only tools', [b]]]);
+    expect(toolGroups([a])).toEqual([['Tools', [a]]]);
   });
 });
