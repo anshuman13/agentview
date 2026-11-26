@@ -5,12 +5,12 @@ import { defineTool } from './tool.js';
 
 export const BUILD_RULES = [
   'When the user asks to build something task by task, overnight or until a time, start it with mcp__agentview__start_build instead of telling them to type /build.',
-  'It opens a new chat in the project that writes a spec and builds its tasks one by one, each in a fresh context, committing without pushing. Without auto it waits for the user to approve the spec and stops on a blocked task; with until it finds more work for the goal until that time.',
+  'It opens a new chat in the project, linked under this chat and shown here as a build card with its state and progress, that writes a spec and builds its tasks one by one, each in a fresh context, committing without pushing. Without auto it waits for the user to approve the spec and stops on a blocked task; with until it finds more work for the goal until that time.',
 ].join(' ');
 
 export const buildTool = defineTool({
   name: 'start_build',
-  description: 'Start a build run in a new chat in a project: a spec, then its tasks one by one, each in a fresh context. The same as typing /build there.',
+  description: 'Start a build run in a new chat in a project: a spec, then its tasks one by one, each in a fresh context. The build chat is linked under this chat, which shows it as a build card. The same as typing /build there.',
   schema: {
     request: z.string().optional().describe('What to build, as the user said it. Omit when spec is given.'),
     spec: z.string().optional().describe('An existing spec to build, .claude/specs/<slug>.md, relative to folder or absolute.'),

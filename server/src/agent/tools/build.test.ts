@@ -8,7 +8,7 @@ describe('start_build', () => {
     const calls: string[][] = [];
     const out = await callTool('start_build', { request: 'add  dark\nmode', auto: true, until: '6:30' }, ctx(async (cwd, line) => (calls.push([cwd, line]), 'n1')));
     expect(calls).toEqual([['/repo', '/build auto until 6:30 add dark mode']]);
-    expect(out).toContain('n1');
+    expect(out).toContain('new chat (n1)');
   });
   it('passes the calling chat', async () => {
     let caller: string | null | undefined;
