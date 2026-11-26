@@ -5,7 +5,7 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.util.LruCache
 import androidx.compose.foundation.Image
-import androidx.compose.runtime.produceState
+import androidx.compose.runtime.key
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import kotlinx.coroutines.Dispatchers
@@ -269,7 +269,7 @@ private fun McpFilterMenu(menu: McpMenu, filter: McpFilter, onChange: (McpFilter
 @Composable
 private fun McpGroup(hub: Hub, rows: List<McpRow>, personal: Set<String>, onOpen: (McpRow) -> Unit) {
     Group {
-        rows.forEachIndexed { i, r ->
+        rows.forEachIndexed { i, r -> key(mcpKey(r)) {
             if (i > 0) Hairline()
             ListRow(
                 mcpShortName(r.name), mcpMeta(r, mcpKey(r) in personal),
@@ -277,7 +277,7 @@ private fun McpGroup(hub: Hub, rows: List<McpRow>, personal: Set<String>, onOpen
                 trailing = { McpStatus(r) },
                 lines = 1, metaLines = 1, muted = mcpStatusGroup(r) == "Off", onClick = { onOpen(r) },
             )
-        }
+        } }
     }
 }
 
@@ -286,8 +286,9 @@ private fun McpGroup(hub: Hub, rows: List<McpRow>, personal: Set<String>, onOpen
 private fun McpIcon(hub: Hub, r: McpRow) {
     val shape = RoundedCornerShape(Tokens.radiusSm)
     val web = mcpType(r) == "Web"
-    val logo by produceState(if (web) mcpLogos.get(r.name) else null, r.name) {
-        if (web && value == null) value = withContext(Dispatchers.IO) { hub.mcpIcon(r.name, r.server.command)?.let { BitmapFactory.decodeByteArray(it, 0, it.size) }?.also { mcpLogos.put(r.name, it) } }
+    var logo by remember(r.name, web) { mutableStateOf(if (web) mcpLogos.get(r.name) else null) }
+    LaunchedEffect(r.name, web) {
+        if (web && logo == null) logo = withContext(Dispatchers.IO) { hub.mcpIcon(r.name, r.server.command)?.let { BitmapFactory.decodeByteArray(it, 0, it.size) }?.also { mcpLogos.put(r.name, it) } }
     }
     val b = logo
     Box(Modifier.size(32.dp).background(if (b != null) Color.White else av.raised, shape).border(Tokens.hairline, av.border, shape), contentAlignment = Alignment.Center) {
