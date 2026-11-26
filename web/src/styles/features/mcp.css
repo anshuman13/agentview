@@ -3,8 +3,8 @@
 .page-mcp .page-hero { display: none; }
 .page-mcp .mt-page { padding-top: var(--sp-10); }
 .mcp-bar { display: flex; align-items: center; gap: var(--sp-2); margin-bottom: var(--sp-4); }
-.mcp-bar h2 { flex: 1; min-width: 0; margin: 0; font-size: var(--fs-md); font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.mcp-bar .page-search { flex: 0 1 220px; margin: 0 0 0 var(--sp-4); max-width: none; height: 28px; padding: 0 var(--sp-4); border: 0; border-radius: var(--radius-sm); background: var(--sunken); }
+.mcp-bar h2 { flex: 1 0 auto; min-width: 0; margin: 0; font-size: var(--fs-md); font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mcp-bar .page-search { flex: 0 1 220px; min-width: 0; margin: 0 0 0 var(--sp-4); max-width: none; height: 28px; padding: 0 var(--sp-4); border: 0; border-radius: var(--radius-sm); background: var(--sunken); }
 .mcp-bar .page-search input { font-size: var(--fs-sm); }
 .mcp-filter { position: relative; }
 .mcp-fhead { padding: var(--sp-2) var(--sp-4) var(--sp-1); font-size: var(--fs-xs); color: var(--fg-muted); }
@@ -46,6 +46,10 @@
   .mcp-tr .c-src { display: none; }
   .mcp-tr .c-name .sub { display: block; }
   .mcp-tr:not(.mcp-th) { min-height: 56px; }
+}
+@container (max-width: 360px) {
+  .mcp-bar h2 { display: none; }
+  .mcp-bar .page-search { flex: 1 1 auto; margin-left: 0; }
 }
 .mcp-error {
   margin: 0 0 var(--sp-8); padding: var(--sp-4) var(--sp-6); display: flex; gap: var(--sp-3); align-items: center; color: var(--err);
