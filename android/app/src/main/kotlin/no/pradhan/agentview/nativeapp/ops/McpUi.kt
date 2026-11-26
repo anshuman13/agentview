@@ -10,7 +10,13 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -203,11 +209,20 @@ private fun McpGroup(rows: List<McpRow>, personal: Set<String>, onOpen: (McpRow)
             if (i > 0) Hairline()
             ListRow(
                 mcpShortName(r.name), mcpMeta(r, mcpKey(r) in personal),
-                leading = { AvIcon(if (mcpType(r) == "Web") "globe" else "terminal", null, Tokens.iconMd, tint = av.fgMuted) },
+                leading = { McpIcon(r) },
                 trailing = { McpStatus(r) },
                 lines = 1, metaLines = 1, muted = mcpStatusGroup(r) == "Off", onClick = { onOpen(r) },
             )
         }
+    }
+}
+
+// web ServerIcon: the Web or Local glyph in a small bordered tile, like Claude's connector logos.
+@Composable
+private fun McpIcon(r: McpRow) {
+    val shape = RoundedCornerShape(Tokens.radiusSm)
+    Box(Modifier.size(32.dp).background(av.raised, shape).border(Tokens.hairline, av.border, shape), contentAlignment = Alignment.Center) {
+        AvIcon(if (mcpType(r) == "Web") "globe" else "terminal", null, Tokens.iconSm, tint = av.fgMuted)
     }
 }
 
