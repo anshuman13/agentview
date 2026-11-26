@@ -76,7 +76,7 @@ export function ReviewList() {
   };
   return (
     <div className="wk">
-      <header className="wk-head">
+      <header className="wk-head wk-page-head">
         <IconButton icon="arrow-left" label="Back" title="Back to the wiki" onClick={back} />
         <h1>Review claims</h1>
         <span className="spacer" />

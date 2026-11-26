@@ -64,7 +64,7 @@ export function WikiPage({ id }: { id: string }) {
   };
   return (
     <div className="wk">
-      <header className="wk-head">
+      <header className="wk-head wk-page-head">
         <IconButton icon="arrow-left" label="Back" onClick={back} />
         {page && (
           <WikiPageHead page={page} isMemory={!pid} groups={groups} pending={pending} renaming={renaming} setRenaming={setRenaming} cancelled={edits.cancelled} onRename={rename} onPropose={() => setClaimDraft((v) => v ?? '')}

@@ -19,6 +19,7 @@ import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontVariation
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.sp
 import androidx.core.view.WindowCompat
 import no.pradhan.agentview.nativeapp.R
 
@@ -31,6 +32,7 @@ val AppFont = variable(R.font.space_grotesk, 300, 400, 500, 600, 700)
 val MonoFont = variable(R.font.jetbrains_mono, 400, 500, 700)
 val ReadingFont = FontFamily.Serif
 val SerifTitle = Type.title.copy(fontFamily = ReadingFont, fontWeight = FontWeight.Normal)
+val SerifHeading = SerifTitle.copy(fontSize = 20.sp, lineHeight = 26.sp)
 
 private val typography = Typography(
     displayLarge = Type.largeTitle, displayMedium = Type.display, displaySmall = Type.title,

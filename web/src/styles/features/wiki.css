@@ -6,6 +6,10 @@
 .wk :is(button, a, [role='button']):focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 .wk-head { flex: none; display: flex; align-items: center; gap: var(--sp-4); width: 100%; max-width: calc(var(--wk-max) + 2 * var(--wk-pad)); margin: 0 auto; padding: var(--sp-10) var(--wk-pad) var(--sp-6); }
 .wk-head h1 { margin: 0; font-size: var(--fs-5xl); font-weight: 650; letter-spacing: -0.02em; }
+.wk-page-head h1 { font-family: var(--font-serif); font-weight: 400; letter-spacing: 0; }
+.wk-page-head > .ui-section .ui-section-label { font-family: var(--font-serif); font-size: var(--type-title-size); font-weight: 400; line-height: var(--type-title-line); color: var(--fg-strong); }
+.wk-group > .ui-section .ui-section-head { color: var(--fg-strong); }
+.wk-group > .ui-section .ui-section-label { font-family: var(--font-serif); font-size: var(--fs-title3); font-weight: 400; line-height: 26px; }
 .wk-scroll { flex: 1; min-height: 0; overflow-y: auto; container-type: inline-size; mask-image: linear-gradient(to bottom, var(--bg) calc(100% - 28px), transparent); }
 .wk-label { font-size: var(--fs-md); font-weight: 500; color: var(--fg-muted); }
 .wk-meta { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2) var(--sp-3); font-size: var(--fs-sm); color: var(--fg-faint); }

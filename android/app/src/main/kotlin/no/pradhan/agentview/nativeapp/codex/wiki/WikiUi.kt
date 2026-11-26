@@ -74,6 +74,7 @@ import no.pradhan.agentview.nativeapp.ui.MenuSeparator
 import no.pradhan.agentview.nativeapp.ui.MoreButton
 import no.pradhan.agentview.nativeapp.ui.SearchField
 import no.pradhan.agentview.nativeapp.ui.SectionHeader
+import no.pradhan.agentview.nativeapp.ui.SerifTitle
 import no.pradhan.agentview.nativeapp.ui.Sheet
 import no.pradhan.agentview.nativeapp.ui.TextField
 import no.pradhan.agentview.nativeapp.ui.TextDialog
@@ -474,7 +475,7 @@ fun WikiPageView(st: CodexState, page: Row, profile: String?, now: Long, actions
         item {
             Column(Modifier.padding(start = Tokens.listPad, end = Tokens.listPad, top = Tokens.sp8, bottom = Tokens.sp8), verticalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
                 LayoutRow(verticalAlignment = Alignment.CenterVertically) {
-                    Text(page.title ?: UNTITLED, Modifier.weight(1f), style = Type.title)
+                    Text(page.title ?: UNTITLED, Modifier.weight(1f), style = SerifTitle)
                     MoreButton { dismiss ->
                         val pick = { act: () -> Unit -> { dismiss(); act() } }
                         if (!memory && onAsk != null) MenuItem("Ask", "sparkle", pick { asking = true })
@@ -506,7 +507,7 @@ fun WikiPageView(st: CodexState, page: Row, profile: String?, now: Long, actions
         }
         groups.forEach { g ->
             val open = g.claims.map { it.fact }.filter { it.str("state") == "proposed" }
-            item { SectionHeader(g.heading, g.claims.size.toString(), action = if (readOnly || open.size < 2) null else ({ Button("Approve ${open.size}", { review.approve(open) }, variant = ButtonVariant.Plain, size = ButtonSize.Sm) })) }
+            item { SectionHeader(g.heading, g.claims.size.toString(), serif = true, action = if (readOnly || open.size < 2) null else ({ Button("Approve ${open.size}", { review.approve(open) }, variant = ButtonVariant.Plain, size = ButtonSize.Sm) })) }
             lazyGroup(g.claims, key = { it.fact.key }) { ClaimRow(it, now, actions, review, page.title ?: "", onOpenChat, ungiven = it.fact.key in ungiven, flash = it.fact.id == flash,
                 mentions = mentions[it.fact.key].orEmpty(), onTask = onTask, onMeeting = onMeeting) }
         }
