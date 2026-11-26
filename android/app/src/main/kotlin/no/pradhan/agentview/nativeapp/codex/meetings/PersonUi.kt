@@ -54,6 +54,7 @@ import no.pradhan.agentview.nativeapp.ui.ListRow
 import no.pradhan.agentview.nativeapp.ui.MenuItem
 import no.pradhan.agentview.nativeapp.ui.SectionHeader
 import no.pradhan.agentview.nativeapp.ui.Tokens
+import no.pradhan.agentview.nativeapp.ui.SerifTitle
 import no.pradhan.agentview.nativeapp.ui.Type
 import no.pradhan.agentview.nativeapp.ui.agoShort
 import no.pradhan.agentview.nativeapp.ui.av
@@ -86,7 +87,7 @@ fun PersonPage(hub: Hub, st: CodexState, name: String, now: Long, actions: TaskA
         item {
             val clip = LocalClipboardManager.current
             LRow(Modifier.padding(start = Tokens.sp8, end = Tokens.sp4, top = Tokens.sp4), verticalAlignment = Alignment.CenterVertically) {
-                Text(shown, Modifier.weight(1f), style = Type.title)
+                Text(shown, Modifier.weight(1f), style = SerifTitle)
                 IconBtn("copy", "Copy as Markdown", {
                     clip.setText(AnnotatedString(personMarkdown(name, commitments, questions, tasks, points, pins, mine, claims)))
                     hub.notice.value = "${firstName(shown)} copied"

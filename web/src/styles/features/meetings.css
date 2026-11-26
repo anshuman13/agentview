@@ -19,7 +19,7 @@
 .mt-chips { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-3); }
 .mt-topics { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-3); }
 .mt-topic { display: inline-flex; align-items: center; gap: var(--sp-1); }
-.mt-topics input { width: 120px; height: 26px; min-height: 36px; padding: 0 var(--sp-4); border: 1px solid var(--border); border-radius: var(--radius-pill); background: var(--wk-card); color: var(--fg); font: inherit; font-size: var(--fs-xs); outline: 0; }
+.mt-topics input { width: 120px; height: 26px; min-height: 36px; padding: 0 var(--sp-4); border: 1px solid transparent; border-radius: var(--radius); background: var(--field); color: var(--fg); font: inherit; font-size: var(--fs-sm); outline: 0; }
 .mt-topics input:focus { border-color: var(--border-strong); }
 .mt-avatars { flex: none; display: flex; }
 .mt-avatars > span { width: 22px; height: 22px; display: grid; place-items: center; margin-left: -7px; border-radius: 50%; border: 2px solid var(--bg); background: var(--hover); color: var(--fg-muted); font-size: var(--fs-2xs); font-weight: 600; }
@@ -36,7 +36,7 @@
 }
 .mt-log { display: flex; flex-direction: column; gap: var(--sp-4); }
 .mt-log-bar { display: flex; align-items: center; gap: var(--sp-4); }
-.mt-log-bar select { min-width: 0; max-width: 100%; height: 30px; padding: 0 var(--sp-4); border: 1px solid var(--border); border-radius: var(--radius-pill); background: var(--wk-card); color: var(--fg); font: inherit; font-size: var(--fs-sm); }
+.mt-log-bar select { min-width: 0; max-width: 100%; height: 30px; padding: 0 var(--sp-4); border: 1px solid transparent; border-radius: var(--radius); background: var(--field); color: var(--fg); font: inherit; font-size: var(--fs-sm); }
 
 .mt-load { display: flex; flex-direction: column; gap: var(--sp-8); }
 .mt-load-track { display: block; height: 12px; border-radius: var(--radius-pill); background: var(--hover); overflow: hidden; }
@@ -50,20 +50,20 @@
 /* Meeting page */
 .mt-page { max-width: calc(var(--wk-max) + 2 * var(--wk-pad)); margin: 0 auto; padding: var(--sp-4) var(--wk-pad) var(--sp-24); }
 .mt-people { padding: 0 var(--list-pad); margin-top: var(--sp-4); font-size: var(--fs-md); color: var(--fg-muted); }
-.mt-title .ui-section-label { font-size: var(--type-title-size); font-weight: var(--type-title-weight); line-height: var(--type-title-line); color: var(--fg-strong); white-space: normal; overflow: visible; }
+.mt-title .ui-section-label { font-family: var(--font-serif); font-size: var(--type-title-size); font-weight: 400; letter-spacing: 0; line-height: var(--type-title-line); color: var(--fg-strong); white-space: normal; overflow: visible; }
 .mt-person::after { display: none; }
 .mt-meta { margin: var(--sp-4) 0 0; padding: 0 var(--list-pad); font-size: var(--fs-md); color: var(--fg-muted); }
 .mt-page .wk-ask { padding-inline: 0; }
 .mt-chips { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-3); padding: 0 var(--list-pad); }
 .mt-more { position: relative; }
 .mt-sec { margin-top: var(--sp-20); }
-.mt-sec h2 { display: flex; align-items: center; gap: var(--sp-3); margin: 0 0 var(--sp-6); font-size: var(--fs-xl); font-weight: 600; color: var(--fg-strong); }
+.mt-sec h2 { display: flex; align-items: center; gap: var(--sp-3); margin: 0 0 var(--sp-6); font-size: var(--fs-xl); font-weight: 500; color: var(--fg-strong); }
 .mt-sec h2 .codicon.icon { font-size: 12px; color: var(--fg-faint); }
 .mt-sync { margin-left: auto; text-transform: none; letter-spacing: 0; }
 .mt-of { margin-left: var(--sp-2); padding: 1px var(--sp-4); border-radius: var(--radius-pill); background: var(--hover); color: var(--fg-muted); letter-spacing: 0; text-transform: none; font-weight: 500; }
-.mt-notes { display: block; width: 100%; min-height: 56px; resize: none; overflow: hidden; padding: var(--sp-6) var(--sp-8); margin: 0 calc(-1 * var(--sp-8)); width: calc(100% + 2 * var(--sp-8)); border: 1px solid transparent; border-radius: 10px; background: transparent; color: var(--fg); font-family: var(--font-doc); font-size: 16px; line-height: 1.6; outline: 0; transition: background var(--dur), border-color var(--dur); }
+.mt-notes { display: block; width: 100%; min-height: 56px; resize: none; overflow: hidden; padding: var(--sp-6) var(--sp-8); margin: 0 calc(-1 * var(--sp-8)); width: calc(100% + 2 * var(--sp-8)); border: 1px solid transparent; border-radius: var(--shape-lg); background: transparent; color: var(--fg); font-family: var(--font-doc); font-size: 16px; line-height: 1.6; outline: 0; transition: background var(--dur), border-color var(--dur); }
 @media (hover: hover) { .mt-notes:hover { background: color-mix(in srgb, var(--hover) 60%, transparent); } }
-.mt-notes:focus { border-color: var(--border-strong); background: var(--wk-card); }
+.mt-notes:focus { border-color: var(--border-strong); background: var(--field); }
 .mt-notes::placeholder { color: var(--fg-faint); }
 .mt-templates { display: flex; flex-wrap: wrap; gap: var(--sp-3); margin-top: var(--sp-4); }
 .mt-summary { margin: 0; font-family: var(--font-doc); font-size: 16px; line-height: 1.7; color: var(--fg-muted); }
@@ -75,7 +75,7 @@
 .mt-decisions li { position: relative; padding-left: var(--sp-12); font-size: 16px; line-height: 1.5; }
 .mt-decisions li::before { content: ''; position: absolute; left: 2px; top: 0.45em; width: 10px; height: 10px; border-radius: 3px; background: color-mix(in srgb, var(--c-meeting) 60%, transparent); }
 
-.mt-action { display: flex; flex-direction: column; gap: var(--sp-4); padding: var(--sp-8) var(--sp-10) var(--sp-6); border: 1px solid var(--border-strong); border-radius: 14px; background: var(--wk-card); box-shadow: var(--shadow-md); }
+.mt-action { display: flex; flex-direction: column; gap: var(--sp-4); padding: var(--sp-8) var(--sp-10) var(--sp-6); border: 1px solid var(--border); border-radius: var(--shape-lg); background: var(--group-card); box-shadow: var(--elev-2); }
 .mt-action-kind { display: flex; align-items: center; gap: var(--sp-4); font-size: var(--fs-sm); color: var(--fg-muted); }
 .mt-action-title { font-size: var(--fs-2xl); font-weight: 600; color: var(--fg-strong); line-height: var(--lh-snug); }
 .mt-action-body { font-size: var(--fs-lg); line-height: var(--lh); color: var(--fg-muted); }

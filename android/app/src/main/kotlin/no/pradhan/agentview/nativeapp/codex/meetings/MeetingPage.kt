@@ -89,6 +89,7 @@ import no.pradhan.agentview.nativeapp.ui.Markdown
 import no.pradhan.agentview.nativeapp.ui.SectionHeader
 import no.pradhan.agentview.nativeapp.ui.TextField
 import no.pradhan.agentview.nativeapp.ui.Tokens
+import no.pradhan.agentview.nativeapp.ui.SerifTitle
 import no.pradhan.agentview.nativeapp.ui.Type
 import no.pradhan.agentview.nativeapp.ui.av
 
@@ -241,7 +242,7 @@ private fun MeetingTitle(c: MeetingCtx, state: MState, all: List<Row>, onNotes: 
     Column(Modifier.padding(start = Tokens.listPad, end = Tokens.listPad, top = Tokens.sp8, bottom = Tokens.sp8), verticalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
         if (isEvent(m)) Text("Event", style = Type.footnote, color = av.fgMuted)
         LRow(verticalAlignment = Alignment.CenterVertically) {
-            Text(m.title?.ifEmpty { null } ?: UNTITLED, Modifier.weight(1f), style = Type.title)
+            Text(m.title?.ifEmpty { null } ?: UNTITLED, Modifier.weight(1f), style = SerifTitle)
             if (state == MState.Live && link != null && !isEvent(m)) Button("Join", { uri.openUri(link) }, icon = "device-camera-video", variant = ButtonVariant.Filled, size = ButtonSize.Sm)
             else Button("Notes", onNotes, icon = "edit", variant = ButtonVariant.Filled, size = ButtonSize.Sm)
             if (link != null || copyable || canRead || hasNotes || !c.hub.readOnly) MoreButton { close ->

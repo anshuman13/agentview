@@ -74,7 +74,7 @@ fun PageHeader(title: String, onBack: (() -> Unit)? = null, subtitle: (@Composab
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
                 // A greeting reads as the Claude apps' home: serif type after the accent spark.
                 if (greeting) AvIcon("sparkle", null, tint = av.accent)
-                Text(title, style = if (greeting || serif) Type.title.copy(fontFamily = ReadingFont, fontWeight = FontWeight.Normal) else Type.title, color = av.fg, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
+                Text(title, style = if (greeting || serif) SerifTitle else Type.title, color = av.fg, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
                 if (trailing != null) Text(trailing, style = Type.subheadline, color = av.fgMuted, maxLines = 1)
             }
             if (subtitle != null) CompositionLocalProvider(LocalContentColor provides av.fgMuted) { ProvideTextStyle(Type.subheadline, subtitle) }
