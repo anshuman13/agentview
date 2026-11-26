@@ -155,11 +155,16 @@ export async function prompt(cwd: string, text: string, from?: string, fresh = f
   return chat.id;
 }
 
+// Build chat id -> session id of the chat that started it, until the build chat's first session id is known.
+export const pendingSpawns = new Map<string, string>();
+
 // The start_build tool: a new chat in the project runs the build, so the calling chat keeps its context.
-export async function buildChat(cwd: string, line: string) {
+// from is the calling chat's session id.
+export async function buildChat(cwd: string, line: string, from?: string | null) {
   const args = parseBuild(line);
   if (!args || args === 'usage') throw new Error('Give a request or a spec');
   const chat = await newChat(cwd, undefined);
+  if (from) pendingSpawns.set(chat.id, from);
   chat.build.start(line, args);
   return chat.id;
 }

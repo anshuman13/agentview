@@ -88,8 +88,8 @@ export interface AgentHost {
   agentOf(toolUseId: string): AgentEvent | undefined;
   system(text: string, error?: boolean): void;
   setStatus(text: string, detail?: { done?: string; next?: string[] }): void;
-  // Opens a new chat in cwd and starts a /build line there; returns the chat id.
-  startBuild?: (cwd: string, line: string) => Promise<string>;
+  // Opens a new chat in cwd and starts a /build line there, linked under the calling chat's session from; returns the chat id.
+  startBuild?: (cwd: string, line: string, from?: string | null) => Promise<string>;
   // Sets an alarm on the phone and returns what the tool tells Claude.
   phoneAlarm(a: { time: string; day?: string; label?: string }): Promise<string>;
   setSession(patch: Partial<SessionInfo>): void;

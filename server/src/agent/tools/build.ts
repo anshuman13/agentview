@@ -18,7 +18,7 @@ export const buildTool = defineTool({
     auto: z.boolean().optional().describe('true only when the user asked for no approval: skip blocked tasks instead of waiting.'),
     until: z.string().regex(/^\d{1,2}:\d{2}$/).optional().describe('Keep going and find more work for the goal until this local time, HH:MM.'),
   },
-  async handler({ request, spec, folder, auto, until }, { cwd, host }) {
+  async handler({ request, spec, folder, auto, until }, { cwd, chatId, host }) {
     if (!host.startBuild) return 'This chat cannot start builds.';
     const dir = path.resolve(folder ?? cwd);
     const rel = spec ? path.relative(dir, path.resolve(dir, spec)) : '';
@@ -26,6 +26,6 @@ export const buildTool = defineTool({
     const what = rel || request?.replace(/\s+/g, ' ').trim();
     if (!what) return 'Give a request or a spec.';
     const line = ['/build', auto && 'auto', until && `until ${until}`, what].filter(Boolean).join(' ');
-    return `Build started in a new chat (${await host.startBuild(dir, line)}): ${line}`;
+    return `Build started in a new chat (${await host.startBuild(dir, line, chatId)}): ${line}`;
   },
 });

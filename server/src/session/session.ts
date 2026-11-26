@@ -151,7 +151,7 @@ export class AgentSession implements AgentHost {
   }
 
   phoneAlarm = phoneAlarm;
-  startBuild?: (cwd: string, line: string) => Promise<string>;
+  startBuild?: (cwd: string, line: string, from?: string | null) => Promise<string>;
 
   private setResumeCommand() {
     const { sessionId, account } = this.state.session;

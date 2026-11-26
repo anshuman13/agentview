@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'bun:test';
 import { callTool } from './index';
 
-const ctx = (startBuild?: (cwd: string, line: string) => Promise<string>) => ({ cwd: '/repo', chatId: 'c', provider: 'claude' as const, host: { setStatus() {}, phoneAlarm: async () => '', startBuild } });
+const ctx = (startBuild?: (cwd: string, line: string, from?: string | null) => Promise<string>) => ({ cwd: '/repo', chatId: 'c', provider: 'claude' as const, host: { setStatus() {}, phoneAlarm: async () => '', startBuild } });
 
 describe('start_build', () => {
   it('opens a build chat with the /build line', async () => {
@@ -9,6 +9,11 @@ describe('start_build', () => {
     const out = await callTool('start_build', { request: 'add  dark\nmode', auto: true, until: '6:30' }, ctx(async (cwd, line) => (calls.push([cwd, line]), 'n1')));
     expect(calls).toEqual([['/repo', '/build auto until 6:30 add dark mode']]);
     expect(out).toContain('n1');
+  });
+  it('passes the calling chat', async () => {
+    let caller: string | null | undefined;
+    await callTool('start_build', { request: 'x' }, ctx(async (_, __, from) => ((caller = from), 'n')));
+    expect(caller).toBe('c');
   });
   it('takes a spec relative to the folder or absolute', async () => {
     const lines: string[] = [];
