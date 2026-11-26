@@ -183,7 +183,7 @@ fun ListRow(
     }
     val merge = if (onClick == null) Modifier.semantics(mergeDescendants = true) {} else Modifier
     Row(
-        modifier.fillMaxWidth().background(if (selected) av.accentSoft else Color.Transparent).heightIn(min = if (compact) 44.dp else if (meta.isNullOrEmpty()) Tokens.rowOne else Tokens.rowTwo).then(click).then(merge)
+        modifier.fillMaxWidth().background(if (selected) av.selected else Color.Transparent).heightIn(min = if (compact) 44.dp else if (meta.isNullOrEmpty()) Tokens.rowOne else Tokens.rowTwo).then(click).then(merge)
             .padding(start = Tokens.listPad, end = if (trailing != null || menu != null || toggle != null) Tokens.sp4 else Tokens.listPad, top = if (compact) Tokens.sp2 else Tokens.sp5, bottom = if (compact) Tokens.sp2 else Tokens.sp5),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(Tokens.sp8),
@@ -193,7 +193,7 @@ fun ListRow(
             val color = if (strike || muted) av.fgMuted else av.fg
             val deco = if (strike) TextDecoration.LineThrough else null
             WordClamp(title.toAnnotated(), Type.body, color, lines, deco)
-            if (!meta.isNullOrEmpty()) WordClamp(meta.toAnnotated(), Type.meta, av.metaFg, metaLines, null)
+            if (!meta.isNullOrEmpty()) WordClamp(meta.toAnnotated(), Type.meta, if (selected) av.fgMutedSelected else av.metaFg, metaLines, null)
             if (below != null) Row(Modifier.fillMaxWidth().padding(top = Tokens.sp3), horizontalArrangement = Arrangement.spacedBy(Tokens.sp4), verticalAlignment = Alignment.CenterVertically) {
                 CompositionLocalProvider(LocalContentColor provides av.fgMuted) { below() }
             }

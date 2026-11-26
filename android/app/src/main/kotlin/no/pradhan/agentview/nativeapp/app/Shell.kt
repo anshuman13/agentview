@@ -219,7 +219,7 @@ private fun PillTabBar(dests: List<Dest>) {
             dests.forEach { d ->
                 val tint = if (d.selected) av.fg else av.fgMuted
                 Column(
-                    Modifier.weight(1f).heightIn(min = Tokens.touch).clip(shape).background(if (d.selected) av.raised else Color.Transparent)
+                    Modifier.weight(1f).heightIn(min = Tokens.touch).clip(shape).background(if (d.selected) av.selected else Color.Transparent)
                         .semantics(mergeDescendants = true) { role = Role.Tab; selected = d.selected }
                         .clickable(onClick = d.onClick).padding(vertical = Tokens.sp2),
                     horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center,
@@ -235,7 +235,7 @@ private fun PillTabBar(dests: List<Dest>) {
 private fun SideRail(dests: List<Dest>) {
     NavigationRail(containerColor = av.surface) {
         val colors = NavigationRailItemDefaults.colors(
-            selectedIconColor = av.onSecondaryContainer, selectedTextColor = av.fg, indicatorColor = av.raised,
+            selectedIconColor = av.onSecondaryContainer, selectedTextColor = av.fg, indicatorColor = av.selected,
             unselectedIconColor = av.fgMuted, unselectedTextColor = av.fgMuted,
         )
         dests.forEach { d -> NavigationRailItem(selected = d.selected, onClick = d.onClick, icon = { DestIcon(d) }, label = { DestLabel(d) }, colors = colors) }
