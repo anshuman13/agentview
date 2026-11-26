@@ -16,7 +16,7 @@
   border-radius: var(--radius-sm); cursor: pointer; white-space: nowrap; font-size: var(--fs-md); color: var(--fg);
 }
 @media (hover: hover) { .palette li:hover { background: var(--hover); } }
-.palette li.active { background: var(--accent-soft); }
+.palette li.active { background: var(--selected); }
 .palette li.palette-item { height: auto; padding: 0; white-space: normal; }
 .palette-item .ui-row { cursor: inherit; }
 .palette-item .ui-row::after { display: none; }

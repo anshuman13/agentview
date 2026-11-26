@@ -22,7 +22,7 @@
 .scm-tree { flex: 1; min-height: 0; overflow: auto; padding-bottom: var(--sp-4); }
 .scm-row { height: var(--size-row); display: flex; align-items: center; gap: var(--sp-2); padding: 0 var(--sp-6) 0 22px; cursor: pointer; white-space: nowrap; color: var(--fg); }
 @media (hover: hover) { .scm-row:hover { background: var(--hover); } }
-.scm-row.selected { background: var(--accent-soft); }
+.scm-row.selected { background: var(--selected); }
 .scm-row > .icon { color: var(--fg-muted); }
 .scm-name { flex: none; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
 .scm-dir { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; padding-left: var(--sp-1); font-size: var(--fs-sm); color: var(--fg-faint); }

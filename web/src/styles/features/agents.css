@@ -1,6 +1,6 @@
 .ag { flex: 1; min-height: 0; display: flex; }
 .ag-side { flex: none; width: var(--sidebar-w); padding: var(--sp-2) 0; overflow-y: auto; border-right: 1px solid var(--border); background: var(--surface); }
-.ui-row.ag-item[aria-current='true'] { background: var(--accent-soft); }
+.ui-row.ag-item[aria-current='true'] { background: var(--selected); }
 .ag-mark { display: inline-flex; align-items: center; justify-content: center; color: var(--agent); }
 .ag-mark.done { color: var(--ok); }
 .ag-mark.failed { color: var(--err); }

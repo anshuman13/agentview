@@ -7,7 +7,7 @@
 
 .side-switch { display: flex; gap: var(--sp-2); padding: 0 var(--sp-6) var(--sp-4) var(--sp-4); }
 .side-switch button { flex: 1; height: var(--size-2xl); font-size: var(--fs-md); color: var(--fg-muted); background: transparent; border: 1px solid var(--border-strong); border-radius: var(--radius-sm); }
-.side-switch button.active { color: var(--fg); background: var(--accent-soft); border-color: var(--accent); }
+.side-switch button.active { color: var(--fg); background: var(--selected); border-color: var(--border-strong); }
 .sessions .side-switch button { height: var(--size-md); font-size: var(--fs-sm); }
 .side-switch .seg-count { margin-left: var(--sp-2); font-size: var(--fs-xs); color: var(--fg-muted); }
 
@@ -118,7 +118,7 @@
 }
 
 .chat-row > .ui-row-wrap:last-child::after { display: block; }
-.chat-row .ui-row[aria-current='true'] { --state: var(--state-hover); }
+.chat-row .ui-row[aria-current='true'] { --state: var(--state-selected); }
 .chat-row .ui-row-state:empty { display: none; }
 .chat-row .ui-row-meta, .chat-hit .ui-row-meta { -webkit-line-clamp: 1; }
 .chat-row.unread .ui-row-title { font-weight: var(--type-headline-weight); color: var(--fg-strong); }

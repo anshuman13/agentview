@@ -122,7 +122,7 @@
 .as-nav-foot { margin-top: auto; padding-top: var(--sp-4); display: flex; flex-direction: column; gap: var(--sp-1); }
 .as-nav button { height: var(--size-2xl); padding: 0 var(--sp-6); display: flex; align-items: center; gap: var(--sp-6); border: 0; border-radius: var(--radius-md); background: transparent; color: var(--fg); font-size: var(--fs-md); text-align: left; }
 @media (hover: hover) { .as-nav button:hover { background: var(--hover); } }
-.as-nav button.active { background: var(--hover); font-weight: 500; }
+.as-nav button.active { background: var(--selected); font-weight: 500; }
 .as-nav span:not(.as-count) { flex: 1; }
 .as-count { font-size: var(--fs-xs); color: var(--fg-muted); }
 .as-nav-label { flex: none; padding: var(--sp-8) var(--sp-6) var(--sp-2); font-size: var(--fs-sm); font-weight: 500; color: var(--fg-faint); }
@@ -353,7 +353,7 @@ textarea.as-draft-text { width: 100%; padding: 0; border: 0; background: transpa
 .assistant:not(.tasks) .as-section { padding: 0 var(--sp-8) var(--sp-3); border-bottom: 0; font-size: var(--type-footnote-size); font-weight: 400; line-height: var(--type-footnote-line); }
 .assistant:not(.tasks) .as-section:not(.late, .review, .next, .done, .later) { color: var(--fg-muted); }
 
-.tasks .tk-row.selected { background-color: var(--accent-soft); }
+.tasks .tk-row.selected { background-color: var(--selected); }
 .tk-row.selected .as-check { color: var(--accent); }
 .tasks .tk-row.selected .as-check.picked, .tasks .tk-row.selected .as-check.picked .codicon.icon { color: var(--accent); }
 .as-bulk { flex: none; display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-3); padding: var(--sp-4) var(--tk-pad, var(--sp-8)); border-top: 1px solid var(--border); background: var(--raised); }

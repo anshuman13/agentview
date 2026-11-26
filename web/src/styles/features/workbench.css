@@ -118,7 +118,7 @@ body.resizing .chrome-frame, body.resizing-v .chrome-frame { pointer-events: non
     font-size: var(--fs-xl); color: var(--fg); background: transparent; border: 0; border-radius: var(--radius-sm); text-align: left;
   }
   .more-sheet > button > span:not(.badge):not(.more-meta) { flex: 1; }
-  .more-sheet > button.active { background: var(--accent-soft); }
+  .more-sheet > button.active { background: var(--selected); }
   .more-sheet .codicon.icon { font-size: var(--icon-md); color: var(--fg-muted); }
   .more-sheet .badge { background: var(--border-strong); color: var(--fg); }
   .more-sheet .badge.waiting { background: var(--warn); color: var(--bg); }

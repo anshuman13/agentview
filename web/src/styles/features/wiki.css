@@ -163,7 +163,7 @@
 
 .wk-review-n { font-size: var(--fs-sm); color: var(--fg-muted); font-variant-numeric: tabular-nums; }
 .wk-review-chips { display: flex; flex-wrap: wrap; gap: var(--sp-2); }
-.wk-item .ui-row.selected { background-color: var(--accent-soft); }
+.wk-item .ui-row.selected { background-color: var(--selected); }
 .wk-item .as-check.picked { color: var(--accent); }
 .wk-decided { display: flex; align-items: center; gap: var(--sp-3); color: var(--fg-muted); font-size: var(--fs-sm); }
 
