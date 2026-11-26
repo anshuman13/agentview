@@ -67,6 +67,7 @@ import no.pradhan.agentview.nativeapp.ui.DotState
 import no.pradhan.agentview.nativeapp.ui.av
 import no.pradhan.agentview.nativeapp.ui.Type
 import androidx.compose.material3.Text
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.foundation.layout.Box
 import no.pradhan.agentview.nativeapp.ui.MoreButton
 import no.pradhan.agentview.nativeapp.ui.SearchField
@@ -300,7 +301,7 @@ private fun McpDetail(hub: Hub, r: McpRow, calls: Pair<Int, Int>?, groups: Map<S
                         Group {
                             list.forEachIndexed { i, t ->
                                 if (i > 0) Hairline()
-                                ListRow(t.name, firstLine(t.description).ifEmpty { null }, metaLines = 2, trailing = if (canUse) ({ IconBtn("comment", "Add ${t.name} to chat", { use(Use(r.name, t.name)) }) }) else null)
+                                ListRow(t.name, firstLine(t.description).ifEmpty { null }, metaLines = 2, below = mcpToolInputs(t.inputSchema)?.let { ins -> { Text(ins, style = Type.footnote, color = av.fgMuted, maxLines = 1, overflow = TextOverflow.Ellipsis) } }, trailing = if (canUse) ({ IconBtn("comment", "Add ${t.name} to chat", { use(Use(r.name, t.name)) }) }) else null)
                             }
                         }
                     }

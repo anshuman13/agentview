@@ -107,6 +107,10 @@
 .mcp-tool .t .codicon, .mcp-call .t > .codicon { color: var(--fg-muted); }
 .mcp-tool .d { margin: var(--sp-2) 0 0; font-size: var(--fs-sm); color: var(--fg-muted); line-height: var(--lh-snug); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .mcp-tool.open { background: transparent; }
+.mcp-tool .d.all { display: block; }
+.mcp-more { margin-top: var(--sp-1); padding: 0; border: 0; background: none; color: var(--fg-muted); font: inherit; font-size: var(--fs-sm); cursor: pointer; }
+.mcp-more:hover { color: var(--fg); }
+.mcp-inputs { margin-top: var(--sp-3); font-size: var(--fs-sm); color: var(--fg-muted); }
 @media (hover: hover) { .mcp-tool.open:hover { background: transparent; } }
 .mcp-tool.open .d { -webkit-line-clamp: unset; }
 .mcp-calls { margin: var(--sp-2) 0 var(--sp-7); }

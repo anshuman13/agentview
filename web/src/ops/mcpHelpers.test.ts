@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'bun:test';
 import type { ChatEvent } from '../../../shared/protocol';
-import { argsOf, dotTone, fieldsOf, initialValues, mcpCalls, merge, moreMcpCounts, rowNote, services, stateOf, toolGroups, toolId } from './mcpHelpers';
+import { argsOf, dotTone, fieldsOf, initialValues, mcpCalls, merge, moreMcpCounts, rowNote, services, stateOf, toolGroups, toolId, toolInputs } from './mcpHelpers';
 
 describe('merge', () => {
   it('drops the probe error once the chat has the server connected', () => {
@@ -108,5 +108,16 @@ describe('toolGroups', () => {
     expect(toolGroups([a, b])).toEqual([['Interactive tools', [a]], ['Read-only tools', [b]]]);
     expect(toolGroups([b])).toEqual([['Read-only tools', [b]]]);
     expect(toolGroups([a])).toEqual([['Tools', [a]]]);
+  });
+});
+
+describe('toolInputs', () => {
+  it('names up to three inputs like Claude', () => {
+    const s = (...n: string[]) => ({ properties: Object.fromEntries(n.map((k) => [k, {}])) });
+    expect(toolInputs()).toBeNull();
+    expect(toolInputs(s('a'))).toBe('Takes 1 input: a');
+    expect(toolInputs(s('a', 'b'))).toBe('Takes 2 inputs: a and b');
+    expect(toolInputs(s('a', 'b', 'c'))).toBe('Takes 3 inputs: a, b, and c');
+    expect(toolInputs(s('a', 'b', 'c', 'd', 'e'))).toBe('Takes 5 inputs: a, b, c, and 2 more');
   });
 });

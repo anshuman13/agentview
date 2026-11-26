@@ -10,7 +10,7 @@ import { Menu, MenuItem } from '../ui/Menu';
 import { ServerIcon, StatusCell } from './McpServiceRow';
 import { Section } from '../ui/Section';
 import { openConnectors, use } from './mcpActions';
-import { runnable, scopeInfo, shortName, toolGroups, usageText, type Group, type Row, type Usage } from './mcpHelpers';
+import { runnable, scopeInfo, shortName, toolGroups, toolInputs, usageText, type Group, type Row, type Usage } from './mcpHelpers';
 import { CallRow } from './McpCallRow';
 import { AddToChat, ClaudeAiLogin, Login } from './McpLogin';
 import { RunForm } from './McpRunForm';
@@ -24,8 +24,9 @@ export function Detail({ row, usage, group, onGroup, hidden, onHide, onClose }: 
   const [shut, setShut] = useState<Set<string>>(() => new Set());
   const [run, setRun] = useState<string | null>(null);
   const [menu, setMenu] = useState(false);
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const more = useRef<HTMLButtonElement>(null);
-  useEffect(() => { setQ(''); setRun(null); }, [row.name]);
+  useEffect(() => { setQ(''); setRun(null); setExpanded(new Set()); }, [row.name]);
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const t = e.target as HTMLElement | null;
@@ -92,7 +93,9 @@ export function Detail({ row, usage, group, onGroup, hidden, onHide, onClose }: 
               {list.map((t) => (
                 <div key={t.name} className={`mcp-tool ${run === t.name ? 'open' : ''}`}>
                   <div className="t"><span className="n">{t.name}</span><span className="spacer" />{t.inputSchema && runnable(row) && <IconButton icon={run === t.name ? 'close' : 'play'} small className="mcp-insert" on={run === t.name} label={run === t.name ? 'Close' : 'Run this tool'} onClick={() => setRun((r) => (r === t.name ? null : t.name))} />}{row.live && <IconButton icon="comment" small className="mcp-insert" label="Add to chat" title={`Ask ${label} to use ${t.name} in your next message`} onClick={() => use(row.name, t.name)} />}</div>
-                  {t.description && <div className="d">{t.description}</div>}
+                  {t.description && <div className={`d ${expanded.has(t.name) ? 'all' : ''}`}>{t.description}</div>}
+                  {t.description && t.description.length > 140 && !expanded.has(t.name) && <button type="button" className="mcp-more" onClick={() => setExpanded((m) => new Set(m).add(t.name))}>Show more</button>}
+                  {toolInputs(t.inputSchema) && <div className="mcp-inputs">{toolInputs(t.inputSchema)}</div>}
                   {run === t.name && <RunForm key={`${row.name}:${t.name}`} server={row.name} tool={t} />}
                 </div>
               ))}

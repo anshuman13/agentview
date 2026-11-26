@@ -42,6 +42,7 @@ import no.pradhan.agentview.nativeapp.ops.mcpLoggedInSince
 import no.pradhan.agentview.nativeapp.ops.mcpMeta
 import no.pradhan.agentview.nativeapp.ops.mcpUsage
 import no.pradhan.agentview.nativeapp.ops.mcpToolGroups
+import no.pradhan.agentview.nativeapp.ops.mcpToolInputs
 import no.pradhan.agentview.nativeapp.ops.McpTool
 import no.pradhan.agentview.nativeapp.ops.mcpDot
 import no.pradhan.agentview.nativeapp.ops.mcpNote
@@ -240,6 +241,12 @@ class PagesLogicTest {
         val ta = McpTool("a"); val tb = McpTool("b", readOnly = true)
         assertEquals(listOf("Interactive tools" to listOf(ta), "Read-only tools" to listOf(tb)), mcpToolGroups(listOf(ta, tb)))
         assertEquals(listOf("Tools" to listOf(ta)), mcpToolGroups(listOf(ta)))
+        val schema = { n: List<String> -> kotlinx.serialization.json.JsonObject(mapOf("properties" to kotlinx.serialization.json.JsonObject(n.associateWith { kotlinx.serialization.json.JsonObject(emptyMap()) }))) }
+        assertNull(mcpToolInputs(null))
+        assertEquals("Takes 1 input: a", mcpToolInputs(schema(listOf("a"))))
+        assertEquals("Takes 2 inputs: a and b", mcpToolInputs(schema(listOf("a", "b"))))
+        assertEquals("Takes 3 inputs: a, b, and c", mcpToolInputs(schema(listOf("a", "b", "c"))))
+        assertEquals("Takes 5 inputs: a, b, c, and 2 more", mcpToolInputs(schema(listOf("a", "b", "c", "d", "e"))))
         assertEquals("1 tool", mcpToolCount(McpRow(probed[0])))
         assertNull(mcpToolCount(rows[1]))
         assertNull(mcpNote(rows[2]))

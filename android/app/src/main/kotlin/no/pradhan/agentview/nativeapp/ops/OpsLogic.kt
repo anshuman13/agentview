@@ -4,6 +4,7 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.builtins.MapSerializer
 import kotlinx.serialization.builtins.serializer
+import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonObject
@@ -57,7 +58,7 @@ fun deployBody(app: String, env: String, ref: String) = buildJsonObject { put("a
 fun rollbackBody(app: String, env: String, sha: String) = buildJsonObject { put("app", app); put("env", env); put("sha", sha) }.toString()
 
 // shared/protocol.ts McpServer and web/src/ops/mcpHelpers.ts.
-@Serializable data class McpTool(val name: String, val description: String = "", val readOnly: Boolean = false, val destructive: Boolean = false)
+@Serializable data class McpTool(val name: String, val description: String = "", val readOnly: Boolean = false, val destructive: Boolean = false, val inputSchema: JsonObject? = null)
 
 @Serializable
 data class McpServer(
@@ -294,3 +295,15 @@ fun setupPrompt(kind: String, repo: String, mcpCommand: String) = when (kind) {
 fun mcpToolGroups(tools: List<McpTool>): List<Pair<String, List<McpTool>>> =
     if (tools.none { it.readOnly }) listOf("Tools" to tools)
     else listOf("Interactive tools" to tools.filter { !it.readOnly }, "Read-only tools" to tools.filter { it.readOnly }).filter { it.second.isNotEmpty() }
+
+fun mcpToolInputs(schema: JsonObject?): String? {
+    val names = (schema?.get("properties") as? JsonObject)?.keys?.toList().orEmpty()
+    if (names.isEmpty()) return null
+    val shown = names.take(3)
+    val list = when {
+        names.size > 3 -> "${shown.joinToString(", ")}, and ${names.size - 3} more"
+        shown.size > 1 -> shown.dropLast(1).joinToString(", ") + (if (shown.size > 2) "," else "") + " and ${shown.last()}"
+        else -> shown[0]
+    }
+    return "Takes ${names.size} input${if (names.size > 1) "s" else ""}: $list"
+}
