@@ -10,7 +10,7 @@ layers, elevation levels, the shape scale, type roles and touch targets.
 
 ## Principles
 
-- Calm: warm dark greys (Claude mobile app look), Space Grotesk for text, a serif for reading replies and JetBrains Mono for code, no borders where spacing does the job, hover only under
+- Calm: neutral greys (Claude desktop look, 26 Nov 2026), Space Grotesk for text, a serif for reading replies and JetBrains Mono for code, no borders where spacing does the job, hover only under
   `(hover: hover)`, short motion (`--dur`, 120ms; see Motion).
 - Content first: chrome is quiet grey; controls get louder only when they act or are selected.
 - One accent: blue `--accent` marks interaction (focus, selection, links, the one primary action).
@@ -56,6 +56,8 @@ Each role names an Apple text style. Desktop keeps dense sizes; coarse pointers 
 | label | Footnote, 500 | 12px | 12px | 500 |
 | reading | Reply text, serif (`--font-serif`) | 17/27px | 18/28px | 400 |
 
+List row titles are `--row-title` 14px on desktop (16px on the phone). Section labels (sidebar title, sessions group header, More "Tools", git section heads) are `--type-section-size` 12px, `--type-section-weight` 400 (500 for panel heads), sentence case without uppercase or tracking (26 Nov 2026).
+
 Tokens: `--type-{role}-size`, `--type-{role}-weight`, `--type-{role}-line`; `--type-meta-*` is the
 subheadline. The Apple scale is `--fs-large-title` 34, `--fs-title1` 28, `--fs-title2` 22,
 `--fs-title3` 20, `--fs-headline` and `--fs-body` 17, `--fs-callout` 16, `--fs-subheadline` 15,
@@ -72,7 +74,7 @@ panel padding `--sp-8` (`--sp-2 --sp-6` for dense list panels); between sections
 
 | Token | Value | Use |
 | --- | --- | --- |
-| `--shape-sm` | 4px | buttons, fields, menu items |
+| `--shape-sm` | 6px | buttons, fields, menu items, MCP logo tile |
 | `--shape-md` | 6px | icon buttons, chips |
 | `--shape-lg` | 12px | panels, menus, sheets |
 | `--shape-full` | pill | badges, avatars, empty-state icon |
@@ -91,15 +93,15 @@ Level 1 is a hairline drawn with box-shadow, so it never shifts layout. Only 2 a
 ### State layers (Material 3)
 
 Interactive controls lay a tint of their own content colour (`currentColor`) over their fill:
-hover `--state-hover` 8%, focus `--state-focus` 10% plus the focus ring (see Tokens), pressed
-`--state-press` 12%. Each control sets `--fill`; buttons.css draws
+hover `--state-hover` (6% light, 8% dark), focus `--state-focus` 10% plus the focus ring (see Tokens),
+pressed `--state-press` = hover (Claude has no separate pressed layer), selected `--state-selected` (11% light, 15% dark). Each control sets `--fill`; buttons.css draws
 `linear-gradient(color-mix(currentColor var(--state), transparent)), var(--fill)`. One rule
 covers every variant, works on any fill, and shows pressed feedback on touch. Disabled is 50%
 opacity with no layer.
 
 ### Tokens
 
-- `--focus-ring`: `2px solid --accent`, used as `outline: var(--focus-ring)`.
+- `--focus-ring`: `1px solid --focus` (#257DE0, Claude's focus blue), used as `outline: var(--focus-ring)`.
 - `--focus-offset`: 1px outset. Buttons, IconButtons, Chips, fields, and the base.css fallback for other buttons and links.
 - `--focus-offset-inset`: -2px. Rows, AskRows, menu items and section heads, which sit edge to edge and would clip an outset ring.
 
@@ -107,7 +109,7 @@ The ring shows on `:focus-visible` only, never on mouse focus. No primitive hard
 
 ### Motion
 
-- Durations come from `--dur-fast`, `--dur` and the `--pulse*` tokens. Sheets, drawers and pushed views use `--motion-duration` (250ms) with `--motion-ease-in` (enter, cubic-bezier(0.2, 0, 0, 1)) and `--motion-ease-out` (exit, cubic-bezier(0.3, 0, 1, 1)); Tokens.kt has the same as `motionDuration`, `motionEaseIn` and `motionEaseOut`. A web `Sheet` opts in with the `ui-motion` class (the Travel sheets do): it rises and its scrim fades in with the enter pair, and drag-dismiss and close settle with the exit pair. On Android `Sheet(motion = true)` does the same for the Travel sheets through `ui/SheetMotion.kt`, which gives the sheet's slide and scrim fade `motionDuration` with `motionEaseIn` (material3 has one spec for open and close); animator scale 0 makes it instant.
+- Durations come from `--dur-fast`, `--dur` and the `--pulse*` tokens. Hover and selected changes use `--dur-hover` (0ms: Claude's hover is instant) on rows, buttons, menu items, section heads, cards and the composer border. Dialogs fade in with a 0.99 scale over `--dur-dialog` (170ms), `--motion-ease-in` to open and `--motion-ease-out` to close; Tokens.kt has `durHover` and `durDialog`. Sheets, drawers and pushed views use `--motion-duration` (250ms) with `--motion-ease-in` (enter, cubic-bezier(0.2, 0, 0, 1)) and `--motion-ease-out` (exit, cubic-bezier(0.3, 0, 1, 1)); Tokens.kt has the same as `motionDuration`, `motionEaseIn` and `motionEaseOut`. A web `Sheet` opts in with the `ui-motion` class (the Travel sheets do): it rises and its scrim fades in with the enter pair, and drag-dismiss and close settle with the exit pair. On Android `Sheet(motion = true)` does the same for the Travel sheets through `ui/SheetMotion.kt`, which gives the sheet's slide and scrim fade `motionDuration` with `motionEaseIn` (material3 has one spec for open and close); animator scale 0 makes it instant.
 - On web a Sketch card zooms into the sketch view and back out with the View Transitions API: the card and `.sk-view` share the `sk-zoom` name, and its group uses `--motion-duration` with `--motion-ease-in`. Without the API, or with reduced motion, the switch is instant.
 - Every transition and animation is either inside `@media (prefers-reduced-motion: no-preference)` or covered by the global reduce override at the end of base.css, which sets `animation: none` and `transition: none` with `!important` on `*`, `*::before` and `*::after`. Do not weaken it (no `:not()` exceptions).
 - `scroll-behavior: smooth` needs a `no-preference` wrapper.
@@ -129,10 +131,29 @@ The ring shows on `:focus-visible` only, never on mouse focus. No primitive hard
 | work | `--work` | Work profile mark |
 | personal | `--personal` | Personal profile mark |
 
-Dark is warm grey: `--bg` #1C1B19, `--surface` and `--group-card` #262522, `--raised` #2E2D2A, `--sunken` #171614, `--border` #3A3935, `--fg` #ECEAE4, `--link` and `--accent-text` #7AA7F0, `--accent-fill` #2F6BD8. Light is `--bg` #FAF9F5, `--surface` #F3F1EB, `--raised` #FFFFFF, `--border` #E3E0D8, `--fg` #1F1E1C, `--link` #2B59A8. Blue is the single accent; no colour role is violet (only the syntax keyword hue is).
+As of 26 Nov 2026 both themes use Claude desktop's neutral greys, sampled from Claude.app on the mini (`.claude/specs/claude-look-ref/colors.md`).
+
+| Token | Dark | Light | Use |
+| --- | --- | --- | --- |
+| `--bg`, `--group-page` | #191919 | #FFFFFF | page and main pane |
+| `--surface` | #232424 | #FCFCFC | sidebar and chrome |
+| `--group-card` | #202020 | #F7F7F7 | group and Codex cards |
+| `--raised` | #303030 | #FFFFFF | menus, sheets, dialogs |
+| `--sunken` | #151515 | #F3F3F3 | code, inputs |
+| `--border`, `--border-card` | #393A3A | #E2E2E3 | hairlines |
+| `--border-strong` | #4A4A4A | #CFCFCF | field outlines |
+| `--fg` / `--fg-strong` | #EFEFEF / #F7F7F7 | #191919 / #0F0F0F | text |
+| `--fg-muted` / `--fg-faint` | #A0A0A0 / #9A9A9A | #656565 / #6B6B6B | secondary text, placeholders |
+| `--hover` | rgba(255,255,255,.07) | rgba(0,0,0,.06) | hovered row |
+| `--selected` | rgba(255,255,255,.15) | rgba(0,0,0,.11) | selected row, active menu item, segment |
+| `--fg-muted-selected` | #CCCCCC | #575757 | muted text on `--selected` (4.5:1) |
+| `--ok` / `--warn` / `--err` | #3FB950 / #FBB315 / #F87F7F | #0B7D1A / #895A03 / #A42629 | status |
+| `--focus` | #257DE0 | #257DE0 | focus ring |
+
+Blue stays the single accent (23 Nov 2026): `--link` and `--accent-text` #7AA7F0 / #2B59A8, `--accent-fill` #2F6BD8. Claude's green #10A122 fails 4.5:1, so `--ok` is darker in light and lighter in dark. No colour role is violet (only the syntax keyword hue is).
 
 Chrome behind content is `--surface` (a step from `--bg`). Soft tints are the role
-colour at 14% (`--warn-soft`); selected is `--accent-soft`.
+colour at 14% (`--warn-soft`). Selected is neutral `--selected`, not blue `--accent-soft` (26 Nov 2026).
 
 ## Components
 
@@ -378,7 +399,7 @@ Rules for the native app in `android/`. TokenGen applies `NATIVE_OVERRIDES`, `NA
 | label | 12/16 | 500 |
 | Mono | 14/20 | 400 |
 
-- **Chat header** (`ChatHeader`) is 64dp: a hamburger that opens the Sessions tab, a centred one-line headline title over the muted repo, New chat (the Sessions New chat sheet for this chat's repo) and the chat menu. The Sessions tab bar (`PillTabBar` below 840dp) is a floating `surface` pill with a 1px `border`, icon above label and a neutral `raised` pill on the active tab; the rail from 840dp takes the same indicator. The composer is the same pill as the web phone: round Add, field, mic, SendAt when typed, and the round Send, Stop or Talk button (hold or tap; `HOLD_MS`).
+- **Chat header** (`ChatHeader`) is 64dp: a hamburger that opens the Sessions tab, a centred one-line headline title over the muted repo, New chat (the Sessions New chat sheet for this chat's repo) and the chat menu. The Sessions tab bar (`PillTabBar` below 840dp) is a floating `surface` pill with a 1px `border`, icon above label and a neutral `selected` pill on the active tab (#E0E0E0 light, #444545 dark measured); the rail from 840dp takes the same indicator. A selected ListRow is `selected` too, with `fgMutedSelected` meta. The composer is the same pill as the web phone: round Add, field, mic, SendAt when typed, and the round Send, Stop or Talk button (hold or tap; `HOLD_MS`).
 - **Header** is 64dp with a 22sp one-line title and an optional muted subheadline subtitle, and at most one action on a page (more go in a More menu). On the web phone the same header is `PhoneHeader` (`.wk-head`: Back, a one-line title, a muted subtitle and one trailing control) for Deploy, MCP, Settings, Files, Source Control and Pull Requests; a Section label that repeats that title is not rendered there. The scope chip shows only on tab roots, never on a page with a back button. Codex roots have no chip: a Lists button (`menu`, opening the drawer) replaces Back, and the profile label is muted text after the title (`PageHeader` `trailing`). On the web all eight Codex roots render `CodexHead` (`.codex-head`): Lists, one title size and weight, the muted profile label, then at most one search field and two controls; `.wk-head` and `.tasks-head` stay on sub-pages.
 - **Sheet** opens with a title row (56dp, 22sp, an optional count and one trailing icon action), and its rows sit in Groups.
 - **Menu icons** are 24dp, and a menu opened from a kebab keeps 12dp from the screen edge.
@@ -388,40 +409,40 @@ Rules for the native app in `android/`. TokenGen applies `NATIVE_OVERRIDES`, `NA
 - **Reading width**: the Codex tab and the list pages of More (Settings, MCP, Pull Requests, Deploy, Travel; `cappedRoute` in `app/Tabs.kt`) sit in a centred column of at most `pageMax` (760dp, as web's `.assistant`) on wider windows. Codex caps its content inside `CodexScreen`, so the Add task button and the snackbar keep the full width. Chat, Sessions, agent and work screens and the tools (Files, Source Control, Terminal, Browser, Sketches) use the full width.
 
 ### Colour
-Colours are Material 3 roles. `NATIVE_COLORS` in TokenGen sets each value for both themes, and `Theme.kt` maps every `colorScheme` slot, so Switch, pickers, dialogs and sheets need no call-site colours.
+Colours are Material 3 roles. `NATIVE_COLORS` in TokenGen sets each value for both themes (Claude desktop neutrals as of 26 Nov 2026, until Claude Android is sampled), and `Theme.kt` maps every `colorScheme` slot, so Switch, pickers, dialogs and sheets need no call-site colours.
 
 | Role | Token | Dark | Light | Use |
 |---|---|---|---|---|
-| background | `bg`, `groupPage` | #1C1B19 | #FAF9F5 | page |
-| containerLowest | `containerLowest` | #171614 | #FFFFFF | code, diff and output wells |
-| containerLow | `containerLow` | #201F1D | #F6F5F0 | sheets |
-| container | `surface`, `groupCard` | #262522 | #F3F1EB | grouped cards, nav bar, rail, tool result cards, terminal |
-| containerHigh | `raised` | #2E2D2A | #FFFFFF | composer, menus, dialogs, pickers, active tab |
-| containerHighest | `sunken`, `hover` | #33322E | #EDEAE2 | text fields, Gray button, Default and Quiet badges, empty-state icon disc |
-| onSurface | `fg`, `fgStrong` | #ECEAE4 / #F7F6F2 | #1F1E1C / #141311 | text |
-| onSurfaceVariant | `fgMuted`, `metaFg` | #A9A69E | #57544D | secondary text |
-| outline | `fgFaint`, `borderStrong` | #85827B | #7A766E | icons, disabled, check rings; never text |
-| outlineVariant | `border`, `borderCard` | #3A3935 | #E3E0D8 | hairlines |
+| background | `bg`, `groupPage` | #191919 | #FFFFFF | page |
+| containerLowest | `containerLowest` | #151515 | #FFFFFF | code, diff and output wells |
+| containerLow | `containerLow` | #1E1E1E | #F9F9F9 | sheets |
+| container | `surface` / `groupCard` | #232424 / #202020 | #FCFCFC / #F7F7F7 | grouped cards, nav bar, rail, tool result cards, terminal |
+| containerHigh | `raised` | #303030 | #FFFFFF | composer, menus, dialogs, pickers, active tab |
+| containerHighest | `sunken` / `hover` | #363636 / #343434 | #F3F3F3 / #EFEFF0 | text fields, Gray button, Default and Quiet badges, empty-state icon disc |
+| onSurface | `fg`, `fgStrong` | #EFEFEF / #F7F7F7 | #191919 / #0F0F0F | text |
+| onSurfaceVariant | `fgMuted`, `metaFg` | #A0A0A0 | #656565 | secondary text |
+| outline | `fgFaint` / `borderStrong` | #9A9A9A / #858585 | #6B6B6B / #767676 | icons, disabled, check rings; never text |
+| outlineVariant | `border`, `borderCard` | #393A3A | #E2E2E3 | hairlines |
 | primary | `accent`, `accentText`, `link` | #7AA7F0 | #2B59A8 | links, selection, focus |
 | primary fill | `accentFill` | #7AA7F0 | #2F6BD8 | primary button |
 | onPrimary | `onAccent` | #0B2350 | #FFFFFF | text on the fill |
 | primaryContainer | `primaryContainer` | #1D3B6E | #D8E4FF | FAB |
 | onPrimaryContainer | `onPrimaryContainer` | #D8E4FF | #0B2350 | FAB glyph |
 | secondaryContainer | `accentSoft` | #2F3340 | #E3E9F5 | selected chip, Tinted button, selected row |
-| onSecondaryContainer | `onSecondaryContainer` | #E4E2DC | #1F2433 | content on those |
-| inverseSurface | `inverseSurface` | #E6E3DC | #31302C | snackbar |
-| inverseOnSurface | `inverseOnSurface` | #31302C | #F3F1EB | snackbar text |
+| onSecondaryContainer | `onSecondaryContainer` | #E3E3E3 | #1F2433 | content on those |
+| inverseSurface | `inverseSurface` | #E3E3E3 | #303030 | snackbar |
+| inverseOnSurface | `inverseOnSurface` | #303030 | #F3F3F3 | snackbar text |
 | inversePrimary | `inversePrimary` | #2B59A8 | #A9C4F5 | snackbar action |
 
 Status pairs: the colour is for text and icons on the surfaces; the container holds a badge or banner with its on-container text.
 
 | Status | Colour | Container | On-container |
 |---|---|---|---|
-| ok | #5FD38D / #00703A | #00522A / #C4F2D3 | #9CF6B8 / #00210E |
-| warn | #E0B94D / #7A6400 | #5A4300 / #FFE08B | #FFE08B / #241A00 |
-| err | #FF8A96 / #C01D3E | #8C1D2E / #FFDADC | #FFD9DC / #40000C (`onErr` #5C0016 / #FFFFFF) |
+| ok | #3FB950 / #0B7D1A | #00522A / #C4F2D3 | #9CF6B8 / #00210E |
+| warn | #FBB315 / #895A03 | #5A4300 / #FFE08B | #FFE08B / #241A00 |
+| err | #F87F7F / #A42629 | #8C1D2E / #FFDADC | #FFD9DC / #40000C (`onErr` #5C0016 / #FFFFFF) |
 | agent (running, agents) | #43C9BD / #00696B | #00504A / #9FF2E7 | #9FF2E7 / #00201F (`onAgent` #003733 / #FFFFFF) |
-| info (new, unread, upcoming) | #6F9AE0 / #285092 | #1E3A66 / #D6E3FF | #D6E3FF / #001A41 |
+| info (new, unread, upcoming) | #76A0E6 / #285092 | #1E3A66 / #D6E3FF | #D6E3FF / #001A41 |
 
 Profile dots: work #6F9AE0 / #285092, personal #E8A3FF / #8E3FAA. Scrim is `scrimStrong`.
 
@@ -457,6 +478,8 @@ Done: Summary uses Panel (filter card), every empty list or report uses EmptySta
 `.as-empty` and `.empty-state` styles are gone), and the menus use Menu. Chips are done: as-chip, cp-chip, mcp-chip and ag-chip use Chip, which takes `tone` (`work`, `personal`, `accent`) and `quiet` (dashed, faint). `mt-add` stays a form, since it is an input row, and uses Chip tokens (height, radius, accent-soft on focus).
 
 As of 23 Nov 2026 the light and dark themes use the Claude mobile app look: warm greys (#1C1B19 or #FAF9F5 page, #262522 or #F3F1EB for cards and chrome), blue as the single accent (#7AA7F0 or #2B59A8 for text, #2F6BD8 fills), teal agents, a serif for replies, and Space Grotesk with JetBrains Mono elsewhere. Work and info stay blue beside the blue accent; this clash is accepted, since Work is a dot next to a "Work" label in Codex lists and never in the chat. Meeting and knowledge icons are neutral.
+
+As of 26 Nov 2026 the greys follow the Claude desktop app instead (see Colour roles): neutral #191919 or #FFFFFF page, #232424 or #FCFCFC sidebar, neutral `--selected` for selected rows instead of blue `--accent-soft`, a 1px #257DE0 focus ring, instant hover, `--radius-sm` 6px, 14px row titles and 12px sentence-case section labels. Android `NATIVE_COLORS` uses the same neutrals. Blue accent, teal agents, the serif and fonts are unchanged. Measurements and open items are in `.claude/specs/claude-look-ref/colors.md` and `compare.md`.
 
 ### Migration status
 
