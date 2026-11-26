@@ -1,0 +1,39 @@
+export const FADE_MS = 250;
+
+export type Tail = { start: number; at: number };
+export type FadeRange = { start: number; end: number; delay: number };
+
+// Each chunk of streamed text fades from the moment it arrived; a re-render keeps it at the same point of its fade.
+export function nextTails(tails: Tail[], prevLen: number, len: number, now: number): Tail[] {
+  const live = tails.filter((t) => now - t.at < FADE_MS && t.start < len);
+  return len > prevLen ? [...live, { start: prevLen, at: now }] : live;
+}
+
+export function fadeRanges(tails: Tail[], len: number, now: number): FadeRange[] {
+  return tails.map((t, i) => ({ start: t.start, end: Math.min(tails[i + 1]?.start ?? len, len), delay: t.at - now })).filter((r) => r.end > r.start);
+}
+
+export function wrapRanges(root: HTMLElement, ranges: FadeRange[]) {
+  if (!ranges.length) return;
+  const texts: { node: Text; start: number }[] = [];
+  const walk = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+  let pos = 0;
+  for (let n = walk.nextNode() as Text | null; n; n = walk.nextNode() as Text | null) {
+    texts.push({ node: n, start: pos });
+    pos += n.data.length;
+  }
+  for (const r of [...ranges].reverse()) {
+    for (const { node, start } of texts) {
+      const from = Math.max(r.start - start, 0);
+      const to = Math.min(r.end - start, node.data.length);
+      if (from >= to || !node.parentNode) continue;
+      const range = document.createRange();
+      range.setStart(node, from);
+      range.setEnd(node, to);
+      const span = document.createElement('span');
+      span.className = 'md-new';
+      span.style.animationDelay = `${r.delay}ms`;
+      range.surroundContents(span);
+    }
+  }
+}

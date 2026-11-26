@@ -1,10 +1,11 @@
-import { memo, useEffect, useMemo, useState, type MouseEvent } from 'react';
+import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState, type MouseEvent } from 'react';
 import type { Token } from './transcript/md';
 import { copyText } from '../codex/view';
 import { getState, setUi } from '../app/store';
 import { CopyPathMenu, type MenuPoint } from '../workspace/CopyPathItems';
 import { runInTerminal } from './chatApi';
 import { cachedHtml, mdKey, storeHtml } from './transcript/mdCache';
+import { fadeRanges, nextTails, wrapRanges, type Tail } from './transcript/streamFade';
 
 export { Composer } from './composer/Composer';
 
@@ -35,15 +36,28 @@ function onCopy(e: MouseEvent<HTMLDivElement>) {
   copyText(code, 'Code copied');
 }
 
+const reduceMotion = typeof matchMedia === 'function' ? matchMedia('(prefers-reduced-motion: reduce)') : null;
+
 const Block = memo(
-  function Block({ m, token }: { m: Md; token: Token }) {
+  function Block({ m, token, fade }: { m: Md; token: Token; fade?: boolean }) {
     const html = m.md.parser([token]);
-    return <div className="md-b" dangerouslySetInnerHTML={{ __html: html }} />;
+    const ref = useRef<HTMLDivElement>(null);
+    const tails = useRef<{ tails: Tail[]; len: number }>({ tails: [], len: 0 });
+    useLayoutEffect(() => {
+      const el = ref.current;
+      if (!el || !fade || reduceMotion?.matches) return;
+      const len = el.textContent?.length ?? 0;
+      const now = performance.now();
+      const next = nextTails(tails.current.tails, tails.current.len, len, now);
+      tails.current = { tails: next, len };
+      wrapRanges(el, fadeRanges(next, len, now));
+    }, [html, fade]);
+    return <div ref={ref} className="md-b" dangerouslySetInnerHTML={{ __html: html }} />;
   },
-  (a, b) => a.token.raw === b.token.raw,
+  (a, b) => a.token.raw === b.token.raw && a.fade === b.fade,
 );
 
-export function Markdown({ text, id, files = true }: { text: string; id?: string; files?: boolean }) {
+export function Markdown({ text, id, files = true, fade }: { text: string; id?: string; files?: boolean; fade?: boolean }) {
   const m = useMd();
   const [menu, setMenu] = useState<MenuPoint | null>(null);
   const onMenu = (e: MouseEvent<HTMLDivElement>) => {
@@ -69,6 +83,6 @@ export function Markdown({ text, id, files = true }: { text: string; id?: string
   let body;
   if (html !== null) body = <div className="md" onClick={onCopy} onContextMenu={onMenu} dangerouslySetInnerHTML={{ __html: html }} />;
   else if (!blocks) body = <div className="md" onClick={onCopy} onContextMenu={onMenu} dangerouslySetInnerHTML={{ __html: m.md.parse(text, { async: false }) as string }} />;
-  else body = <div className="md" onClick={onCopy} onContextMenu={onMenu}>{blocks.map((t, i) => <Block key={i} m={m} token={t} />)}</div>;
+  else body = <div className="md" onClick={onCopy} onContextMenu={onMenu}>{blocks.map((t, i) => <Block key={i} m={m} token={t} fade={fade} />)}</div>;
   return <>{body}{copyMenu}</>;
 }

@@ -33,6 +33,9 @@
 .tr-user:is(.stopping, .queued, .unsent) .tr-stop { position: static; justify-content: flex-end; margin-top: var(--sp-2); }
 .tr-user .tr-stop { position: absolute; right: var(--sp-5); top: var(--sp-5); display: flex; align-items: center; gap: var(--sp-3); color: var(--fg-faint); }
 .tr-assistant { padding: 0; }
+/* FADE_MS in streamFade.ts matches --motion-duration. */
+.tr-assistant .md-new { animation: md-new var(--motion-duration) var(--motion-ease-in) both; }
+@keyframes md-new { from { opacity: 0; } }
 .tr-assistant .tr-acts { display: flex; gap: var(--sp-1); margin-top: var(--sp-2); margin-left: calc(-1 * var(--sp-3)); color: var(--fg-muted); }
 .tr-rows > .tr-acts { display: flex; margin-top: var(--sp-2); padding-left: var(--sp-5); font-size: var(--fs-xs); }
 @media (min-width: 901px) { .tr-rows { max-width: 90ch; margin-inline: auto; } }
