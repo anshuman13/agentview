@@ -1,4 +1,5 @@
 import { readFile } from 'node:fs/promises';
+import path from 'node:path';
 import { openInChrome } from '../chrome/chrome.js';
 import { listSessions, renameRoute, savedSession } from '../agent/claude/sessions.js';
 import { loggedInAccounts } from '../agent/claude/accounts.js';
@@ -20,7 +21,10 @@ import { assistantRoute } from '../integrations/assistant.js';
 import { linkTitleRoute } from '../integrations/linkTitle.js';
 import { otherMacs } from './macs.js';
 import { hideableIds } from '../../../shared/featureUse.js';
-import { ACCOUNT_LABEL, type Account, type SavedSession } from '../../../shared/protocol.js';
+import { ACCOUNT_LABEL, type Account, type BuildCardState, type ChatRun, type SavedSession, type SpawnedBuild } from '../../../shared/protocol.js';
+import { APPROVE } from '../../../shared/build.js';
+import { specTasks } from '../../../shared/specTasks.js';
+import { STOPPED_BY_YOU } from '../session/runs.js';
 import { clearFeatureUse, featureUseDays, recordRoute } from '../featureUse.js';
 import { loadSettings, publicSettings, saveSettings } from '../settings.js';
 import { listPorts, openPort } from './preview.js';
@@ -87,6 +91,22 @@ export function sessionRoutes(d: RouteDeps): Record<string, Entry<Ctx>> {
         return { sessionId, title: saved?.firstPrompt ?? saved?.title ?? '', startedAt, ...(round && { round }), ...(commit && { commit }) };
       }));
     }),
+    // The builds a chat started, for the build card: each with its run state, ticked tasks of its spec and last round.
+    'ANY /api/chat/spawned': entry(async ({ url }) => {
+      const ids = await groupOf(url.searchParams.get('session') ?? '');
+      const [spawned, list] = await Promise.all([listSpawned(), listSessions({ limit: 1000 })]);
+      const byId = new Map(list.map((x) => [x.sessionId, x]));
+      const children = Object.entries(spawned).filter(([, l]) => ids.includes(l.parent)).sort(([, a], [, b]) => a.at - b.at).map(([child]) => child);
+      return Promise.all(children.map(async (sessionId): Promise<SpawnedBuild> => {
+        const members = await groupOf(sessionId);
+        const run = d.runs().filter((r) => r.kind === 'build' && members.includes(r.sessionId)).at(-1);
+        const tasks = run?.spec ? specTasks(await readFile(path.resolve(run.cwd ?? '', run.spec), 'utf8').catch(() => '')) : [];
+        const s = byId.get(sessionId);
+        const chatId = run && d.chats().has(run.chatId) ? run.chatId : undefined;
+        const round = run?.rounds.at(-1)?.line;
+        return { ...(chatId && { chatId }), sessionId, title: (s && savedSession(s).title) || run?.title || '', state: buildCardState(run), done: tasks.filter((t) => t.done).length, total: tasks.length, ...(round && { round }) };
+      }));
+    }),
     // A saved sub-chat's events, read-only and paged like /api/chat/events, without starting the agent.
     'ANY /api/chat/subchat-events': entry(async ({ url }) => {
       const id = url.searchParams.get('session') ?? '';
@@ -110,6 +130,16 @@ export function sessionRoutes(d: RouteDeps): Record<string, Entry<Ctx>> {
   };
 }
 
+
+// The state a build card shows for a build chat's run; no run reads as a spec still being written.
+export function buildCardState(run: ChatRun | undefined): BuildCardState {
+  if (!run) return 'spec';
+  if (run.state === 'done') return run.why === STOPPED_BY_YOU ? 'stopped' : 'done';
+  if (run.why === APPROVE) return 'approval';
+  if (run.needsYou) return 'needs';
+  if (run.state === 'paused') return 'paused';
+  return run.phase === 'spec' ? 'spec' : 'running';
+}
 
 export function workspaceRoutes(d: RouteDeps): Record<string, Entry<Ctx>> {
   // Open chats and open job runs, whose worktree a review still needs, are in use.

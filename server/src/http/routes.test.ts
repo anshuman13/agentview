@@ -122,6 +122,37 @@ describe('routes', () => {
     ]);
   });
 
+  it('lists the builds a chat started with their state, task counts and last round', async () => {
+    const dir = mkdtempSync(path.join(os.tmpdir(), 'spawned-'));
+    await Bun.write(path.join(dir, '.claude/specs/x.md'), '- [x] one\n- [ ] two\n- [ ] three\n');
+    mocks.groupOf.mockImplementation(async (id: string) => (id === 'now' ? ['root', 'now'] : id === 'b1' ? ['b1', 'b1b'] : [id]));
+    mocks.listSessions.mockResolvedValue([{ sessionId: 'b1', title: 'Build one' }]);
+    mocks.listSpawned.mockResolvedValue({ b2: { parent: 'now', kind: 'build', at: 9 }, b1: { parent: 'root', kind: 'build', at: 5 }, b3: { parent: 'other', kind: 'build', at: 1 } });
+    const runs = [
+      { kind: 'build', sessionId: 'b1b', chatId: 'c1', title: 'Build: x', state: 'running', why: '', phase: 'task', spec: '.claude/specs/x.md', cwd: dir, rounds: [{ line: 'Added it' }], needsYou: false },
+      { kind: 'build', sessionId: 'b2', chatId: 'gone', title: 'Build: y', state: 'done', why: 'you stopped it', rounds: [], needsYou: false },
+    ];
+    const r = await call('GET', '/api/chat/spawned?session=now', undefined, { runs: () => runs } as unknown as Partial<RouteDeps>);
+    mocks.listSpawned.mockResolvedValue({});
+    rmSync(dir, { recursive: true });
+    expect(r.json).toEqual([
+      { chatId: 'c1', sessionId: 'b1', title: 'Build one', state: 'running', done: 1, total: 3, round: 'Added it' },
+      { sessionId: 'b2', title: 'Build: y', state: 'stopped', done: 0, total: 0 },
+    ]);
+  });
+
+  it('maps a build run to the card state', async () => {
+    const { buildCardState } = await import('./openRoutes.js');
+    const run = (p: object) => ({ state: 'running', why: '', needsYou: false, ...p }) as never;
+    expect(buildCardState(undefined)).toBe('spec');
+    expect(buildCardState(run({ phase: 'spec' }))).toBe('spec');
+    expect(buildCardState(run({ phase: 'task' }))).toBe('running');
+    expect(buildCardState(run({ state: 'paused', why: 'Approve the spec: Build all', needsYou: true }))).toBe('approval');
+    expect(buildCardState(run({ state: 'paused', why: 'Needs you: a task is blocked', needsYou: true }))).toBe('needs');
+    expect(buildCardState(run({ state: 'paused', why: 'Paused by you' }))).toBe('paused');
+    expect(buildCardState(run({ state: 'done', why: 'all tasks done' }))).toBe('done');
+  });
+
   it('pages a saved sub-chat\'s events and answers 404 without a transcript', async () => {
     mocks.savedEvents.mockResolvedValue(['a', 'b', 'c', 'd'].map((id) => ({ id, kind: 'user', text: id, at: 0 })));
     expect((await call('GET', '/api/chat/subchat-events?session=kid&limit=2')).json).toEqual({ events: [{ id: 'c', kind: 'user', text: 'c', at: 0 }, { id: 'd', kind: 'user', text: 'd', at: 0 }], earlier: 2 });
