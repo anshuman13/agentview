@@ -29,6 +29,8 @@ function init() {
     while (stack.length > depth()) {
       try { stack.pop()!(); } catch (err) { console.error(err); }
     }
+    // Forward onto the entry of a layer that is already closed: step back off it, so the next back press is not lost.
+    if (!booting && depth() > stack.length) history.go(stack.length - depth());
   });
 }
 
