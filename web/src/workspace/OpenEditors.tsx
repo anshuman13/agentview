@@ -26,7 +26,7 @@ export function OpenEditors() {
   return (
     <>
       <Section
-        label="Open Editors"
+        label="Open editors"
         count={opened.length || undefined}
         open={editorsOpen}
         onToggle={() => setEditorsOpen(!editorsOpen)}
