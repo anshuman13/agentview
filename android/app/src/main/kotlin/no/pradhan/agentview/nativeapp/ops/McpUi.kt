@@ -88,6 +88,7 @@ import no.pradhan.agentview.nativeapp.workspace.WorkspaceHeader
 import no.pradhan.agentview.nativeapp.workspace.openLink
 import no.pradhan.agentview.nativeapp.ui.rememberLoad
 import no.pradhan.agentview.nativeapp.ui.select
+import no.pradhan.agentview.nativeapp.net.providerLabel
 import no.pradhan.agentview.nativeapp.ui.plural
 
 // MCP Servers (web/src/ops/McpStatus.tsx): the probed servers with the chat's live state, grouped by where they come from, with status and source filter chips, and a detail page.
@@ -159,8 +160,7 @@ fun McpScreen(hub: Hub, onBack: () -> Unit) {
     else Column(Modifier.fillMaxSize()) {
         WorkspaceHeader(hub, "MCP Servers", onBack, sub = if (probe.data != null) "${mcp.connected} connected of ${mcp.total}" + if (mcp.needsYou > 0) " · ${mcp.needsYou} need you" else "" else null) {
             IconBtn("refresh", "Check", { refresh = true; reprobe() }, enabled = !probe.busy)
-            val addPrompt = setupPrompt("mcp", pageRepo(hub), if (connectors) "claude mcp add" else "codex mcp add")
-            if (!hub.readOnly) IconBtn("add", "Add server", { hub.askChat(addPrompt) })
+            if (!hub.readOnly) McpAddMenu(hub, connectors, account)
         }
         PageBody {
             LazyColumn(Modifier.fillMaxSize(), listState) {
@@ -180,6 +180,21 @@ fun McpScreen(hub: Hub, onBack: () -> Unit) {
             }
         }
     }
+    }
+}
+
+// web AddMenu: add a server through the chat, or a claude.ai connector on claude.ai.
+@Composable
+private fun McpAddMenu(hub: Hub, connectors: Boolean, account: String?) {
+    var open by remember { mutableStateOf(false) }
+    val prompt = setupPrompt("mcp", pageRepo(hub), if (connectors) "claude mcp add" else "codex mcp add")
+    val provider by hub.store.state.select { it.session?.provider }
+    Box {
+        IconBtn("add", "Add", { open = true })
+        Menu(open, { open = false }) {
+            MenuItem("Add MCP server with ${providerLabel(provider)}", "terminal", { open = false; hub.askChat(prompt) })
+            if (connectors) MenuItem("Add claude.ai connector", "globe", { open = false; hub.openConnectors(account) {} })
+        }
     }
 }
 

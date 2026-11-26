@@ -14,6 +14,10 @@ import { useMcpGroups, useMcpProbe } from './useMcpPage';
 import { Detail } from './McpDetail';
 import { SetupButton } from './SetupButton';
 import { ServiceRow } from './McpServiceRow';
+import { openConnectors } from './mcpActions';
+import { askChat } from '../chat/chatActions';
+import { providerLabel } from '../../../shared/providers';
+import { setupPrompt } from '../../../shared/setupPrompt';
 import '../styles/features/wiki.css';
 import '../styles/features/meetings.css';
 import '../styles/features/mcp.css';
@@ -22,6 +26,25 @@ const FILTER = 'agentview.mcp.filter';
 const ALL: McpFilter = { show: 'all', where: 'all' };
 
 // The funnel menu of Claude's Connectors page: what to show, then where it comes from, each with a count and a check on the current one.
+// Claude's Add button with a chevron: add a server through the chat, or a claude.ai connector on claude.ai.
+function AddMenu({ connectors, account }: { connectors: boolean; account?: string }) {
+  const [open, setOpen] = useState(false);
+  const trigger = useRef<HTMLSpanElement>(null);
+  const provider = useStore((s) => s.session.provider);
+  const cwd = useStore((s) => s.session.cwd);
+  return (
+    <span ref={trigger} className="mcp-add">
+      <Button variant="filled" size="sm" icon="add" aria-expanded={open} onClick={() => setOpen((v) => !v)}>Add<Icon name="chevron-down" small /></Button>
+      {open && (
+        <Menu trigger={trigger} onClose={() => setOpen(false)}>
+          <MenuItem icon="terminal" onClick={() => { setOpen(false); askChat(setupPrompt('mcp', cwd.split('/').pop() ?? '', connectors ? 'claude mcp add' : 'codex mcp add')); }}>Add MCP server with {providerLabel(provider)}</MenuItem>
+          {connectors && <MenuItem icon="globe" onClick={() => { setOpen(false); void openConnectors(account); }}>Add claude.ai connector</MenuItem>}
+        </Menu>
+      )}
+    </span>
+  );
+}
+
 function FilterMenu({ counts, filter, onChange }: { counts: ReturnType<typeof filterCounts>; filter: McpFilter; onChange: (f: McpFilter) => void }) {
   const [open, setOpen] = useState(false);
   const trigger = useRef<HTMLButtonElement>(null);
@@ -100,7 +123,7 @@ export function McpPage() {
               <SearchBox value={query} onChange={setQuery} label="Search" />
               <FilterMenu counts={counts} filter={filter} onChange={setFilter} />
               <IconButton icon="refresh" label={busy ? 'Checking' : at ? `Check again (checked ${ago(at, ' ago')})` : 'Check'} size="sm" spin={busy} disabled={busy} onClick={() => load(true)} />
-              <SetupButton kind="mcp" mcpCommand={connectors ? 'claude mcp add' : 'codex mcp add'} label="Add" />
+              <AddMenu connectors={connectors} account={account} />
             </div>
           )}
           {probed === null && !error && !rows.length && (

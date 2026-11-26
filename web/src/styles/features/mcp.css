@@ -167,5 +167,7 @@
   .mcp-detail { animation: mcp-in var(--motion-duration) var(--motion-ease-in); }
   @keyframes mcp-in { from { opacity: 0; transform: translateX(12px); } }
 }
-.mcp-bar .btn-filled { height: 28px; border-radius: var(--radius-sm); background: var(--fg); color: var(--bg); }
-.mcp-bar .btn-filled:hover { background: var(--fg); opacity: .85; }
+.mcp-bar .btn.btn-filled { --fill: var(--fg); height: 28px; border-radius: var(--radius-sm); color: var(--bg); }
+.mcp-add { display: inline-flex; flex: none; position: relative; }
+.mcp-add .ui-menu { white-space: nowrap; }
+.mcp-add .btn-filled .codicon:last-child { margin-left: 2px; opacity: .8; }
