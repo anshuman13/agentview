@@ -76,6 +76,14 @@ export function appendTo(ev: ChatEvent, offset: number, text: string): ChatEvent
 export type Account = 'main' | 'alt' | 'alt2';
 // The labels are replaced at startup by the ones in ~/.agentview/settings.json.
 export const ACCOUNT_LABEL: Record<Account, string> = { main: 'Account 1', alt: 'Account 2', alt2: 'Account 3' };
+// Display names on the Usage page.
+export const ACCOUNT_NAME: Record<Account, string> = { main: 'Personal', alt: 'Work', alt2: 'Enterprise' };
+// What GET /api/usage returns: per account, the latest limits, 7 days of window percents and tokens per local day.
+export type UsageExtra = { enabled: boolean; limit: number | null; used: number | null; pct: number | null; currency: string | null };
+export type UsageLatest = { at: number; fiveHour?: UsageWindow; week?: UsageWindow; models: (UsageWindow & { name: string })[]; extra?: UsageExtra };
+export type UsageDay = { day: string; input: number; output: number; cacheWrite: number; cacheRead: number };
+export type UsageAccount = { account: Account; name: string; latest: UsageLatest | null; series: { at: number; fiveHour?: number; week?: number }[]; days: UsageDay[] };
+export type UsageReport = { accounts: UsageAccount[] };
 // The account each hub profile runs on.
 export const PROFILE_ACCOUNT = { work: 'alt', personal: 'main' } as const;
 // Accounts only picked by hand, never for new chats or after a usage limit.
