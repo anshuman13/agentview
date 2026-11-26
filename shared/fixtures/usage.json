@@ -119,5 +119,158 @@
         ]
       }
     ]
-  }
+  },
+  "expected": [
+    {
+      "account": "main",
+      "limits": [
+        {
+          "label": "5-hour",
+          "pct": 30,
+          "text": "resets in 2h 30m"
+        },
+        {
+          "label": "Weekly",
+          "pct": 55,
+          "text": "resets in 3d 20h"
+        },
+        {
+          "label": "Opus",
+          "pct": 62,
+          "text": "resets in 3d 20h"
+        },
+        {
+          "label": "Sonnet",
+          "pct": 12,
+          "text": ""
+        }
+      ],
+      "lines": {
+        "fiveHour": [
+          {
+            "x": 0.5714,
+            "y": 5
+          },
+          {
+            "x": 0.9881,
+            "y": 10
+          },
+          {
+            "x": 1,
+            "y": 30
+          }
+        ],
+        "week": [
+          {
+            "x": 0.5714,
+            "y": 40
+          },
+          {
+            "x": 0.9881,
+            "y": 50
+          },
+          {
+            "x": 1,
+            "y": 55
+          }
+        ]
+      },
+      "bars": [
+        {
+          "day": "2026-11-24",
+          "label": "24",
+          "total": 954600,
+          "parts": [
+            0.0013,
+            0.0036,
+            0.0524,
+            0.9428
+          ]
+        },
+        {
+          "day": "2026-11-25",
+          "label": "25",
+          "total": 0,
+          "parts": [
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        {
+          "day": "2026-11-26",
+          "label": "26",
+          "total": 632900,
+          "parts": [
+            0.0008,
+            0.0022,
+            0.0314,
+            0.6285
+          ]
+        }
+      ],
+      "totals": {
+        "input": "2k",
+        "output": "5.5k",
+        "cacheWrite": "80k",
+        "cacheRead": "1.5M"
+      }
+    },
+    {
+      "account": "alt2",
+      "limits": [
+        {
+          "label": "Extra usage",
+          "pct": 25,
+          "text": "125 of 500 USD"
+        }
+      ],
+      "lines": {
+        "fiveHour": [],
+        "week": []
+      },
+      "bars": [
+        {
+          "day": "2026-11-24",
+          "label": "24",
+          "total": 0,
+          "parts": [
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        {
+          "day": "2026-11-25",
+          "label": "25",
+          "total": 161000,
+          "parts": [
+            0.0019,
+            0.0043,
+            0.0621,
+            0.9317
+          ]
+        },
+        {
+          "day": "2026-11-26",
+          "label": "26",
+          "total": 0,
+          "parts": [
+            0,
+            0,
+            0,
+            0
+          ]
+        }
+      ],
+      "totals": {
+        "input": "300",
+        "output": "700",
+        "cacheWrite": "10k",
+        "cacheRead": "150k"
+      }
+    }
+  ]
 }
