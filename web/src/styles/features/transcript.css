@@ -18,7 +18,7 @@
 
 .tr-user {
   position: relative; width: fit-content; max-width: 85%; margin-left: auto; padding: var(--sp-5) var(--sp-6); border-radius: var(--shape-lg);
-  background: color-mix(in srgb, var(--fg) 6%, var(--bg)); color: var(--fg); white-space: pre-wrap; overflow-wrap: anywhere;
+  background: color-mix(in srgb, var(--fg) 5%, var(--bg)); color: var(--fg); font-size: var(--fs-lg); white-space: pre-wrap; overflow-wrap: anywhere;
 }
 .tr-mic { float: left; margin: 0.15em var(--sp-3) 0 0; color: var(--fg-muted); }
 .tr-user-text.folded { display: -webkit-box; -webkit-line-clamp: 6; -webkit-box-orient: vertical; overflow: hidden; }

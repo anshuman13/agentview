@@ -483,7 +483,7 @@ fun Modifier.leftBar(color: androidx.compose.ui.graphics.Color, width: Dp = Toke
 private fun UserBubble(onLongClick: (() -> Unit)? = null, content: @Composable ColumnScope.() -> Unit) {
     BoxWithConstraints(Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterEnd) {
         Column(
-            Modifier.widthIn(max = maxWidth * 0.85f).clip(RoundedCornerShape(Tokens.shapeLg)).background(av.fg.copy(alpha = 0.06f))
+            Modifier.widthIn(max = maxWidth * 0.85f).clip(RoundedCornerShape(Tokens.shapeLg)).background(av.fg.copy(alpha = 0.05f))
                 .then(if (onLongClick != null) Modifier.combinedClickable(onClick = {}, onLongClick = onLongClick) else Modifier)
                 .padding(horizontal = Tokens.sp8, vertical = Tokens.sp6),
             verticalArrangement = Arrangement.spacedBy(Tokens.sp3),
@@ -511,8 +511,8 @@ private fun ReplyActions(hub: Hub, copy: String?, rewind: Item.User?) {
         "Rewind", { ask = false; hub.rewind(rewind.id) }, onDismiss = { ask = false },
     )
     Row(Modifier.offset(x = -Tokens.sp4)) {
-        if (copy != null) IconBtn("copy", "Copy", { clip.setText(AnnotatedString(copy)); hub.notice.value = "Reply copied" })
-        if (rewind != null) IconBtn("discard", "Rewind files", { ask = true })
+        if (copy != null) IconBtn("copy", "Copy", { clip.setText(AnnotatedString(copy)); hub.notice.value = "Reply copied" }, iconSize = Tokens.icon)
+        if (rewind != null) IconBtn("discard", "Rewind files", { ask = true }, iconSize = Tokens.icon)
     }
 }
 

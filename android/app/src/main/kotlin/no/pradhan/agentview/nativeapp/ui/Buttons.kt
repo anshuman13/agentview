@@ -102,11 +102,11 @@ private val CodiconFont = FontFamily(Font(R.font.codicon))
 
 // Icon button (web IconButton): a muted glyph with a touch-sized target, accent when on.
 @Composable
-fun IconBtn(icon: String, label: String, onClick: () -> Unit, modifier: Modifier = Modifier, on: Boolean = false, enabled: Boolean = true, tint: Color? = null) {
+fun IconBtn(icon: String, label: String, onClick: () -> Unit, modifier: Modifier = Modifier, on: Boolean = false, enabled: Boolean = true, tint: Color? = null, iconSize: Dp = Tokens.iconLg) {
     Box(
         modifier.size(Tokens.touch).clickable(interactionSource = remember { MutableInteractionSource() }, indication = ripple(bounded = false, radius = Tokens.controlMd / 2), enabled = enabled, onClickLabel = label, onClick = onClick).alpha(if (enabled) 1f else 0.38f),
         contentAlignment = Alignment.Center,
-    ) { AvIcon(icon, label, Tokens.iconLg, tint = tint ?: if (on) av.accentText else av.fgMuted) }
+    ) { AvIcon(icon, label, iconSize, tint = tint ?: if (on) av.accentText else av.fgMuted) }
 }
 
 enum class ChipTone { Default, Work, Personal }

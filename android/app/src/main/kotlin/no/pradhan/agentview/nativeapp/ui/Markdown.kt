@@ -1,7 +1,11 @@
 package no.pradhan.agentview.nativeapp.ui
 
 import android.util.LruCache
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -135,9 +139,10 @@ fun CodeBlock(text: String, lang: String = "", modifier: Modifier = Modifier) {
     val run = LocalRunCommand.current
     val notice = LocalNotice.current
     val cmd = run?.let { shellLine(lang, text) }
-    Column(modifier.well(av)) {
-        Row(Modifier.fillMaxWidth().padding(start = Tokens.sp5, end = Tokens.sp2), verticalAlignment = Alignment.CenterVertically) {
-            Text(lang, style = Type.footnote, color = av.fgMuted, modifier = Modifier.weight(1f))
+    val shape = RoundedCornerShape(Tokens.shapeLg)
+    Column(modifier.fillMaxWidth().clip(shape).border(BorderStroke(Tokens.hairline, av.border), shape)) {
+        Row(Modifier.fillMaxWidth().padding(start = Tokens.sp6, end = Tokens.sp2), verticalAlignment = Alignment.CenterVertically) {
+            Text(lang, style = Type.caption, color = av.fgMuted, modifier = Modifier.weight(1f))
             if (run != null && cmd != null) IconBtn("terminal", "Run in terminal", { run(cmd) })
             IconBtn("copy", "Copy code", { clip.setText(AnnotatedString(text)); notice?.invoke("Code copied") })
         }
