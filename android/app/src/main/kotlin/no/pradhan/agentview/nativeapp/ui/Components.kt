@@ -238,7 +238,7 @@ fun RowLabel(text: String, color: Color = av.fgMuted) = Text(text, style = Type.
 @Composable
 fun Loading(text: String) {
     Column(Modifier.fillMaxWidth().padding(horizontal = Tokens.sp8, vertical = Tokens.sp24), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(Tokens.sp6)) {
-        CircularProgressIndicator(Modifier.size(Tokens.iconMd), color = av.accent, strokeWidth = Tokens.sp1)
+        CircularProgressIndicator(Modifier.size(Tokens.iconMd), color = av.fgMuted, strokeWidth = Tokens.sp1)
         Text(text, style = Type.subheadline, color = av.fgMuted, textAlign = TextAlign.Center)
     }
 }
