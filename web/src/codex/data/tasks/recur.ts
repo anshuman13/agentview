@@ -101,6 +101,14 @@ export function cadenceOf(text: string | null, at: number | null): Cadence {
   return r.dom === d.getDate() || (d.getDate() === new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate() && r.dom >= d.getDate()) ? 'monthly' : 'custom';
 }
 
+// The text with its repeat rule moved to a new due time, or null when it has no simple rule or nothing changes.
+export function moveRule(text: string | null, from: number | null, to: number | null): string | null {
+  const c = cadenceOf(text, from);
+  if (to == null || c === 'never' || c === 'custom') return null;
+  const next = withRule(text!, cadenceLine(c, to));
+  return next === text ? null : next;
+}
+
 // The first rule time after the later of the due time and now, or null. Skipping makes no copy, so no duplicate check.
 export function skipTarget(row: ItemRow, now: number) {
   if (!row.text || !isRepeat(row.text)) return null;

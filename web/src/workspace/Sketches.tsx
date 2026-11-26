@@ -29,6 +29,13 @@ export function SketchList({ sketches, onOpen, onChanged, zoomed }: { sketches: 
   const theme = useThemeName();
   const shown = query ? sketches.filter((s) => sketchMatches(s.name, query)) : sketches;
   const rows = all || query ? shown : shown.slice(0, FOLD);
+  // The card to focus once the list shows the change: the renamed sketch, or the delete's neighbour.
+  const focusAfter = useRef<string | null>(null);
+  useEffect(() => {
+    const name = focusAfter.current;
+    const cell = name && [...document.querySelectorAll<HTMLElement>('.sk-cell')].find((c) => c.dataset.name === name);
+    if (cell) { focusAfter.current = null; cell.querySelector<HTMLElement>('.sk-card')?.focus(); }
+  }, [sketches]);
   const changed = () => onChanged?.();
   const rename = (s: SketchFile) => setAsk({
     title: 'Rename sketch', detail: 'The file in .claude/sketches gets the new name.', action: 'Rename', icon: 'edit',
@@ -37,12 +44,12 @@ export function SketchList({ sketches, onOpen, onChanged, zoomed }: { sketches: 
       const file = sketchRename(to);
       if (!file) return Promise.resolve(notice('Not a valid sketch name'));
       if (file === s.name) return Promise.resolve();
-      return renameSketch(s.name, to).then(changed, (e) => notice(`Not renamed: ${errText(e)}`));
+      return renameSketch(s.name, to).then(() => { focusAfter.current = file; changed(); }, (e) => notice(`Not renamed: ${errText(e)}`));
     },
   });
   const remove = (s: SketchFile) => setAsk({
     title: `Delete ${sketchTitle(s.name)}?`, detail: 'The file is removed from .claude/sketches. This cannot be undone.', action: 'Delete', icon: 'trash',
-    run: () => deleteSketch(s.name).then(changed, (e) => notice(`Not deleted: ${errText(e)}`)),
+    run: () => deleteSketch(s.name).then(() => { const i = rows.indexOf(s); focusAfter.current = (rows[i + 1] ?? rows[i - 1])?.name ?? null; changed(); }, (e) => notice(`Not deleted: ${errText(e)}`)),
   });
   return (
     <>
@@ -53,7 +60,7 @@ export function SketchList({ sketches, onOpen, onChanged, zoomed }: { sketches: 
       {shown.length ? (
         <CardGrid className="sk-grid">
           {rows.map((s) => (
-            <div key={s.name} className="sk-cell">
+            <div key={s.name} className="sk-cell" data-name={s.name}>
               <Card className="sk-card" cover={<SketchThumb file={s} theme={theme} />} title={sketchTitle(s.name)} meta={ago(s.mtime, ' ago')} style={s.name === zoomed ? { viewTransitionName: ZOOM } : undefined} onClick={() => onOpen(s.name)} />
               <CardMenu name={s.name} items={(close) => (
                 <>

@@ -329,6 +329,12 @@ export function Travel({ shown }: { shown: boolean }) {
     if (trip) scroller.current?.querySelector<HTMLElement>('h2')?.focus({ preventScroll: true });
     else opener.current?.focus({ preventScroll: true });
   }, [!!trip]);
+  // A deleted trip's card is gone once the list reloads, so focus moves to the first card.
+  useEffect(() => {
+    if (trip || !opener.current || opener.current.isConnected || document.activeElement !== document.body) return;
+    opener.current = null;
+    scroller.current?.querySelector<HTMLElement>('.tv-card')?.focus({ preventScroll: true });
+  }, [data, trip]);
   const openTrip = (id: string) => {
     listTop.current = scroller.current?.scrollTop ?? 0;
     opener.current = document.activeElement as HTMLElement | null;

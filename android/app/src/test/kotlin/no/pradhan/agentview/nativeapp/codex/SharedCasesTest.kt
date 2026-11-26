@@ -1019,6 +1019,7 @@ class SharedCasesTest {
         fun time(o: JsonObject, k: String) = o.nullable(k)?.jsonPrimitive?.content?.let { java.time.LocalDateTime.parse(it).atZone(codexZone).toInstant().toEpochMilli() }
         for (l in c.getValue("lines").jsonArray.map { it.jsonObject }) assertEquals(l.str("name"), l.str("expected"), cadenceLine(l.str("cadence"), time(l, "at"), time(l, "now")!!))
         for (r in c.getValue("reads").jsonArray.map { it.jsonObject }) assertEquals(r.str("name"), r.str("expected"), cadenceOf(r.nullable("text")?.jsonPrimitive?.content, time(r, "at"), 0L))
+        for (m in c.getValue("moves").jsonArray.map { it.jsonObject }) assertEquals(m.str("name"), m.nullable("expected")?.jsonPrimitive?.content, moveRule(m.str("text"), time(m, "from"), time(m, "to"), 0L))
     }
 
     @Test fun dateSheet() {

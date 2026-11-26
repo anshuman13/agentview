@@ -245,7 +245,11 @@ fun EditorSheet(hub: Hub, row: Row, items: List<Row>, meetings: List<Row>, now: 
     }
     if (pickDue) DateSheet(DuePick(row.at, remind = row.remind), now, cadence = false, reminder = true, { p ->
         val at = p?.at
-        if (at != row.at) actions.due(row, at)
+        if (at != row.at) {
+            val moved = moveRule(text, row.at, at, now)
+            if (moved != null) text = moved
+            actions.due(row, at, moved)
+        }
         if (p != null && p.remind != row.remind) actions.edit(row, mapOf("remind" to p.remind))
     }, { pickDue = false })
 }

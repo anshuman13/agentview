@@ -8,7 +8,7 @@ import { haptic } from '../../../ui/haptic';
 import { useActions } from '../../useActions';
 import { clock, PickDue } from '../time';
 import { estimateMin, minutesText } from '../../data/tasks/plan';
-import { cadenceLine, cadenceOf, skipTarget, withRule, type Cadence } from '../../data/tasks/recur';
+import { cadenceLine, cadenceOf, moveRule, skipTarget, withRule, type Cadence } from '../../data/tasks/recur';
 import { Flag, PRIORITIES, tagList } from '../AddSheet';
 import { TagInput } from './TagInput';
 
@@ -43,6 +43,12 @@ export function TaskChips({ row, title, text, putText, addEstimate }: Props) {
   const skipAt = row.status === 'open' && at != null ? skipTarget(row, Date.now()) : null;
   const timed = row.status === 'open' || row.status === 'suggested' || at != null;
   const repeat = (c: Cadence) => { if (c !== 'custom' && c !== cadence) putText(withRule(text, c === 'never' ? null : cadenceLine(c, at))); };
+  const pickDue = (t: number | null) => {
+    if (t === at) return;
+    const moved = moveRule(text, at, t);
+    act.due(row, t, moved ?? undefined);
+    if (moved) putText(moved);
+  };
   const closeAdd = () => { setAdderOpen(false); setAdder(null); };
   const pickPriority = (p: number) => { haptic('tap'); act.edit(row, { priority: p || null }); };
   const priorityItems = (done: () => void) => PRIORITIES.map(([p, l]) => <button key={p} role="menuitemradio" aria-checked={(row.priority ?? 0) === p} className="ui-menu-item as-flag-item" onClick={() => { done(); pickPriority(p); }}><Flag priority={p} /><span>{l} priority</span></button>);
@@ -56,7 +62,7 @@ export function TaskChips({ row, title, text, putText, addEstimate }: Props) {
   return (
     <div className="as-tags">
       {timed && (
-        <PickDue className={chipClass({ quiet: true, late: at != null && at < Date.now() && row.status === 'open' })} value={at} onPick={(t) => t !== at && act.due(row, t)} remind={row.remind ?? null} onRemind={(r) => act.edit(row, { remind: r })} skipAt={skipAt} onSkip={() => skipAt != null && act.skip(row, skipAt)}>
+        <PickDue className={chipClass({ quiet: true, late: at != null && at < Date.now() && row.status === 'open' })} value={at} onPick={pickDue} remind={row.remind ?? null} onRemind={(r) => act.edit(row, { remind: r })} skipAt={skipAt} onSkip={() => skipAt != null && act.skip(row, skipAt)}>
           <Icon name="calendar" small /> {dueLabel(at)}{row.remind != null && at != null && <Icon name={row.remind < 0 ? 'bell-slash' : 'bell'} small />}
         </PickDue>
       )}

@@ -86,6 +86,14 @@ fun cadenceOf(text: String?, at: Long?, now: Long): String {
     return if (r.dom == d.dayOfMonth || (d.dayOfMonth == d.lengthOfMonth() && r.dom >= d.dayOfMonth)) "monthly" else "custom"
 }
 
+// The text with its repeat rule moved to a new due time, or null when it has no simple rule or nothing changes.
+fun moveRule(text: String?, from: Long?, to: Long?, now: Long): String? {
+    val c = cadenceOf(text, from, now)
+    if (to == null || c == "never" || c == "custom") return null
+    val next = withRule(text!!, cadenceLine(c, to, now))
+    return if (next == text) null else next
+}
+
 class Repeat(val title: String, val text: String, val at: Long)
 
 // "Water plants every monday 9" gives the title, the "Repeats:" line and the first due time.

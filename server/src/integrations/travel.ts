@@ -11,6 +11,8 @@ const DIR = path.join(os.homedir(), '.agentview', 'travel');
 const FILES = path.join(DIR, 'files');
 const store = jsonFile<TravelData>(path.join(DIR, 'travel.json'), { trips: [], receipts: [] });
 const MAX_FILE = 30_000_000;
+// The currency the receipt sheet shows as its placeholder, saved when an amount is typed without one.
+const DEFAULT_CURRENCY = 'NOK';
 
 const STALE = 5 * 60_000;
 
@@ -152,7 +154,7 @@ export async function updateReceipt(body: Record<string, unknown>) {
       ...old,
       merchant: 'merchant' in body ? text(body.merchant, 80) : old.merchant,
       amount: 'amount' in body ? (amount != null && Number.isFinite(amount) ? amount : null) : old.amount,
-      currency: 'currency' in body ? text(body.currency, 3).toUpperCase() : old.currency,
+      currency: ('currency' in body ? text(body.currency, 3).toUpperCase() : old.currency) || (amount != null && Number.isFinite(amount) ? DEFAULT_CURRENCY : ''),
       date: 'date' in body ? day(body.date) : old.date,
       category: CATEGORIES.find((c) => c === body.category) ?? old.category,
       note: 'note' in body ? text(body.note, 500) : old.note,

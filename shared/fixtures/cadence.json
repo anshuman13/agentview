@@ -24,5 +24,14 @@
     {"name": "unreadable rule", "text": "Repeats: whenever", "at": "2026-02-02T08:30", "expected": "custom"},
     {"name": "weekly without a due time", "text": "Repeats: every friday 09:00", "at": null, "expected": "weekly"},
     {"name": "monthly without a due time", "text": "Repeats: every month on the 15th 09:00", "at": null, "expected": "monthly"}
+  ],
+  "moves": [
+    {"name": "weekly follows the new day and time", "text": "Repeats: every saturday 14:00\nNotes", "from": "2026-11-28T14:00", "to": "2026-11-29T15:00", "expected": "Repeats: every sunday 15:00\nNotes"},
+    {"name": "monthly follows the new date", "text": "Repeats: every month on the 2nd 08:30", "from": "2026-02-02T08:30", "to": "2026-02-05T09:00", "expected": "Repeats: every month on the 5th 09:00"},
+    {"name": "daily takes the new time", "text": "Repeats: every day 08:30", "from": "2026-02-02T08:30", "to": "2026-02-03T10:15", "expected": "Repeats: every day 10:15"},
+    {"name": "custom rule stays", "text": "Repeats: every friday 09:00", "from": "2026-02-02T08:30", "to": "2026-02-03T10:15", "expected": null},
+    {"name": "no rule", "text": "Notes", "from": "2026-02-02T08:30", "to": "2026-02-03T10:15", "expected": null},
+    {"name": "cleared due keeps the rule", "text": "Repeats: every day 08:30", "from": "2026-02-02T08:30", "to": null, "expected": null},
+    {"name": "same rule", "text": "Repeats: every day 08:30", "from": "2026-02-02T08:30", "to": "2026-02-05T08:30", "expected": null}
   ]
 }

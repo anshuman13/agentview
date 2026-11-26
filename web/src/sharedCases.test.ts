@@ -42,7 +42,7 @@ import { composerPlaceholder, quoteText, shellLine, type PlaceholderDevice, type
 import { agentChipCount, headerState, nowMeta, runLine, stoppedText } from './sessions/runLogic';
 import { tryColumn } from './sessions/triesLogic';
 import { parseWhen, stripWhen } from './codex/data/tasks/when';
-import { cadenceLine, cadenceOf } from './codex/data/tasks/recur';
+import { cadenceLine, cadenceOf, moveRule } from './codex/data/tasks/recur';
 import { parseCapture } from './codex/data/tasks/quickAdd';
 import { composeDue, monthCells, quickDays, remindLabel, repeatLabel } from './codex/data/tasks/dateSheet';
 import { needsYou } from './codex/summary/needsYou';
@@ -314,10 +314,11 @@ describe('cases shared with the Android app', () => {
   });
 
   it('cadence', () => {
-    const c = cases<never>('cadence') as unknown as { lines: { name: string; cadence: 'daily' | 'weekdays' | 'weekly' | 'monthly'; at: string | null; now: string; expected: string }[]; reads: { name: string; text: string | null; at: string | null; expected: string }[] };
+    const c = cases<never>('cadence') as unknown as { lines: { name: string; cadence: 'daily' | 'weekdays' | 'weekly' | 'monthly'; at: string | null; now: string; expected: string }[]; reads: { name: string; text: string | null; at: string | null; expected: string }[]; moves: { name: string; text: string; from: string; to: string | null; expected: string | null }[] };
     const time = (s: string | null) => (s === null ? null : new Date(s).getTime());
     for (const l of c.lines) expect(cadenceLine(l.cadence, time(l.at), time(l.now) as number), l.name).toBe(l.expected);
     for (const r of c.reads) expect(cadenceOf(r.text, time(r.at)), r.name).toBe(r.expected);
+    for (const m of c.moves) expect(moveRule(m.text, time(m.from), time(m.to)), m.name).toBe(m.expected);
   });
 
   it('staleFacts', () => {

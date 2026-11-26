@@ -67,6 +67,16 @@ describe('addReceipt', () => {
   });
 });
 
+describe('updateReceipt', () => {
+  it('saves NOK for an amount typed without a currency and keeps a given one', async () => {
+    const trip = await travel.saveTrip({ name: 'Lyon', from: '2026-03-09', to: '2026-03-12' });
+    const r = await upload(trip!.id);
+    expect((await travel.updateReceipt({ id: r.id, amount: '1200', currency: '' }))!.currency).toBe('NOK');
+    expect((await travel.updateReceipt({ id: r.id, amount: '40', currency: 'eur' }))!.currency).toBe('EUR');
+    expect((await travel.updateReceipt({ id: r.id, amount: '', currency: '' }))!.currency).toBe('');
+  });
+});
+
 describe('setCheck', () => {
   it('flips one item, keeps items added after the page loaded and leaves edited unset', async () => {
     const trip = (await travel.saveTrip({ name: 'Lyon', from: '2026-03-09', to: '2026-03-12' }))!;
