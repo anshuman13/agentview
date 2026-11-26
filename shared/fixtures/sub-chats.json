@@ -82,6 +82,54 @@
       ]
     }
   ],
+  "subChatLabelBuilds": [
+    { "count": 0, "allBuild": false, "builds": 1, "expected": "1 build" },
+    { "count": 0, "allBuild": false, "builds": 2, "expected": "2 builds" },
+    { "count": 12, "allBuild": false, "builds": 1, "expected": "12 sub-chats · 1 build" },
+    { "count": 3, "allBuild": true, "builds": 2, "expected": "3 tasks · 2 builds" }
+  ],
+  "groupSpawned": [
+    {
+      "name": "a parent with one build and no sub-chats",
+      "saved": [{ "sessionId": "b", "lastModified": 30, "spawnedBy": "p" }, { "sessionId": "p", "lastModified": 10 }],
+      "open": [],
+      "expected": [{ "root": "p", "latest": "p", "count": 0, "label": "1 build", "lastModified": 30, "members": ["p"], "builds": 1, "buildMembers": ["b"] }]
+    },
+    {
+      "name": "a parent with a sub-chat and two builds, one started from the sub-chat",
+      "saved": [
+        { "sessionId": "b1t", "lastModified": 50, "parentId": "b1", "via": "build", "startedAt": 45 },
+        { "sessionId": "b1", "lastModified": 40, "spawnedBy": "p" },
+        { "sessionId": "x", "lastModified": 35 },
+        { "sessionId": "c1", "lastModified": 30, "parentId": "p", "via": "clear", "startedAt": 20 },
+        { "sessionId": "b2", "lastModified": 25, "spawnedBy": "c1" },
+        { "sessionId": "p", "lastModified": 10 }
+      ],
+      "open": [],
+      "expected": [
+        { "root": "p", "latest": "c1", "count": 1, "label": "1 sub-chat · 2 builds", "lastModified": 50, "members": ["p", "c1"], "builds": 2, "buildMembers": ["b2", "b1", "b1t"] },
+        { "root": "x", "latest": "x", "count": 0, "label": "", "lastModified": 35, "members": ["x"], "builds": 0, "buildMembers": [] }
+      ]
+    },
+    {
+      "name": "a build whose parent is not listed stands on its own",
+      "saved": [{ "sessionId": "b", "lastModified": 30, "spawnedBy": "gone" }, { "sessionId": "y", "lastModified": 20 }],
+      "open": [],
+      "expected": [
+        { "root": "b", "latest": "b", "count": 0, "label": "", "lastModified": 30, "members": ["b"], "builds": 0, "buildMembers": [] },
+        { "root": "y", "latest": "y", "count": 0, "label": "", "lastModified": 20, "members": ["y"], "builds": 0, "buildMembers": [] }
+      ]
+    }
+  ],
+  "needsRows": [
+    {
+      "name": "a build in Needs you lifts its parent row",
+      "saved": [{ "sessionId": "q", "lastModified": 20 }, { "sessionId": "p", "lastModified": 10 }, { "sessionId": "b", "lastModified": 5, "spawnedBy": "p" }],
+      "open": [],
+      "needs": ["b"],
+      "expected": ["p"]
+    }
+  ],
   "searchHitRows": [
     {
       "name": "a hit in a sub-chat opens the parent at the sub-chat",
