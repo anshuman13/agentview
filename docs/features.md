@@ -554,7 +554,18 @@ auto the run pauses for "Build all" after the spec and for you on a blocked task
 and the run goes on. With until it asks for 1 to 3 more tasks for the goal when the list runs out, until that time or two
 searches find nothing. It ends with a recap at the stop time, at 60% weekly usage or when the tasks are done; Pause
 takes effect after the current task. Build all on a spec's Tasks header, Start as Build on the New chat sheet and the
-MCP tool `start_build` (any chat; it opens a new chat in the project) start one.
+MCP tool `start_build` (any chat; it opens a new chat in the project, linked under the calling chat) start one.
+
+A build started with `start_build` belongs to the chat that called it. The host keeps the calling chat's session id
+with the new build chat and, when the build chat gets its first session id, writes `{ child: { parent, kind, at } }` to
+`~/.agentview/spawned.json` (`server/src/session/spawned.ts`); a session gets one parent at most, and builds started any
+other way record nothing. `/api/sessions` returns it as `spawnedBy` on the build chat's root. In the calling chat's
+transcript the tool call shows as a build card (`BuildCard.tsx`, `BuildCard.kt`, text from `buildCardLogic.ts` /
+`BuildCardLogic.kt` on `shared/fixtures/build-card.json`): the spec name, the state (Writing spec, Waiting for approval,
+Running, Paused, Needs you, Done, Stopped), "Task n of N", the last round and Open, from `GET /api/chat/spawned`,
+refreshed when the chat's events change and every 30 s until the build ends. A card whose build is not found shows the
+tool's result text. The build chat's header shows "Started from <parent title>" under the title, and a tap opens the
+parent chat (`startedFrom.ts`, `startedFrom` in `Folders.kt`).
 
 On the web a chat's run heads its Agents rail (`RailHead`), on Android its Agents sheet (`RunActions` and `RunRows` in
 `RunsUi.kt`): tries show Open board and Stop, jobs Stop, and with no run the header has Stop all agents. Under the state
@@ -592,6 +603,12 @@ activity and the count label after the repo and branch ("62 tasks" when every su
 "12 sub-chats", "1 sub-chat"); its dot and bold come from the latest sub-chat. Pin, Mute, Mark as unread, Rename, Copy
 link and Archive act on the root, Archive and Restore move the whole group, and auto-archive goes by the group's last
 activity. A sub-chat whose root is missing or in the bin shows on its own.
+
+A build chat whose root has `spawnedBy` folds into the row of the chat that started it (one level only): the row keeps
+the parent's title and opens the parent's latest sub-chat, the count label adds "1 build" or "2 builds" ("12 sub-chats
+· 1 build"), and the row's last activity, unread dot, running state and Needs you include the builds (`buildMembers`),
+so a build that waits for you lifts its parent's row into Needs you. Archive and Restore move the builds too. A build
+whose parent is not listed shows on its own.
 
 Opening the row resumes the latest sub-chat; `?session=` and `/api/events?session=` take any id of the group, and the
 header shows the root's title. Above the live transcript the earlier sub-chats show oldest first as collapsed rows
