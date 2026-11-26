@@ -98,7 +98,7 @@ fun ChangesScreen(hub: Hub, onBack: () -> Unit) {
     val ops = GitOps(hub, reload, { ask = it }) { f -> pager = listOf(review.indexOf(f.path).toString()) + review }
 
     Column(Modifier.fillMaxSize()) {
-        WorkspaceHeader(hub, "Source Control", onBack) {
+        WorkspaceHeader(hub, "Source control", onBack) {
             MoreButton { close ->
                 MenuItem("Refresh", "refresh", { close(); reload(); reloadBranch() })
                 MenuItem("Write message with $label", "sparkle", { close(); hub.askChat(DRAFT_PROMPT) }, enabled = files.any { it.staged })

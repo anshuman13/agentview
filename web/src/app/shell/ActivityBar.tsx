@@ -9,7 +9,7 @@ import { ariaKeys, keyText } from './keys';
 export const VIEWS: { id: View; icon: string; title: string }[] = [
   { id: 'assistant', icon: 'sparkle', title: 'Codex' },
   { id: 'explorer', icon: 'files', title: 'Explorer' },
-  { id: 'changes', icon: 'source-control', title: 'Source Control' },
+  { id: 'changes', icon: 'source-control', title: 'Source control' },
   { id: 'github', icon: 'github', title: 'GitHub Pull Requests' },
   { id: 'chats', icon: 'comment-discussion', title: 'Sessions' },
   { id: 'sessions', icon: 'repo', title: 'Workspace' },

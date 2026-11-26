@@ -12,7 +12,7 @@ val MORE_TOOLS = listOf(
     MoreItem("files", "Files", "files"),
     MoreItem("browser", "Browser", "globe"),
     MoreItem("terminal", "Terminal", "terminal"),
-    MoreItem("changes", "Source Control", "source-control"),
+    MoreItem("changes", "Source control", "source-control"),
     MoreItem("github", "Pull Requests", "git-pull-request"),
 )
 val MORE_PAGES = listOf(

@@ -116,7 +116,7 @@ export function MoreSheet({ open, onClose, tab, view, showing, project, theme, t
       )}
       {shown('changes') && (
         <button className={tab === 'repos' && view === 'changes' ? 'active' : ''} onClick={() => { track('more:changes'); goSide('changes'); }}>
-          <Icon name="source-control" /><span>Source Control</span><ChangesBadge />
+          <Icon name="source-control" /><span>Source control</span><ChangesBadge />
         </button>
       )}
       {shown('github') && (

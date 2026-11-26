@@ -8,14 +8,14 @@
 .scm-commit { flex: none; display: flex; flex-direction: column; gap: var(--sp-3); padding: 0 var(--sp-6) var(--sp-4); }
 .scm-commit textarea {
   width: 100%; resize: none; padding: 5px var(--sp-4); font: inherit; font-size: var(--fs-md); line-height: var(--line-sm);
-  color: var(--fg); background: var(--raised); border: 1px solid var(--border-strong); border-radius: var(--radius-sm);
+  color: var(--fg); background: var(--field); border: 1px solid transparent; border-radius: var(--radius);
 }
-.scm-commit textarea:focus { outline: 0; border-color: var(--accent); }
+.scm-commit textarea:focus { outline: 0; border-color: var(--border-strong); }
 .scm-commit-actions { display: flex; gap: var(--sp-3); }
 .scm-commit-actions .primary { flex: 1; }
 .scm-claude { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .scm-error { padding: 0 var(--sp-6) var(--sp-3); font-size: var(--fs-sm); color: var(--err); white-space: pre-wrap; word-break: break-word; }
-.scm-error.muted { color: var(--fg-muted); }
+.scm-error.muted { font-size: var(--fs-md); color: var(--fg-faint); }
 .scm-review { padding: 0 var(--sp-5) var(--sp-4); }
 .scm-review .scm-claude { flex: 1; }
 
