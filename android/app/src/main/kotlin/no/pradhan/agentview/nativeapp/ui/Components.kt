@@ -247,7 +247,7 @@ fun Loading(text: String) {
 @Composable
 fun EmptyState(title: String, hint: String? = null, icon: String? = null, small: Boolean = true, action: (@Composable () -> Unit)? = null) {
     Column(
-        Modifier.fillMaxWidth().padding(horizontal = Tokens.sp8, vertical = if (small) Tokens.sp12 else Tokens.sp24),
+        Modifier.fillMaxWidth().padding(start = Tokens.sp8, end = Tokens.sp8, top = if (small) Tokens.sp12 else Tokens.sp24 * 2, bottom = if (small) Tokens.sp12 else Tokens.sp24),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(Tokens.sp2),
     ) {

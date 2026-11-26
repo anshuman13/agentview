@@ -244,7 +244,8 @@ The visible text is the status word in sentence case, or "N word" with `count` (
 
 ### EmptyState (EuiEmptyPrompt)
 `<EmptyState icon title hint action size>`; `.ui-empty`. Centred and quiet (Claude and Muse empty states): a bare
-`--icon-xl` icon (`--icon-lg` at sm) in `--on-surface-faint`, the title as one body line in `--on-surface-muted`, an optional hint in subheadline `--on-surface-faint`,
+`--icon-xl` icon (`--icon-lg` at sm) in `--on-surface-faint`, the title 14 px (`--fs-lg`) in `--on-surface-muted`, an optional hint 13 px (`--fs-md`, subheadline on touch) in `--on-surface-faint`
+(Claude empty panel). md sits near the top, not in the vertical centre: top padding `clamp(48px, 16vh, 160px)` on the web, 96 dp on Android;
 then at most one action (a setup state names what is missing and its action is "Set up with <provider>", which asks the chat on screen). md for a whole view, sm inside a panel or report. The icon stays grey;
 the accent is for the action.
 Copy (Status language): the title is a sentence-case noun phrase with no trailing period ("No past meetings yet"), the hint is one short line with no period, and the one action is a Button sm directly under `.ui-empty`.
