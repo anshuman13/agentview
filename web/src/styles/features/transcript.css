@@ -50,10 +50,10 @@
 
 .tr-step {
   display: grid; grid-template-columns: 16px minmax(0, 1fr) auto auto; column-gap: var(--sp-4); align-items: center;
-  min-height: var(--size-row); line-height: var(--size-row); font-size: var(--fs-sm); color: var(--fg-muted); border-radius: var(--radius-sm); cursor: pointer;
+  min-height: var(--size-xl); line-height: var(--size-xl); font-size: var(--fs-md); color: var(--fg-muted); border-radius: var(--radius); cursor: pointer;
 }
 @media (hover: hover) { .tr-step:hover { color: var(--fg); } }
-.tr-mark { display: flex; align-items: center; justify-content: center; width: var(--icon); height: var(--size-row); color: var(--fg-faint); }
+.tr-mark { display: flex; align-items: center; justify-content: center; width: var(--icon); height: var(--size-xl); color: var(--fg-faint); }
 .tr-mark .codicon.icon.small { font-size: var(--fs-sm); }
 .tr-chev { display: flex; align-items: center; color: var(--fg-faint); }
 .tr-step { --tone: var(--fg-faint); }
@@ -83,7 +83,7 @@
 .tr-detail { grid-column: 1 / -1; display: flex; flex-direction: column; gap: var(--sp-3); margin: var(--sp-1) 0 var(--sp-4) var(--sp-12); cursor: auto; }
 .tr-detail pre, .tr-report {
   padding: var(--sp-4) var(--sp-5); overflow: auto; line-height: var(--lh);
-  background: var(--sunken); border: 1px solid var(--border); border-radius: var(--radius-sm);
+  background: var(--sunken); border: 1px solid var(--border); border-radius: var(--radius);
 }
 .tr-detail pre { max-height: 320px; font-family: var(--mono); font-size: var(--fs-xs); white-space: pre-wrap; overflow-wrap: anywhere; color: var(--fg); }
 .tr-detail pre.err { color: var(--err); }
@@ -112,7 +112,7 @@
 .tr-box > .tr-sub { margin: 0 var(--sp-4) var(--sp-4) var(--list-pad); }
 .tr-box > .tr-report { margin: 0 var(--sp-4) var(--sp-4); }
 .tr-steps { display: flex; flex-direction: column; gap: var(--sp-1); font-size: var(--fs-sm); }
-.tr-steps-head { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-3); min-height: var(--size-row); color: var(--fg-muted); font-size: var(--fs-sm); }
+.tr-steps-head { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-3); min-height: var(--size-row); color: var(--fg-muted); font-size: var(--fs-lg); }
 .tr-review { align-self: flex-start; margin-left: var(--sp-6); }
 .tr-claims { display: flex; flex-direction: column; gap: var(--sp-1); margin: 0; padding: 0 0 var(--sp-2) var(--sp-6); color: var(--fg-muted); line-height: 1.35; }
 .tr-claims > li[role='button'] { cursor: pointer; }
