@@ -33,6 +33,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.IntOffset
 import kotlinx.coroutines.coroutineScope
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.contentOrNull
 import kotlinx.coroutines.launch
 import no.pradhan.agentview.nativeapp.chat.ACCOUNT_LABEL
 import no.pradhan.agentview.nativeapp.chat.can
@@ -79,6 +83,8 @@ import androidx.compose.foundation.layout.Box
 import no.pradhan.agentview.nativeapp.ui.MoreButton
 import no.pradhan.agentview.nativeapp.ui.SearchField
 import no.pradhan.agentview.nativeapp.ui.SectionHeader
+import no.pradhan.agentview.nativeapp.ui.Sheet
+import no.pradhan.agentview.nativeapp.ui.Mono
 import no.pradhan.agentview.nativeapp.ui.Tokens
 import no.pradhan.agentview.nativeapp.ui.motionOff
 import no.pradhan.agentview.nativeapp.workspace.ErrorHint
@@ -180,6 +186,33 @@ fun McpScreen(hub: Hub, onBack: () -> Unit) {
             }
         }
     }
+    }
+}
+
+// web ToolInputs: the whole description, then each input with its type, whether it is required and its description.
+@Composable
+private fun McpToolSheet(t: McpTool, onDismiss: () -> Unit) {
+    val props = (t.inputSchema?.get("properties") as? JsonObject).orEmpty()
+    val required = (t.inputSchema?.get("required") as? JsonArray)?.mapNotNull { (it as? JsonPrimitive)?.contentOrNull }.orEmpty()
+    Sheet(onDismiss, t.title ?: t.name, full = false) {
+        if (t.description.isNotBlank()) Text(t.description, style = Type.body, color = av.fgMuted)
+        if (props.isNotEmpty()) {
+            SectionHeader("Inputs", props.size.toString())
+            Group {
+                props.entries.forEachIndexed { i, (name, p) ->
+                    if (i > 0) Hairline()
+                    val o = p as? JsonObject
+                    val type = listOfNotNull((o?.get("type") as? JsonPrimitive)?.contentOrNull, "required".takeIf { name in required }).joinToString(" · ")
+                    Column(Modifier.padding(horizontal = Tokens.listPad, vertical = Tokens.sp4)) {
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Tokens.sp3)) {
+                            Text(name, style = Mono, color = av.fg)
+                            if (type.isNotEmpty()) Text(type, style = Type.caption, color = av.fgMuted)
+                        }
+                        (o?.get("description") as? JsonPrimitive)?.contentOrNull?.let { Text(it, style = Type.footnote, color = av.fgMuted) }
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -289,6 +322,8 @@ private fun McpDetail(hub: Hub, r: McpRow, calls: Pair<Int, Int>?, groups: Map<S
     val group = if (r.account != null) (if (r.account == "main") "personal" else "work") else if (groups[mcpGroupKey(r)] == "personal") "personal" else "work"
     val tools = (r.server.tools ?: emptyList()).filter { q.isEmpty() || it.name.contains(q, true) || it.title?.contains(q, true) == true || it.description.contains(q, true) }
     val url = r.server.command?.startsWith("http") == true
+    var toolSheet by remember(r.name) { mutableStateOf<McpTool?>(null) }
+    toolSheet?.let { McpToolSheet(it) { toolSheet = null } }
     Column(Modifier.fillMaxSize()) {
         WorkspaceHeader(hub, mcpShortName(r.name), onBack, sub = label) {
             MoreButton { close ->
@@ -334,7 +369,7 @@ private fun McpDetail(hub: Hub, r: McpRow, calls: Pair<Int, Int>?, groups: Map<S
                         Group {
                             list.forEachIndexed { i, t ->
                                 if (i > 0) Hairline()
-                                ListRow(t.title ?: t.name, firstLine(t.description).ifEmpty { null }, metaLines = 2, below = mcpToolInputs(t.inputSchema)?.let { ins -> { Text(ins, style = Type.footnote, color = av.fgMuted, maxLines = 1, overflow = TextOverflow.Ellipsis) } }, trailing = if (canUse) ({ IconBtn("comment", "Add ${t.name} to chat", { use(Use(r.name, t.name)) }) }) else null)
+                                ListRow(t.title ?: t.name, firstLine(t.description).ifEmpty { null }, metaLines = 2, below = mcpToolInputs(t.inputSchema)?.let { ins -> { Text(ins, style = Type.footnote, color = av.fgMuted, maxLines = 1, overflow = TextOverflow.Ellipsis) } }, trailing = if (canUse) ({ IconBtn("comment", "Add ${t.name} to chat", { use(Use(r.name, t.name)) }) }) else null, onClick = { toolSheet = t })
                             }
                         }
                     }
