@@ -37,6 +37,8 @@ import no.pradhan.agentview.nativeapp.ops.fixBody
 import no.pradhan.agentview.nativeapp.ops.parsePullDetail
 import no.pradhan.agentview.nativeapp.ops.parsePullFix
 import no.pradhan.agentview.nativeapp.ops.parsePulls
+import no.pradhan.agentview.nativeapp.ops.UsageReport
+import no.pradhan.agentview.nativeapp.ops.parseUsage
 
 suspend fun Hub.deployJob(id: String): DeployJob = parseDeployJob(read("/api/deploy/job/$id"))
 
@@ -80,6 +82,8 @@ fun Hub.actOnPull(number: Int, action: String, body: String, failure: String, do
 
 fun Hub.fixPull(number: Int, check: PrCheck, done: (PullFix?) -> Unit) =
     write("/api/gh/pr/$number/fix", fixBody(check), "Could not start the fix", ::parsePullFix, done)
+
+suspend fun Hub.usage(days: Int = 30): UsageReport = parseUsage(read("/api/usage?days=$days"))
 
 suspend fun Hub.observe(repo: String): ObserveInfo = parseObserve(read("/api/observe" + if (repo.isNotEmpty()) "?repo=${enc(repo)}" else ""))
 
