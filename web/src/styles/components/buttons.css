@@ -54,7 +54,7 @@ button.destructive { background: color-mix(in srgb, var(--err) 18%, transparent)
 .chip.chip-btn.chip-accent.on { --fill: var(--accent-fill); }
 :is(.btn.btn-filled, .btn.btn-tinted, .btn.btn-gray, .btn.btn-plain, .btn.btn-danger, .icon-btn, .chip.chip-btn) {
   --state: 0%;
-  transition: background var(--dur) var(--ease), color var(--dur) var(--ease);
+  transition: background var(--dur-hover) var(--ease), color var(--dur-hover) var(--ease);
 }
 :is(.btn.btn-filled, .btn.btn-tinted, .btn.btn-gray, .btn.btn-plain, .btn.btn-danger, .icon-btn, .chip.chip-btn),
 :is(.btn.btn-filled, .btn.btn-tinted, .btn.btn-gray, .btn.btn-plain, .btn.btn-danger, .icon-btn, .chip.chip-btn):is(:hover, :focus-visible, :active):not(:disabled) {

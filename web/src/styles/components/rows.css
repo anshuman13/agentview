@@ -3,7 +3,7 @@
   --state: 0%; --lead-w: 24px;
   position: relative; display: flex; align-items: center; gap: var(--sp-6); width: 100%; min-height: 48px; padding: var(--sp-3) var(--list-pad); border: 0; border-radius: 0;
   color: var(--on-surface); font: inherit; font-size: var(--type-body-size); line-height: var(--type-body-line); text-align: left; text-decoration: none; cursor: pointer;
-  transition: background var(--dur) var(--ease);
+  transition: background var(--dur-hover) var(--ease);
 }
 .ui-row, .ui-row:is(:hover, :focus-visible, :active) {
   background: linear-gradient(color-mix(in srgb, currentColor var(--state), transparent) 0 0), transparent;

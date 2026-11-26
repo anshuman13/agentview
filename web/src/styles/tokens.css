@@ -134,6 +134,8 @@
 
   --dur-fast: 100ms;
   --dur: 120ms;
+  --dur-hover: 0ms;
+  --dur-dialog: 170ms;
   --ease: ease-in-out;
   --motion-duration: 250ms;
   --motion-ease-in: cubic-bezier(0.2, 0, 0, 1);

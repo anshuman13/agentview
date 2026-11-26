@@ -434,6 +434,8 @@ object Tokens {
     val shadowLg = 32.dp
     const val durFast = 100
     const val dur = 120
+    const val durHover = 0
+    const val durDialog = 170
     const val motionDuration = 250
     val motionEaseIn = CubicBezierEasing(0.2f, 0f, 0f, 1f)
     val motionEaseOut = CubicBezierEasing(0.3f, 0f, 1f, 1f)

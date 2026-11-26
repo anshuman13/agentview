@@ -6,7 +6,7 @@
   display: flex; flex-direction: column; min-width: 0; padding: 0; overflow: hidden; border: var(--hairline); border-radius: var(--shape-lg);
   background: linear-gradient(color-mix(in srgb, currentColor var(--state), transparent) 0 0), var(--surface);
   color: var(--on-surface); font: inherit; text-align: left; cursor: pointer;
-  transition: border-color var(--motion-duration) var(--motion-ease-in), background var(--dur) var(--ease);
+  transition: border-color var(--dur-hover) var(--ease), background var(--dur-hover) var(--ease);
 }
 @media (hover: hover) { .ui-card:hover { --state: var(--state-hover); } }
 .ui-card:active { --state: var(--state-press); }
