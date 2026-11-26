@@ -65,6 +65,8 @@ import no.pradhan.agentview.nativeapp.ui.MenuSeparator
 import no.pradhan.agentview.nativeapp.ui.AvIcon
 import no.pradhan.agentview.nativeapp.ui.DotState
 import no.pradhan.agentview.nativeapp.ui.av
+import no.pradhan.agentview.nativeapp.ui.Type
+import androidx.compose.material3.Text
 import androidx.compose.foundation.layout.Box
 import no.pradhan.agentview.nativeapp.ui.MoreButton
 import no.pradhan.agentview.nativeapp.ui.SearchField
@@ -171,19 +173,19 @@ fun McpScreen(hub: Hub, onBack: () -> Unit) {
     }
 }
 
-// The funnel menu (web FilterMenu): Show, then Source when rows come from more than one place, each with its count and a check.
+// The filter menu (web FilterMenu): Show, then Source when rows come from more than one place, with a check on the current one.
 @Composable
 private fun McpFilterMenu(menu: McpMenu, filter: McpFilter, onChange: (McpFilter) -> Unit) {
     var open by remember { mutableStateOf(false) }
     Box {
-        IconBtn("filter", "Filter", { open = true }, on = filter != McpFilter())
+        IconBtn("list-filter", "Filter", { open = true }, on = filter != McpFilter())
         Menu(open, { open = false }) {
             MenuLabel("Show")
-            menu.show.forEach { (k, n) -> MenuItem(MCP_SHOWS.first { it.first == k }.second, "", { open = false; onChange(filter.copy(show = k)) }, checked = filter.show == k, count = "$n") }
+            menu.show.forEach { (k, _) -> MenuItem(MCP_SHOWS.first { it.first == k }.second, "", { open = false; onChange(filter.copy(show = k)) }, checked = filter.show == k) }
             if (menu.where.size > 2) {
                 MenuSeparator()
                 MenuLabel("Source")
-                menu.where.forEach { (k, n) -> MenuItem(mcpWhereLabel(k), "", { open = false; onChange(filter.copy(where = k)) }, checked = filter.where == k, count = "$n") }
+                menu.where.forEach { (k, _) -> MenuItem(mcpWhereLabel(k), "", { open = false; onChange(filter.copy(where = k)) }, checked = filter.where == k) }
             }
         }
     }
@@ -212,7 +214,7 @@ private fun McpStatus(r: McpRow) {
     when {
         r.status == "pending" || r.status == "probing" -> StatusDot(DotState.Busy, desc = label)
         tone == BadgeTone.Done -> AvIcon("check", label, Tokens.iconMd, tint = av.fgMuted)
-        else -> Badge(label, tone)
+        else -> Text(label, style = Type.footnote, color = if (tone == BadgeTone.Failed) av.err else av.fgMuted, maxLines = 1)
     }
 }
 
@@ -296,8 +298,8 @@ private fun McpDetail(hub: Hub, r: McpRow, calls: Pair<Int, Int>?, groups: Map<S
                             if (i > 0) Hairline()
                             ListRow(t.name, firstLine(t.description).ifEmpty { null }, metaLines = 2, trailing = if (t.readOnly || t.destructive || canUse) ({
                                 Row(horizontalArrangement = Arrangement.spacedBy(Tokens.sp2), verticalAlignment = Alignment.CenterVertically) {
-                                    if (t.readOnly) Badge("read only", BadgeTone.Done)
-                                    if (t.destructive) Badge("destructive", BadgeTone.Waiting)
+                                    if (t.readOnly) Badge("Read only", BadgeTone.Quiet)
+                                    if (t.destructive) Badge("Destructive", BadgeTone.Waiting)
                                     if (canUse) IconBtn("comment", "Add ${t.name} to chat", { use(Use(r.name, t.name)) })
                                 }
                             }) else null)

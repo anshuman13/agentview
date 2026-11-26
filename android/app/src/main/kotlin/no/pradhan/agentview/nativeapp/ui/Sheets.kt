@@ -145,14 +145,13 @@ fun Menu(expanded: Boolean, onDismiss: () -> Unit, content: @Composable ColumnSc
 }
 
 @Composable
-fun MenuItem(text: String, icon: String, onClick: () -> Unit, danger: Boolean = false, enabled: Boolean = true, checked: Boolean = false, count: String? = null) {
+fun MenuItem(text: String, icon: String, onClick: () -> Unit, danger: Boolean = false, enabled: Boolean = true, checked: Boolean = false) {
     val color = if (danger) av.danger else av.fg
     DropdownMenuItem(
         text = {
             Row(horizontalArrangement = Arrangement.spacedBy(Tokens.sp4), verticalAlignment = Alignment.CenterVertically) {
                 if (checked || icon.isNotEmpty()) AvIcon(if (checked) "check" else icon, null, Tokens.iconMd) else Spacer(Modifier.size(Tokens.iconMd))
                 Text(text, style = Type.body)
-                if (count != null) Text(count, style = Type.body, color = av.fgMuted)
             }
         },
         onClick = onClick,

@@ -48,6 +48,15 @@ export function Detail({ row, usage, group, onGroup, hidden, onHide, onClose }: 
         <h2 className="mcp-detail-name">{shortName(row.name)}</h2>
         <span className="mcp-detail-st"><StatusCell row={row} /></span>
         <span className="spacer" />
+        <div className="mcp-detail-acts">
+          {row.live && MCP_BAD.includes(row.status) && <Button icon="debug-restart" onClick={() => send({ type: 'mcp_reconnect', name: row.name })}>Reconnect in chat</Button>}
+          {canEdit && row.live && row.status === 'disabled' && <Button icon="debug-start" onClick={() => send({ type: 'mcp_toggle', name: row.name, enabled: true })}>Enable</Button>}
+          {canEdit && row.live && row.status !== 'disabled' && <Button icon="circle-slash" onClick={() => send({ type: 'mcp_toggle', name: row.name, enabled: false })}>Disable for this chat</Button>}
+          {row.live && row.status === 'connected' && <Button icon="comment" onClick={() => use(row.name)} title={`Ask ${label} to use this server in your next message`}>Add to chat</Button>}
+          {canEdit && !row.live && !row.account && <AddToChat name={row.name} />}
+          {connectors && row.type === 'claudeai' && row.status !== 'needs-auth' && <Button icon="key" onClick={() => openConnectors(row.account)}>Manage on claude.ai</Button>}
+          {url && <Button icon="link-external" href={row.command} target="_blank" rel="noreferrer">Open URL</Button>}
+        </div>
         <IconButton ref={more} icon="ellipsis" label="More" size="sm" onClick={() => setMenu((v) => !v)} />
         {menu && (
           <Menu trigger={more} onClose={() => setMenu(false)}>
@@ -57,15 +66,6 @@ export function Detail({ row, usage, group, onGroup, hidden, onHide, onClose }: 
         )}
       </div>
       {row.command && <div className="mcp-detail-cmd mono">{row.command}<IconButton icon="copy" label="Copy" size="sm" small onClick={() => void navigator.clipboard.writeText(row.command!)} /></div>}
-      <div className="mcp-detail-acts">
-        {row.live && MCP_BAD.includes(row.status) && <Button icon="debug-restart" onClick={() => send({ type: 'mcp_reconnect', name: row.name })}>Reconnect in chat</Button>}
-        {canEdit && row.live && row.status === 'disabled' && <Button icon="debug-start" onClick={() => send({ type: 'mcp_toggle', name: row.name, enabled: true })}>Enable</Button>}
-        {canEdit && row.live && row.status !== 'disabled' && <Button icon="circle-slash" onClick={() => send({ type: 'mcp_toggle', name: row.name, enabled: false })}>Disable for this chat</Button>}
-        {row.live && row.status === 'connected' && <Button icon="comment" onClick={() => use(row.name)} title={`Ask ${label} to use this server in your next message`}>Add to chat</Button>}
-        {canEdit && !row.live && !row.account && <AddToChat name={row.name} />}
-        {connectors && row.type === 'claudeai' && row.status !== 'needs-auth' && <Button icon="key" onClick={() => openConnectors(row.account)}>Manage on claude.ai</Button>}
-        {url && <Button icon="link-external" href={row.command} target="_blank" rel="noreferrer">Open URL</Button>}
-      </div>
       {!canEdit && <div className="muted">Edit ~/.codex/config.toml, then Reconnect</div>}
       <dl className="mcp-kv">
         <dt>Status</dt><dd className={tone}>{statusLabel}{row.version ? <span className="muted mono"> · v{row.version}</span> : null}</dd>
@@ -96,7 +96,7 @@ export function Detail({ row, usage, group, onGroup, hidden, onHide, onClose }: 
         />
         {tools.map((t) => (
           <div key={t.name} className={`mcp-tool ${run === t.name ? 'open' : ''}`}>
-            <div className="t"><Icon name="symbol-method" small /><span className="mono">{t.name}</span>{t.readOnly && <span className="chip sm mcp-tag st-ok">read only</span>}{t.destructive && <span className="chip sm mcp-tag st-warn">destructive</span>}<span className="spacer" />{t.inputSchema && runnable(row) && <IconButton icon={run === t.name ? 'close' : 'play'} small className="mcp-insert" on={run === t.name} label={run === t.name ? 'Close' : 'Run this tool'} onClick={() => setRun((r) => (r === t.name ? null : t.name))} />}{row.live && <IconButton icon="comment" small className="mcp-insert" label="Add to chat" title={`Ask ${label} to use ${t.name} in your next message`} onClick={() => use(row.name, t.name)} />}</div>
+            <div className="t"><span className="n">{t.name}</span>{t.readOnly && <span className="mcp-tag">Read only</span>}{t.destructive && <span className="mcp-tag warn">Destructive</span>}<span className="spacer" />{t.inputSchema && runnable(row) && <IconButton icon={run === t.name ? 'close' : 'play'} small className="mcp-insert" on={run === t.name} label={run === t.name ? 'Close' : 'Run this tool'} onClick={() => setRun((r) => (r === t.name ? null : t.name))} />}{row.live && <IconButton icon="comment" small className="mcp-insert" label="Add to chat" title={`Ask ${label} to use ${t.name} in your next message`} onClick={() => use(row.name, t.name)} />}</div>
             {t.description && <div className="d">{t.description}</div>}
             {run === t.name && <RunForm key={`${row.name}:${t.name}`} server={row.name} tool={t} />}
           </div>

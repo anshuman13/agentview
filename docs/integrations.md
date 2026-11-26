@@ -22,7 +22,7 @@ Claude in Chrome is not needed there: chats on that Mac can drive the laptop's C
 
 The MCP Servers page reads the same config as the Claude CLI (`~/.claude.json`, the repo's `.mcp.json`) and connects
 to every server itself, like `claude mcp list`: one table lists each server's type, source and connection status, with a
-search box and a filter menu (Show and Source). Click a row for the command or URL, the env variable names, the error text and the
+search box and a filter menu (Show and Source), styled like Claude desktop's Connectors page. Click a row for the command or URL, the env variable names, the error text and the
 tool list with descriptions. Servers that log in through OAuth show "OAuth via Claude" until Claude starts in the chat;
 from then on the page shows the live status from the chat, with reconnect and disable actions, and claude.ai connectors
 and plugin servers appear too. "Check" connects to everything again; results are cached for a minute.

@@ -26,10 +26,9 @@ export function ServiceRow({ row, usage, onPick, group, onGroup, onHide, isHidde
       <span role="cell" className="c-name">
         <ServerIcon row={row} />
         <button type="button" className="mcp-hit" data-row={rowKey(row)} onClick={onPick} title={usage ? usageText(usage) : undefined}>{shortName(row.name)}</button>
-        {!row.account && group === 'personal' && <span className="mcp-tag">Personal</span>}
       </span>
-      <span role="cell" className="c-type">{typeOf(row)}{tag && <span className="mcp-tag">{tag}</span>}</span>
-      <span role="cell" className="c-src">{sourceOf(row)}</span>
+      <span role="cell" className="c-type"><span className="t">{typeOf(row)}</span>{tag && <span className="mcp-tag">{tag}</span>}</span>
+      <span role="cell" className="c-src"><span className="t">{sourceOf(row)}</span>{!row.account && group === 'personal' && <span className="mcp-tag">Personal</span>}</span>
       <span role="cell" className="c-st"><StatusCell row={row} /></span>
       <span role="cell" className="c-more">
         <IconButton ref={more} icon="ellipsis" label="More" size="sm" small onClick={() => setOpen((v) => !v)} />

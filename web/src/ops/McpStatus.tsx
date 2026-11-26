@@ -18,20 +18,6 @@ import '../styles/features/wiki.css';
 import '../styles/features/meetings.css';
 import '../styles/features/mcp.css';
 
-type Stats = { probed: boolean; busy: boolean; at: number; ok: number; total: number; attention: number; onCheck: () => void };
-
-function McpStats({ probed, busy, at, ok, total, attention, onCheck }: Stats) {
-  return (
-    <div className="mcp-stats">
-      {probed && <span className={attention ? 'warn' : ''}><b>{ok}</b> connected of {total}</span>}
-      {attention > 0 && <span className="bad"><b>{attention}</b> need you</span>}
-      <Button size="sm" className="mcp-refresh" onClick={onCheck} disabled={busy} title="Connect to every server again">
-        <Icon name={busy ? 'loading' : 'refresh'} small spin={busy} /> {busy ? 'Checking' : at ? `Checked ${ago(at, ' ago')}` : 'Check'}
-      </Button>
-    </div>
-  );
-}
-
 const FILTER = 'agentview.mcp.filter';
 const ALL: McpFilter = { show: 'all', where: 'all' };
 
@@ -40,20 +26,20 @@ function FilterMenu({ counts, filter, onChange }: { counts: ReturnType<typeof fi
   const [open, setOpen] = useState(false);
   const trigger = useRef<HTMLButtonElement>(null);
   const narrowed = filter.show !== 'all' || filter.where !== 'all';
-  const item = (on: boolean, label: string, n: number, pick: () => void) => (
+  const item = (on: boolean, label: string, pick: () => void) => (
     <MenuItem key={label} className="mcp-fitem" aria-checked={on} role="menuitemradio" onClick={() => { pick(); setOpen(false); }}>
-      <span className="l">{label}</span><span className="n">{n}</span>{on ? <Icon name="check" small /> : <span className="ck" />}
+      <span className="l">{label}</span>{on ? <Icon name="check" small /> : <span className="ck" />}
     </MenuItem>
   );
   return (
     <div className="mcp-filter">
-      <IconButton ref={trigger} icon="filter" label="Filter" size="sm" on={narrowed} onClick={() => setOpen((v) => !v)} />
+      <IconButton ref={trigger} icon="list-filter" label="Filter" size="sm" on={narrowed} onClick={() => setOpen((v) => !v)} />
       {open && (
         <Menu trigger={trigger} onClose={() => setOpen(false)}>
           <div className="mcp-fhead">Show</div>
-          {counts.show.map(([k, n]) => item(filter.show === k, SHOWS.find(([s]) => s === k)![1], n, () => onChange({ ...filter, show: k })))}
+          {counts.show.map(([k]) => item(filter.show === k, SHOWS.find(([s]) => s === k)![1], () => onChange({ ...filter, show: k })))}
           {counts.where.length > 2 && <><MenuSeparator /><div className="mcp-fhead">Source</div>
-            {counts.where.map(([k, n]) => item(filter.where === k, whereLabel(k), n, () => onChange({ ...filter, where: k })))}</>}
+            {counts.where.map(([k]) => item(filter.where === k, whereLabel(k), () => onChange({ ...filter, where: k })))}</>}
         </Menu>
       )}
     </div>
@@ -87,7 +73,6 @@ export function McpPage() {
   const filter = validFilter(saved, counts);
   const list = useMemo(() => mcpList(searched, filter, hidden), [searched, filter.show, filter.where, groups]);
   const narrowed = query.trim() !== '' || filter.show !== 'all' || filter.where !== 'all';
-  const extra = useSlot('page-mcp-extra');
   const action = useSlot('page-mcp-action');
   const close = () => {
     const key = sel;
@@ -101,7 +86,6 @@ export function McpPage() {
     <div className="mcp-page">
       <div className="mcp-main wk"><div className="wk-scroll"><div className="mt-page">
         {action && createPortal(<IconButton icon="refresh" label="Check" size="sm" spin={busy} disabled={busy} onClick={() => load(true)} />, action)}
-        {extra && createPortal(<McpStats probed={probed !== null} busy={busy} at={at} ok={shownCounts.connected} total={shownCounts.total} attention={shownCounts.needsYou} onCheck={() => load(true)} />, extra)}
         {current ? (
           <Detail row={current} usage={usageOf(current)} group={groupOf(current)} onGroup={(to) => setGroup(groupKey(current), to)} hidden={hidden(current)} onHide={() => setGroup(hideKey({ name: groupKey(current) }), hidden(current) ? 'shown' : 'hidden')} onClose={close} />
         ) : <>
@@ -115,8 +99,10 @@ export function McpPage() {
           {!connectors && <div className="muted">claude.ai connectors load in Claude chats only</div>}
           {probed !== null && rows.length > 0 && (
             <div className="mcp-bar">
+              <h2>MCP servers</h2>
               <SearchBox value={query} onChange={setQuery} label="Search" />
               <FilterMenu counts={counts} filter={filter} onChange={setFilter} />
+              <IconButton icon="refresh" label={busy ? 'Checking' : at ? `Check again (checked ${ago(at, ' ago')})` : 'Check'} size="sm" spin={busy} disabled={busy} onClick={() => load(true)} />
             </div>
           )}
           {narrowed && !list.length && (
