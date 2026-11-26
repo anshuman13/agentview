@@ -165,3 +165,4 @@ suspend fun Hub.attach(name: String, mime: String, bytes: ByteArray): String? {
 }
 
 suspend fun Hub.image(chat: String, path: String): ByteArray? = runCatching { api.image(chat, path) }.getOrNull()
+suspend fun Hub.mcpIcon(name: String, server: String?): ByteArray? = runCatching { api.mcpIcon(name, server) }.getOrNull()

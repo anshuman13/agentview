@@ -32,6 +32,7 @@
 .mcp-ico { flex: none; display: inline-grid; place-items: center; width: 24px; height: 24px; border: var(--hairline); border-radius: var(--radius-sm); background: var(--raised); color: var(--fg-muted); }
 .mcp-tag { flex: none; padding: 0 5px; border: var(--hairline); border-radius: var(--radius-xs); background: var(--sunken); color: var(--fg-muted); font-size: 10px; line-height: 15px; }
 .mcp-st-ico { display: inline-flex; color: var(--fg-muted); }
+.mcp-st-ico:has(.codicon-check) { color: var(--ok); }
 .mcp-off .c-name .mcp-hit { color: var(--fg-muted); }
 @container (max-width: 640px) {
   .mcp-tr { grid-template-columns: minmax(0, 1fr) 150px 72px 28px; }
@@ -80,6 +81,9 @@
 .mcp-detail-head { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-4); position: relative; }
 .mcp-detail-head > .ui-menu { white-space: nowrap; }
 .mcp-detail-head .mcp-ico { width: 28px; height: 28px; }
+.mcp-ico.logo { background: #fff; }
+.mcp-ico img { width: 16px; height: 16px; object-fit: contain; }
+.mcp-detail-head .mcp-ico img { width: 18px; height: 18px; }
 .mcp-detail-name { margin: 0; font-size: var(--fs-lg); font-weight: 500; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .mcp-detail-st { font-size: var(--fs-sm); }
 .mcp-detail-st .bad { color: var(--err); } .mcp-detail-st .warn { color: var(--warn); }
@@ -89,8 +93,9 @@
 .mcp-detail-acts .btn .codicon { display: none; }
 .mcp-detail-acts :is(.mcp-login, .mcp-login-acts) { display: contents; }
 .mcp-detail-acts .mcp-login-acts .btn:first-child { background: var(--fg); color: var(--bg); }
-.mcp-detail-acts { position: relative; }
-.mcp-detail-acts .mcp-login > :is(.muted, .bad) { position: absolute; top: calc(100% + var(--sp-2)); right: 0; white-space: nowrap; font-size: var(--fs-sm); }
+/* The login hint gets its own line under the header, so it never covers the fields below. */
+.mcp-detail-head:has(.mcp-login > :is(.muted, .bad)) .mcp-detail-acts { display: contents; }
+.mcp-detail-acts .mcp-login > :is(.muted, .bad) { order: 1; flex-basis: 100%; text-align: right; font-size: var(--fs-sm); }
 .mcp-kv { display: grid; grid-template-columns: 80px minmax(0, 1fr); gap: var(--sp-4) var(--sp-5); margin: 0 0 var(--sp-10); font-size: var(--fs-sm); }
 .mcp-kv dt { color: var(--fg-muted); }
 .mcp-kv dd { margin: 0; min-width: 0; }

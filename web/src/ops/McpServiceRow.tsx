@@ -2,6 +2,7 @@ import { useRef, useState } from 'react';
 import { IconButton } from '../ui/Button';
 import { Icon } from '../ui/Icon';
 import { Menu, MenuItem } from '../ui/Menu';
+import { mcpIconUrl } from './opsApi';
 import { rowKey, shortName, sourceOf, stateOf, statusGroup, tagOf, typeOf, usageText, type Group, type Row, type Usage } from './mcpHelpers';
 
 // The Status cell: a check when connected, a spinner while connecting, else the reason in its tone.
@@ -12,7 +13,16 @@ export function StatusCell({ row }: { row: Row }) {
   return <span className={status === 'failed' ? 'bad' : status === 'waiting' ? 'warn' : 'muted'} title={row.status === 'failed' ? row.error : undefined}>{reason}</span>;
 }
 
-export const ServerIcon = ({ row }: { row: Row }) => <span className="mcp-ico" aria-hidden><Icon name={typeOf(row) === 'Web' ? 'globe' : 'terminal'} small /></span>;
+// The service's logo when its site has one, else the Web or Local glyph.
+export function ServerIcon({ row }: { row: Row }) {
+  const [failed, setFailed] = useState(false);
+  const web = typeOf(row) === 'Web';
+  return (
+    <span className={`mcp-ico ${web && !failed ? 'logo' : ''}`} aria-hidden>
+      {web && !failed ? <img src={mcpIconUrl(row.name, row.command)} alt="" loading="lazy" onError={() => setFailed(true)} /> : <Icon name={web ? 'globe' : 'terminal'} small />}
+    </span>
+  );
+}
 
 // One table row like Claude's Connectors page: icon and name, Type with a tag, Source, Status, and a menu.
 export function ServiceRow({ row, usage, onPick, group, onGroup, onHide, isHidden }: { row: Row; usage?: Usage; onPick: () => void; group: Group; onGroup: (g: Group) => void; onHide: () => void; isHidden?: boolean }) {

@@ -17,6 +17,9 @@ export const fetchMcpConnectors = (refresh: boolean) => fetch(api(`/api/mcp/conn
 
 export const fetchMcpProbe = (refresh: boolean) => fetch(api(`/api/mcp/probe${refresh ? '?refresh=1' : ''}`)).then((r) => r.json());
 
+// A server's logo from its own site (server/src/integrations/mcpIcons.ts); 404 when there is none.
+export const mcpIconUrl = (name: string, url?: string) => apiUrl(`/api/mcp/icon?name=${encodeURIComponent(name)}${url?.startsWith('http') ? `&url=${encodeURIComponent(url)}` : ''}`);
+
 export const fetchMcpGroups = () => fetch(api('/api/mcp/groups')).then((r) => r.json());
 
 export const saveMcpGroup = (service: string, group: string) => post<any>('/api/mcp/groups', { service, group });

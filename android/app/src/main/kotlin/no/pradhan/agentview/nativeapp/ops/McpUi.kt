@@ -1,6 +1,16 @@
 package no.pradhan.agentview.nativeapp.ops
 
 import androidx.activity.compose.BackHandler
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.util.LruCache
+import androidx.compose.foundation.Image
+import androidx.compose.runtime.produceState
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import no.pradhan.agentview.nativeapp.app.mcpIcon
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
@@ -187,7 +197,7 @@ fun McpScreen(hub: Hub, onBack: () -> Unit) {
                         if (filter != McpFilter()) Button("Clear filters", { query = ""; setFilter(McpFilter()) }, variant = ButtonVariant.Plain, size = ButtonSize.Sm)
                     }
                 }
-                if (list.isNotEmpty()) item(key = "rows") { McpGroup(list, personal) { sel = mcpKey(it) } }
+                if (list.isNotEmpty()) item(key = "rows") { McpGroup(hub, list, personal) { sel = mcpKey(it) } }
                 item { Spacer(Modifier.padding(bottom = Tokens.sp16)) }
             }
         }
@@ -257,13 +267,13 @@ private fun McpFilterMenu(menu: McpMenu, filter: McpFilter, onChange: (McpFilter
 
 // One row per server, by name (web ServiceRow): Web or Local icon, name, Type and Source under it, and the status at the end; Off rows are greyed.
 @Composable
-private fun McpGroup(rows: List<McpRow>, personal: Set<String>, onOpen: (McpRow) -> Unit) {
+private fun McpGroup(hub: Hub, rows: List<McpRow>, personal: Set<String>, onOpen: (McpRow) -> Unit) {
     Group {
         rows.forEachIndexed { i, r ->
             if (i > 0) Hairline()
             ListRow(
                 mcpShortName(r.name), mcpMeta(r, mcpKey(r) in personal),
-                leading = { McpIcon(r) },
+                leading = { McpIcon(hub, r) },
                 trailing = { McpStatus(r) },
                 lines = 1, metaLines = 1, muted = mcpStatusGroup(r) == "Off", onClick = { onOpen(r) },
             )
@@ -273,12 +283,20 @@ private fun McpGroup(rows: List<McpRow>, personal: Set<String>, onOpen: (McpRow)
 
 // web ServerIcon: the Web or Local glyph in a small bordered tile, like Claude's connector logos.
 @Composable
-private fun McpIcon(r: McpRow) {
+private fun McpIcon(hub: Hub, r: McpRow) {
     val shape = RoundedCornerShape(Tokens.radiusSm)
-    Box(Modifier.size(32.dp).background(av.raised, shape).border(Tokens.hairline, av.border, shape), contentAlignment = Alignment.Center) {
-        AvIcon(if (mcpType(r) == "Web") "globe" else "terminal", null, Tokens.iconSm, tint = av.fgMuted)
+    val web = mcpType(r) == "Web"
+    val logo by produceState(if (web) mcpLogos.get(r.name) else null, r.name) {
+        if (web && value == null) value = withContext(Dispatchers.IO) { hub.mcpIcon(r.name, r.server.command)?.let { BitmapFactory.decodeByteArray(it, 0, it.size) }?.also { mcpLogos.put(r.name, it) } }
+    }
+    val b = logo
+    Box(Modifier.size(32.dp).background(if (b != null) Color.White else av.raised, shape).border(Tokens.hairline, av.border, shape), contentAlignment = Alignment.Center) {
+        if (b != null) Image(b.asImageBitmap(), null, Modifier.size(Tokens.iconSm))
+        else AvIcon(if (web) "globe" else "terminal", null, Tokens.iconSm, tint = av.fgMuted)
     }
 }
+
+private val mcpLogos = LruCache<String, Bitmap>(128)
 
 // The status at the end of a row (web StatusCell): a check when connected, a pulsing dot while connecting, else the reason.
 @Composable
@@ -286,7 +304,7 @@ private fun McpStatus(r: McpRow) {
     val (label, tone) = mcpState(r)
     when {
         r.status == "pending" || r.status == "probing" -> StatusDot(DotState.Busy, desc = label)
-        tone == BadgeTone.Done -> AvIcon("check", label, Tokens.iconMd, tint = av.fgMuted)
+        tone == BadgeTone.Done -> AvIcon("check", label, Tokens.iconMd, tint = av.ok)
         else -> Text(label, style = Type.footnote, color = if (tone == BadgeTone.Failed) av.err else av.fgMuted, maxLines = 1)
     }
 }

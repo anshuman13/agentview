@@ -1,4 +1,5 @@
 import { readFile } from 'node:fs/promises';
+import { mcpIconRoute } from '../integrations/mcpIcons.js';
 import path from 'node:path';
 import { openInChrome } from '../chrome/chrome.js';
 import { listSessions, renameRoute, savedSession } from '../agent/claude/sessions.js';
@@ -201,6 +202,7 @@ export function workspaceRoutes(d: RouteDeps): Record<string, Entry<Ctx>> {
 export function systemRoutes(d: RouteDeps): Record<string, Entry<Ctx>> {
   return {
     'ANY /api/link-title': entry(({ url }) => linkTitleRoute(url)),
+    'ANY /api/mcp/icon': entry(({ url }) => mcpIconRoute(url)),
     'ANY /api/mcp/connectors': entry(({ url }) => connectorStatus(url.searchParams.has('refresh'))),
     'POST /api/mcp/groups': entry(async ({ body }) => {
       const service = String(body.service ?? '').trim();

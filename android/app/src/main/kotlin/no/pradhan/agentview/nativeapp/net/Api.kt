@@ -152,6 +152,7 @@ class Api(private val origin: () -> String, private val http: OkHttpClient = sha
     fun link(path: String) = origin() + path
 
     suspend fun image(chat: String, path: String): ByteArray = call(url("/api/image?chat=${enc(chat)}&path=${enc(path)}"))
+    suspend fun mcpIcon(name: String, server: String?): ByteArray = call(url("/api/mcp/icon?name=${enc(name)}" + if (server?.startsWith("http") == true) "&url=${enc(server)}" else ""))
 
     // Chat-scoped routes run in the chat's folder; without a chat the server uses the last viewed one.
     private fun scoped(path: String, chat: String) = if (chat.isEmpty()) path else path + (if ('?' in path) "&" else "?") + "chat=${enc(chat)}"
