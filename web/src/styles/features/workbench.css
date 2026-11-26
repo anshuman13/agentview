@@ -28,7 +28,7 @@
 .status-text { font-size: var(--fs-md); color: var(--fg); margin-bottom: var(--sp-2); }
 
 .editor-group { flex: 1; min-width: 0; display: flex; flex-direction: column; background: var(--bg); }
-.editor { flex: 1; min-height: 0; display: none; background: var(--raised); }
+.editor { flex: 1; min-height: 0; display: none; background: var(--bg); }
 .editor.shown { display: flex; flex-direction: column; }
 
 .main { flex: 1; min-width: 0; display: flex; flex-direction: column; background: var(--bg); }

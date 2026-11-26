@@ -161,24 +161,24 @@
   --file-folder: #dcb67a;
 }
 
-/* Dark: KiroCrew's kiro-dark. Page is bg, cards and chrome surface, menus raised. */
+/* Dark: Claude desktop's neutral greys, sampled 26 Nov 2026. Page and main pane are bg, sidebar and cards surface, menus raised. */
 :root,
 :root[data-theme='dark'] {
   color-scheme: dark;
-  --group-page: #1c1b19;
-  --group-card: #262522;
-  --sunken: #171614;
-  --bg: #1c1b19;
-  --surface: #262522;
-  --raised: #2e2d2a;
+  --group-page: #191919;
+  --group-card: #202020;
+  --sunken: #151515;
+  --bg: #191919;
+  --surface: #232424;
+  --raised: #303030;
   --hover: rgba(169, 166, 158, 0.14);
-  --border: #3a3935;
-  --border-strong: #4a4843;
-  --border-card: #3a3935;
-  --fg-faint: #9a978f;
-  --fg-muted: #a9a69e;
-  --fg: #eceae4;
-  --fg-strong: #f7f6f2;
+  --border: #393a3a;
+  --border-strong: #4a4a4a;
+  --border-card: #393a3a;
+  --fg-faint: #9a9a9a;
+  --fg-muted: #a0a0a0;
+  --fg: #efefef;
+  --fg-strong: #f7f7f7;
   --hue-violet: #c19aff;
   --hue-amber: #e0b94d;
   --hue-teal: #43c9bd;
