@@ -208,6 +208,32 @@ class FoldersTest {
     }
 
     @Test
+    fun openBuildChatFoldsIntoItsParentRowWithItsState() {
+        val rows = groupChats(listOf(
+            saved("p", "/w/shop", at = 10),
+            saved("b", "/w/shop", at = 20).copy(spawnedBy = "p", startedAt = 15),
+            saved("b1", "/w/shop", at = 30).copy(parentId = "b", via = "build", startedAt = 25),
+        ))
+        assertEquals(listOf(listOf("p", "1 build", listOf("p"), listOf("b", "b1"))), rows.map { listOf(it.sessionId, it.subs, it.members, it.buildMembers) })
+        val ws = Workspace(repos, trees, rows)
+        val g = groupByRepo(listOf(live("b1", "/w/shop", pending = 1)), ws).first { it.name == "shop" }
+        assertEquals(emptyList<String>(), g.open.map { it.id })
+        assertEquals(listOf("p"), g.recent.map { it.sessionId })
+        assertEquals(1, g.waiting)
+        val both = groupByRepo(listOf(live("p", "/w/shop"), live("b1", "/w/shop", running = true)), ws).first { it.name == "shop" }
+        assertEquals(listOf("p"), both.open.map { it.id })
+        val p = rows[0]
+        assertEquals(ChatState.Needs, buildsState(listOf(live("b1", "/w/shop", pending = 1)), p.buildMembers))
+        assertEquals(ChatState.Running, buildsState(listOf(live("b", "/w/shop", running = true)), p.buildMembers))
+        assertNull(buildsState(listOf(live("x", "/w/shop", pending = 1)), p.buildMembers))
+        assertEquals(ChatState.Needs, chatState(null, p, emptyMap(), ChatState.Needs))
+        assertEquals(ChatState.Running, chatState(live("p", "/w/shop"), p, emptyMap(), ChatState.Running))
+        assertNull(chatState(null, p, mapOf("p" to 5L, "b1" to 40L)))
+        assertEquals(ChatState.Done, chatState(null, p, mapOf("p" to 5L)))
+        assertEquals(Glance(0, 1, 0), groupGlance(g, mapOf("p" to 40L), listOf(live("b1", "/w/shop", pending = 1))))
+    }
+
+    @Test
     fun shownChoicesFoldsAfterFiveAndKeepsThePicked() {
         val twelve = (1..12).map { RepoChoice("k$it", "r$it") }
         assertEquals(twelve.take(3), shownChoices(twelve.take(3), null, false))

@@ -159,7 +159,7 @@ class ChatRows(
     fun LiveRow(c: LiveChat, repo: String? = null) {
         val s = c.sessionId?.let { saved[it] }
         val branch = (s?.gitBranch ?: repoBranch(c.cwd)).takeIf { !isDefaultBranch(it) }
-        val state = chatState(c, s, seen)
+        val state = chatState(c, s, seen, buildsState(live, s?.buildMembers))
         val id = saved.rowId(c.sessionId)
         ChatRow(
             title = c.title.ifBlank { "Untitled" },
@@ -201,7 +201,7 @@ class ChatRows(
             title = (if (opening.value == s.sessionId) "Opening… " else "") + s.title.ifBlank { "Untitled" },
             meta = draftSnippet(hub.draftOfSession(s.sessionId))?.let { draftMeta(it) }
                 ?: AnnotatedString(s.summary?.takeIf { it.isNotBlank() }?.let { metaLine(since(s.lastModified), s.subs, it) } ?: metaLine(repo, branch, s.subs, providerMark(s.provider), since(s.lastModified))),
-            state = chatState(null, s, seen),
+            state = chatState(null, s, seen, buildsState(live, s.buildMembers)),
             selected = false,
             actions = actions(s.sessionId, s.title, null),
             onClick = { scope.launch { opening.value = s.sessionId; if (hub.openSaved(s.sessionId)) onOpen(); opening.value = null } },
@@ -218,8 +218,8 @@ private fun draftMeta(draft: String) = buildAnnotatedString {
 class RowActions(val pinned: Boolean, val canPin: Boolean, val onPin: () -> Unit, val onRename: () -> Unit, val onClose: (() -> Unit)?, val onArchive: () -> Unit, val onUnread: () -> Unit = {}, val muted: Boolean = false, val onMute: () -> Unit = {}, val onLink: () -> Unit = {}, val onRetry: (() -> Unit)? = null, val onSwipePin: (() -> Unit)? = null, val onSwipeArchive: (() -> Unit)? = null)
 
 @Composable
-fun RepoRow(g: RepoGroup, seen: Map<String, Long>, onClick: () -> Unit) {
-    val glance = groupGlance(g, seen)
+fun RepoRow(g: RepoGroup, seen: Map<String, Long>, live: List<LiveChat>, onClick: () -> Unit) {
+    val glance = groupGlance(g, seen, live)
     val chats = g.open.size + g.recent.size
     val meta = when {
         chats == 0 -> "No chats"

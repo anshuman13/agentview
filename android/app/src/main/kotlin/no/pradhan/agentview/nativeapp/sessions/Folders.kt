@@ -25,10 +25,22 @@ data class SavedSession(
     val spawnedBy: String? = null,
     val subs: String? = null,
     val members: List<String>? = null,
+    val buildMembers: List<String>? = null,
 )
 
-// web groupChats: one row per chat, the root session with the group's last activity, the count label and every member id when it has sub-chats.
-fun groupChats(saved: List<SavedSession>) = groupSessions(saved).map { r -> if (r.count > 0 || r.builds > 0) r.root.copy(lastModified = r.lastModified, subs = r.label, members = r.members) else r.root }
+// web groupChats: one row per chat, the root session with the group's last activity, the count label and every member id when it has sub-chats
+// or builds. buildMembers are the sessions of the builds started from the chat; the row never opens them.
+fun groupChats(saved: List<SavedSession>) = groupSessions(saved).map { r -> if (r.count > 0 || r.builds > 0) r.root.copy(lastModified = r.lastModified, subs = r.label, members = r.members, buildMembers = r.buildMembers.ifEmpty { null }) else r.root }
+
+// The row id of each listed build session, so an open build chat folds into the row of the chat that started it.
+fun buildRows(saved: List<SavedSession>): Map<String, String> = saved.flatMap { s -> s.buildMembers.orEmpty().map { it to s.sessionId } }.toMap()
+
+// Needs you or Running when an open build chat of the row is.
+fun buildsState(live: List<LiveChat>, ids: List<String>?): ChatState? {
+    if (ids.isNullOrEmpty()) return null
+    val mine = live.filter { it.sessionId in ids }
+    return if (mine.any { it.pending > 0 }) ChatState.Needs else if (mine.any { it.running && !it.stalled }) ChatState.Running else null
+}
 
 // Each chat row by its root id and every member id, so an open chat on a sub-chat finds its row.
 fun rowsById(saved: List<SavedSession>): Map<String, SavedSession> = saved.flatMap { s -> (s.members ?: listOf(s.sessionId)).map { it to s } }.toMap()
@@ -90,16 +102,17 @@ fun isDefaultBranch(b: String?) = b.isNullOrEmpty() || b == "main" || b == "mast
 
 enum class ChatState { Needs, Failed, Running, Done }
 
-fun chatState(live: LiveChat?, saved: SavedSession?, seen: Map<String, Long>): ChatState? {
-    if (live != null) {
-        if (live.pending > 0) return ChatState.Needs
-        if (live.failed) return ChatState.Failed
-        if (live.running) return if (live.stalled) null else ChatState.Running
-    }
-    // A chat with sub-chats reads the latest mark of its root and members; Mark as unread zeroes the root's.
+// builds is buildsState of the row's open build chats: their Needs you and Running lift the row.
+fun chatState(live: LiveChat?, saved: SavedSession?, seen: Map<String, Long>, builds: ChatState? = null): ChatState? {
+    if ((live?.pending ?: 0) > 0 || builds == ChatState.Needs) return ChatState.Needs
+    if (live?.failed == true) return ChatState.Failed
+    if (live?.running == true && !live.stalled) return ChatState.Running
+    if (builds == ChatState.Running) return ChatState.Running
+    if (live?.running == true) return null
+    // A chat with sub-chats or builds reads the latest mark of its root and members; Mark as unread zeroes the root's.
     val id = if (saved?.members != null) saved.sessionId else live?.sessionId ?: saved?.sessionId ?: return null
     val at = maxOf(live?.lastActive ?: 0, saved?.lastModified ?: 0)
-    val marks = (listOf(id, live?.sessionId) + saved?.members.orEmpty()).mapNotNull { it?.let(seen::get) }
+    val marks = (listOf(id, live?.sessionId) + saved?.members.orEmpty() + saved?.buildMembers.orEmpty()).mapNotNull { it?.let(seen::get) }
     val s = if (seen[id] == 0L) 0L else marks.maxOrNull() ?: return null
     return if (at > s) ChatState.Done else null
 }
@@ -196,16 +209,23 @@ fun groupByRepo(live: List<LiveChat>, ws: Workspace, filter: String = "", held: 
         g.last = maxOf(g.last, last)
         return g
     }
+    val builds = buildRows(ws.saved)
+    val (folded, open) = live.partition { it.sessionId in builds }
     val shown = mutableSetOf<String>()
-    for (c in live.sortedWith(byUrgency)) {
+    for (c in open.sortedWith(byUrgency)) {
         val id = saved.rowId(c.sessionId)
         if (id != null && !shown.add(id)) continue
         val g = add(c.cwd, c.title, c.sessionId, c.lastActive) ?: continue
         g.open += c
         if (c.pending > 0) g.waiting++
     }
-    val ids = live.mapNotNull { saved.rowId(it.sessionId) }.toSet()
+    val ids = open.mapNotNull { saved.rowId(it.sessionId) }.toSet()
     for (s in ws.saved) if (s.sessionId !in ids) add(s.cwd, s.title, s.sessionId, s.lastModified)?.recent?.add(s)
+    for (c in folded) {
+        val id = builds.getValue(c.sessionId!!)
+        val g = m.values.firstOrNull { g -> g.recent.any { it.sessionId == id } || g.open.any { saved.rowId(it.sessionId) == id } }
+        if (g != null && c.pending > 0) g.waiting++
+    }
     for (r in ws.repos) if (r.cwd !in m && (words.isEmpty() || matchesWords(words, r.name))) m[r.cwd] = RepoGroup(r.cwd, folderName(r.cwd)).apply { last = r.lastCommit.toLong() }
     for (g in m.values) {
         g.open.sortWith(byUrgency)
@@ -224,12 +244,12 @@ data class ChatItem(val live: LiveChat?, val saved: SavedSession?, val repo: Str
     val heldKey get() = live?.heldKey ?: saved!!.sessionId
 }
 
-fun recentRows(groups: List<RepoGroup>, filter: String, pins: Set<String> = emptySet(), status: StatusFilter = StatusFilter.All, saved: Map<String, SavedSession> = emptyMap(), seen: Map<String, Long> = emptyMap(), held: HeldOrder? = null): List<ChatItem> {
+fun recentRows(groups: List<RepoGroup>, filter: String, pins: Set<String> = emptySet(), status: StatusFilter = StatusFilter.All, saved: Map<String, SavedSession> = emptyMap(), seen: Map<String, Long> = emptyMap(), held: HeldOrder? = null, live: List<LiveChat> = emptyList()): List<ChatItem> {
     val every = status != StatusFilter.All
     return groups.flatMap { g -> g.open.filter { every || (it.pending == 0 && saved.rowId(it.sessionId) !in pins) }.map { ChatItem(it, null, g.name) to it.lastActive } + g.recent.filter { every || it.sessionId !in pins }.map { ChatItem(null, it, g.name) to it.lastModified } }
         .sortedByDescending { it.second }.map { it.first }
         .heldBy(held?.recent) { it.heldKey }
-        .filter { status.matches(it.state(saved, seen)) }
+        .filter { status.matches(it.state(saved, seen, live)) }
         .let { if (filter.isBlank() && !every) it.take(RECENT) else it }
 }
 
@@ -244,14 +264,17 @@ enum class StatusFilter(val label: String) {
     }
 }
 
-fun ChatItem.state(saved: Map<String, SavedSession>, seen: Map<String, Long>) = chatState(live, live?.sessionId?.let { saved[it] } ?: this.saved, seen)
+fun ChatItem.state(saved: Map<String, SavedSession>, seen: Map<String, Long>, live: List<LiveChat> = emptyList()): ChatState? {
+    val s = this.live?.sessionId?.let { saved[it] } ?: this.saved
+    return chatState(this.live, s, seen, buildsState(live, s?.buildMembers))
+}
 
 fun ChatItem.stalled() = live?.stalled == true
 
 fun RepoGroup.items() = open.map { ChatItem(it, null, name) } + recent.map { ChatItem(null, it, name) }
 
-fun statusCount(groups: List<RepoGroup>, status: StatusFilter, saved: Map<String, SavedSession>, seen: Map<String, Long>) =
-    groups.sumOf { g -> g.items().count { status.matches(it.state(saved, seen)) } }
+fun statusCount(groups: List<RepoGroup>, status: StatusFilter, saved: Map<String, SavedSession>, seen: Map<String, Long>, live: List<LiveChat> = emptyList()) =
+    groups.sumOf { g -> g.items().count { status.matches(it.state(saved, seen, live)) } }
 
 // Mute is kept by row id; a muted row silences every member session.
 fun mutedIds(muted: Set<String>, saved: List<SavedSession>) = muted + saved.filter { it.sessionId in muted }.flatMap { it.members.orEmpty() }
@@ -285,7 +308,7 @@ fun waitingRows(live: List<LiveChat>, ws: Workspace, filter: String): List<LiveC
 
 data class Glance(val running: Int, val needs: Int, val unread: Int)
 
-fun groupGlance(g: RepoGroup, seen: Map<String, Long>): Glance {
+fun groupGlance(g: RepoGroup, seen: Map<String, Long>, live: List<LiveChat> = emptyList()): Glance {
     var running = 0
     var needs = 0
     var unread = 0
@@ -298,7 +321,7 @@ fun groupGlance(g: RepoGroup, seen: Map<String, Long>): Glance {
         }
     }
     g.open.forEach { count(chatState(it, null, seen)) }
-    g.recent.forEach { count(chatState(null, it, seen)) }
+    g.recent.forEach { count(chatState(null, it, seen, buildsState(live, it.buildMembers))) }
     return Glance(running, needs, unread)
 }
 

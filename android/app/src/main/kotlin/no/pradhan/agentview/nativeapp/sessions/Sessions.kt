@@ -145,7 +145,7 @@ private fun ChipRow(content: @Composable () -> Unit) {
 private fun StatusChips(of: List<RepoGroup>, rows: ChatRows, filters: SessionsFilters) {
     val status = filters.status
     StatusFilter.entries.filter { it != StatusFilter.All }.forEach { f ->
-        val n = statusCount(of, f, rows.saved, rows.seen)
+        val n = statusCount(of, f, rows.saved, rows.seen, rows.live)
         if (n > 0 || status == f) Chip("${f.label} $n", { filters.status = if (status == f) StatusFilter.All else f }, on = status == f)
     }
     // Slack's mark all read, while the Done chip is on.
@@ -163,7 +163,7 @@ private fun RepoSessions(repo: RepoGroup, rows: ChatRows, filters: SessionsFilte
         Column(Modifier.fillMaxSize()) {
             PageHeader(repo.name, onBack = { filters.repoKey = null })
             ChipRow { StatusChips(listOf(repo), rows, filters) }
-            val items = repo.items().map { it.copy(repo = null) }.filter { status.matches(it.state(rows.saved, rows.seen)) }
+            val items = repo.items().map { it.copy(repo = null) }.filter { status.matches(it.state(rows.saved, rows.seen, rows.live)) }
             if (items.isEmpty()) EmptyState(if (filters.byStatus) "No ${status.label.lowercase()} chats in ${repo.name}" else "No chats in ${repo.name} yet", icon = "comment-discussion", small = false, action = { Button("New chat", { onNewChat(RepoChoice(repo.key, repo.name)) }, variant = ButtonVariant.Tinted, icon = "add") })
             else LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(top = Tokens.sp3, bottom = Tokens.fabClear)) {
                 lazyGroup(items, { "c-${it.key}" }) { rows.Row(it) }
@@ -243,7 +243,7 @@ private fun SessionsList(rows: ChatRows, filters: SessionsFilters, groups: List<
     val ws = rows.ws
     val filter = filters.filter
     val (busy, idle) = remember(groups) { groups.partition { it.open.isNotEmpty() || it.recent.isNotEmpty() } }
-    val recentRows = remember(groups, filter, ws.pins, held) { recentRows(groups, filter, rowPins(ws, rows.saved).toSet(), saved = rows.saved, held = held) }
+    val recentRows = remember(groups, filter, ws.pins, held) { recentRows(groups, filter, rowPins(ws, rows.saved).toSet(), saved = rows.saved, held = held, live = rows.live) }
     val bin by rows.hub.bin.collectAsState()
     var binOpen by remember { mutableStateOf(false) }
     var emptying by remember { mutableStateOf(false) }
@@ -267,7 +267,7 @@ private fun SessionsList(rows: ChatRows, filters: SessionsFilters, groups: List<
         }
         val repoRows = if (filters.showIdle || filter.isNotBlank()) busy + idle.sortedBy { it.name.lowercase() } else busy
         if ((repoRows.isNotEmpty() || idle.isNotEmpty())) item(key = "repos-head") { SectionHeader("Repos", (busy.size + idle.size).toString()) }
-        lazyGroup(repoRows, { "g-${it.key}" }, lead = true) { g -> RepoRow(g, rows.seen) { filters.repoKey = g.key } }
+        lazyGroup(repoRows, { "g-${it.key}" }, lead = true) { g -> RepoRow(g, rows.seen, rows.live) { filters.repoKey = g.key } }
         if (idle.isNotEmpty() && filter.isBlank()) item(key = "idle") {
             Group { ListRow(if (filters.showIdle) "Show fewer repos" else "More repos", trailing = { Chevron(if (!filters.showIdle) "${idle.size}" else null) }, onClick = { filters.showIdle = !filters.showIdle }) }
         }
