@@ -17,7 +17,7 @@ export type Folder = { cwd: string; name: string; repo?: Repo; trees: Worktree[]
 export type ChatSession = SavedSession & { subs?: string; members?: string[] };
 
 export const groupChats = (chats: SavedSession[]): ChatSession[] =>
-  groupSessions(chats).map((r) => (r.count ? { ...r.root, lastModified: r.lastModified, subs: r.label, members: r.members } : r.root));
+  groupSessions(chats).map((r) => (r.count || r.builds ? { ...r.root, lastModified: r.lastModified, subs: r.label, members: r.members } : r.root));
 
 const roots = new WeakMap<ChatSession[], Map<string, string>>();
 // The row id (root session) of any member id of the listed chats; other ids map to themselves.

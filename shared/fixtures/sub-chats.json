@@ -18,8 +18,8 @@
       "saved": [{ "sessionId": "a", "lastModified": 30 }, { "sessionId": "b", "lastModified": 20 }],
       "open": [],
       "expected": [
-        { "root": "a", "latest": "a", "count": 0, "label": "", "lastModified": 30, "members": ["a"] },
-        { "root": "b", "latest": "b", "count": 0, "label": "", "lastModified": 20, "members": ["b"] }
+        { "root": "a", "latest": "a", "count": 0, "label": "", "lastModified": 30, "members": ["a"], "builds": 0, "buildMembers": [] },
+        { "root": "b", "latest": "b", "count": 0, "label": "", "lastModified": 20, "members": ["b"], "builds": 0, "buildMembers": [] }
       ]
     },
     {
@@ -32,8 +32,8 @@
       ],
       "open": [],
       "expected": [
-        { "root": "a", "latest": "c2", "count": 2, "label": "2 sub-chats", "lastModified": 50, "members": ["a", "c1", "c2"] },
-        { "root": "x", "latest": "x", "count": 0, "label": "", "lastModified": 35, "members": ["x"] }
+        { "root": "a", "latest": "c2", "count": 2, "label": "2 sub-chats", "lastModified": 50, "members": ["a", "c1", "c2"], "builds": 0, "buildMembers": [] },
+        { "root": "x", "latest": "x", "count": 0, "label": "", "lastModified": 35, "members": ["x"], "builds": 0, "buildMembers": [] }
       ]
     },
     {
@@ -44,7 +44,7 @@
         { "sessionId": "a", "lastModified": 10 }
       ],
       "open": [],
-      "expected": [{ "root": "a", "latest": "t2", "count": 2, "label": "2 tasks", "lastModified": 50, "members": ["a", "t1", "t2"] }]
+      "expected": [{ "root": "a", "latest": "t2", "count": 2, "label": "2 tasks", "lastModified": 50, "members": ["a", "t1", "t2"], "builds": 0, "buildMembers": [] }]
     },
     {
       "name": "a mixed chain",
@@ -54,7 +54,7 @@
         { "sessionId": "c1", "lastModified": 50, "parentId": "a", "via": "clear", "startedAt": 40 }
       ],
       "open": [],
-      "expected": [{ "root": "a", "latest": "c1", "count": 2, "label": "2 sub-chats", "lastModified": 50, "members": ["a", "t1", "c1"] }]
+      "expected": [{ "root": "a", "latest": "c1", "count": 2, "label": "2 sub-chats", "lastModified": 50, "members": ["a", "t1", "c1"], "builds": 0, "buildMembers": [] }]
     },
     {
       "name": "a sub-chat whose parent is in the bin or missing stands on its own",
@@ -64,8 +64,8 @@
       ],
       "open": [],
       "expected": [
-        { "root": "c1", "latest": "c1", "count": 0, "label": "", "lastModified": 30, "members": ["c1"] },
-        { "root": "b", "latest": "b", "count": 0, "label": "", "lastModified": 20, "members": ["b"] }
+        { "root": "c1", "latest": "c1", "count": 0, "label": "", "lastModified": 30, "members": ["c1"], "builds": 0, "buildMembers": [] },
+        { "root": "b", "latest": "b", "count": 0, "label": "", "lastModified": 20, "members": ["b"], "builds": 0, "buildMembers": [] }
       ]
     },
     {
@@ -77,8 +77,8 @@
       ],
       "open": [{ "sessionId": "live", "parentId": "a", "lastActive": 60 }, { "sessionId": "t1", "parentId": "a", "lastActive": 30 }, { "sessionId": null }],
       "expected": [
-        { "root": "a", "latest": "live", "count": 2, "label": "2 sub-chats", "lastModified": 60, "members": ["a", "t1", "live"] },
-        { "root": "b", "latest": "b", "count": 0, "label": "", "lastModified": 40, "members": ["b"] }
+        { "root": "a", "latest": "live", "count": 2, "label": "2 sub-chats", "lastModified": 60, "members": ["a", "t1", "live"], "builds": 0, "buildMembers": [] },
+        { "root": "b", "latest": "b", "count": 0, "label": "", "lastModified": 40, "members": ["b"], "builds": 0, "buildMembers": [] }
       ]
     }
   ],

@@ -7,9 +7,9 @@ export type { SubVia };
 export type SubLink = { parent: string; via: SubVia; at: number };
 export type SubLinks = Record<string, SubLink>;
 
-export type GroupSession = { sessionId: string; lastModified: number; parentId?: string; via?: SubVia; startedAt?: number };
+export type GroupSession = { sessionId: string; lastModified: number; parentId?: string; via?: SubVia; startedAt?: number; spawnedBy?: string };
 export type OpenSession = { sessionId: string | null; parentId?: string; lastActive?: number };
-export type ParentRow<T extends GroupSession> = { root: T; latest: string; count: number; label: string; lastModified: number; members: string[] };
+export type ParentRow<T extends GroupSession> = { root: T; latest: string; count: number; label: string; lastModified: number; members: string[]; builds: number; buildMembers: string[] };
 
 export const SUB_GAP_MS = 2 * 60 * 1000;
 const SENT_MS = 5000;
@@ -25,16 +25,22 @@ export function rootOf(links: SubLinks, id: string): string {
   return cur;
 }
 
-export function subChatLabel(count: number, allBuild: boolean): string {
-  if (count <= 0) return '';
-  const noun = allBuild ? 'task' : 'sub-chat';
-  return `${count} ${noun}${count === 1 ? '' : 's'}`;
+const plural = (n: number, noun: string) => `${n} ${noun}${n === 1 ? '' : 's'}`;
+
+export function subChatLabel(count: number, allBuild: boolean, builds = 0): string {
+  const parts = [count > 0 ? plural(count, allBuild ? 'task' : 'sub-chat') : '', builds > 0 ? plural(builds, 'build') : ''];
+  return parts.filter(Boolean).join(' · ');
 }
+
+// Every session of a row: its own chain, then the builds started from it.
+export const rowSessions = (row: { members: string[]; buildMembers: string[] }) => [...row.members, ...row.buildMembers];
 
 const startOf = (s: GroupSession) => s.startedAt ?? s.lastModified;
 
 // One row per chat: sub-chats fold into their root's row. A sub-chat whose root is not in the list stands on its own.
 // An open chat whose current session is a sub-chat not yet saved joins its root's row as the latest member.
+// A build chat started from a listed chat (spawnedBy) folds into that chat's row, after its members; the row still
+// opens the chat's own latest session. A build started from a build that folds stands on its own.
 export function groupSessions<T extends GroupSession>(saved: T[], open: OpenSession[] = []): ParentRow<T>[] {
   const byId = new Map(saved.map((s) => [s.sessionId, s]));
   const groups = new Map<string, { root: T; subs: T[]; live: { id: string; at: number }[] }>();
@@ -51,9 +57,20 @@ export function groupSessions<T extends GroupSession>(saved: T[], open: OpenSess
     const count = subs.length + live.length;
     const allBuild = live.length === 0 && subs.every((s) => s.via === 'build');
     const lastModified = Math.max(root.lastModified, ...subs.map((s) => s.lastModified), ...live.map((l) => l.at));
-    return { root, latest: members[members.length - 1], count, label: subChatLabel(count, allBuild), lastModified, members };
+    return { root, latest: members[members.length - 1], count, allBuild, lastModified, members };
   });
-  return rows.sort((a, b) => b.lastModified - a.lastModified);
+  const rowOf = new Map(rows.flatMap((r) => r.members.map((id) => [id, r] as const)));
+  const hostOf = (r: (typeof rows)[number]) => {
+    const host = r.root.spawnedBy ? rowOf.get(r.root.spawnedBy) : undefined;
+    return host && host !== r ? host : undefined;
+  };
+  const folded = rows.filter((r) => hostOf(r) && !hostOf(hostOf(r)!)).sort((a, b) => startOf(a.root) - startOf(b.root));
+  const shown = rows.filter((r) => !folded.includes(r)).map(({ allBuild, ...r }) => {
+    const bs = folded.filter((b) => hostOf(b)?.root === r.root);
+    const lastModified = Math.max(r.lastModified, ...bs.map((b) => b.lastModified));
+    return { ...r, label: subChatLabel(r.count, allBuild, bs.length), lastModified, builds: bs.length, buildMembers: bs.flatMap((b) => b.members) };
+  });
+  return shown.sort((a, b) => b.lastModified - a.lastModified);
 }
 
 export type SubHit = { sessionId: string; parentId?: string };
