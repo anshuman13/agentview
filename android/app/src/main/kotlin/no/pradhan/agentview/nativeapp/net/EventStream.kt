@@ -40,11 +40,20 @@ class SseParser(private val onId: (String) -> Unit, private val onData: (String)
     }
 }
 
+// Passes on link changes from the current connection loop only: a loop cancelled by a restart still runs
+// its drop path after the new loop is up, and that late "down" would leave the app marked offline.
+class StreamLink(private val onConnected: (Boolean) -> Unit) {
+    private var gen = 0
+    @Synchronized fun next(): Int = ++gen
+    @Synchronized fun report(g: Int, up: Boolean) { if (g == gen) onConnected(up) }
+    @Synchronized fun stop() { gen++; onConnected(false) }
+}
+
 // GET /api/events with 1, 2, 4, 8, 15 s backoff (20% jitter) after a drop; resumes from the last event id.
 class EventStream(
     private val scope: CoroutineScope,
     private val url: (lastId: String) -> String,
-    private val onConnected: (Boolean) -> Unit,
+    onConnected: (Boolean) -> Unit,
     private val onData: (String) -> Unit,
 ) {
     private val http = sharedHttp.newBuilder().readTimeout(45, TimeUnit.SECONDS).build()
@@ -52,9 +61,11 @@ class EventStream(
     @Volatile private var call: Call? = null
     private var lastId = ""
     @Volatile var lastSeen = 0L
+    private val link = StreamLink(onConnected)
 
     @Synchronized fun start() {
-        stop()
+        cancel()
+        val g = link.next()
         job = scope.launch(Dispatchers.IO) {
             var attempt = 0
             while (isActive) {
@@ -64,7 +75,7 @@ class EventStream(
                     c.execute().use { r ->
                         if (!r.isSuccessful) error("status ${r.code}")
                         attempt = 0
-                        onConnected(true)
+                        link.report(g, true)
                         val parser = SseParser({ lastId = it }, onData)
                         val src = r.body.source()
                         while (isActive) {
@@ -75,7 +86,7 @@ class EventStream(
                     }
                 } catch (_: Exception) {
                 }
-                onConnected(false)
+                link.report(g, false)
                 if (!isActive) break
                 delay(backoffMs(attempt++))
             }
@@ -83,6 +94,11 @@ class EventStream(
     }
 
     @Synchronized fun stop() {
+        cancel()
+        link.stop()
+    }
+
+    private fun cancel() {
         job?.cancel()
         call?.cancel()
         job = null

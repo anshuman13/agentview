@@ -22,6 +22,20 @@ class OfflineTest {
 
     private fun q(id: String, chat: String = "c1") = Queued(id, chat, "text $id")
 
+    @Test fun streamLinkIgnoresTheLoopARestartReplaced() {
+        val seen = mutableListOf<Boolean>()
+        val link = StreamLink { seen += it }
+        val first = link.next()
+        link.report(first, true)
+        val second = link.next()
+        link.report(second, true)
+        link.report(first, false)
+        assertEquals(listOf(true, true), seen)
+        link.stop()
+        link.report(second, false)
+        assertEquals(listOf(true, true, false), seen)
+    }
+
     @Test fun draftSnippetTakesFirstLineClipped() {
         assertNull(draftSnippet(" \n  "))
         assertEquals("fix the build", draftSnippet("\n  fix the build\nand more"))
