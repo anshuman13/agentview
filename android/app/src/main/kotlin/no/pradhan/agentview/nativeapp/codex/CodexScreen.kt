@@ -257,8 +257,9 @@ private fun ListsDrawer(hub: Hub, st: CodexState, page: String, profile: String?
                     if (page == id) AnnotatedString(label, SpanStyle(fontWeight = FontWeight.Medium)) else label,
                     leading = { AvIcon(icon) },
                     trailing = if (id == "wiki" && claims > 0) { { Badge(claims.toString(), BadgeTone.Quiet) } } else null,
+                    selected = page == id,
                     compact = true,
-                    modifier = Modifier.padding(horizontal = Tokens.sp4).clip(RoundedCornerShape(Tokens.shapeMd)).then(if (page == id) Modifier.background(av.raised) else Modifier),
+                    modifier = Modifier.padding(horizontal = Tokens.sp4).clip(RoundedCornerShape(Tokens.radius)),
                     onClick = { go(id) },
                 )
             }
