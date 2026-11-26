@@ -81,6 +81,10 @@
 .mcp-detail-acts, .mcp-login-acts { display: flex; flex-wrap: wrap; gap: var(--sp-3); }
 .mcp-detail-acts .btn { height: 28px; border-radius: var(--radius-sm); background: var(--sunken); color: var(--fg); font-weight: 400; }
 .mcp-detail-acts .btn .codicon { display: none; }
+.mcp-detail-acts :is(.mcp-login, .mcp-login-acts) { display: contents; }
+.mcp-detail-acts .mcp-login-acts .btn:first-child { background: var(--fg); color: var(--bg); }
+.mcp-detail-acts { position: relative; }
+.mcp-detail-acts .mcp-login > :is(.muted, .bad) { position: absolute; top: calc(100% + var(--sp-2)); right: 0; white-space: nowrap; font-size: var(--fs-sm); }
 .mcp-kv { display: grid; grid-template-columns: 80px minmax(0, 1fr); gap: var(--sp-4) var(--sp-5); margin: 0 0 var(--sp-10); font-size: var(--fs-sm); }
 .mcp-kv dt { color: var(--fg-muted); }
 .mcp-kv dd { margin: 0; min-width: 0; }

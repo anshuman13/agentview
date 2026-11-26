@@ -266,7 +266,7 @@ class PagesLogicTest {
         assertFalse(mcpCanManage(McpRow(slack.copy(status = "needs-auth"))))
         assertFalse(mcpCanManage(McpRow(McpServer("grafana", "connected", type = "http"))))
         assertEquals("No tools reported" to null, mcpNoTools(McpRow(slack)))
-        assertEquals("No tools yet" to "Log in to load them", mcpNoTools(McpRow(slack.copy(status = "needs-auth"))))
+        assertEquals("No tools yet" to "Connect to load them", mcpNoTools(McpRow(slack.copy(status = "needs-auth"))))
         assertEquals("No tools yet" to "They load once the server connects", mcpNoTools(McpRow(slack.copy(status = "pending"))))
         val tool = parseMcp("""[{"name":"s","tools":[{"name":"read","readOnly":true},{"name":"drop","destructive":true}]}]""")[0].tools!!
         assertTrue(tool[0].readOnly && !tool[0].destructive)

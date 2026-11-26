@@ -229,8 +229,8 @@ private fun McpLoginRow(hub: Hub, r: McpRow, kind: McpLogin) {
         opened -> "Opened in Chrome on the Mac. Reconnect once you finish there."
         else -> "Opens the login page in Chrome on the Mac."
     }
-    val label = if (kind == McpLogin.ClaudeAi) "Connect on claude.ai" else if (opened) "Open again" else "Log in"
-    ListRow("Log in", hint, metaLines = 3, trailing = {
+    val label = if (opened && kind != McpLogin.ClaudeAi) "Open again" else "Connect"
+    ListRow("Connect", hint, metaLines = 3, trailing = {
         Button(label, {
             busy = true
             if (kind == McpLogin.ClaudeAi) hub.openConnectors(r.account) { busy = false; opened = opened || it }

@@ -10,16 +10,12 @@ import { Menu, MenuItem } from '../ui/Menu';
 import { ServerIcon, StatusCell } from './McpServiceRow';
 import { Section } from '../ui/Section';
 import { openConnectors, use } from './mcpActions';
-import { runnable, scopeInfo, shortName, stateOf, toolGroups, usageText, type Group, type Row, type Usage } from './mcpHelpers';
+import { runnable, scopeInfo, shortName, toolGroups, usageText, type Group, type Row, type Usage } from './mcpHelpers';
 import { CallRow } from './McpCallRow';
 import { AddToChat, ClaudeAiLogin, Login } from './McpLogin';
 import { RunForm } from './McpRunForm';
 
-const DOT: Record<string, string> = { done: 'ok', failed: 'bad', waiting: 'warn', skipped: 'off' };
-
 export function Detail({ row, usage, group, onGroup, hidden, onHide, onClose }: { row: Row; usage?: Usage; group: Group; onGroup: (g: Group) => void; hidden: boolean; onHide: () => void; onClose: () => void }) {
-  const [status, statusLabel] = stateOf(row);
-  const tone = DOT[status];
   const [, scope, where] = scopeInfo(row.scope ?? 'other');
   const label = providerLabel(useStore((s) => s.session.provider));
   const canEdit = useCan('mcpEdit');
@@ -47,9 +43,10 @@ export function Detail({ row, usage, group, onGroup, hidden, onHide, onClose }: 
       <div className="mcp-detail-head">
         <ServerIcon row={row} />
         <h2 className="mcp-detail-name">{shortName(row.name)}</h2>
-        <span className="mcp-detail-st"><StatusCell row={row} /></span>
+        <span className="mcp-detail-st"><StatusCell row={row} />{row.version && <span className="muted mono"> v{row.version}</span>}</span>
         <span className="spacer" />
         <div className="mcp-detail-acts">
+          {canEdit && row.status === 'needs-auth' && (row.type === 'claudeai' ? <ClaudeAiLogin name={row.name} live={Boolean(row.live)} account={row.account} /> : <Login name={row.name} live={Boolean(row.live)} />)}
           {row.live && MCP_BAD.includes(row.status) && <Button icon="debug-restart" onClick={() => send({ type: 'mcp_reconnect', name: row.name })}>Reconnect in chat</Button>}
           {canEdit && row.live && row.status === 'disabled' && <Button icon="debug-start" onClick={() => send({ type: 'mcp_toggle', name: row.name, enabled: true })}>Enable</Button>}
           {canEdit && row.live && row.status !== 'disabled' && <Button icon="circle-slash" onClick={() => send({ type: 'mcp_toggle', name: row.name, enabled: false })}>Disable for this chat</Button>}
@@ -69,10 +66,7 @@ export function Detail({ row, usage, group, onGroup, hidden, onHide, onClose }: 
       {row.command && <div className="mcp-detail-cmd mono">{row.command}<IconButton icon="copy" label="Copy" size="sm" small onClick={() => void navigator.clipboard.writeText(row.command!)} /></div>}
       {!canEdit && <div className="muted">Edit ~/.codex/config.toml, then Reconnect</div>}
       <dl className="mcp-kv">
-        <dt>Status</dt><dd className={tone}>{statusLabel}{row.version ? <span className="muted mono"> · v{row.version}</span> : null}</dd>
         {row.error && (row.live || row.status !== 'needs-auth') && <><dt>Error</dt><dd className="bad mono wrap">{row.error}</dd></>}
-        {canEdit && row.status === 'needs-auth' && row.type === 'claudeai' && <><dt>Log in</dt><dd><ClaudeAiLogin name={row.name} live={Boolean(row.live)} account={row.account} /></dd></>}
-        {canEdit && row.status === 'needs-auth' && row.type !== 'claudeai' && <><dt>Log in</dt><dd><Login name={row.name} live={Boolean(row.live)} /></dd></>}
         {row.env && <><dt>Env</dt><dd className="mono wrap">{row.env.join('  ')}</dd></>}
         <dt>From</dt><dd>{scope}{where ? <span className="muted mono"> · {where}</span> : null}</dd>
         <dt>In chat</dt><dd>{row.live ? 'Loaded' : 'Not loaded'}</dd>
@@ -91,7 +85,7 @@ export function Detail({ row, usage, group, onGroup, hidden, onHide, onClose }: 
       )}
       <div className="mcp-tools">
         {(row.tools?.length ?? 0) > 6 && <input className="mcp-tool-filter" placeholder="Filter tools" aria-label="Filter tools" value={q} onChange={(e) => setQ(e.target.value)} spellCheck={false} />}
-        {toolGroups(tools).map(([name, list]) => (
+        {tools.length > 0 && toolGroups(tools).map(([name, list]) => (
           <div key={name} className="mcp-tool-group">
             <Section label={name} count={list.length} open={!shut.has(name)} onToggle={() => setShut((s) => { const n = new Set(s); if (!n.delete(name)) n.add(name); return n; })} />
             {!shut.has(name) && <>
@@ -106,7 +100,7 @@ export function Detail({ row, usage, group, onGroup, hidden, onHide, onClose }: 
           </div>
         ))}
         {row.tools && row.tools.length > 0 && tools.length === 0 && <EmptyState size="sm" title="No tool matches" />}
-        {!row.tools?.length && <EmptyState size="sm" title={row.status === 'connected' ? 'No tools reported' : 'No tools yet'} hint={row.status === 'connected' ? undefined : row.status === 'needs-auth' ? 'Log in to load them' : 'They load once the server connects'} />}
+        {!row.tools?.length && <EmptyState size="sm" title={row.status === 'connected' ? 'No tools reported' : 'No tools yet'} hint={row.status === 'connected' ? undefined : row.status === 'needs-auth' ? 'Connect to load them' : 'They load once the server connects'} />}
       </div>
     </section>
   );

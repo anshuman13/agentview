@@ -254,7 +254,7 @@ fun mcpCanManage(r: McpRow) = r.server.type == "claudeai" && r.status != "needs-
 // The Tools section's empty line and hint (web McpDetail).
 fun mcpNoTools(r: McpRow): Pair<String, String?> = when (r.status) {
     "connected" -> "No tools reported" to null
-    "needs-auth" -> "No tools yet" to "Log in to load them"
+    "needs-auth" -> "No tools yet" to "Connect to load them"
     else -> "No tools yet" to "They load once the server connects"
 }
 

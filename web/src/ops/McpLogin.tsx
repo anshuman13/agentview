@@ -29,7 +29,7 @@ export function ClaudeAiLogin({ name, live, account }: { name: string; live: boo
   return (
     <div className="mcp-login">
       <div className="mcp-login-acts">
-        <Button icon="link-external" onClick={() => { openConnectors(account); setOpened(true); }}>Connect on claude.ai</Button>
+        <Button icon="link-external" onClick={() => { openConnectors(account); setOpened(true); }}>Connect</Button>
         {opened && live && <Button icon="debug-restart" onClick={() => send({ type: 'mcp_reconnect', name })}>Reconnect in chat</Button>}
       </div>
       <div className="muted">{opened ? `Opened in ${account && account !== 'main' ? 'Chrome' : 'Firefox'} on the Mac. Once it says Connected there, reconnect it here.` : `Opens in ${account && account !== 'main' ? 'Chrome' : 'Firefox'} on the Mac.`}</div>
@@ -59,7 +59,7 @@ export function Login({ name, live }: { name: string; live: boolean }) {
   return (
     <div className="mcp-login">
       <div className="mcp-login-acts">
-        <Button icon={busy ? 'loading' : 'key'} onClick={start} disabled={busy}>{opened ? 'Open again' : 'Log in'}</Button>
+        <Button icon={busy ? 'loading' : 'key'} onClick={start} disabled={busy}>{opened ? 'Open again' : 'Connect'}</Button>
         {opened && <Button icon="globe" onClick={() => command('tab:browser')}>Show browser</Button>}
       </div>
       {opened && <div className="muted">The login page is open in Chrome on the Mac. This updates once you finish there.</div>}
