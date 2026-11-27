@@ -74,7 +74,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.unit.dp
 
-// Bottom sheet (web Sheet): a card that rises over a scrim, with a drag handle and a title row. With `onBack`, system Back calls it instead of closing the sheet.
+// Bottom sheet (web Sheet): a card that rises over a scrim, with a drag handle and a title row. With `onBack`, a back arrow leads the title row and system Back calls it instead of closing the sheet.
 // With `motion`, it opens and closes with the shared sheet motion; the content keeps the app's motion.
 @Composable
 fun Sheet(onDismiss: () -> Unit, title: String, padded: Boolean = true, full: Boolean = true, count: String? = null, action: (@Composable () -> Unit)? = null, onBack: (() -> Unit)? = null, scroll: ScrollState = rememberScrollState(), motion: Boolean = false, content: @Composable ColumnScope.() -> Unit) {
@@ -104,7 +104,8 @@ private fun SheetBody(onDismiss: () -> Unit, title: String, padded: Boolean, ful
         if (onBack != null) BackHandler(onBack = onBack)
         // The sheet is its own window: no text in it may register with a SelectionContainer behind it (that crashes on a long press), so the body gets its own.
         DisableSelection { Column(Modifier.navigationBarsPadding().nestedScroll(remember { DragOnlyToSheet() }).verticalScroll(scroll).padding(bottom = Tokens.sp8)) {
-            Row(Modifier.fillMaxWidth().height(Tokens.rowOne).padding(start = Tokens.listPad, end = if (action != null) Tokens.sp2 else Tokens.listPad), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
+            Row(Modifier.fillMaxWidth().height(Tokens.rowOne).padding(start = if (onBack != null) Tokens.sp2 else Tokens.listPad, end = if (action != null) Tokens.sp2 else Tokens.listPad), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
+                if (onBack != null) IconBtn("arrow-left", "Back", onBack, tint = c.fg)
                 Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
                     Text(title, Modifier.weight(1f, fill = false), style = Type.title, color = c.fg, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     if (count != null) Badge(count, BadgeTone.Quiet)

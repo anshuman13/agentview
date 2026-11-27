@@ -62,7 +62,7 @@ export function AgentsPane({ selected, onSelect, stack }: { selected: string | n
 
   return (
     <div className={`ag ${stack ? 'stack' : ''} ${selected && current?.id === selected ? 'picked' : ''}`}>
-      {selected && current?.id === selected && (stack || narrow()) && <Back close={() => onSelect(null)} />}
+      {selected && current?.id === selected && !stack && narrow() && <Back close={() => onSelect(null)} />}
       <div className="ag-side">
         {groups.map(([name, rows]) => (
           <Fragment key={name ?? ''}>
@@ -89,7 +89,7 @@ function AgentDetail({ a, cwd, now, stack, onBack }: { a: Agent; cwd: string; no
   const meta = [a.type, a.model, took(a, now), usage && tokens(usage.tokens), usage && plural(usage.toolUses, 'tool use'), a.info?.background && 'background'].filter(Boolean);
   return (
     <div className="ag-detail">
-      <button className={`ag-back ${stack ? '' : 'mobile-only'}`} onClick={onBack}><Icon name="arrow-left" small /> Agents</button>
+      {!stack && <button className="ag-back mobile-only" onClick={onBack}><Icon name="arrow-left" small /> Agents</button>}
       <Section
         label={<><span className={`ag-mark ${a.status}`}><Icon name={STATUS_ICON[a.status]} small spin={running} /></span> <span title={a.description}>{a.description}</span></>}
         action={running && !a.group && canStop && <Button size="sm" icon="debug-stop" title="Stop this agent" onClick={() => send({ type: 'stop_task', toolUseId: a.id })}>Stop</Button>}

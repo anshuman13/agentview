@@ -111,4 +111,8 @@ export function elapsed(ms: number) {
 
 export const tokens = (n: number) => (n < 1000 ? `${n} tokens` : `${(n / 1000).toFixed(n < 10_000 ? 1 : 0)}k tokens`);
 
+// Back from an open agent to the list, or undefined while the list shows (the selected agent is gone too).
+export const agentBack = (agents: Agent[], selected: string | null, clear: () => void) =>
+  (selected !== null && agents.some((a) => a.id === selected) ? clear : undefined);
+
 export const openAgent = (id: string | null = null) => window.dispatchEvent(new CustomEvent('open-agent', { detail: id }));

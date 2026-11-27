@@ -86,30 +86,38 @@ private fun AgentPage(hub: Hub, a: Agent, cwd: String, chat: String, onBack: () 
     val running = a.status == "running"
     val canStop by hub.store.state.select { it.session?.capabilities?.stopTask ?: true }
     val now by rememberNow(running)
-    var prompt by rememberSaveable(a.id) { mutableStateOf(false) }
-    val clip = LocalClipboardManager.current
     Column(Modifier.fillMaxSize()) {
         PageHeader(a.description, onBack, subtitle = { Text(agentMeta(a, now), maxLines = 1) }) {
             if (running && canStop && a.group == null) Button("Stop", { hub.stopTask(a.id) }, Modifier.padding(end = Tokens.sp6), size = ButtonSize.Sm, icon = "debug-stop")
         }
-        val pad = Modifier.padding(horizontal = Tokens.listPad, vertical = Tokens.sp2)
-        LazyColumn(Modifier.fillMaxSize()) {
-            if (running) {
-                a.info?.progress?.let { item { Text(it, pad, style = Type.subheadline, color = av.fg) } }
-                item { Text("Last activity ${elapsed(now - a.lastAt)} ago" + if (a.lastStep.isNotEmpty()) " · ${a.lastStep}" else "", pad, style = Type.footnote, color = av.fgMuted) }
-                item { Text("The report shows here when the agent finishes.", pad, style = Type.footnote, color = av.fgMuted) }
-            } else {
-                item { Markdown(reportText(a), pad) }
-                item { Box(pad) { Button("Copy report", { clip.setText(AnnotatedString(reportText(a))); hub.notice.value = "Report copied" }, size = ButtonSize.Sm, icon = "copy") } }
-            }
-            if (a.prompt.isNotEmpty()) {
-                item { SectionHeader("Prompt", open = prompt, onToggle = { prompt = !prompt }) }
-                if (prompt) item { Markdown(a.prompt, pad) }
-            }
-            item { SectionHeader("Steps", a.item.steps.size.toString()) }
-            if (a.item.steps.isEmpty()) item { Box(pad) { EmptyState("No steps yet") } }
-            items(a.item.steps, key = { it.id }) { s -> Box(Modifier.padding(horizontal = Tokens.listPad)) { ItemRow(hub, s, chat, cwd, !running, onOpenAgent) } }
-            item { Spacer(Modifier.padding(bottom = Tokens.sp16)) }
+        AgentBody(hub, a, cwd, chat, onOpenAgent)
+    }
+}
+
+// An agent's report, prompt and steps, on its page and in the Agents sheet.
+@Composable
+fun AgentBody(hub: Hub, a: Agent, cwd: String, chat: String, onOpenAgent: (String) -> Unit) {
+    val running = a.status == "running"
+    val now by rememberNow(running)
+    var prompt by rememberSaveable(a.id) { mutableStateOf(false) }
+    val clip = LocalClipboardManager.current
+    val pad = Modifier.padding(horizontal = Tokens.listPad, vertical = Tokens.sp2)
+    LazyColumn(Modifier.fillMaxSize()) {
+        if (running) {
+            a.info?.progress?.let { item { Text(it, pad, style = Type.subheadline, color = av.fg) } }
+            item { Text("Last activity ${elapsed(now - a.lastAt)} ago" + if (a.lastStep.isNotEmpty()) " · ${a.lastStep}" else "", pad, style = Type.footnote, color = av.fgMuted) }
+            item { Text("The report shows here when the agent finishes.", pad, style = Type.footnote, color = av.fgMuted) }
+        } else {
+            item { Markdown(reportText(a), pad) }
+            item { Box(pad) { Button("Copy report", { clip.setText(AnnotatedString(reportText(a))); hub.notice.value = "Report copied" }, size = ButtonSize.Sm, icon = "copy") } }
         }
+        if (a.prompt.isNotEmpty()) {
+            item { SectionHeader("Prompt", open = prompt, onToggle = { prompt = !prompt }) }
+            if (prompt) item { Markdown(a.prompt, pad) }
+        }
+        item { SectionHeader("Steps", a.item.steps.size.toString()) }
+        if (a.item.steps.isEmpty()) item { Box(pad) { EmptyState("No steps yet") } }
+        items(a.item.steps, key = { it.id }) { s -> Box(Modifier.padding(horizontal = Tokens.listPad)) { ItemRow(hub, s, chat, cwd, !running, onOpenAgent) } }
+        item { Spacer(Modifier.padding(bottom = Tokens.sp16)) }
     }
 }

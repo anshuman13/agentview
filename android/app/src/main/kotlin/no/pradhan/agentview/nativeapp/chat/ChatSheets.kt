@@ -30,7 +30,10 @@ import no.pradhan.agentview.nativeapp.app.stopTask
 import no.pradhan.agentview.nativeapp.net.ChatRun
 import no.pradhan.agentview.nativeapp.ui.keepScrollInside
 import no.pradhan.agentview.nativeapp.ui.IconBtn
+import no.pradhan.agentview.nativeapp.ops.AgentBody
 import no.pradhan.agentview.nativeapp.ops.AgentList
+import no.pradhan.agentview.nativeapp.ops.agentMeta
+import no.pradhan.agentview.nativeapp.ui.select
 import no.pradhan.agentview.nativeapp.ops.UnseenAgentList
 import no.pradhan.agentview.nativeapp.sessions.renameTitle
 import no.pradhan.agentview.nativeapp.ui.Chevron
@@ -52,13 +55,26 @@ internal fun ChatSheets(hub: Hub, live: LiveChat, session: SessionInfo?, agents:
     val sessionId = live.sessionId ?: session?.sessionId
     val unseen = remember(live.agentList, agents) { unseenAgents(live.agentList, agents) }
     val now = rememberNow(panels.agents && (unseen.isNotEmpty() || agents.any { it.status == "running" }))
-    if (panels.agents) Sheet(onDismiss = { panels.agents = false }, title = "Agents", padded = false, full = false, action = { AgentsActions(hub, run, agents) }) {
+    // One sheet for the list and an open agent, so going back swaps its content without closing it.
+    val shown = panels.shownAgent(agents)
+    if (panels.agents) Sheet(
+        onDismiss = { panels.closeAgents() }, title = shown?.description ?: "Agents", padded = false, full = false,
+        onBack = shown?.let { { panels.agent = null } },
+        action = { if (shown != null) AgentStop(hub, shown) else AgentsActions(hub, run, agents) },
+    ) {
+        if (shown != null) {
+            Text(agentMeta(shown, now.value), Modifier.fillMaxWidth().padding(start = Tokens.listPad, end = Tokens.listPad, bottom = Tokens.sp4), style = Type.footnote, color = av.fgMuted, maxLines = 1)
+            Box(Modifier.height(sheetHeight()).keepScrollInside()) {
+                AgentBody(hub, shown, cwd, live.id) { id -> if (agents.any { it.id == id }) panels.agent = id else { panels.closeAgents(); onOpenAgent(id) } }
+            }
+            return@Sheet
+        }
         run?.let { r ->
             val line = listOfNotNull(runLine(r), loopNow(r, live.now).next?.let { "next $it" }).joinToString(" · ")
             Text(line, Modifier.fillMaxWidth().padding(start = Tokens.listPad, end = Tokens.listPad, bottom = Tokens.sp4), style = Type.footnote, color = av.fgMuted)
             RunRows(hub, r, live)
         }
-        AgentList(agents, { now.value }) { panels.agents = false; onOpenAgent(it) }
+        AgentList(agents, { now.value }) { panels.agent = it }
         UnseenAgentList(unseen) { now.value }
     }
     if (panels.tools) Sheet(onDismiss = { panels.tools = false }, title = "Tools", padded = false, full = false) {
@@ -91,12 +107,18 @@ fun RenameDialog(current: String, onSave: (String) -> Unit, onDismiss: () -> Uni
     TextDialog("Rename chat", current, "Save", { t -> renameTitle(t, current)?.let(onSave) }, onDismiss, maxLength = 120)
 }
 
-// The Agents sheet's head: the run's controls, else stop every running agent.
+// The Agents sheet's head on the list: the run's controls, else stop every running agent.
 @Composable
 private fun AgentsActions(hub: Hub, run: ChatRun?, agents: List<Agent>) {
     val running = agents.filter { it.status == "running" && it.group == null }
     if (run != null) RunActions(hub, run)
     else if (running.isNotEmpty()) IconBtn("debug-stop", "Stop all agents", { running.forEach { hub.stopTask(it.id) } }, enabled = !hub.readOnly)
+}
+
+@Composable
+private fun AgentStop(hub: Hub, a: Agent) {
+    val canStop by hub.store.state.select { it.session?.capabilities?.stopTask ?: true }
+    if (a.status == "running" && a.group == null && canStop) IconBtn("debug-stop", "Stop this agent", { hub.stopTask(a.id) }, enabled = !hub.readOnly)
 }
 
 @Composable

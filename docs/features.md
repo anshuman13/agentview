@@ -600,6 +600,7 @@ with that sub-chat expanded and scrolled to the hit (web and phone).
 
 Agents in the More menu of the task box header opens a pane that lists the subagents of the chat with their status, elapsed time and tokens.
 Click one for its report, prompt and steps. On the phone it is the Agents sheet of the chat.
+In the Agents rail and sheet (web and Android) an open agent replaces the list, and a back arrow at the left of the head returns to it; Escape on the web and system Back on Android do the same before they close the sheet.
 Agents started by a Workflow call are listed under a section named after the workflow, and update live while it runs, while the chat is open, also during a turn.
 An agent the chat reports as running but whose start is not in the loaded events shows as a Running row on both clients, so the web pane says "No agents yet" only when none runs, and the phone's agent chip shows while one runs.
 A chat rebuilt from its Claude session file after a host restart puts each subagent's steps right after its Agent call (a nested one inside its parent's steps; one whose call is missing at the end), so its agents keep their names like a live chat's.

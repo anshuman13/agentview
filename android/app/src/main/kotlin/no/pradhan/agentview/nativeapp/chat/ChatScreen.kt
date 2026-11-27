@@ -30,6 +30,7 @@ import no.pradhan.agentview.nativeapp.net.providerLabel
 import no.pradhan.agentview.nativeapp.app.gitStatus
 import no.pradhan.agentview.nativeapp.app.pulls
 import no.pradhan.agentview.nativeapp.app.submit
+import no.pradhan.agentview.nativeapp.ops.Agent
 import no.pradhan.agentview.nativeapp.ops.PullsScreen
 import no.pradhan.agentview.nativeapp.ui.AvIcon
 import no.pradhan.agentview.nativeapp.ui.Button
@@ -53,11 +54,17 @@ import no.pradhan.agentview.nativeapp.ui.rememberLoad
 
 class ChatPanels {
     var agents by mutableStateOf(false)
+    // The agent open in the Agents sheet; null shows the list.
+    var agent by mutableStateOf<String?>(null)
     var memory by mutableStateOf(false)
     var tools by mutableStateOf(false)
     var find by mutableStateOf(false)
     var file by mutableStateOf<FilePath?>(null)
     var dialog by mutableStateOf<String?>(null)
+
+    // The open agent while it is still in the chat; the sheet's back arrow shows only then.
+    fun shownAgent(list: List<Agent>): Agent? = agent?.let { id -> list.firstOrNull { it.id == id } }
+    fun closeAgents() { agents = false; agent = null }
 }
 
 @Composable

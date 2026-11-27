@@ -20,6 +20,23 @@ class ChatLogicTest {
         assertEquals(emptyList<LiveAgent>(), unseenAgents(emptyList(), listOf(loaded("a"))))
     }
 
+    @Test fun agentsSheetShowsTheOpenAgentUntilBackOrClose() {
+        val panels = ChatPanels()
+        val list = listOf(loaded("a"), loaded("b"))
+        panels.agents = true
+        assertEquals(null, panels.shownAgent(list))
+        panels.agent = "b"
+        assertEquals("b", panels.shownAgent(list)?.id)
+        assertEquals(null, panels.shownAgent(list.take(1)))
+        panels.agent = null
+        assertEquals(null, panels.shownAgent(list))
+        assertEquals(true, panels.agents)
+        panels.agent = "a"
+        panels.closeAgents()
+        assertEquals(false, panels.agents)
+        assertEquals(null, panels.agent)
+    }
+
     @Test fun replyTimeIsAgoThenClockThenDay() {
         codexZone = ZoneId.of("UTC")
         val now = Instant.parse("2026-11-20T15:00:00Z").toEpochMilli()

@@ -133,7 +133,7 @@ fun MemorySheet(hub: Hub, cwd: String, instructionFiles: List<String>, initial: 
         var discard by remember(f) { mutableStateOf(false) }
         val back: () -> Unit = { if (draft != null) discard = true else open = null }
         if (discard) ConfirmDialog("Discard the edit?", "Your changes to ${f.name} are not saved.", "Discard", { open = null }, onDismiss = { discard = false })
-        Sheet(onDismiss = onDismiss, title = f.name, onBack = back, action = { Button("Back", back, variant = ButtonVariant.Plain, size = ButtonSize.Sm) }) {
+        Sheet(onDismiss = onDismiss, title = f.name, onBack = back) {
             Text(memoryWhere(f, cwd), style = Type.footnote, color = av.fgMuted)
             markOf(f)?.let { Text(markLine(it, f.at, now), style = Type.footnote, color = av.fgMuted) }
             val text = draft

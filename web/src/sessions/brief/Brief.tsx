@@ -11,7 +11,8 @@ import { RailHead } from './RailHead';
 import { Icon } from '../../ui/Icon';
 import { IconButton } from '../../ui/Button';
 import { Sheet } from '../../ui/Sheet';
-import { agentsOf } from '../agents';
+import { agentBack, agentsOf } from '../agents';
+import { Back } from '../../app/touch/back';
 import { agentChipCount, buildHead } from '../runLogic';
 import { useChatRun } from '../useChatRun';
 import { useNarrow } from '../../app/shell/useNarrow';
@@ -68,6 +69,8 @@ export function Brief() {
   const showWork = !phone && workTurn !== null && (railTab === 'work' || !hasAgents);
   const side = hasAgents || (!phone && workTurn !== null);
   const closeWork = () => { setWorkTurn(null); setRailTab('agents'); };
+  // An open agent replaces the list in the rail and the sheet; Back returns to it.
+  const agentsBack = agentBack(agentsOf(events), agentSel, () => setAgentSel(null));
   const tabs = !phone && workTurn !== null && (
     <div className="rail-h rail-tabs">
       {hasAgents && <button className={`rail-tab ${showWork ? '' : 'on'}`} onClick={() => setRailTab('agents')}>Agents</button>}
@@ -79,7 +82,8 @@ export function Brief() {
     <>
       {tabs}
       {showWork ? <Suspense fallback={<Loading />}><WorkPane turn={workTurn!} onBack={closeWork} /></Suspense> : <>
-        <RailHead titled={!tabs} onClose={phone || tabs ? undefined : () => setRailClosed(true)} />
+        <RailHead titled={!tabs} onClose={phone || tabs ? undefined : () => setRailClosed(true)} onBack={agentsBack} />
+        {!phone && agentsBack && <Back close={agentsBack} />}
         {agentCount > 0 && <Suspense fallback={<Loading />}><AgentsPane stack selected={agentSel} onSelect={setAgentSel} /></Suspense>}
       </>}
     </>
@@ -145,7 +149,7 @@ export function Brief() {
       </div>
     </div>
     {!phone && side && !railClosed && <aside className={`brief-rail ${showWork ? 'wide' : ''}`}>{rail}</aside>}
-    {phone && side && showAgents && <Sheet label="Agents" className="brief-sheet" onClose={() => { setShowAgents(false); setAgentSel(null); }}>{rail}</Sheet>}
+    {phone && side && showAgents && <Sheet label="Agents" className="brief-sheet" onClose={() => { setShowAgents(false); setAgentSel(null); }} onBack={agentsBack}>{rail}</Sheet>}
     </div>
   );
 }

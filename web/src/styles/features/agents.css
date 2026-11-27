@@ -24,7 +24,6 @@
 .ag.stack .ag-detail { display: none; padding: var(--sp-2) var(--sp-6) var(--sp-8); }
 .ag.stack.picked .ag-side { display: none; }
 .ag.stack.picked .ag-detail { display: flex; }
-.ag.stack .ag-back { display: inline-flex; }
 
 @media (max-width: 900px) {
   .ag-side { width: 100%; border-right: 0; }

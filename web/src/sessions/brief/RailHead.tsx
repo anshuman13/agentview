@@ -13,15 +13,16 @@ import { useCan } from '../../chat/useCan';
 import { billing } from '../../../../shared/providers';
 import { APPROVE } from '../../../../shared/build';
 
-// The rail's title with the run's controls, and the run's state under it.
-export function RailHead({ titled = true, onClose }: { titled?: boolean; onClose?: () => void }) {
+// The rail's title with the run's controls, and the run's state under it. With `onBack` (an agent is open), a back arrow leads the title.
+export function RailHead({ titled = true, onClose, onBack }: { titled?: boolean; onClose?: () => void; onBack?: () => void }) {
   const chat = useStore((s) => s.session.id);
   const run = useChatRun(chat);
   const live = useStore((s) => s.live.find((c) => c.id === chat));
   const agents = useStore((s) => agentsOf(s.events));
   const canStop = useCan('stopTask');
   const [board, setBoard] = useState(false);
-  if (run?.kind === 'job' && run.review === 'pending') return <ReviewCard run={run} />;
+  const back = onBack && <IconButton icon="arrow-left" label="Back to agents" size="sm" onClick={onBack} />;
+  if (run?.kind === 'job' && run.review === 'pending') return <>{back && <div className="rail-h">{back}</div>}<ReviewCard run={run} /></>;
   const running = agents.filter((a) => a.status === 'running' && !a.group);
   // Tries and jobs have Stop only; a build also pauses after its task and resumes.
   const stop = () => (run ? stopRun(run) : running.forEach((a) => send({ type: 'stop_task', toolUseId: a.id })));
@@ -30,6 +31,7 @@ export function RailHead({ titled = true, onClose }: { titled?: boolean; onClose
   return (
     <>
       <div className="rail-h">
+        {back}
         {titled ? <span className="rail-title">Agents</span> : <span className="spacer" />}
         {run?.kind === 'tries' && <IconButton icon="layout" label="Open board" size="sm" onClick={() => setBoard(true)} />}
         {run?.kind === 'build' && (run.state === 'paused'
