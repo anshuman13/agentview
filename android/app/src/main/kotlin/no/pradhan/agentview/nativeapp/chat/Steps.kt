@@ -294,6 +294,24 @@ fun rewindReplies(items: List<Item>): Map<String, Item.User> {
 fun awaitingReply(items: List<Item>, running: Boolean): Boolean =
     running && items.lastOrNull { it !is Item.User || !it.queued } is Item.User
 
+private val DOING = mapOf("Read" to "Reading", "Edited" to "Editing", "Wrote" to "Writing", "Searched" to "Searching", "Listed" to "Listing", "Ran" to "Running", "Fetched" to "Fetching", "Searched the web for" to "Searching the web for", "Delegated" to "Delegating", "Called" to "Calling", "Used" to "Using", "Looked up" to "Looking up", "Loaded" to "Loading")
+
+// The step a running turn is on, named as it happens ("Running npm test…"), or "" when none waits on a result (web steps.ts runningStep).
+fun runningStep(items: List<Item>, cwd: String = ""): String {
+    for (it in items.asReversed()) {
+        val use = when {
+            it is Item.Step && it.result == null -> it.use
+            it is Item.Agent && it.running -> it.use
+            it is Item.File && it.pending -> it.uses.last()
+            else -> null
+        }
+        if (use == null || use.name.endsWith("__set_status")) continue
+        val l = stepLabel(use.name, use.input, cwd)
+        return listOf(DOING[l.verb] ?: l.verb, l.obj).filter { it.isNotEmpty() }.joinToString(" ") + "\u2026"
+    }
+    return ""
+}
+
 // The last reply of each finished turn, when nothing follows it in the turn: the answers that get a Copy action.
 // A prompt, a loop or goal round or a system line ends a turn, and the running turn gets none yet.
 fun turnAnswers(items: List<Item>, running: Boolean = false): Set<String> {

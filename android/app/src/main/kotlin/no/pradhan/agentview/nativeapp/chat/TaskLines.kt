@@ -10,6 +10,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -54,6 +55,7 @@ internal fun TaskLines(hub: Hub, fold: FoldRow.Fold, cwd: String, live: Boolean,
     val done = steps.count { it.done }
     val current = if (live) steps.firstOrNull { !it.done } else null
     val spin = @Composable { WorkDots() }
+    val doing = if (live) runningStep(fold.hidden, cwd) else ""
     var reading by remember { mutableStateOf(false) }
     var proposing by remember { mutableStateOf(false) }
     var memory by remember { mutableStateOf(false) }
@@ -72,7 +74,10 @@ internal fun TaskLines(hub: Hub, fold: FoldRow.Fold, cwd: String, live: Boolean,
                 Modifier.heightIn(min = Tokens.touchSm).clickable { onOpenWork(fold.id) },
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text("Used ${plural(fold.work.tools, "tool")}", style = Type.footnote, color = av.fgMuted, maxLines = 1, softWrap = false)
+                if (doing.isNotEmpty()) {
+                    WorkDots()
+                    Text(doing, Modifier.padding(start = Tokens.sp2).weight(1f, fill = false), style = Type.footnote, color = av.fgStrong, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                } else Text("Used ${plural(fold.work.tools, "tool")}", style = Type.footnote, color = av.fgMuted, maxLines = 1, softWrap = false)
                 AvIcon("chevron-right", null, Tokens.sp5, tint = av.fgMuted)
             }
         }
