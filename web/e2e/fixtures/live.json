@@ -1,4 +1,4 @@
 [
-  { "id": "c1", "sessionId": "s1", "cwd": "/repo", "title": "Fix the login bug", "running": true, "pending": 0, "status": "Working", "lastActive": 0, "provider": "claude", "edits": { "add": 3, "del": 2 }, "todos": { "done": 2, "total": 4 } },
+  { "id": "c1", "sessionId": "s1", "cwd": "/repo", "title": "Fix the login bug", "running": true, "pending": 0, "status": "Working", "lastActive": 0, "provider": "claude", "edits": { "add": 3, "del": 2 }, "todos": { "done": 2, "total": 4 }, "pr": 6, "prChecks": "failure" },
   { "id": "c2", "sessionId": "s2", "cwd": "/repo", "title": "Build: e2e suite", "running": true, "pending": 0, "status": "Working", "lastActive": 0, "provider": "claude" }
 ]

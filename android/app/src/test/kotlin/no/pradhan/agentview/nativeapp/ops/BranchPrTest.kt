@@ -14,6 +14,8 @@ class BranchPrTest {
         assertEquals(2, branchPr(prs, "feat")?.number)
         assertNull(branchPr(prs, "main"))
         assertNull(branchPr(listOf(PullRequest(3)), ""))
+        assertEquals(1, branchPr(prs, "feat", 1)?.number)
+        assertEquals(2, branchPr(prs, "feat", 9)?.number)
     }
 
     @Test fun summarisesReadiness() {

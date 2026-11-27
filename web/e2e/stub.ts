@@ -52,6 +52,7 @@ const GET: Record<string, (u: URL) => unknown> = {
   '/api/sessions': () => sessions.chats.map((c) => ({ ...c, lastModified: Date.now() - 3_600_000 })),
   '/api/repos': () => sessions.repos,
   '/api/git/status': () => ({ branch: 'main', ahead: 0, behind: 0, files: [] }),
+  '/api/gh/prs': () => [{ number: 6, title: 'Test PR', author: 'me', branch: 'fix-login', draft: true, review: '', checks: 'failure', updatedAt: '', url: 'https://github.com/o/r/pull/6', sha: '', additions: 3, deletions: 2, mine: true, reviewRequested: false }],
   '/api/settings': () => ({ deploy: false, accountLabels: { main: 'Account 1', alt: 'Account 2', alt2: 'Account 3' } }),
 };
 

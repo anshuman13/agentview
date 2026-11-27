@@ -64,6 +64,14 @@ export function usePullRequests(cwd: string) {
   return l.cwd === cwd ? l.prs : [];
 }
 
+// A chat's PR as a link with its check icon, for the chat row and the chat header.
+export function ChatPr({ n, checks, cwd, className = 'chat-pr' }: { n: number; checks?: CheckState; cwd: string; className?: string }) {
+  const pr = usePullRequests(cwd).find((p) => p.number === n);
+  const state = pr?.checks ?? checks;
+  const icon = state && state !== 'none' && <CheckIcon state={state} />;
+  return pr ? <a className={className} href={pr.url} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()}>{prText(n, pr)}{icon}</a> : <span className={className}>#{n}{icon}</span>;
+}
+
 export const PullState = ({ pr }: { pr: PullRequest }) => (
   <span className="gh-state"><CheckIcon state={pr.checks} />{pr.draft ? <span className="chip outline pill sm">Draft</span> : <StateChip state={pr.review} />}<Counts a={pr.additions} d={pr.deletions} /></span>
 );

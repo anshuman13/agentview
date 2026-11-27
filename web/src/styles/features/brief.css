@@ -58,6 +58,8 @@ button.rail-s { cursor: pointer; }
 /* The task line closes the header block: opaque, with the status line's border moved under it, so the transcript starts below it. */
 .tl-line:has(+ .tl-build) { padding-bottom: var(--sp-1); margin-bottom: 0; border-bottom: 0; }
 .tl-build { flex: none; padding-bottom: var(--sp-3); margin-bottom: var(--sp-2); border-bottom: 1px solid var(--border); background: var(--brief-bg); overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: var(--fs-xs); color: var(--fg-muted); }
+.tl-pr { color: inherit; display: inline-flex; align-items: center; gap: var(--sp-2); text-decoration: none; vertical-align: bottom; }
+a.tl-pr:hover { color: var(--fg); text-decoration: underline; }
 .tl-name small { flex: 0 0 auto; max-width: 40%; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: var(--fs-sm); color: var(--fg-muted); }
 .tl-state { flex: 0 1 auto; min-width: 0; max-width: 45%; display: inline-flex; align-items: center; gap: var(--sp-2); padding: 0 var(--sp-2); border: 0; border-radius: var(--radius); background: transparent; font: inherit; font-size: var(--type-subheadline-size); color: var(--fg-muted); white-space: nowrap; cursor: pointer; }
 @media (hover: hover) { .tl-state:hover { background: var(--hover); color: var(--fg); } }

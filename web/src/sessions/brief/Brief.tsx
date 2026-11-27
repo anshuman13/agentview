@@ -27,6 +27,7 @@ import { useLongPress } from '../../ui/longPress';
 import { ChatDetailsMenu } from './ChatDetailsMenu';
 import { HeadState } from './HeadState';
 import { useGit } from '../../workspace/gitStatus';
+import { ChatPr } from '../../ops/pulls';
 
 function lastReplyOf(turns: Turn[]) {
   for (let i = turns.length - 1; i >= 0; i--) if (turns[i].reply) return turns[i].reply;
@@ -135,7 +136,7 @@ export function Brief() {
             ) : (
               <b className={startRename ? 'editable' : undefined} onDoubleClick={startRename} onPointerDown={press?.down} onPointerMove={press?.move} onPointerUp={press?.up} onPointerCancel={press?.cancel} onContextMenu={press ? (e) => press.menu(e.nativeEvent) : undefined}>{title}</b>
             )}
-            {cwd && <small>{cwd.split('/').pop()}</small>}
+            {(cwd || live?.pr) && <small>{cwd?.split('/').pop()}{cwd && live?.pr && ' · '}{live?.pr && <ChatPr n={live.pr} checks={live.prChecks} cwd={cwd ?? ''} className="tl-pr" />}</small>}
           </span>
           <span className="spacer" />
           {phone && <IconButton icon="edit" label="New chat" onClick={() => newChat({ cwd })} />}

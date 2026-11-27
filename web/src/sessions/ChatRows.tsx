@@ -8,7 +8,7 @@ import { type ChatRun, type LiveChat, type SavedSession } from '../../../shared/
 import { providerMark, shortModel } from '../../../shared/providers';
 import { save } from '../ui/util';
 import { RenameInput } from './RenameInput';
-import { CheckIcon, prText, usePullRequests } from '../ops/pulls';
+import { ChatPr } from '../ops/pulls';
 import { archiveChat, buildsState, chatMenuItems, chatSwipe, chatLine, chatBranch, chatState, closeChat, renameChat, repoName, removeRequest, restoreChat, rootLookup, rowsById, since, type ChatSession, type ChatState, type Folder } from './folders';
 import { askLine } from './runLogic';
 import { Swipe } from '../codex/gestures/Swipe';
@@ -185,16 +185,13 @@ export function LiveRow({ c, saved, repo, branch, selected, pinned, actions, ask
   const builds = useStore((s) => buildsState(s.live, saved?.buildMembers));
   const line = chatLine(c, events);
   const shownCwd = useStore((s) => s.session.cwd);
-  const pr = usePullRequests(c.pr && c.cwd === shownCwd ? shownCwd : '').find((p) => p.number === c.pr);
-  const checks = pr?.checks ?? c.prChecks;
-  const checkIcon = checks && checks !== 'none' && <CheckIcon state={checks} />;
   const when = c.pending ? metaLine(c.ask, since(c.lastActive)) : c.stalled ? 'No activity for 15 min' : c.running ? line.text || 'Working' : metaLine(since(Math.max(c.lastActive, saved?.lastModified ?? 0)), askLine(c.run));
   // Slack's sidebar draft line: an unsent composer draft replaces the meta line, except in the chat you are in.
   const draft = selected ? '' : draftLine(readDraft(draftKey(c.id, c.sessionId), c.id));
   const main = draft ? draftMeta(draft) : (
     <>
       {metaLine(repo, chatBranch(saved?.gitBranch, branch), saved?.subs, c.model && shortModel(c.model), providerMark(c.provider), when)}
-      {c.pr && <> · {pr ? <a className="chat-pr" href={pr.url} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()}>{prText(c.pr, pr)}{checkIcon}</a> : <>#{c.pr}{checkIcon}</>}</>}
+      {c.pr && <> · <ChatPr n={c.pr} checks={c.prChecks} cwd={c.cwd === shownCwd ? shownCwd : ''} /></>}
       {c.todos && ` · ${c.todos.done}/${c.todos.total}`}
       {line.edits && <> · <span className="chat-add">+{line.edits.add}</span> <span className="chat-del">-{line.edits.del}</span></>}
     </>

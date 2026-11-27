@@ -105,8 +105,9 @@ fun parsePullFix(body: String): PullFix = protocolJson.decodeFromString(PullFix.
 
 val MERGE_METHODS = listOf("squash" to "Squash", "merge" to "Merge commit", "rebase" to "Rebase")
 
-// The open PR of the chat's branch, and its merge readiness for the strip under the chat header.
-fun branchPr(prs: List<PullRequest>, branch: String) = prs.firstOrNull { branch.isNotEmpty() && it.branch == branch }
+// The chat's own PR (the one it opened), else the open PR of its branch, for the strip under the chat header.
+fun branchPr(prs: List<PullRequest>, branch: String, number: Int? = null) =
+    prs.firstOrNull { it.number == number } ?: prs.firstOrNull { branch.isNotEmpty() && it.branch == branch }
 
 fun checksLabel(state: String) = when (state) {
     "success" -> "Checks passed"

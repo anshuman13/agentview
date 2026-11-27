@@ -378,7 +378,9 @@ worktree of the PR's branch (the repo root when none has it, which the prompt sa
 lines of its `gh run view --log-failed` log and the instruction to fix it, run the checks and not push.
 
 A pull request Claude opened with `gh pr create` stays linked to its chat: the pull request row shows "Open chat"
-while that chat is open.
+while that chat is open. The chat header shows that PR beside the folder name: "#6 · Draft" with its check icon (pending,
+passed, failed), a link that opens the PR on GitHub (`ChatPr` in `web/src/ops/pulls.tsx`). The phone shows the chat's
+PR, else its branch's open PR, as a row under the header with the title, number and checks, which opens the PR pane.
 
 Merge when checks pass is a per-PR switch in the pull request pane (web Row, phone More menu), off until you turn it on
 and confirm. The server (`integrations/automerge.ts`, entries in `~/.agentview/automerge.json`) checks each armed PR every

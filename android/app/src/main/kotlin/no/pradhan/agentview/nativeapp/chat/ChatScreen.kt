@@ -109,7 +109,7 @@ fun ChatScreen(hub: Hub, onOpenAgent: (String) -> Unit, onOpenWork: (String) -> 
         ChangesPager(hub, left, start, reviewed.toSet(), { reviewed = reviewed + it }, { p -> reverted = reverted + "$p\t${edits.count { it == p }}" }, onBack = { review = null })
         return
     }
-    val (prLoad) = rememberLoad(live.id, cwd) { branchPr(hub.pulls(false), hub.gitStatus().branch) }
+    val (prLoad) = rememberLoad(live.id, cwd, live.pr) { branchPr(hub.pulls(false), hub.gitStatus().branch, live.pr) }
     var prOpen by rememberSaveable(live.id) { mutableStateOf<Int?>(null) }
     prOpen?.let { PullsScreen(hub, onBack = { prOpen = null }, initial = it); return }
 

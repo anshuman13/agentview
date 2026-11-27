@@ -58,6 +58,14 @@ test('the build task line shows the short title and ends above the transcript', 
   expect(await line.evaluate((n) => getComputedStyle(n).backgroundColor)).not.toBe('rgba(0, 0, 0, 0)');
 });
 
+test('the header links the chat PR with its check state', async () => {
+  const pr = page.locator('.brief .tl-pr');
+  await expect(pr).toHaveText('#6 · Draft');
+  await expect(pr).toHaveAttribute('href', 'https://github.com/o/r/pull/6');
+  await expect(pr.locator('.gh-check.failure')).toBeVisible();
+  await inViewport(pr);
+});
+
 test('the themes paint different backgrounds', async () => {
   const bg = () => page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--bg').trim());
   await page.emulateMedia({ colorScheme: 'dark' });
