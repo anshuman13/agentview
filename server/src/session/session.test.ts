@@ -901,6 +901,8 @@ describe('rewind files', () => {
     expect(await s.forkAt('r1')).toBe('new-session');
     expect(forkAt).toHaveBeenCalledWith('sid', expect.objectContaining({ id: 'r1', text: 'Done' }), 'Plan (fork)');
     expect(() => s.forkAt('missing')).toThrow('That reply is not in this chat');
+    await s.forkAt(null, 'Fix the tests');
+    expect(forkAt).toHaveBeenLastCalledWith('sid', null, 'Fix the tests');
   });
 });
 

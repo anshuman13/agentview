@@ -347,7 +347,7 @@ export class ClaudeDriver implements AgentDriver {
     this.send(target === 'local' ? '/code-review' : `/code-review ${target}`, id);
   }
 
-  forkAt(sessionId: string, reply: { id: string; text: string }, title?: string) {
+  forkAt(sessionId: string, reply: { id: string; text: string } | null, title?: string) {
     return forkAt(sessionId, this.cwd, reply, title);
   }
 

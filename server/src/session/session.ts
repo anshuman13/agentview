@@ -19,7 +19,7 @@ import { SKETCH_COMMAND, sketchPrompt } from '../../../shared/sketches.js';
 import { SPEC_REVIEW_COMMAND, specReviewPrompt } from '../../../shared/specTasks.js';
 import { RunLinks } from './runLinks.js';
 import { BuildLoop } from './build.js';
-import { SESSION_COMMANDS, withSessionCommands } from './commands.js';
+import { SESSION_COMMANDS, sessionCommands, withSessionCommands } from './commands.js';
 import { Runs } from './runs.js';
 import { phoneAlarm } from '../host/phoneAlarm.js';
 import { SessionSettings } from './settings.js';
@@ -84,6 +84,7 @@ export class AgentSession implements AgentHost {
     this.driver = driver(this);
     this.state.session.provider = this.driver.provider;
     this.state.session.capabilities = this.driver.capabilities;
+    this.state.session.commands = sessionCommands(this.driver.capabilities.forkAt);
     this.state.session.instructionFiles = this.driver.instructionFiles;
     this.state.session.account = this.driver.account;
     this.state.session.accounts = this.driver.accounts();
@@ -166,7 +167,7 @@ export class AgentSession implements AgentHost {
       this.clearing = null;
     }
     if (patch.running !== undefined && patch.running !== wasRunning) patch = { ...patch, turn: patch.running ? { startedAt: Date.now(), tokens: 0 } : null };
-    this.state.session = { ...this.state.session, ...patch, ...(patch.commands && { commands: withSessionCommands(patch.commands) }) };
+    this.state.session = { ...this.state.session, ...patch, ...(patch.commands && { commands: withSessionCommands(patch.commands, this.driver.capabilities.forkAt) }) };
     if ('sessionId' in patch || 'account' in patch || 'provider' in patch) this.setResumeCommand();
     if (patch.sessionId) this.runs.bind(this.id, patch.sessionId);
     if (wasRunning && patch.running === false) this.driver.settled();
@@ -341,12 +342,14 @@ export class AgentSession implements AgentHost {
     return { files: (r.filesChanged ?? []).map((f) => path.relative(this.cwd, f)), insertions: r.insertions ?? 0, deletions: r.deletions ?? 0 };
   }
 
-  // A new session holding this chat up to and with one reply.
-  forkAt(replyId: string) {
+  // A new session holding this chat up to and with one reply, or the whole chat without one.
+  forkAt(replyId: string | null, title = this.title ? `${this.title} (fork)` : undefined) {
     const { sessionId } = this.state.session;
+    if (!sessionId) throw new Error('This chat has no saved conversation yet');
+    if (!replyId) return this.driver.forkAt(sessionId, null, title);
     const reply = this.state.events.find((e) => e.id === replyId);
-    if (!sessionId || reply?.kind !== 'assistant') throw new Error('That reply is not in this chat');
-    return this.driver.forkAt(sessionId, reply, this.title ? `${this.title} (fork)` : undefined);
+    if (reply?.kind !== 'assistant') throw new Error('That reply is not in this chat');
+    return this.driver.forkAt(sessionId, reply, title);
   }
 
   interrupt() {

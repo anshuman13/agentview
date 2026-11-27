@@ -13,8 +13,9 @@ export function replyUuid(msgs: SessionMessage[], reply: { id: string; text: str
   return [...msgs].reverse().find((m) => m.type === 'assistant' && texts(m).includes(text))?.uuid ?? null;
 }
 
-// Copies a session up to and with a reply into a new session; returns its id.
-export async function forkAt(sessionId: string, cwd: string, reply: { id: string; text: string }, title?: string) {
+// Copies a session up to and with a reply, or all of it without one, into a new session; returns its id.
+export async function forkAt(sessionId: string, cwd: string, reply: { id: string; text: string } | null, title?: string) {
+  if (!reply) return (await forkSession(sessionId, { dir: cwd, title })).sessionId;
   const upToMessageId = replyUuid(await getSessionMessages(sessionId, { dir: cwd }), reply);
   if (!upToMessageId) throw new Error('That reply is not saved yet');
   return (await forkSession(sessionId, { dir: cwd, upToMessageId, title })).sessionId;

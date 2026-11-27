@@ -7,7 +7,7 @@ import { isProvider, provider, providerOf, providerOptions, rememberProvider, tr
 import { codexThread } from '../agent/codex/threads.js';
 import { removeChat } from '../agent/claude/pins.js';
 import { AgentSession } from '../session/session.js';
-import { READY } from '../session/runs.js';
+import { READY, firstSentence } from '../session/runs.js';
 import { latestOf, linkSubChat, rootOf } from '../session/subChats.js';
 import { linkSpawned } from '../session/spawned.js';
 import { UNATTENDED_INSTRUCTION } from '../session/prompts.js';
@@ -156,12 +156,26 @@ export async function newChat(cwd: string, from: AgentSession | undefined, fork?
   return fork ? createChat(dir, fork, from?.title ?? '', true) : createChat(dir, undefined, '', false, choice);
 }
 
-// Fork from here: a new chat holding the conversation up to and with one reply, with a line that opens the parent.
-export async function forkFrom(from: AgentSession, replyId: string) {
-  const sessionId = await from.forkAt(replyId);
-  const chat = await createChat(from.cwd, sessionId, from.title ? `${from.title} (fork)` : '');
+// Fork from here: a new chat holding the conversation up to and with one reply (all of it without one), with a line that opens the parent.
+export async function forkFrom(from: AgentSession, replyId: string | null, title = from.title ? `${from.title} (fork)` : '') {
+  const sessionId = await from.forkAt(replyId, title || undefined);
+  const chat = await createChat(from.cwd, sessionId, title);
   chat.system(`Forked from ${from.title || 'this chat'}`, false, undefined, from.state.session.sessionId ?? undefined);
   return chat;
+}
+
+// /subtask <task>: a copy of the whole chat, titled from the task, works on it while the user stays here.
+export function subtask(chat: AgentSession, text: string, task: string, id: string) {
+  chat.pushEvent({ id, kind: 'user', text, at: Date.now() });
+  if (!task) return chat.system('Usage: /subtask <task>');
+  if (!chat.driver.capabilities.forkAt) return chat.system('This chat cannot start a subtask', true);
+  forkFrom(chat, null, firstSentence(task, 70)).then(
+    (copy) => {
+      copy.prompt(task).catch((err) => copy.system(`Not sent: ${errText(err)}`, true));
+      chat.system('Started the subtask in a new chat', false, undefined, copy.state.session.sessionId ?? undefined);
+    },
+    (err) => chat.system(`Subtask not started: ${errText(err)}`, true),
+  );
 }
 
 export async function prompt(cwd: string, text: string, from?: string, fresh = false, choice: Provider = 'claude', model?: string) {

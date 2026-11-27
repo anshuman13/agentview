@@ -4,6 +4,9 @@ import type { AgentSession } from '../session/session.js';
 import { parseTries } from '../workspace/tries.js';
 import { parseBuild } from '../../../shared/build.js';
 import { keepTry, runTries, sendToTries } from './tries.js';
+import { subtask } from './chats.js';
+import { parseSubtask } from '../session/commands.js';
+import { randomUUID } from 'node:crypto';
 
 type Msg<T extends ClientMessage['type']> = Extract<ClientMessage, { type: T }>;
 
@@ -19,8 +22,13 @@ function promptCommand(chat: AgentSession, msg: Msg<'prompt'>) {
   notSent(chat, chat.prompt(msg.text, id, msg.voice === true));
 }
 
-// /tries starts its own chats and /build its run, however they are sent.
+// /tries starts its own chats, /build its run and /subtask its fork, however they are sent.
 function triesCommand(chat: AgentSession, text: string, id: string | undefined) {
+  const task = parseSubtask(text);
+  if (task !== null) {
+    subtask(chat, text, task, id ?? randomUUID());
+    return true;
+  }
   const build = parseBuild(text);
   if (build) chat.build.start(text, build, id);
   const tries = build ? null : parseTries(text);

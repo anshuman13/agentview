@@ -11,7 +11,17 @@ export const SESSION_COMMANDS: SessionInfo['commands'] = [
   { name: 'code-review', description: 'Review the working tree or a PR' },
   SKETCH_COMMAND,
   { name: SPEC_REVIEW_COMMAND, description: 'Review a spec with a cold reader and a readiness check' },
+  { name: 'subtask', description: 'Fork this chat to work on a task while you stay here' },
 ];
 
+// /subtask forks the chat, so a provider that cannot fork does not offer it.
+export const sessionCommands = (canFork: boolean) => (canFork ? SESSION_COMMANDS : SESSION_COMMANDS.filter((c) => c.name !== 'subtask'));
+
 // The provider's list keeps its own wording for a command both have.
-export const withSessionCommands = (commands: SessionInfo['commands']) => [...commands, ...SESSION_COMMANDS.filter((c) => !commands.some((p) => p.name === c.name))];
+export const withSessionCommands = (commands: SessionInfo['commands'], canFork = true) => [...commands, ...sessionCommands(canFork).filter((c) => !commands.some((p) => p.name === c.name))];
+
+// "/subtask <task>": the task, '' for a bare /subtask, null for any other text.
+export function parseSubtask(text: string) {
+  const m = text.trim().match(/^\/subtask(?:\s+([\s\S]*))?$/);
+  return m ? (m[1] ?? '').trim() : null;
+}

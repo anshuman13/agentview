@@ -246,6 +246,10 @@ cost so far. The status bar usage tooltip adds a Spend block with today's and th
   "<title> (fork)" that is an exact copy of the conversation up to and with that reply (the SDK's forkSession; a streamed
   reply is found by its text). It ends with a muted "Forked from <title>" line that opens the parent; the parent is left
   as it is. The line is live only and is gone once the fork is reopened
+- `/subtask <task>` (Claude chats only; Codex does not list it) copies the whole chat the same way into a new chat titled
+  from the task, sends the task there as its first prompt and keeps the user on the parent, which gets a muted
+  "Started the subtask in a new chat" line that opens the copy. The server handles it however it is sent (prompt, queue
+  or steer), so web and phone need nothing of their own
 - In the phone review pager, tapping a changed line opens the comment sheet, which also has Revert this change: the file
   is saved with that one block of changed lines put back to the last commit
 - Turns are separated by space only, with a divider only where the day changes
