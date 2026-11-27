@@ -183,7 +183,7 @@ fun CodexScreen(hub: Hub) {
     LaunchedEffect(nav.page, nav.route, nav.searching, filterKey) { nav.picked = null; if (nav.page != "meetings") nav.decisions = false }
     BackHandler(enabled = nav.picked != null || nav.sub || nav.searching || nav.page != "overview") { nav.back() }
     val drawerState = rememberDrawerState(DrawerValue.Closed)
-    BackHandler(enabled = drawerState.isOpen) { scope.launch { drawerState.close() } }
+    BackHandler(enabled = drawerState.isOpen) { scope.launch { drawerState.animateTo(DrawerValue.Closed, tween(Tokens.motionDuration, easing = Tokens.motionEaseOut)) } }
     val refresh = { scope.launch { refreshing = true; hub.codex.sync(); refreshing = false }; Unit }
     val go = { p: String -> if (p != nav.page) hub.track("list:$p"); nav.go(p); scope.launch { drawerState.animateTo(DrawerValue.Closed, tween(Tokens.motionDuration, easing = Tokens.motionEaseOut)) }; Unit }
 

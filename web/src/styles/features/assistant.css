@@ -150,6 +150,9 @@
 .as-drawer { width: min(300px, 82%); height: 100%; display: flex; flex-direction: column; padding-top: var(--sp-8); background: var(--surface); border-right: 1px solid var(--border); animation: as-in var(--motion-duration) var(--motion-ease-in); }
 .as-drawer-title { padding: var(--sp-4) var(--sp-10) var(--sp-4); font-family: var(--font-serif); font-size: var(--fs-4xl); font-weight: 400; }
 @keyframes as-in { from { transform: translateX(-100%); } }
+.as-drawer-overlay.leaving { pointer-events: none; animation: dialog-fade-out var(--motion-duration) var(--motion-ease-out) forwards; }
+.as-drawer-overlay.leaving .as-drawer { animation: as-out var(--motion-duration) var(--motion-ease-out) forwards; }
+@keyframes as-out { to { transform: translateX(-100%); } }
 
 @media (max-width: 900px) {
   .tasks-head { gap: var(--sp-2); }
@@ -330,7 +333,8 @@ textarea.as-draft-text { width: 100%; padding: 0; border: 0; background: transpa
   .assistant.wide > .wk { animation: nav-fade 160ms var(--ease); }
   :root[data-nav='push'] .assistant.wide > .wk { animation: nav-push 180ms ease-out; }
   :root[data-nav='pop'] .assistant.wide > .wk { animation: nav-pop 180ms ease-out; }
-  .as-drawer-overlay, .more-sheet-overlay { animation: nav-fade 150ms var(--ease); }
+  .as-drawer-overlay { animation: nav-fade var(--motion-duration) var(--motion-ease-in); }
+  .more-sheet-overlay { animation: nav-fade 150ms var(--ease); }
   @keyframes nav-fade { from { opacity: 0; } }
   @keyframes nav-push { from { opacity: 0; transform: translateX(16px); } }
   @keyframes nav-pop { from { opacity: 0; transform: translateX(-16px); } }

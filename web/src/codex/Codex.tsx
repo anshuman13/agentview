@@ -61,7 +61,7 @@ export function Assistant() {
   const { list, filter, open, tag } = useView();
   const s = useSplit();
   const root = useRef<HTMLDivElement>(null);
-  const [drawer, setDrawer] = useState(false);
+  const [drawer, setDrawer] = useState<false | 'open' | 'leaving'>(false);
   const [adding, setAdding] = useState<boolean | number>(false);
   const [olderOpen, setOlderOpen] = useState(false);
   const [doneOpen, setDoneOpen] = useState(false);
@@ -91,7 +91,8 @@ export function Assistant() {
 
   if (!ready) return <LockedCodex root={root} snap={snap} store={store} />;
 
-  const drawerSheet = drawer && <ListsDrawer close={() => setDrawer(false)} />;
+  const leaveDrawer = () => setDrawer((d) => (d === 'open' && !matchMedia('(prefers-reduced-motion: reduce)').matches ? 'leaving' : d && d !== 'open' ? d : false));
+  const drawerSheet = drawer && <ListsDrawer leaving={drawer === 'leaving'} leave={leaveDrawer} close={() => setDrawer(false)} />;
 
   if (current) {
     return (
@@ -110,7 +111,7 @@ export function Assistant() {
     const Page = { wiki: Wiki, meetings: Meetings, jobs: Jobs, summary: Summary, goals: GoalsPage, search: Search }[list];
     return (
       <div className="assistant wide" ref={root}>
-        <Suspense fallback={<Skeleton />}><Page key={list === 'search' ? searchRun() : list} onMenu={() => setDrawer(true)} /></Suspense>
+        <Suspense fallback={<Skeleton />}><Page key={list === 'search' ? searchRun() : list} onMenu={() => setDrawer('open')} /></Suspense>
         {drawerSheet}
       </div>
     );
@@ -134,7 +135,7 @@ export function Assistant() {
   const synced = <span className="as-synced">{syncedAt(gate.last, now)}</span>;
   return (
     <div className={`assistant${list === 'tasks' ? ' tasks' : ''}`} ref={root}>
-      <CodexHead title={heading} greeting={list === 'today'} onMenu={() => setDrawer(true)}
+      <CodexHead title={heading} greeting={list === 'today'} onMenu={() => setDrawer('open')}
         search={list === 'tasks' && query != null && <SearchBar query={query} setQuery={setQuery} />}
         action={list === 'tasks' && query == null && !picked && <IconButton className="desktop-only" icon="add" label="Add task" onClick={() => setAdding(true)} />}
         menu={list === 'tasks' && query == null && !picked && <TasksMenu onSearch={() => setQuery('')} onSelect={() => setPicked(new Set())} />} />

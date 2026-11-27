@@ -16,13 +16,13 @@ export function LockedCodex({ root, snap, store }: { root: RefObject<HTMLDivElem
   );
 }
 
-export function ListsDrawer({ close }: { close: () => void }) {
+export function ListsDrawer({ leaving, leave, close }: { leaving: boolean; leave: () => void; close: () => void }) {
   return (
-    <div className="as-drawer-overlay" onClick={close}>
-      <Back close={close} />
+    <div className={`as-drawer-overlay ${leaving ? 'leaving' : ''}`} onClick={leave} onAnimationEnd={(e) => leaving && e.target === e.currentTarget && close()}>
+      <Back close={leave} />
       <div className="as-drawer" onClick={(e) => e.stopPropagation()}>
         <div className="as-drawer-title">Codex</div>
-        <AssistantNav onPick={close} />
+        <AssistantNav onPick={leave} />
       </div>
     </div>
   );
