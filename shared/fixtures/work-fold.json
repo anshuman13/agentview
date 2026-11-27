@@ -332,5 +332,127 @@
     "rows": ["u1", "work:u1", "a1"],
     "titles": [{"text": "1 tool", "failed": "", "detail": "1 agent"}],
     "billing": "plan"
+  },
+  {
+    "name": "read claims: wiki_search and wiki_page result lines, each id once, page lines, errors and other tools skipped",
+    "events": [
+      {
+        "id": "u1",
+        "kind": "user",
+        "text": "check",
+        "at": 1000
+      },
+      {
+        "id": "t1",
+        "kind": "tool_use",
+        "name": "mcp__agentview__wiki_search",
+        "input": {
+          "query": "x"
+        },
+        "summary": "",
+        "at": 2000
+      },
+      {
+        "id": "r1",
+        "kind": "tool_result",
+        "toolUseId": "t1",
+        "text": "- page [p1] Deploys\n- [c1] (live) Deploys on merge (on Deploys)\n- [c2] (old) Uses bun\n- [c1] (live) Deploys on merge (on Deploys)",
+        "isError": false,
+        "at": 2100
+      },
+      {
+        "id": "t2",
+        "kind": "tool_use",
+        "name": "mcp__agentview__wiki_page",
+        "input": {
+          "query": "x"
+        },
+        "summary": "",
+        "at": 3000
+      },
+      {
+        "id": "r2",
+        "kind": "tool_result",
+        "toolUseId": "t2",
+        "text": "- [c3] (live) Limits 60 a minute (on API)\n- [c2] (live) Uses bun twice",
+        "isError": false,
+        "at": 3100
+      },
+      {
+        "id": "t3",
+        "kind": "tool_use",
+        "name": "mcp__agentview__wiki_search",
+        "input": {
+          "query": "x"
+        },
+        "summary": "",
+        "at": 4000
+      },
+      {
+        "id": "r3",
+        "kind": "tool_result",
+        "toolUseId": "t3",
+        "text": "- [c4] (live) From a failed call",
+        "isError": true,
+        "at": 4100
+      },
+      {
+        "id": "t4",
+        "kind": "tool_use",
+        "name": "Grep",
+        "input": {
+          "query": "x"
+        },
+        "summary": "",
+        "at": 5000
+      },
+      {
+        "id": "r4",
+        "kind": "tool_result",
+        "toolUseId": "t4",
+        "text": "- [c5] (live) Not a wiki read",
+        "isError": false,
+        "at": 5100
+      },
+      {
+        "id": "a1",
+        "kind": "assistant",
+        "text": "Done.",
+        "streaming": false,
+        "at": 6000
+      }
+    ],
+    "rows": [
+      "u1",
+      "work:u1",
+      "a1"
+    ],
+    "titles": [
+      {
+        "text": "4 tools",
+        "failed": "1 failed",
+        "detail": ""
+      }
+    ],
+    "billing": "plan",
+    "claims": [
+      [
+        {
+          "id": "c1",
+          "text": "Deploys on merge",
+          "where": "Deploys"
+        },
+        {
+          "id": "c2",
+          "text": "Uses bun",
+          "where": ""
+        },
+        {
+          "id": "c3",
+          "text": "Limits 60 a minute",
+          "where": "API"
+        }
+      ]
+    ]
   }
 ]

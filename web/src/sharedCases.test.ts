@@ -113,7 +113,7 @@ describe('cases shared with the Android app', () => {
     it(`editCount: ${c.name}`, () => expect(editCount(c.tool, c.input)).toEqual(c.expected));
   }
 
-  for (const c of cases<{ name: string; events: ChatEvent[]; billing: Billing; rows: string[]; titles: { text: string; failed: string; detail: string }[] }>('work-fold')) {
+  for (const c of cases<{ name: string; events: ChatEvent[]; billing: Billing; rows: string[]; titles: { text: string; failed: string; detail: string }[]; claims?: object[] }>('work-fold')) {
     it(`foldTurns: ${c.name}`, () => {
       const rows = foldTurns(buildTranscript(c.events), c.events);
       expect(rows.map((r) => (r.kind === 'fold' ? `work:${r.id}` : r.it.id))).toEqual(c.rows);
@@ -122,6 +122,7 @@ describe('cases shared with the Android app', () => {
       if (c.steps) expect(rows.flatMap((r) => (r.kind === 'fold' ? [r.steps] : []))).toEqual(c.steps);
       if (c.now) expect(rows.flatMap((r) => (r.kind === 'fold' ? [r.now] : []))).toEqual(c.now);
       if (c.proposed) expect(rows.flatMap((r) => (r.kind === 'fold' ? [r.proposed] : []))).toEqual(c.proposed);
+      if (c.claims) expect(rows.flatMap((r) => (r.kind === 'fold' ? [r.claims] : []))).toEqual(c.claims);
     });
   }
 

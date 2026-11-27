@@ -111,6 +111,7 @@ import no.pradhan.agentview.nativeapp.chat.buildCard
 import no.pradhan.agentview.nativeapp.net.SpawnedBuild
 import no.pradhan.agentview.nativeapp.chat.rememberedOf
 import no.pradhan.agentview.nativeapp.chat.Proposal
+import no.pradhan.agentview.nativeapp.chat.Claim
 import no.pradhan.agentview.nativeapp.chat.StatusStep
 import no.pradhan.agentview.nativeapp.chat.buildTranscript
 import no.pradhan.agentview.nativeapp.chat.foldTurns
@@ -392,6 +393,10 @@ class SharedCasesTest {
                 assertEquals(c.str("name"), want, rows.filterIsInstance<FoldRow.Fold>().map { it.proposed })
             }
             c["now"]?.let { expected -> assertEquals(c.str("name"), expected.jsonArray.map { it.jsonPrimitive.content }, rows.filterIsInstance<FoldRow.Fold>().map { it.now }) }
+            c["claims"]?.let { expected ->
+                val want = expected.jsonArray.map { turn -> turn.jsonArray.map { p -> p.jsonObject.let { Claim(it.str("id"), it.str("text"), it.str("where")) } } }
+                assertEquals(c.str("name"), want, rows.filterIsInstance<FoldRow.Fold>().map { it.claims })
+            }
         }
     }
 
