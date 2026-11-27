@@ -7,7 +7,7 @@ import { Section } from '../ui/Section';
 import { Sheet } from '../ui/Sheet';
 import { useNarrow } from '../app/shell/useNarrow';
 import { ACCOUNT_LABEL, ACCOUNT_NOTE, EFFORT_LABEL } from '../../../shared/protocol';
-import { modeSteps, newestModels } from '../../../shared/providers';
+import { modelRow, modeSteps, newestModels } from '../../../shared/providers';
 import { effortsFor } from './capabilitiesLogic';
 import { useChatSettings, type Pick } from './ChatSettings';
 import { rememberModel } from '../app/newChat';
@@ -39,14 +39,15 @@ export function ModelPick({ pick, close, back }: Props) {
   const { model, models } = useChatSettings();
   const provider = useStore((s) => s.session.provider);
   const [all, setAll] = useState(false);
-  const newest = newestModels(models, model);
+  const row = modelRow(models, model);
+  const newest = newestModels(models, row);
   const more = all ? 0 : models.length - newest.length;
   return (
     <ChoicePick
       back={back}
       anchor={pick.at}
       title="Select model"
-      current={model}
+      current={row}
       items={[
         ...(more ? newest : models).map((m) => ({ value: m.value, label: m.displayName, detail: m.description })),
         ...(more ? [{ value: OLDER, label: 'Older models', detail: `${more} more` }] : []),

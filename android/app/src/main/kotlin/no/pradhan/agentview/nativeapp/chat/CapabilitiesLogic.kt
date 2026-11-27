@@ -16,6 +16,7 @@ fun Capabilities.can(what: String) = when (what) {
 
 // The effort levels the chat's model lists, or all of them when it lists none.
 fun effortsFor(models: List<ModelInfo>, model: String?): List<String> {
-    val listed = models.firstOrNull { it.value == model }?.efforts
+    val row = modelRow(models, model)
+    val listed = models.firstOrNull { it.value == row }?.efforts
     return if (listed == null) EFFORT_LEVELS else EFFORT_LEVELS.filter { it in listed }
 }

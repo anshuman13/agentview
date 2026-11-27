@@ -86,6 +86,13 @@ export function newestModels<T extends { value: string; displayName: string }>(m
   });
 }
 
+// The list row of the chat's model: the chat reports a full id ("claude-opus-5-5") where the list has its alias ("opus", "Opus 5.5").
+export function modelRow(shown: { value: string; displayName: string }[], model?: string | null): string | null {
+  if (!model) return null;
+  const name = shortModel(model);
+  return (shown.find((m) => m.value === model) ?? shown.find((m) => shortModel(m.displayName) === name))?.value ?? null;
+}
+
 // The model row the new chat sheet checks: the picked or last model when shown, else the first shown, which the chat gets when none is sent.
 export function checkedModel(shown: { value: string }[], model?: string | null): string | null {
   return shown.some((m) => m.value === model) ? model! : shown[0]?.value ?? null;

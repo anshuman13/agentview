@@ -11,7 +11,7 @@ import { editCount, stripRound } from '../../shared/edits';
 import { exploreLabelOf, exploreRunsOf, type ExploreRow } from '../../shared/explore';
 import { FEATURES, featureRows, paletteFeature, shownFeature, type UseDays } from '../../shared/featureUse';
 import type { Capabilities, ChatEvent, Finding, ChatRun, LiveChat, Provider, SavedSession, SpawnedBuild, Try } from '../../shared/protocol';
-import { START_MODES, billing, checkedModel, menuModes, modeSteps, newestModels, providerLabel, providerMark, providerModes, shortModel, startModeFor, startTexts, type Billing } from '../../shared/providers';
+import { START_MODES, billing, checkedModel, menuModes, modeSteps, modelRow, newestModels, providerLabel, providerMark, providerModes, shortModel, startModeFor, startTexts, type Billing } from '../../shared/providers';
 import { recentInRepo } from './app/newChat';
 import { binLeft, buildFolders, chatPlace, since } from './sessions/folders';
 import { findingFixPrompt, findingsFixPrompt } from '../../shared/reviewPrompt';
@@ -865,6 +865,10 @@ describe('cases shared with the Android app', () => {
 
   for (const c of cases<{ name: string; shown: string[]; model: string | null; checked: string | null }>('checked-model')) {
     it(`checkedModel: ${c.name}`, () => expect(checkedModel(c.shown.map((value) => ({ value })), c.model)).toBe(c.checked));
+  }
+
+  for (const c of cases<{ name: string; shown: [string, string][]; model: string | null; row: string | null }>('model-row')) {
+    it(`modelRow: ${c.name}`, () => expect(modelRow(c.shown.map(([value, displayName]) => ({ value, displayName })), c.model)).toBe(c.row));
   }
 
   for (const c of cases<{ name: string; mode: string; review: boolean; picked: string; send: { mode: string | null; review: boolean | null } }>('mode-steps')) {

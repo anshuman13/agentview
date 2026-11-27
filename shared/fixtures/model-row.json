@@ -1,0 +1,8 @@
+[
+  { "name": "an alias value matches itself", "shown": [["default", "Default (recommended)"], ["opus", "Opus 5.5"], ["sonnet", "Sonnet 5.5"]], "model": "opus", "row": "opus" },
+  { "name": "a full model id matches its alias row", "shown": [["default", "Default (recommended)"], ["opus", "Opus 5.5"], ["sonnet", "Sonnet 5.5"]], "model": "claude-opus-5-5", "row": "opus" },
+  { "name": "a 1M context id matches its alias row", "shown": [["opus", "Opus 5.5"], ["sonnet", "Sonnet 5.5"]], "model": "claude-sonnet-5-5[1m]", "row": "sonnet" },
+  { "name": "a full id listed as itself matches exactly", "shown": [["opus", "Opus 5.5"], ["claude-opus-4-8", "Opus 4.8"]], "model": "claude-opus-4-8", "row": "claude-opus-4-8" },
+  { "name": "an unknown model matches nothing", "shown": [["opus", "Opus 5.5"]], "model": "claude-opus-4-6", "row": null },
+  { "name": "no model matches nothing", "shown": [["opus", "Opus 5.5"]], "model": null, "row": null }
+]

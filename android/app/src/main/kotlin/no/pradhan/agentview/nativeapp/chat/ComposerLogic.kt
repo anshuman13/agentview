@@ -4,6 +4,7 @@ import no.pradhan.agentview.nativeapp.codex.Week
 import no.pradhan.agentview.nativeapp.codex.meetings.Repeats
 import no.pradhan.agentview.nativeapp.net.ChatEvent
 import no.pradhan.agentview.nativeapp.net.CommandInfo
+import no.pradhan.agentview.nativeapp.net.ModelInfo
 import no.pradhan.agentview.nativeapp.net.PlanUsage
 import no.pradhan.agentview.nativeapp.net.SessionInfo
 import no.pradhan.agentview.nativeapp.net.menuModes
@@ -105,6 +106,13 @@ fun contextPercent(context: Long?, contextWindow: Long?): Int? = context?.let { 
 fun shortModel(name: String): String {
     val plain = name.replace(Regex("\\s*\\(.*\\)$"), "")
     return Regex("^claude-([a-z]+)-(\\d+)-(\\d+).*$").replace(plain) { m -> "${m.groupValues[1].replaceFirstChar { it.uppercase() }} ${m.groupValues[2]}.${m.groupValues[3]}" }
+}
+
+// shared/providers.ts modelRow: the list row of the chat's model, which reports a full id ("claude-opus-5-5") where the list has its alias ("opus", "Opus 5.5").
+fun modelRow(shown: List<ModelInfo>, model: String?): String? {
+    if (model.isNullOrEmpty()) return null
+    val name = shortModel(model)
+    return (shown.firstOrNull { it.value == model } ?: shown.firstOrNull { shortModel(it.displayName) == name })?.value
 }
 
 // The settings chip text: the short model name, plus the mode label unless it is plain Default.

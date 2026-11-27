@@ -71,6 +71,7 @@ import no.pradhan.agentview.nativeapp.chat.usedClaimState
 import no.pradhan.agentview.nativeapp.chat.shortModel
 import no.pradhan.agentview.nativeapp.chat.startModeFor
 import no.pradhan.agentview.nativeapp.chat.checkedModel
+import no.pradhan.agentview.nativeapp.chat.modelRow
 import no.pradhan.agentview.nativeapp.chat.START_MODES
 import no.pradhan.agentview.nativeapp.chat.recentInRepo
 import no.pradhan.agentview.nativeapp.chat.startTexts
@@ -1458,6 +1459,13 @@ class SharedCasesTest {
             val models = c.getValue("models").jsonArray.map { ModelInfo(it.jsonPrimitive.content, it.jsonPrimitive.content) }
             val shown = newestModels(models, c.nullable("current")?.jsonPrimitive?.content).map { it.value }
             assertEquals(c.str("name"), c.getValue("shown").jsonArray.map { it.jsonPrimitive.content }, shown)
+        }
+    }
+
+    @Test fun modelRowCases() {
+        for (c in cases("model-row")) {
+            val shown = c.getValue("shown").jsonArray.map { val p = it.jsonArray; ModelInfo(p[0].jsonPrimitive.content, p[1].jsonPrimitive.content) }
+            assertEquals(c.str("name"), c.nullable("row")?.jsonPrimitive?.content, modelRow(shown, c.nullable("model")?.jsonPrimitive?.content))
         }
     }
 

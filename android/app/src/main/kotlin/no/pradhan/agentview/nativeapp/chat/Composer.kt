@@ -454,7 +454,7 @@ private fun ChatSettingsSheet(hub: Hub, session: SessionInfo?, onSheet: (Picker?
             }
         }
         if (models.isNotEmpty()) {
-            val current = session?.model
+            val current = modelRow(models, session?.model)
             var all by remember { mutableStateOf(false) }
             val newest = newestModels(models, current)
             Group {
