@@ -18,7 +18,7 @@ import { createFoldBuilder, type FoldRow } from './workFold';
 import { ALARM_TOOL, BUILD_TOOL, createTranscriptBuilder, exploreRuns, dayDividers, newMarker, newReplies, openAtNew, rewindReplies, turnAnswers, docCards, isDocFile, fileMeta, sameItem, type Item, type Rewind } from './steps';
 import { pressable } from '../../ui/util';
 import { useCan } from '../useCan';
-import { copyReply, resume, retry } from '../chatActions';
+import { copyReply, insertText, resume, retry } from '../chatActions';
 import { failedLine } from '../composer/composerLogic';
 import { billing, providerLabel } from '../../../../shared/providers';
 import { isSketchPath } from '../../../../shared/sketches';
@@ -64,7 +64,7 @@ function QuoteButton({ rows }: { rows: RefObject<HTMLDivElement | null> }) {
   });
   if (!at) return null;
   const quote = () => {
-    window.dispatchEvent(new CustomEvent('agentview:insert', { detail: { text: quoteText(at.quote) } }));
+    insertText(quoteText(at.quote));
     document.getSelection()?.removeAllRanges();
     clear();
   };

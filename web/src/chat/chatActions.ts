@@ -8,6 +8,12 @@ import { profileOfPath } from '../../../shared/workspace';
 import { removeMemory, restoreMemory, type RemovedMemory } from './chatApi';
 import { memoryClaimText, type MemoryFile } from './cards/memoryLogic';
 
+// Puts text into the composer; the composer listens.
+export const insertText = (text: string) => window.dispatchEvent(new CustomEvent('agentview:insert', { detail: { text } }));
+
+// Opens one turn's tool calls in their own tab; the workbench listens.
+export const openWork = (turn: string) => window.dispatchEvent(new CustomEvent('open-work', { detail: turn }));
+
 // Side chat (like Claude desktop's): forks this chat into the column beside it, so a question does not land in the
 // running chat. The server views the fork once it starts; the original moves back to the main column.
 export function sideChat() {

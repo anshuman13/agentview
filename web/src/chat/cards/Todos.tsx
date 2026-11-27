@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { QuickPick } from '../../ui/QuickPick';
 import { fetchTodos } from '../chatApi';
+import { insertText } from '../chatActions';
 
 export type Todo = { path: string; line: number; text?: string; ai?: string | null };
 
@@ -28,7 +29,7 @@ export function TodosPick({ anchor, onClose }: { anchor: DOMRect; onClose: () =>
       items={items}
       onPick={(v) => {
         const t = v ? todos?.[Number(v)] : undefined;
-        if (t) window.dispatchEvent(new CustomEvent('agentview:insert', { detail: { text: todoPrompt(t) } }));
+        if (t) insertText(todoPrompt(t));
         onClose();
       }}
       onClose={onClose}
