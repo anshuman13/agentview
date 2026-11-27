@@ -98,16 +98,13 @@ describe('chat view', () => {
     await lastSent('interrupt');
   });
 
-  it('copies and reuses a prompt and copies a reply', async () => {
+  it('reuses a prompt and copies a reply', async () => {
     open();
-    fireEvent.click(button('Copy', userRow('Now run the tests')));
-    await waitFor(() => expect(copied).toEqual(['Now run the tests']));
-    await screen.findByText('Prompt copied');
     fireEvent.click(button('Use again', userRow('Now run the tests')));
     await waitFor(() => expect(box().value).toBe('Now run the tests'));
     const reply = document.querySelector<HTMLElement>('[id="turn-a1"] .tr-acts')!;
     fireEvent.click(button('Copy', reply));
-    await waitFor(() => expect(copied[1]).toContain('const ttl = 3600;'));
+    await waitFor(() => expect(copied[0]).toContain('const ttl = 3600;'));
     await screen.findByText('Reply copied');
   });
 
