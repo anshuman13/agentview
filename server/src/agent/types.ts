@@ -59,6 +59,7 @@ export interface AgentDriver {
   stopTask(toolUseId: string): Promise<boolean>;
   mcpStatus(): Promise<McpServer[] | null>;
   refreshUsage?(): Promise<void>;
+  loadContextUsage?(): Promise<void>;
   // Background tasks (workflow runs, background agents and shell commands) that die with the CLI process.
   runningTasks?(): RunningTask[];
   reconnectMcp(name: string): Promise<void>;

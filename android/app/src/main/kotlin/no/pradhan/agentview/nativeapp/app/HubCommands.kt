@@ -29,6 +29,7 @@ import no.pradhan.agentview.nativeapp.net.stopTaskCmd
 import no.pradhan.agentview.nativeapp.net.triesKeepCmd
 import no.pradhan.agentview.nativeapp.net.triesSendCmd
 import no.pradhan.agentview.nativeapp.net.usageCmd
+import no.pradhan.agentview.nativeapp.net.contextUsageCmd
 import androidx.lifecycle.viewModelScope
 import java.util.UUID
 import kotlinx.coroutines.launch
@@ -178,6 +179,8 @@ fun Hub.setEffort(effort: String) = post(setEffortCmd(effort), store.wanted)
 fun Hub.setAccount(account: String) = post(setAccountCmd(account), store.wanted)
 
 fun Hub.refreshUsage() = post(usageCmd(), store.wanted)
+
+fun Hub.loadContextUsage() = post(contextUsageCmd(), store.wanted)
 
 fun Hub.setMode(mode: String) = post(setModeCmd(mode), store.wanted)
 

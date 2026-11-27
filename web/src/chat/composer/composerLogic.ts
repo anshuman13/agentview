@@ -1,7 +1,8 @@
 import { parseWhen, stripWhen } from '../../codex/data/tasks/engine';
 import { match } from '../../workspace/FileSwitcher';
 import { firstLine } from '../../ui/util';
-import { compactAt, type ChatEvent, type SavedSession } from '../../../../shared/protocol';
+import { compactAt, type ChatEvent, type ContextUsage, type SavedSession } from '../../../../shared/protocol';
+import { tokens } from '../../ops/usageLogic';
 import { isBlock } from '../../../../shared/util';
 import { timedMeetings } from '../../../../shared/plan';
 import { live, type Meeting } from '../../codex/data/wiki/wiki';
@@ -177,3 +178,23 @@ export const nextMode = (modes: { value: string }[], mode: string) => modes[(mod
 // Fork chat: the new chat reads the old one's transcript (via @chat) and summarises it, so work continues from a short brief.
 export const handoffText = (sessionId: string) =>
   `Summarise @chat:${sessionId} so we can continue its work in this chat: the goal, decisions made, what is done, what is still open, and the files and commands that matter. At most 15 lines. Then wait for my next message.`;
+
+export type ContextRow = { name: string; tokens: string; share: string; tone: number | null; gap: boolean };
+export type ContextPanel = { used: string; amount: string; fill: number; rows: ContextRow[] };
+
+// The context panel: the total against the window, then the agent's rows; tone numbers the rows in the window, gap opens the reserve and free rows.
+export function contextPanel(usage: ContextUsage | null | undefined, context: number | null, contextWindow?: number | null): ContextPanel | null {
+  const total = usage?.total ?? context;
+  const max = usage?.max || contextWindow || 0;
+  if (total == null) return null;
+  if (!max) return { used: '', amount: `${tokens(total)} tokens`, fill: 0, rows: [] };
+  let tone = 0;
+  const rows = (usage?.rows ?? []).map((r, i, all) => ({
+    name: r.name,
+    tokens: tokens(r.tokens),
+    share: `${((r.tokens / max) * 100).toFixed(1)}%`,
+    tone: r.kind === 'used' ? tone++ : null,
+    gap: r.kind !== 'used' && (i === 0 || all[i - 1].kind === 'used'),
+  }));
+  return { used: `${Math.round((total / max) * 100)}% used`, amount: `${tokens(total)} / ${tokens(max)}`, fill: Math.min(1, total / max), rows };
+}

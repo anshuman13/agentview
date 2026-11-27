@@ -28,7 +28,9 @@ import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.int
+import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.long
+import kotlinx.serialization.json.double
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import no.pradhan.agentview.nativeapp.app.chatNotice
@@ -1516,6 +1518,20 @@ class SharedCasesTest {
         for (c in cases("task-checklist")) {
             val n = c["toggle"]?.jsonPrimitive?.int
             assertEquals(c.str("name"), c.str("expected"), if (n == null) addCheck(c.str("text"), c.str("add")) else toggleCheck(c.str("text"), n))
+        }
+    }
+
+    @Test fun contextPanel() {
+        for (c in cases("context-panel")) {
+            val usage = c.nullable("usage")?.let { protocolJson.decodeFromJsonElement<no.pradhan.agentview.nativeapp.net.ContextUsage>(it) }
+            val p = no.pradhan.agentview.nativeapp.chat.contextPanel(usage, c.nullable("context")?.jsonPrimitive?.long, c.nullable("contextWindow")?.jsonPrimitive?.long)
+            val want = c.nullable("panel")?.jsonObject
+            if (want == null) { assertEquals(c.str("name"), null, p); continue }
+            assertEquals(c.str("name"), want.str("used"), p!!.used)
+            assertEquals(c.str("name"), want.str("amount"), p.amount)
+            assertEquals(c.str("name"), want.getValue("fill").jsonPrimitive.double, Math.round(p.fill * 10000) / 10000.0, 0.0)
+            val rows = want.getValue("rows").jsonArray.map { it.jsonObject }
+            assertEquals(c.str("name"), rows.map { listOf(it.str("name"), it.str("tokens"), it.str("share"), it.getValue("tone").jsonPrimitive.intOrNull, it.getValue("gap").jsonPrimitive.boolean) }, p.rows.map { listOf(it.name, it.tokens, it.share, it.tone, it.gap) })
         }
     }
 

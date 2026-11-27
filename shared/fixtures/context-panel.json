@@ -1,0 +1,20 @@
+[
+  { "name": "a Claude chat lists the rows with tokens and share", "usage": { "total": 107800, "max": 1000000, "rows": [
+      { "id": "messages", "name": "Messages", "tokens": 44800, "kind": "used" },
+      { "id": "system_tools", "name": "System tools", "tokens": 21800, "kind": "used" },
+      { "id": "custom_agents", "name": "Custom agents", "tokens": 381, "kind": "used" },
+      { "id": "autocompact_buffer", "name": "Autocompact buffer", "tokens": 33000, "kind": "buffer" },
+      { "id": "free_space", "name": "Free space", "tokens": 859200, "kind": "free" } ] },
+    "context": 90000, "contextWindow": 1000000,
+    "panel": { "used": "11% used", "amount": "107.8k / 1M", "fill": 0.1078, "rows": [
+      { "name": "Messages", "tokens": "44.8k", "share": "4.5%", "tone": 0, "gap": false },
+      { "name": "System tools", "tokens": "21.8k", "share": "2.2%", "tone": 1, "gap": false },
+      { "name": "Custom agents", "tokens": "381", "share": "0.0%", "tone": 2, "gap": false },
+      { "name": "Autocompact buffer", "tokens": "33k", "share": "3.3%", "tone": null, "gap": true },
+      { "name": "Free space", "tokens": "859.2k", "share": "85.9%", "tone": null, "gap": false } ] } },
+  { "name": "a Codex chat shows only the total", "usage": null, "context": 64000, "contextWindow": 256000,
+    "panel": { "used": "25% used", "amount": "64k / 256k", "fill": 0.25, "rows": [] } },
+  { "name": "without a window it shows the tokens", "usage": null, "context": 1500, "contextWindow": null,
+    "panel": { "used": "", "amount": "1.5k tokens", "fill": 0, "rows": [] } },
+  { "name": "nothing to show before the first turn", "usage": null, "context": null, "contextWindow": 200000, "panel": null }
+]

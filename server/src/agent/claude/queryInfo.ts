@@ -1,4 +1,5 @@
 import type { Query } from '@anthropic-ai/claude-agent-sdk';
+import type { ContextUsage } from '../../../../shared/protocol.js';
 import type { AgentHost } from '../types.js';
 import { sessionUsage } from './usage.js';
 
@@ -34,5 +35,19 @@ export async function loadUsage(q: Query, host: AgentHost, isCurrent: () => bool
     if (isCurrent()) host.setSession({ usage: sessionUsage(u) });
   } catch (err) {
     process.stderr.write(`loadUsage failed: ${String(err)}\n`);
+  }
+}
+
+// The CLI's /context rows, without the tool schemas kept out of the window.
+export function contextUsage(u: Awaited<ReturnType<Query['getContextUsage']>>): ContextUsage {
+  const rows = u.categories.flatMap((c) => (c.kind === 'deferred' || c.isDeferred ? [] : [{ id: c.id ?? c.name, name: c.name, tokens: c.tokens, kind: c.kind as 'used' | 'buffer' | 'free' }]));
+  return { total: u.totalTokens, max: u.maxTokens, rows };
+}
+
+export async function loadContextUsage(q: Query, host: AgentHost) {
+  try {
+    host.setSession({ contextUsage: contextUsage(await q.getContextUsage()) });
+  } catch (err) {
+    process.stderr.write(`loadContextUsage failed: ${String(err)}\n`);
   }
 }

@@ -136,7 +136,12 @@ export type SessionInfo = {
   shells?: BackgroundShell[];
   // The running turn: when it began and the output tokens the model has streamed in it so far.
   turn?: TurnMeter | null;
+  // What fills the context window, read when a client opens the context panel.
+  contextUsage?: ContextUsage | null;
 };
+
+// The context window by category: kind used is in the window, buffer the auto-compact reserve, free what is left.
+export type ContextUsage = { total: number; max: number; rows: Array<{ id: string; name: string; tokens: number; kind: 'used' | 'buffer' | 'free' }> };
 
 export type TurnMeter = { startedAt: number; tokens: number };
 
@@ -145,7 +150,7 @@ export type BackgroundShell = { toolUseId: string; label: string; startedAt: num
 export type SessionUpdate = Omit<SessionInfo, 'commands' | 'mcp'> & Partial<Pick<SessionInfo, 'commands' | 'mcp'>>;
 
 // What the agent behind a chat supports.
-export type Capabilities = { rewind: boolean; mcp: boolean; mcpEdit: boolean; connectors: boolean; effort: boolean; stopTask: boolean; subagents: boolean; forkAt: boolean };
+export type Capabilities = { rewind: boolean; mcp: boolean; mcpEdit: boolean; connectors: boolean; effort: boolean; stopTask: boolean; subagents: boolean; forkAt: boolean; contextUsage: boolean };
 
 // What a file rewind to before a prompt would change, paths relative to the chat folder.
 export type RewindPreview = { files: string[]; insertions: number; deletions: number } | { error: string };
@@ -432,6 +437,7 @@ export type ClientMessage =
   | { type: 'mcp_status' }
   | { type: 'phone_alarm_result'; id: string; ok: boolean; notified?: boolean; weekday?: string; error?: string }
   | { type: 'usage' }
+  | { type: 'context_usage' }
   | { type: 'mcp_reconnect'; name: string }
   | { type: 'mcp_toggle'; name: string; enabled: boolean }
   | { type: 'restart'; now?: boolean };

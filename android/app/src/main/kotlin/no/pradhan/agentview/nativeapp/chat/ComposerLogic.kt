@@ -4,11 +4,13 @@ import no.pradhan.agentview.nativeapp.codex.Week
 import no.pradhan.agentview.nativeapp.codex.meetings.Repeats
 import no.pradhan.agentview.nativeapp.net.ChatEvent
 import no.pradhan.agentview.nativeapp.net.CommandInfo
+import no.pradhan.agentview.nativeapp.net.ContextUsage
 import no.pradhan.agentview.nativeapp.net.ModelInfo
 import no.pradhan.agentview.nativeapp.net.PlanUsage
 import no.pradhan.agentview.nativeapp.net.SessionInfo
 import no.pradhan.agentview.nativeapp.net.menuModes
 import no.pradhan.agentview.nativeapp.ops.mcpSlug
+import no.pradhan.agentview.nativeapp.ops.tokens
 import no.pradhan.agentview.nativeapp.sessions.SavedSession
 
 // web/src/chat/composerLogic.ts and ChatSettings.tsx, the parts the phone composer uses.
@@ -100,6 +102,21 @@ fun appendWord(text: String, add: String) = "$text${if (text.isNotEmpty() && !te
 
 // 80% of the model's window, or COMPACT_AT when the agent does not report it (shared/protocol.ts compactAt).
 fun compactAt(contextWindow: Long?): Long = contextWindow?.takeIf { it > 0 }?.let { Math.round(it * 0.8) } ?: COMPACT_AT.toLong()
+
+data class ContextRow(val name: String, val tokens: String, val share: String, val tone: Int?, val gap: Boolean)
+data class ContextPanel(val used: String, val amount: String, val fill: Double, val rows: List<ContextRow>)
+
+// web composerLogic contextPanel: the total against the window, then the agent's rows; tone numbers the rows in the window, gap opens the reserve and free rows.
+fun contextPanel(usage: ContextUsage?, context: Long?, contextWindow: Long?): ContextPanel? {
+    val total = usage?.total ?: context ?: return null
+    val max = usage?.max?.takeIf { it > 0 } ?: contextWindow?.takeIf { it > 0 } ?: return ContextPanel("", "${tokens(total)} tokens", 0.0, emptyList())
+    var tone = 0
+    val list = usage?.rows.orEmpty()
+    val rows = list.mapIndexed { i, r ->
+        ContextRow(r.name, tokens(r.tokens), String.format(java.util.Locale.US, "%.1f%%", r.tokens * 100.0 / max), if (r.kind == "used") tone++ else null, r.kind != "used" && (i == 0 || list[i - 1].kind == "used"))
+    }
+    return ContextPanel("${Math.round(total * 100.0 / max)}% used", "${tokens(total)} / ${tokens(max)}", minOf(1.0, total.toDouble() / max), rows)
+}
 
 fun contextPercent(context: Long?, contextWindow: Long?): Int? = context?.let { minOf(100, Math.round(it.toDouble() / compactAt(contextWindow) * 100).toInt()) }
 

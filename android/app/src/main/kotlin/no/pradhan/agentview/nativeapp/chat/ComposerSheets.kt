@@ -1,6 +1,20 @@
 package no.pradhan.agentview.nativeapp.chat
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Text
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.dp
+import no.pradhan.agentview.nativeapp.app.loadContextUsage
+import no.pradhan.agentview.nativeapp.ui.Type
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -32,12 +46,13 @@ import no.pradhan.agentview.nativeapp.ui.av
 
 internal class Choice(val value: String, val label: String, val detail: String = "")
 
-internal enum class Picker { Add, Settings, Effort, Account }
+internal enum class Picker { Add, Settings, Effort, Account, Context }
 
 @Composable
 internal fun ComposerSheets(hub: Hub, s: ComposerState, uploading: Int, session: SessionInfo?, sheet: Picker?, attach: Attach, onSheet: (Picker?) -> Unit) {
     when (sheet) {
         Picker.Add -> AddSheet(s, uploading, session, attach, onSheet)
+        Picker.Context -> ContextSheet(s, session, onSheet)
         Picker.Settings -> ChatSettingsSheet(hub, session, onSheet)
         Picker.Effort -> PickerSheet("Select effort", effortsFor(session?.models.orEmpty(), session?.model).map { Choice(it, EFFORT_LABEL[it] ?: it) }, session?.effort, { hub.setEffort(it) }) { onSheet(null) }
         Picker.Account -> PickerSheet("Select Claude account", (session?.accounts?.ifEmpty { null } ?: listOf(session?.account ?: "main")).map { Choice(it, ACCOUNT_LABEL[it] ?: it, listOfNotNull(ACCOUNT_NOTE[it], usageText(session?.usage).ifEmpty { null }?.takeIf { _ -> it == (session?.account ?: "main") }).joinToString(" · ")) }, session?.account ?: "main", { hub.setAccount(it) }) { onSheet(null) }
@@ -60,18 +75,9 @@ private fun AddSheet(s: ComposerState, uploading: Int, session: SessionInfo?, at
             ListRow("Choose file", leading = icon("file"), onClick = { onSheet(null); attach.chooseFile() })
             Hairline(lead = true)
             ListRow("Chat settings", settings, leading = icon("settings-gear"), onClick = { onSheet(Picker.Settings) }, trailing = { Chevron() })
-            if (pct != null && pct >= 50) {
-                val compacting = session?.compacting == true
-                val running = session?.running == true
-                val idle = !compacting && !running && !s.hub.readOnly
-                val meta = when {
-                    compacting -> "Compacting…"
-                    running -> "Compacts when this turn ends"
-                    idle -> "Tap to compact"
-                    else -> null
-                }
+            if (pct != null) {
                 Hairline(lead = true)
-                ListRow("$pct% context", meta, leading = icon("pulse"), onClick = if (idle) ({ onSheet(null); s.hub.submit("/compact", false) {} }) else null)
+                ListRow("Context", "$pct% used", leading = icon("pulse"), onClick = { onSheet(Picker.Context) }, trailing = { Chevron() })
             }
         }
     }
@@ -130,6 +136,36 @@ private fun PickerSheet(title: String, items: List<Choice>, current: String?, on
                 if (i > 0) Hairline()
                 ChoiceRow(c.label, c.detail, checked = c.value == current, onClick = { onPick(c.value); onDismiss() })
             }
+        }
+    }
+}
+
+@Composable
+private fun ContextSheet(s: ComposerState, session: SessionInfo?, onSheet: (Picker?) -> Unit) {
+    val c = av
+    val rowsToo = session?.capabilities?.can("contextUsage") ?: false
+    LaunchedEffect(rowsToo) { if (rowsToo) s.hub.loadContextUsage() }
+    val panel = contextPanel(if (rowsToo) session?.contextUsage else null, session?.context, session?.contextWindow) ?: return
+    val tones = listOf(c.accentFill, c.err, c.ok, c.warn)
+    val swatch = { color: Color -> @Composable { Box(Modifier.size(10.dp).background(color, RoundedCornerShape(2.dp))) } }
+    Sheet({ onSheet(null) }, "Context", padded = false, full = false, onBack = { onSheet(Picker.Add) }) {
+        Group {
+            ListRow(panel.used.ifEmpty { panel.amount }, panel.amount.takeIf { panel.used.isNotEmpty() }, below = {
+                Box(Modifier.fillMaxWidth().padding(top = Tokens.sp2).height(4.dp).background(c.border, RoundedCornerShape(2.dp))) {
+                    Box(Modifier.fillMaxWidth(panel.fill.toFloat()).fillMaxHeight().background(c.accentFill, RoundedCornerShape(2.dp)))
+                }
+            })
+            if (rowsToo && session?.contextUsage == null) { Hairline(); ListRow("Reading the breakdown…", muted = true) }
+            panel.rows.forEach { r ->
+                Hairline(lead = !r.gap)
+                ListRow(r.name, leading = swatch(r.tone?.let { tones.getOrElse(it) { c.fgMuted } } ?: c.border), trailing = { Text("${r.tokens}  ${r.share}", style = Type.body, color = c.fgMuted) }, compact = true)
+            }
+        }
+        val compacting = session?.compacting == true
+        val running = session?.running == true
+        val idle = !compacting && !running && !s.hub.readOnly
+        Group {
+            ListRow("Compact now", when { compacting -> "Compacting…"; running -> "Compacts when this turn ends"; else -> null }, muted = !idle, onClick = if (idle) ({ onSheet(null); s.hub.submit("/compact", false) {} }) else null)
         }
     }
 }

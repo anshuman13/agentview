@@ -14,7 +14,7 @@ import { preferencesText } from '../tools/wiki.js';
 import { mcpFrom } from './mcp.js';
 import { loadOpenRouter, openRouterModels, openRouterValue } from './openrouter.js';
 import { McpControl } from './mcpControl.js';
-import { loadMeta, loadUsage } from './queryInfo.js';
+import { loadContextUsage, loadMeta, loadUsage } from './queryInfo.js';
 import { configDir, loggedInAccounts, markLimited, otherAccount, overageUntil, reopenAccount } from './accounts.js';
 import { unattendedRules } from './unattended.js';
 import { loadSettings, unattendedLimits } from '../../settings.js';
@@ -89,7 +89,7 @@ export class ClaudeDriver implements AgentDriver {
 
   // On OpenRouter the models, effort and the Opus advisor are not Anthropic's, so they are left out.
   get capabilities(): Capabilities {
-    return { rewind: true, mcp: true, mcpEdit: true, connectors: !this.openrouter, effort: !this.openrouter, stopTask: true, subagents: true, forkAt: true };
+    return { rewind: true, mcp: true, mcpEdit: true, connectors: !this.openrouter, effort: !this.openrouter, stopTask: true, subagents: true, forkAt: true, contextUsage: true };
   }
 
   get instructionFiles() {
@@ -254,6 +254,10 @@ export class ClaudeDriver implements AgentDriver {
 
   refreshUsage() {
     return this.loadUsage();
+  }
+
+  async loadContextUsage() {
+    if (this.q) return loadContextUsage(this.q, this.host);
   }
 
   private async loadUsage() {

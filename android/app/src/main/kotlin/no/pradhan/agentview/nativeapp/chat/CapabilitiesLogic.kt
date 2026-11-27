@@ -12,6 +12,7 @@ fun Capabilities.can(what: String) = when (what) {
     "stopTask" -> stopTask
     "subagents" -> subagents
     "forkAt" -> forkAt
+    "contextUsage" -> contextUsage
     else -> true
 }
 

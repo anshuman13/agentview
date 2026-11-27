@@ -206,7 +206,7 @@ data class ModelInfo(val value: String, val displayName: String = "", val descri
 
 // shared/protocol.ts Capabilities: what the chat's driver supports; a missing field counts as supported.
 @Serializable
-data class Capabilities(val rewind: Boolean = true, val mcp: Boolean = true, val mcpEdit: Boolean = true, val connectors: Boolean = true, val effort: Boolean = true, val stopTask: Boolean = true, val subagents: Boolean = true, val forkAt: Boolean = true)
+data class Capabilities(val rewind: Boolean = true, val mcp: Boolean = true, val mcpEdit: Boolean = true, val connectors: Boolean = true, val effort: Boolean = true, val stopTask: Boolean = true, val subagents: Boolean = true, val forkAt: Boolean = true, val contextUsage: Boolean = true)
 
 @Serializable
 data class CommandInfo(val name: String, val description: String = "")
@@ -239,7 +239,15 @@ data class SessionInfo(
     val resumeCommand: String? = null,
     val shells: List<BackgroundShell> = emptyList(),
     val turn: TurnMeter? = null,
+    val contextUsage: ContextUsage? = null,
 )
+
+// shared/protocol.ts ContextUsage: the context window by category; kind is used, buffer or free.
+@Serializable
+data class ContextUsage(val total: Long = 0, val max: Long = 0, val rows: List<ContextUsageRow> = emptyList())
+
+@Serializable
+data class ContextUsageRow(val id: String = "", val name: String = "", val tokens: Long = 0, val kind: String = "used")
 
 // shared/protocol.ts TurnMeter: when the running turn began and the output tokens streamed in it so far.
 @Serializable
@@ -403,6 +411,7 @@ fun sendNowCmd(id: String) = cmd("send_now") { put("id", id) }
 fun setModelCmd(model: String) = cmd("set_model") { put("model", model) }
 fun setEffortCmd(effort: String) = cmd("set_effort") { put("effort", effort) }
 fun usageCmd() = cmd("usage")
+fun contextUsageCmd() = cmd("context_usage")
 fun setAccountCmd(account: String) = cmd("set_account") { put("account", account) }
 fun setModeCmd(mode: String) = cmd("set_permission_mode") { put("mode", mode) }
 fun setReviewCmd(on: Boolean) = cmd("set_review") { put("on", on) }

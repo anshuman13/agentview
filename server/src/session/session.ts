@@ -228,6 +228,10 @@ export class AgentSession implements AgentHost {
     await this.driver.refreshUsage?.();
   }
 
+  async loadContextUsage() {
+    await this.driver.loadContextUsage?.();
+  }
+
   setModel(model: string) {
     return this.settings.setModel(model);
   }

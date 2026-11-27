@@ -10,7 +10,7 @@ import { TABLES } from '../../shared/tables';
 import { editCount, stripRound } from '../../shared/edits';
 import { exploreLabelOf, exploreRunsOf, type ExploreRow } from '../../shared/explore';
 import { FEATURES, featureRows, paletteFeature, shownFeature, type UseDays } from '../../shared/featureUse';
-import type { Capabilities, ChatEvent, Finding, ChatRun, Effort, LiveChat, Provider, SavedSession, SpawnedBuild, Try } from '../../shared/protocol';
+import type { Capabilities, ContextUsage, ChatEvent, Finding, ChatRun, Effort, LiveChat, Provider, SavedSession, SpawnedBuild, Try } from '../../shared/protocol';
 import { START_MODES, billing, checkedModel, menuModes, modeSteps, modelRow, newestModels, providerLabel, providerMark, providerModes, settingsLabel, shortModel, startModeFor, startTexts, type Billing } from '../../shared/providers';
 import { recentInRepo } from './app/newChat';
 import { blockedRule, planFeedback, planParagraphs } from './chat/cards/pendingLogic';
@@ -40,7 +40,7 @@ import { memoryMark, type MemoryFile, type MemoryMark } from './chat/cards/memor
 import { leftOutPreferences, type Preference } from '../../shared/preferences';
 import { countChat } from './app/shell/counts';
 import { can } from './chat/capabilitiesLogic';
-import { buildHistory, draftKey, failedLine, ghostFor, handoffText, joinMarks, markChip, remember, splitMarks, turnEnd, userParts } from './chat/composer/composerLogic';
+import { buildHistory, contextPanel, draftKey, failedLine, ghostFor, handoffText, joinMarks, markChip, remember, splitMarks, turnEnd, userParts } from './chat/composer/composerLogic';
 import { composerPlaceholder, type PlaceholderDevice, type PlaceholderState } from '../../shared/composerText';
 import { agentChipCount, buildHead, headerState, nowMeta, runLine, stoppedText } from './sessions/runLogic';
 import { tryColumn } from './sessions/triesLogic';
@@ -848,6 +848,13 @@ describe('cases shared with the Android app', () => {
         const changes = action === 'approve' ? approveAllChanges(list, pages, facts, now) : rejectChanges(list, pages, facts, reason, now);
         expect(changes.map((x) => ({ table: x.table, id: x.row.id, patch: x.patch, undo: x.undo }))).toEqual(c.changes!);
       }
+    });
+  }
+
+  for (const c of cases<{ name: string; usage: ContextUsage | null; context: number | null; contextWindow: number | null; panel: unknown }>('context-panel')) {
+    it(`context panel: ${c.name}`, () => {
+      const p = contextPanel(c.usage, c.context, c.contextWindow);
+      expect(p && { ...p, fill: Math.round(p.fill * 10000) / 10000 }).toEqual(c.panel as any);
     });
   }
 

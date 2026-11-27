@@ -5,5 +5,6 @@
   { "name": "a driver with only the basics", "capabilities": { "rewind": false, "mcp": false, "effort": false, "stopTask": false }, "can": { "rewind": false, "mcp": false, "effort": false, "stopTask": false } },
   { "name": "a driver without subagents", "capabilities": { "rewind": true, "mcp": true, "effort": true, "stopTask": false, "subagents": false }, "can": { "subagents": false, "rewind": true } },
   { "name": "a missing subagents field means supported", "capabilities": { "rewind": true, "mcp": true, "effort": true, "stopTask": true }, "can": { "subagents": true } },
-  { "name": "a Codex chat cannot fork from a reply", "capabilities": { "rewind": false, "mcp": true, "effort": true, "stopTask": false, "subagents": false, "forkAt": false }, "can": { "forkAt": false, "mcp": true } }
+  { "name": "a Codex chat cannot fork from a reply", "capabilities": { "rewind": false, "mcp": true, "effort": true, "stopTask": false, "subagents": false, "forkAt": false }, "can": { "forkAt": false, "mcp": true } },
+  { "name": "a Codex chat has no context breakdown", "capabilities": { "rewind": false, "mcp": true, "effort": true, "stopTask": false, "contextUsage": false }, "can": { "contextUsage": false } }
 ]

@@ -1,9 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { sinceHeard, useStore } from '../../app/store';
-import { compact } from '../chatActions';
 import { Icon } from '../../ui/Icon';
 import { compactAt, type ChatEvent } from '../../../../shared/protocol';
 import { contextPercent, filesEdited } from './composerLogic';
+import { ContextPanel } from './ContextPanel';
 
 let editedFor: ChatEvent[] | undefined;
 let editedCount = 0;
@@ -29,16 +29,19 @@ export function ComposerStats({ hint }: { hint: string }) {
   const pct = contextPercent(context, contextWindow);
   const limit = compactAt(contextWindow);
   const level = context === null ? '' : context >= limit ? 'over' : context >= limit * 0.75 ? 'near' : '';
+  const [open, setOpen] = useState(false);
+  const meter = useRef<HTMLButtonElement>(null);
   return (
     <div className="cp-under">
       {hint && <span className="cp-hint">{hint}</span>}
       <span className="cp-stats">
-        {compacting ? <span><Icon name="loading" small spin /> Compacting…</span> : level && (
-          <button className={`cp-ctx ${level}`} disabled={running} title={`${context!.toLocaleString()} tokens in context. ${running ? 'Compacts when this turn ends' : 'Tap to compact'}`} onClick={compact}>{pct}% context{!running && ' · compact'}</button>
+        {compacting ? <span><Icon name="loading" small spin /> Compacting…</span> : pct !== null && (
+          <button ref={meter} className={`cp-ctx ${level}`} title={`${context!.toLocaleString()} tokens in context. Tap for the breakdown`} onClick={() => setOpen((v) => !v)}>{pct}% context</button>
         )}
         {edited > 0 && <span>{edited} {edited === 1 ? 'file' : 'files'} edited</span>}
         {stale >= 30 && <span className="cp-stale" title="Nothing has arrived from the server. The link is reopened after 50 s of silence.">No update for {stale}s</span>}
       </span>
+      {open && <ContextPanel trigger={meter} onClose={() => setOpen(false)} />}
     </div>
   );
 }

@@ -93,6 +93,8 @@ export function command(chat: AgentSession, msg: ClientMessage): Promise<unknown
       return void chat.mcp.refresh();
     case 'usage':
       return void chat.refreshUsage();
+    case 'context_usage':
+      return void chat.loadContextUsage();
     case 'mcp_reconnect':
       return void chat.mcp.reconnect(String(msg.name));
     case 'mcp_toggle':
