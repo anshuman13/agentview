@@ -3,7 +3,9 @@ import { apiUrl, fetchJson, wsUrl } from '../app/api';
 import type { MemoryFile } from './cards/memoryLogic';
 import type { SubChat } from './transcript/subChatsLogic';
 import type { ChatEvent, SpawnedBuild } from '../../../shared/protocol';
+import { appendRule, removeRule } from '../../../shared/steering';
 import { createTerm, listTerms } from '../workspace/termApi';
+import { fileRequest } from '../workspace/fileApi';
 
 async function terminalId(chat: string): Promise<string | null> {
   try {
@@ -50,6 +52,26 @@ export const removeMemory = (path: string) => fetchJson<RemovedMemory>(api('/api
 
 export const restoreMemory = (path: string, removed: RemovedMemory) =>
   fetchJson(api('/api/memory/restore'), { method: 'POST', body: JSON.stringify({ path, ...removed }) });
+
+async function readRepoFile(file: string, chat?: string): Promise<string> {
+  const r = await fileRequest(file, undefined, chat);
+  if (!r.ok) throw new Error(await r.text());
+  return (await r.json()).content ?? '';
+}
+
+async function writeRepoFile(file: string, text: string, chat?: string) {
+  const r = await fileRequest(file, { method: 'PUT', body: text }, chat);
+  if (!r.ok) throw new Error(await r.text());
+}
+
+// Appends a bullet to the instruction file and returns an undo that reads the file again and removes only that bullet.
+export async function addRepoRule(file: string, text: string, chat?: string) {
+  await writeRepoFile(file, appendRule(await readRepoFile(file, chat), text)!, chat);
+  return async () => {
+    const left = removeRule(await readRepoFile(file, chat), text);
+    if (left !== null) await writeRepoFile(file, left, chat);
+  };
+}
 
 export const fetchSavedSessions = () => fetch(api('/api/sessions')).then((r) => r.json());
 

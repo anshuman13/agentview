@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { appendRule, removeRule } from '../../../../shared/steering';
+import { appendRule } from '../../../../shared/steering';
 import { setUi, useStore } from '../../app/store';
 import { Button } from '../../ui/Button';
 import { Icon } from '../../ui/Icon';
@@ -10,7 +10,6 @@ import { Section, sectionCount } from '../../ui/Section';
 import { Sheet } from '../../ui/Sheet';
 import { Confirm, type ConfirmRequest } from '../../ui/Confirm';
 import { command } from '../../ui/util';
-import { fileRequest } from '../../workspace/fileApi';
 import { setView, showSnack } from '../../codex/view';
 import { useAssistantTable } from '../../codex/data';
 import { MEMORY } from '../../codex/wiki/shared';
@@ -23,7 +22,7 @@ import { profileOfPath } from '../../../../shared/workspace';
 import { loadErrorText } from '../../../../shared/loadError';
 import { PREFERENCE_CHARS, PREFERENCES, givenPreferences, leftOutPreferences } from '../../../../shared/preferences';
 import { Markdown } from '../Chat';
-import { fetchMemory, saveMemory } from '../chatApi';
+import { addRepoRule, fetchMemory, saveMemory } from '../chatApi';
 import { forgetMemory, moveMemoryToWiki, rememberChat } from '../chatActions';
 import { isMemoryIndex } from '../transcript/workFold';
 import { markLine, memoryMark, type MemoryFile, type MemoryMark } from './memoryLogic';
@@ -42,26 +41,6 @@ export const ruleFile = (cwd: string, files?: string[]) => (files?.[0]?.startsWi
 
 export function RememberPick({ close }: { close: () => void }) {
   return <Confirm title="Remember" detail="Saved to Memory for every later chat." action="Save" icon="lightbulb" input={{ value: '', placeholder: 'What to remember', maxLength: 400 }} run={async (text) => rememberChat(text)} onClose={close} />;
-}
-
-export async function readRepoFile(file: string, chat?: string): Promise<string> {
-  const r = await fileRequest(file, undefined, chat);
-  if (!r.ok) throw new Error(await r.text());
-  return (await r.json()).content ?? '';
-}
-
-export async function writeRepoFile(file: string, text: string, chat?: string) {
-  const r = await fileRequest(file, { method: 'PUT', body: text }, chat);
-  if (!r.ok) throw new Error(await r.text());
-}
-
-// Appends a bullet to the instruction file and returns an undo that reads the file again and removes only that bullet.
-export async function addRepoRule(file: string, text: string, chat?: string) {
-  await writeRepoFile(file, appendRule(await readRepoFile(file, chat), text)!, chat);
-  return async () => {
-    const left = removeRule(await readRepoFile(file, chat), text);
-    if (left !== null) await writeRepoFile(file, left, chat);
-  };
 }
 
 // Enter appends a bullet to the repo instruction file; Undo removes it again.
