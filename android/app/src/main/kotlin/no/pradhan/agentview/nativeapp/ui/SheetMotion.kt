@@ -31,16 +31,33 @@ internal fun motionOff(): Boolean {
     return remember(resolver) { Settings.Global.getFloat(resolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f) == 0f }
 }
 
+// ModalNavigationDrawer's open() and close(), which its scrim tap calls, read defaultSpatialSpec; the swipe settle keeps the app's motion.
+private class DrawerCloseMotion(app: MotionScheme, private val still: Boolean) : MotionScheme by app {
+    override fun <T> defaultSpatialSpec(): FiniteAnimationSpec<T> = if (still) snap() else tween(Tokens.motionDuration, easing = Tokens.motionEaseOut)
+}
+
 // Runs `sheet` under the token motion; `keep` puts the app's motion back for the sheet's content.
 @Composable
 internal fun SheetMotion(sheet: @Composable (keep: @Composable (@Composable () -> Unit) -> Unit) -> Unit) {
+    val still = motionOff()
+    WithMotion({ remember(still) { TokenMotion(still) } }, sheet)
+}
+
+// Runs `drawer` so DrawerState.close() is the 250 ms token close; `keep` puts the app's motion back for its content.
+@Composable
+internal fun DrawerMotion(drawer: @Composable (keep: @Composable (@Composable () -> Unit) -> Unit) -> Unit) {
+    val still = motionOff()
+    WithMotion({ app -> remember(app, still) { DrawerCloseMotion(app, still) } }, drawer)
+}
+
+@Composable
+private fun WithMotion(scheme: @Composable (app: MotionScheme) -> MotionScheme, content: @Composable (keep: @Composable (@Composable () -> Unit) -> Unit) -> Unit) {
     val m = MaterialTheme
     val colors = m.colorScheme
     val shapes = m.shapes
     val type = m.typography
     val app = m.motionScheme
-    val still = motionOff()
-    MaterialTheme(colors, remember(still) { TokenMotion(still) }, shapes, type) {
-        sheet { inner -> MaterialTheme(colors, app, shapes, type, inner) }
+    MaterialTheme(colors, scheme(app), shapes, type) {
+        content { inner -> MaterialTheme(colors, app, shapes, type, inner) }
     }
 }

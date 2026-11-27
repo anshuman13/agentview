@@ -65,6 +65,7 @@ import no.pradhan.agentview.nativeapp.ui.Badge
 import no.pradhan.agentview.nativeapp.ui.BadgeTone
 import no.pradhan.agentview.nativeapp.ui.Button
 import no.pradhan.agentview.nativeapp.ui.ButtonSize
+import no.pradhan.agentview.nativeapp.ui.DrawerMotion
 import no.pradhan.agentview.nativeapp.ui.Chip
 import no.pradhan.agentview.nativeapp.ui.Fab
 import no.pradhan.agentview.nativeapp.ui.Group
@@ -183,16 +184,17 @@ fun CodexScreen(hub: Hub) {
     LaunchedEffect(nav.page, nav.route, nav.searching, filterKey) { nav.picked = null; if (nav.page != "meetings") nav.decisions = false }
     BackHandler(enabled = nav.picked != null || nav.sub || nav.searching || nav.page != "overview") { nav.back() }
     val drawerState = rememberDrawerState(DrawerValue.Closed)
-    BackHandler(enabled = drawerState.isOpen) { scope.launch { drawerState.animateTo(DrawerValue.Closed, tween(Tokens.motionDuration, easing = Tokens.motionEaseOut)) } }
+    // Back, a row pick and the scrim tap all close through DrawerState.close(), which DrawerMotion makes the token tween.
+    BackHandler(enabled = drawerState.isOpen) { scope.launch { drawerState.close() } }
     val refresh = { scope.launch { refreshing = true; hub.codex.sync(); refreshing = false }; Unit }
-    val go = { p: String -> if (p != nav.page) hub.track("list:$p"); nav.go(p); scope.launch { drawerState.animateTo(DrawerValue.Closed, tween(Tokens.motionDuration, easing = Tokens.motionEaseOut)) }; Unit }
+    val go = { p: String -> if (p != nav.page) hub.track("list:$p"); nav.go(p); scope.launch { drawerState.close() }; Unit }
 
-    ModalNavigationDrawer(
-        drawerContent = { ListsDrawer(hub, st, nav.page, profile, filterKey, go) },
+    DrawerMotion { keep -> ModalNavigationDrawer(
+        drawerContent = { keep { ListsDrawer(hub, st, nav.page, profile, filterKey, go) } },
         modifier = Modifier.clipToBounds(),
         drawerState = drawerState,
         gesturesEnabled = drawerState.isOpen,
-    ) {
+    ) { keep {
         Box(Modifier.fillMaxSize().background(av.groupPage)) {
             Column(Modifier.align(Alignment.TopCenter).widthIn(max = Tokens.pageMax).fillMaxSize()) {
                 CodexHeader(hub, st, nav, profile, filterKey, now) { scope.launch { drawerState.animateTo(DrawerValue.Open, tween(Tokens.motionDuration, easing = Tokens.motionEaseIn)) } }
@@ -207,7 +209,7 @@ fun CodexScreen(hub: Hub) {
             )
             SnackHost(snack, Modifier.align(Alignment.BottomCenter))
         }
-    }
+    } } }
     CodexSheetsHost(hub, st, nav, profile, now, actions, ops, editing, snack)
 }
 
