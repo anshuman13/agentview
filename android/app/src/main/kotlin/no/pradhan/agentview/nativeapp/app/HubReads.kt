@@ -18,6 +18,7 @@ import no.pradhan.agentview.nativeapp.codex.autopilot.parseGitLog
 import no.pradhan.agentview.nativeapp.codex.autopilot.parseRunDiff
 import no.pradhan.agentview.nativeapp.net.ChatRun
 import no.pradhan.agentview.nativeapp.workspace.parseBranchDiff
+import no.pradhan.agentview.nativeapp.workspace.parseCommitDiff
 import no.pradhan.agentview.nativeapp.workspace.parseDir
 import no.pradhan.agentview.nativeapp.workspace.parseFile
 import no.pradhan.agentview.nativeapp.workspace.parseGitStatus
@@ -30,6 +31,7 @@ suspend fun Hub.readDir(path: String) = parseDir(read("/api/dir?path=${enc(path)
 suspend fun Hub.chatFiles(chat: String): List<String> = protocolJson.decodeFromString(api.get("/api/files", chat))
 suspend fun Hub.gitStatus() = parseGitStatus(read("/api/git/status"))
 suspend fun Hub.branchDiff() = parseBranchDiff(read("/api/git/branch"))
+suspend fun Hub.commitDiff(hash: String) = parseCommitDiff(read("/api/git/show?hash=${enc(hash)}"))
 fun Hub.git(action: String, body: String, failure: String, done: (Boolean) -> Unit) = write("/api/git/$action", body, failure, done)
 suspend fun Hub.terminals() = parseTerms(read("/api/terms"))
 fun Hub.newTerminal(failure: String, done: (Boolean) -> Unit) = write("/api/terms", "", failure, done)

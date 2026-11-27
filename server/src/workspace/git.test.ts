@@ -3,6 +3,7 @@ import { mkdtempSync, mkdirSync, rmSync, writeFileSync, existsSync, readFileSync
 import os from 'node:os';
 import path from 'node:path';
 import { afterAll, describe, expect, it } from 'bun:test';
+import { jobRepo, sh as repoSh } from './testRepo.js';
 import { gitRoute, gitStatus, parseStatus, parseLog, parseNumstat } from './git.js';
 
 const repo = mkdtempSync(path.join(os.tmpdir(), 'agentview-git-'));
@@ -120,5 +121,30 @@ describe('gitStatus', () => {
     expect((await second).files.some((f) => f.path === 'later.txt')).toBe(true);
     await first;
     rmSync(path.join(repo, 'later.txt'));
+  });
+});
+
+describe('branch commits and one commit', () => {
+  it('lists the commits since the base and shows one commit, a root commit against the empty tree', async () => {
+    const { root, dir } = jobRepo();
+    try {
+      writeFileSync(path.join(dir, 'one.txt'), '1\n');
+      repoSh(dir, 'add', '.');
+      repoSh(dir, 'commit', '-q', '-m', 'Add one');
+      writeFileSync(path.join(dir, 'two.txt'), '2\n');
+      repoSh(dir, 'add', '.');
+      repoSh(dir, 'commit', '-q', '-m', 'Add two');
+      const b = (await gitRoute(dir, 'branch', new URLSearchParams(), null)) as { files: { path: string }[]; commits: { hash: string; subject: string }[] };
+      expect(b.files.map((f) => f.path)).toEqual(['one.txt', 'two.txt']);
+      expect(b.commits.map((c) => c.subject)).toEqual(['Add two', 'Add one']);
+      const one = (await gitRoute(dir, 'show', new URLSearchParams({ hash: b.commits[1].hash }), null)) as { files: { path: string; additions: number }[]; diff: string };
+      expect(one.files).toEqual([{ path: 'one.txt', additions: 1, deletions: 0 }]);
+      expect(one.diff).toContain('+1');
+      const first = repoSh(dir, 'rev-list', '--max-parents=0', 'HEAD').trim();
+      expect(((await gitRoute(dir, 'show', new URLSearchParams({ hash: first }), null)) as { files: unknown[] }).files).toEqual([]);
+      await expect(gitRoute(dir, 'show', new URLSearchParams({ hash: '--output=x' }), null)).rejects.toThrow('hash');
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
   });
 });

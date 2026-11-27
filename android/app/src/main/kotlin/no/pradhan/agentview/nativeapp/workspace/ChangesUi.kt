@@ -29,6 +29,7 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import no.pradhan.agentview.nativeapp.app.Hub
 import no.pradhan.agentview.nativeapp.app.branchDiff
+import no.pradhan.agentview.nativeapp.app.commitDiff
 import no.pradhan.agentview.nativeapp.app.git
 import no.pradhan.agentview.nativeapp.app.gitStatus
 import no.pradhan.agentview.nativeapp.net.providerLabel
@@ -53,7 +54,9 @@ import no.pradhan.agentview.nativeapp.ui.Sheet
 import no.pradhan.agentview.nativeapp.ui.TextField
 import no.pradhan.agentview.nativeapp.ui.Tokens
 import no.pradhan.agentview.nativeapp.ui.WhileStarted
+import no.pradhan.agentview.nativeapp.ui.agoShort
 import no.pradhan.agentview.nativeapp.ui.av
+import no.pradhan.agentview.nativeapp.ui.plural
 import no.pradhan.agentview.nativeapp.ui.select
 import no.pradhan.agentview.nativeapp.ui.Loaded
 import no.pradhan.agentview.nativeapp.ui.rememberLoad
@@ -89,6 +92,8 @@ fun ChangesScreen(hub: Hub, onBack: () -> Unit) {
         return
     }
     val (branchLoad, reloadBranch) = rememberLoad(chat) { hub.branchDiff() }
+    val pick = rememberSaveable(chat) { mutableStateOf<String?>(null) }
+    val (commitLoad, _) = rememberLoad(chat, pick.value) { pick.value?.let { hub.commitDiff(it) } }
     // A file the agent or watcher reports changed refreshes after the burst; the slow poll catches git commands run outside.
     LaunchedEffect(hub, chat) { hub.fileChanged.collectLatest { delay(300); reload() } }
     WhileStarted(chat) { while (true) { delay(30_000); reload() } }
@@ -105,7 +110,7 @@ fun ChangesScreen(hub: Hub, onBack: () -> Unit) {
                 MenuItem("Review changes with $label", "sparkle", { close(); hub.askChat(REVIEW_LOCAL) }, enabled = files.isNotEmpty())
             }
         }
-        PageBody { ChangesList(hub, load, branchLoad.data, ops, message, shownPatch) { open = it.file; openLine = it.line } }
+        PageBody { ChangesList(hub, load, branchLoad.data, Picked(pick, commitLoad), ops, message, shownPatch) { open = it.file; openLine = it.line } }
     }
     ask?.let { list ->
         ConfirmDialog(discardTitle(list), discardDetail(list), if (list.any { it.status == "?" }) "Discard and Delete" else "Discard", { ops.run("discard", pathsBody(list)) }, onDismiss = { ask = null })
@@ -113,7 +118,7 @@ fun ChangesScreen(hub: Hub, onBack: () -> Unit) {
 }
 
 @Composable
-private fun ChangesList(hub: Hub, load: Loaded<GitStatus>, branch: BranchDiff?, ops: GitOps, message: MutableState<String>, shownPatch: MutableState<String?>, onOpenFinding: (Finding) -> Unit) {
+private fun ChangesList(hub: Hub, load: Loaded<GitStatus>, branch: BranchDiff?, picked: Picked, ops: GitOps, message: MutableState<String>, shownPatch: MutableState<String?>, onOpenFinding: (Finding) -> Unit) {
     val status = load.data
     val files = status?.files ?: emptyList()
     val staged = files.filter { it.staged }
@@ -135,7 +140,7 @@ private fun ChangesList(hub: Hub, load: Loaded<GitStatus>, branch: BranchDiff?, 
         stagedSection(staged, ops)
         changesSection(changes, ops)
         if (status != null && files.isEmpty()) item { EmptyState("No changes", icon = "source-control", small = false) }
-        branch?.takeIf { it.files.isNotEmpty() }?.let { committedSection(it, status?.branch, shownPatch) }
+        branch?.takeIf { it.files.isNotEmpty() }?.let { committedSection(it, status?.branch, picked, shownPatch) }
         item { Column { Findings(hub, "local", onOpenFinding) } }
         item { Spacer(Modifier.padding(bottom = Tokens.sp16)) }
     }
@@ -169,17 +174,37 @@ private fun LazyListScope.changesSection(changes: List<GitFile>, ops: GitOps) {
     }
 }
 
-private fun LazyListScope.committedSection(b: BranchDiff, branch: String?, shownPatch: MutableState<String?>) {
-    val patches = splitDiff(b.diff)
+// The commit picked in "Committed since <base>" and its loaded files; null shows all of the branch.
+private class Picked(val hash: MutableState<String?>, val load: Loaded<BranchDiff?>)
+
+// Claude Code's Commits list: "All changes", then each commit with its sha and age; a picked commit shows only its files.
+private fun LazyListScope.committedSection(b: BranchDiff, branch: String?, picked: Picked, shownPatch: MutableState<String?>) {
+    val pick = picked.hash.value?.takeIf { h -> b.commits.any { it.hash == h } }
+    val shown = if (pick == null) b else picked.load.data
     item { SectionHeader(committedLabel(branch, b.base), b.files.size.toString()) }
+    if (b.commits.size > 1) item {
+        val now = System.currentTimeMillis()
+        Group(Modifier.padding(bottom = Tokens.sp8)) {
+            ListRow("All changes", plural(b.commits.size, "commit"), lines = 1, selected = pick == null, onClick = { picked.hash.value = null; shownPatch.value = null })
+            b.commits.forEach { c ->
+                Hairline()
+                ListRow(c.subject, "${c.hash} · ${agoShort(c.at, now)}", lines = 1, metaLines = 1, selected = pick == c.hash, onClick = { picked.hash.value = if (pick == c.hash) null else c.hash; shownPatch.value = null })
+            }
+        }
+    }
+    if (shown == null) {
+        item { if (picked.load.error.isNotEmpty()) ErrorHint(picked.load.error) else EmptyState("Loading…", icon = "git-commit") }
+        return
+    }
+    val patches = splitDiff(shown.diff)
     item {
         Group {
-            b.files.forEachIndexed { i, f ->
+            shown.files.forEachIndexed { i, f ->
                 if (i > 0) Hairline(lead = true)
                 val name = f.path.substringAfterLast('/')
-                val shown = shownPatch.value == f.path
-                ListRow(name, parentOf(f.path).ifEmpty { null }, selected = shown, leading = { FileTag(name) }, trailing = { Counts(f.additions, f.deletions) }, onClick = { shownPatch.value = if (shown) null else f.path })
-                if (shown) PatchView(patches[f.path] ?: if (b.diff.isEmpty()) "Diff too large to show" else "No diff", f.path)
+                val open = shownPatch.value == f.path
+                ListRow(name, parentOf(f.path).ifEmpty { null }, selected = open, leading = { FileTag(name) }, trailing = { Counts(f.additions, f.deletions) }, onClick = { shownPatch.value = if (open) null else f.path })
+                if (open) PatchView(patches[f.path] ?: if (shown.diff.isEmpty()) "Diff too large to show" else "No diff", f.path)
             }
         }
     }

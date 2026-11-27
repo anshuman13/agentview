@@ -158,7 +158,19 @@ async function diffSince(cwd: string, since: string, to: string[] = [], env?: Re
 async function branchDiff(cwd: string) {
   const base = await defaultBase(cwd);
   const since = await mergeBase(cwd, base);
-  return { base: base.replace(/^origin\//, ''), ...(since ? await diffSince(cwd, since, ['HEAD']) : { files: [], diff: '' }) };
+  if (!since) return { base: base.replace(/^origin\//, ''), files: [], diff: '', commits: [] };
+  const [diff, log] = await Promise.all([diffSince(cwd, since, ['HEAD']), safeGit(cwd, ['log', `--max-count=${MAX_BRANCH_COMMITS}`, LOG_FORMAT, `${since}..HEAD`])]);
+  return { base: base.replace(/^origin\//, ''), ...diff, commits: parseLog(log) };
+}
+
+const MAX_BRANCH_COMMITS = 50;
+const EMPTY_TREE = '4b825dc642cb6eb9a060e54bf8d69288fbee4904';
+
+// One commit's files and patch against its first parent, a root commit against the empty tree.
+async function commitDiff(cwd: string, hash: string) {
+  if (!/^[0-9a-f]{4,40}$/i.test(hash)) throw new Error('hash must be a commit hash');
+  const parent = (await safeGit(cwd, ['rev-parse', '--verify', '-q', `${hash}^`]).catch(() => '')).trim();
+  return diffSince(cwd, parent || EMPTY_TREE, [hash]);
 }
 const MAX_LOOSE = 200;
 
@@ -199,6 +211,7 @@ export async function reviewDiff(cwd: string, env?: Record<string, string>) {
 }
 
 const MAX_COMMITS = 20;
+const LOG_FORMAT = '--format=%h%x1f%ct%x1f%s';
 
 // `git log --format=%h%x1f%ct%x1f%s` lines, newest first as git prints them.
 export function parseLog(out: string): GitCommit[] {
@@ -214,8 +227,9 @@ export async function gitRoute(cwd: string, route: string, query: URLSearchParam
   if (route === 'log') {
     const since = Number(query.get('since'));
     if (!query.get('since') || !Number.isFinite(since) || since < 0) throw new Error('since must be a time in milliseconds');
-    return { commits: parseLog(await git(cwd, ['log', `--since=${new Date(since).toISOString()}`, `--max-count=${MAX_COMMITS}`, '--format=%h%x1f%ct%x1f%s'], [0, 128])) };
+    return { commits: parseLog(await git(cwd, ['log', `--since=${new Date(since).toISOString()}`, `--max-count=${MAX_COMMITS}`, LOG_FORMAT], [0, 128])) };
   }
+  if (route === 'show') return commitDiff(cwd, query.get('hash') ?? '');
   if (route === 'diff') return { diff: await diff(cwd, query.get('path') ?? '', query.get('staged') === 'true') };
   if (!body) throw new Error('Use POST');
   if (route === 'commit') {

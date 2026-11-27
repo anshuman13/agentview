@@ -47,3 +47,6 @@
   .scm-branch .icon-btn, .scm-acts .icon-btn { width: var(--touch-sm); height: var(--touch-sm); }
   .scm-commit textarea { font-size: var(--fs-2xl); line-height: var(--line-lg); }
 }
+.scm-commits { margin-bottom: var(--sp-3); }
+.scm-sha { font-family: var(--mono); font-size: var(--fs-sm); white-space: nowrap; }
+.scm-loading { padding: var(--sp-3) var(--sp-6); font-size: var(--fs-sm); }

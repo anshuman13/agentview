@@ -1,5 +1,6 @@
 package no.pradhan.agentview.nativeapp.workspace
 
+import no.pradhan.agentview.nativeapp.codex.autopilot.GitCommit
 import no.pradhan.agentview.nativeapp.ui.DiffLine
 import no.pradhan.agentview.nativeapp.ui.lineDiff
 import kotlinx.serialization.Serializable
@@ -144,9 +145,12 @@ fun commentPrompt(path: String, row: DiffRow, comment: String): String {
 fun appendPrompt(draft: String, prompt: String) = if (draft.isBlank()) prompt else draft.trimEnd() + "\n\n" + prompt
 
 // shared: server/src/workspace/git.ts branchDiff, the commits this branch made since the default branch.
-@Serializable data class BranchDiff(val base: String = "", val files: List<PrFile> = emptyList(), val diff: String = "")
+@Serializable data class BranchDiff(val base: String = "", val files: List<PrFile> = emptyList(), val diff: String = "", val commits: List<GitCommit> = emptyList())
 
 fun parseBranchDiff(body: String): BranchDiff = protocolJson.decodeFromString(BranchDiff.serializer(), body)
+
+// One commit's files and patch, from /api/git/show; base and commits stay empty.
+fun parseCommitDiff(body: String): BranchDiff = parseBranchDiff(body)
 
 // web/src/workspace/Changes.tsx Committed: on the default branch itself the commits are what origin does not have yet.
 fun committedLabel(branch: String?, base: String) = if (branch == base) "Not pushed" else "Committed since $base"

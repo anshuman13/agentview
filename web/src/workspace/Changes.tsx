@@ -2,7 +2,8 @@ import { useEffect, useMemo, useRef, useState, type MouseEvent, type ReactNode }
 import type { GitFile, GitStatus } from '../../../shared/protocol';
 import { errText } from '../../../shared/util';
 import { setUi, useStore } from '../app/store';
-import { fetchBranchDiff, postGit, type BranchDiff } from './fileApi';
+import { fetchBranchDiff, fetchCommitDiff, postGit, type BranchDiff, type DiffFiles } from './fileApi';
+import { Row } from '../ui/Row';
 import { Icon } from '../ui/Icon';
 import { Button, IconButton } from '../ui/Button';
 import { EmptyState } from '../ui/Panel';
@@ -12,7 +13,7 @@ import { Confirm, type ConfirmRequest } from '../ui/Confirm';
 import { FileIcon } from './FileIcon';
 import { refresh, useGit } from './gitStatus';
 import { Findings, REVIEW_LOCAL } from '../ops/Findings';
-import { clickOnKey, usePoll } from '../ui/util';
+import { ago, clickOnKey, usePoll } from '../ui/util';
 import { askChat } from '../chat/chatActions';
 import { providerLabel } from '../../../shared/providers';
 import '../styles/features/changes.css';
@@ -99,14 +100,39 @@ function Section({ label, files, isSelected, actions, rowActions, onRowClick }: 
   );
 }
 
+const patches = (d: DiffFiles) => (d.diff ? splitDiff(d.diff) : new Map(d.files.map((f) => [f.path, 'Diff too large to show'])));
+
 // What the branch committed since it left the default branch, on the default branch itself what it has not pushed; rows expand to their patch.
+// With more than one commit, a list above the files picks "All changes" or one commit, whose files are loaded on their own.
 function Committed({ branch, current }: { branch: BranchDiff; current?: string }) {
-  const diffs = useMemo(() => (branch.diff ? splitDiff(branch.diff) : new Map(branch.files.map((f) => [f.path, 'Diff too large to show']))), [branch]);
+  const commits = branch.commits ?? [];
+  const [pick, setPick] = useState<string | null>(null);
+  const [one, setOne] = useState<{ hash: string; data: DiffFiles | null; error?: string } | null>(null);
+  useEffect(() => {
+    if (pick && !commits.some((c) => c.hash === pick)) setPick(null);
+  }, [branch]);
+  useEffect(() => {
+    if (!pick) return setOne(null);
+    let live = true;
+    setOne({ hash: pick, data: null });
+    fetchCommitDiff(pick).then((data) => live && setOne({ hash: pick, data }), (err) => live && setOne({ hash: pick, data: null, error: errText(err) }));
+    return () => { live = false; };
+  }, [pick]);
+  const shown = pick ? (one?.data ?? null) : branch;
+  const diffs = useMemo(() => (shown ? patches(shown) : new Map<string, string>()), [shown]);
   return (
     <>
       <ListSection label={current === branch.base ? 'Not pushed' : `Committed since ${branch.base}`} count={branch.files.length} />
+      {commits.length > 1 && (
+        <div className="as-group scm-commits" aria-label="Commits">
+          <Row title="All changes" lines={1} aria-current={!pick} trailing={<span className="muted">{commits.length} commits</span>} onClick={() => setPick(null)} />
+          {commits.map((c) => (
+            <Row key={c.hash} title={c.subject} lines={1} aria-current={pick === c.hash} trailing={<span className="muted scm-sha">{c.hash} · {ago(c.at)}</span>} onClick={() => setPick(pick === c.hash ? null : c.hash)} />
+          ))}
+        </div>
+      )}
       <div className="as-group gh-group">
-        <Files files={branch.files} diffs={diffs} />
+        {shown ? <Files key={pick ?? ''} files={shown.files} diffs={diffs} /> : one?.error ? <div className="scm-error" role="alert">{one.error}</div> : <div className="muted scm-loading">Loading…</div>}
       </div>
     </>
   );

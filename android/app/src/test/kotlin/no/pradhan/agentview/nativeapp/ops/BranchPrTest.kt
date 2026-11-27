@@ -38,6 +38,13 @@ class BranchPrTest {
         assertEquals("main", b.base)
         assertEquals(1, b.files.single().additions)
         assertEquals(true, splitDiff(b.diff)["README.md"]?.contains("+y"))
+        assertEquals(emptyList<Any>(), b.commits)
+    }
+
+    @Test fun readsTheBranchCommits() {
+        val b = parseBranchDiff("""{"base":"main","files":[],"diff":"","commits":[{"hash":"abc1234","subject":"Add one","at":1700000000000}]}""")
+        assertEquals("abc1234", b.commits.single().hash)
+        assertEquals(1700000000000, b.commits.single().at)
     }
 
     @Test fun aRowShowsTheNumberAndCheckDotOnlyWhenKnown() {

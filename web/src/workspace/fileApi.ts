@@ -1,3 +1,4 @@
+import type { GitCommit } from '../../../shared/protocol';
 import { api } from '../app/store';
 import { apiUrl, fetchJson } from '../app/api';
 
@@ -12,9 +13,13 @@ export const listDir = (path: string) => fetch(api(`/api/dir?path=${encodeURICom
 
 export const fetchGitStatus = () => fetch(api('/api/git/status'));
 
-export type BranchDiff = { base: string; files: { path: string; additions: number; deletions: number }[]; diff: string };
+export type DiffFiles = { files: { path: string; additions: number; deletions: number }[]; diff: string };
+
+export type BranchDiff = DiffFiles & { base: string; commits?: GitCommit[] };
 
 export const fetchBranchDiff = () => fetchJson<BranchDiff>(api('/api/git/branch'));
+
+export const fetchCommitDiff = (hash: string) => fetchJson<DiffFiles>(api(`/api/git/show?hash=${encodeURIComponent(hash)}`));
 
 export const postGit = (action: string, body: unknown) =>
   fetchJson(api(`/api/git/${action}`), { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
