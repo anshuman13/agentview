@@ -21,9 +21,9 @@ Branch prefix: anshuman/build/
 - Checks, from the worktree root, for every package touched plus assistant whenever shared/ or server/src changed: `npx tsc --noEmit -p web`, `npx tsc --noEmit -p server`, `npx tsc --noEmit -p assistant`, `npm test` from the root, `cd assistant && bun test`, and `npm run build -w web` when web changed.
 
 ## Test
-- Run every (UI) criterion in headless Chrome. Never return a criterion as unverified with verdict pass: any unverified criterion makes the verdict fail.
+- Cover every (UI) criterion with a committed e2e test, not a throwaway click script: web in Playwright under web/e2e (`bun run e2e`, every server and hub call stubbed), Android as Robolectric/Roborazzi or Compose UI tests in the unit test step. Never return a criterion as unverified with verdict pass: a criterion without a test that runs it makes the verdict fail.
 - Checks for the packages the diff touches: `npx tsc --noEmit -p web|server|assistant`, `npm test` from the root, `cd assistant && bun test`.
-- (UI) criteria: start the web app on a spare port from the worktree (`cd web && npx vite --port 5199`, proxies to the running server on :7777), launch headless Chrome with `--user-data-dir=/tmp/avchk/profile --remote-debugging-port=9334 --headless=new` from `/Applications/Google Chrome.app/Contents/MacOS/Google Chrome`, drive it over CDP, check at 390x844 and 1280x800, light and dark. Never port 9333. macOS has no `timeout`.
+- The e2e suite runs Vite on a spare port from the worktree (5199, never 9333) against the stub server; no manual clicking in headless Chrome. macOS has no `timeout`.
 - Clean up: `pkill -f user-data-dir=/tmp/avchk; pkill -f "main.ts /tmp/avhub"; lsof -ti tcp:5199 -ti tcp:7788 -ti tcp:7799 | xargs kill; rm -rf /tmp/avhub`; delete temp scripts and screenshots.
 - Read-only against the live hub (:7790, ~/.agentview). Never create, edit, delete or swipe real rows, never post to Slack, never press Send on a real ask. Anything that must write uses a scratch hub (`HOME=/tmp/avhub`, port 7799) or a unit test.
 
