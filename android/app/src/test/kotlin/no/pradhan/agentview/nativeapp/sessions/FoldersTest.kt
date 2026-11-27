@@ -259,4 +259,14 @@ class FoldersTest {
         assertNull(startedFrom(rows, null))
         assertEquals(StartedFrom("Started from another chat", "gone"), startedFrom(listOf(SavedSession("b", "B", "/w", spawnedBy = "gone")), "b"))
     }
+
+    @Test
+    fun binMatchesTitleOrRepoWhileSearching() {
+        val bin = listOf(BinnedSession("a", "Fix login", "/r/web"), BinnedSession("b", "Docs pass", "/r/api"))
+        val repo = { b: BinnedSession -> b.cwd.substringAfterLast('/') }
+        assertEquals(bin, binMatches(" ", bin, repo))
+        assertEquals(listOf("a"), binMatches("LOGIN", bin, repo).map { it.sessionId })
+        assertEquals(listOf("b"), binMatches("api docs", bin, repo).map { it.sessionId })
+        assertEquals(emptyList<BinnedSession>(), binMatches("login api", bin, repo))
+    }
 }

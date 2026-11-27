@@ -212,6 +212,12 @@ fun shownChoices(choices: List<RepoChoice>, picked: String?, all: Boolean, max: 
 fun chatMatches(words: List<String>, title: String, saved: SavedSession?, repo: String?) =
     matchesWords(words, title, saved?.title, saved?.firstPrompt, saved?.summary, saved?.gitBranch, repo)
 
+// web Bin.tsx: while the Sessions search has text, the bin chats whose title or repo match; all of them otherwise.
+fun binMatches(filter: String, bin: List<BinnedSession>, repo: (BinnedSession) -> String?): List<BinnedSession> {
+    val words = queryWords(filter)
+    return if (words.isEmpty()) bin else bin.filter { chatMatches(words, it.title, null, repo(it)) }
+}
+
 // ws.saved holds the grouped rows (groupChats), so an open chat on a sub-chat stands for its root's row.
 fun groupByRepo(live: List<LiveChat>, ws: Workspace, filter: String = "", held: HeldOrder? = null): List<RepoGroup> {
     val words = queryWords(filter)

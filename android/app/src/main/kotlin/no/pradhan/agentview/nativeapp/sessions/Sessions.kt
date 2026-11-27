@@ -248,6 +248,8 @@ private fun SessionsList(rows: ChatRows, filters: SessionsFilters, groups: List<
     var binOpen by remember { mutableStateOf(false) }
     var emptying by remember { mutableStateOf(false) }
     var deleting by remember { mutableStateOf<BinnedSession?>(null) }
+    val searching = filter.isNotBlank()
+    LaunchedEffect(searching) { binOpen = false }
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = Tokens.fabClear)) {
         if (empty != null) item(key = "empty") {
             if (filter.isNotBlank()) EmptyState(empty, icon = "search", small = false)
@@ -272,7 +274,7 @@ private fun SessionsList(rows: ChatRows, filters: SessionsFilters, groups: List<
             Group { ListRow(if (filters.showIdle) "Show fewer repos" else "More repos", trailing = { Chevron(if (!filters.showIdle) "${idle.size}" else null) }, onClick = { filters.showIdle = !filters.showIdle }) }
         }
         if (hits.isNotEmpty()) messageHits(rows, hits, filter)
-        if (filter.isBlank()) binRows(rows, bin, binOpen, { binOpen = !binOpen }, { emptying = true }) { deleting = it }
+        binRows(rows, bin, filter, binOpen, { binOpen = !binOpen }, { emptying = true }) { deleting = it }
     }
     if (emptying) ConfirmDialog("Empty the bin?", "${plural(bin.size, "chat")}\n\nThe transcripts are removed permanently.", "Empty bin", { emptying = false; rows.hub.emptyBin() }, onDismiss = { emptying = false })
     deleting?.let { b ->
@@ -280,17 +282,21 @@ private fun SessionsList(rows: ChatRows, filters: SessionsFilters, groups: List<
     }
 }
 
-// The archived chats (web Bin.tsx), folded on every open of the page.
-private fun LazyListScope.binRows(rows: ChatRows, bin: List<BinnedSession>, open: Boolean, onToggle: () -> Unit, onEmpty: () -> Unit, onDelete: (BinnedSession) -> Unit) {
-    if (bin.isEmpty()) return
+// The archived chats (web Bin.tsx), folded on every open of the page; while searching, only the matching ones behind "Show N in the bin".
+private fun LazyListScope.binRows(rows: ChatRows, bin: List<BinnedSession>, filter: String, open: Boolean, onToggle: () -> Unit, onEmpty: () -> Unit, onDelete: (BinnedSession) -> Unit) {
+    val repo = { b: BinnedSession -> folderName(folderKey(b.cwd, rows.ws.repos, rows.ws.trees)) }
+    val shown = binMatches(filter, bin, repo)
+    if (shown.isEmpty()) return
     val hub = rows.hub
-    item(key = "bin-head") {
+    if (filter.isNotBlank()) item(key = "bin-head") {
+        Group { ListRow(if (open) "Hide the bin" else "Show ${shown.size} in the bin", trailing = { Chevron() }, onClick = onToggle) }
+    } else item(key = "bin-head") {
         SectionHeader("Bin", bin.size.toString(), open = open, onToggle = onToggle, action = if (hub.readOnly) null else ({ IconBtn("trash", "Empty bin", onEmpty) }))
     }
-    if (open) lazyGroup(bin, { "bin-${it.sessionId}" }) { b ->
+    if (open) lazyGroup(shown, { "bin-${it.sessionId}" }) { b ->
         ListRow(
             b.title.ifBlank { UNTITLED },
-            metaLine(folderName(folderKey(b.cwd, rows.ws.repos, rows.ws.trees)), binLeft(b.deletedAt)),
+            metaLine(repo(b), binLeft(b.deletedAt)),
             trailing = if (hub.readOnly) null else ({ IconBtn("discard", "Restore chat", { hub.restoreFromBin(b.sessionId) }) }),
             menu = if (hub.readOnly) null else ({ dismiss ->
                 MenuItem("Restore", "discard", { dismiss(); hub.restoreFromBin(b.sessionId) })
