@@ -9,6 +9,9 @@ export function leaveCopy(nodes: (HTMLElement | null)[]) {
     const c = n.cloneNode(true) as HTMLElement;
     c.classList.add('sheet-leaving');
     c.setAttribute('aria-hidden', 'true');
+    c.inert = true;
+    c.removeAttribute('id');
+    c.querySelectorAll('[id]').forEach((e) => e.removeAttribute('id'));
     n.before(c);
     return c;
   });
