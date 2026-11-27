@@ -146,17 +146,6 @@ class StepsTest {
     }
 
     @Test
-    fun awaitingReplyHoldsUntilSomethingFollowsTheSentPrompt() {
-        val user = Item.User("u", "hi", 0, false, false)
-        val text = Item.Assistant("a", "ok", true)
-        assertTrue(awaitingReply(listOf(user), true))
-        assertFalse(awaitingReply(listOf(user), false))
-        assertFalse(awaitingReply(listOf(user, text), true))
-        assertFalse(awaitingReply(listOf(user, text, Item.User("q", "next", 0, false, true)), true))
-        assertFalse(awaitingReply(emptyList(), true))
-    }
-
-    @Test
     fun runningStepNamesTheStepWaitingOnAResult() {
         val u = ChatEvent("u", "user", text = "go")
         assertEquals("Running npm test\u2026", runningStep(buildTranscript(listOf(u, use("t1", "Read", obj("file_path" to "/p/a.ts")), res("r1", "t1"), use("t2", "Bash", obj("command" to "npm test")))), "/p"))

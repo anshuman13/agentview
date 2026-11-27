@@ -2,7 +2,7 @@ import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'bun:test';
 import { Explored } from './StepRows';
-import { awaitingReply, buildTranscript, runningStep, createTranscriptBuilder, duration, exploreLabel, exploreRuns, stepLabel, stepTone, type Item } from './steps';
+import { buildTranscript, runningStep, createTranscriptBuilder, duration, exploreLabel, exploreRuns, stepLabel, stepTone, type Item } from './steps';
 import { replyLine, sumEdits } from '../../../../shared/edits';
 import { buildTurns } from './turns';
 import { chatLine } from '../../sessions/folders';
@@ -210,17 +210,6 @@ describe('collapsible boxes', () => {
   });
 });
 
-
-describe('awaitingReply', () => {
-  const user = (id: string, queued = false): Item => ({ kind: 'user', id, text: 'hi', at: 0, queued });
-  it('holds only while a turn runs and the last sent prompt has nothing after it', () => {
-    expect(awaitingReply([user('u1')], true)).toBe(true);
-    expect(awaitingReply([user('u1')], false)).toBe(false);
-    expect(awaitingReply([user('u1'), { kind: 'assistant', id: 'a1', text: 'x', streaming: true }], true)).toBe(false);
-    expect(awaitingReply([user('u1'), { kind: 'assistant', id: 'a1', text: 'x', streaming: true }, user('u2', true)], true)).toBe(false);
-    expect(awaitingReply([], true)).toBe(false);
-  });
-});
 
 describe('runningStep', () => {
   it('names the last step still waiting on a result, as it happens', () => {

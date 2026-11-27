@@ -233,7 +233,12 @@ data class SessionInfo(
     val instructionFiles: List<String> = emptyList(),
     val resumeCommand: String? = null,
     val shells: List<BackgroundShell> = emptyList(),
+    val turn: TurnMeter? = null,
 )
+
+// shared/protocol.ts TurnMeter: when the running turn began and the output tokens streamed in it so far.
+@Serializable
+data class TurnMeter(val startedAt: Long = 0, val tokens: Long = 0)
 
 // shared/protocol.ts BackgroundShell: a shell command the agent left running in the background.
 @Serializable

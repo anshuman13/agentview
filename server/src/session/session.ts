@@ -165,6 +165,7 @@ export class AgentSession implements AgentHost {
       if (oldId) this.onSubChat(patch.sessionId, oldId, this.clearing);
       this.clearing = null;
     }
+    if (patch.running !== undefined && patch.running !== wasRunning) patch = { ...patch, turn: patch.running ? { startedAt: Date.now(), tokens: 0 } : null };
     this.state.session = { ...this.state.session, ...patch, ...(patch.commands && { commands: withSessionCommands(patch.commands) }) };
     if ('sessionId' in patch || 'account' in patch || 'provider' in patch) this.setResumeCommand();
     if (patch.sessionId) this.runs.bind(this.id, patch.sessionId);

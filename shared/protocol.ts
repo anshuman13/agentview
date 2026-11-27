@@ -134,7 +134,11 @@ export type SessionInfo = {
   resumeCommand?: string | null;
   // Shell commands the agent left running in the background.
   shells?: BackgroundShell[];
+  // The running turn: when it began and the output tokens the model has streamed in it so far.
+  turn?: TurnMeter | null;
 };
+
+export type TurnMeter = { startedAt: number; tokens: number };
 
 export type BackgroundShell = { toolUseId: string; label: string; startedAt: number };
 

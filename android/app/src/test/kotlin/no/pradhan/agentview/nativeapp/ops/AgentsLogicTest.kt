@@ -5,6 +5,7 @@ import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import no.pradhan.agentview.nativeapp.chat.Item
 import no.pradhan.agentview.nativeapp.net.ChatEvent
+import no.pradhan.agentview.nativeapp.net.TurnMeter
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -35,5 +36,12 @@ class AgentsLogicTest {
         assertEquals("Boom", agentSummary(agent(false, done("Boom\nstack", err = true))))
         assertEquals("Agent failed", agentSummary(agent(false, done("", err = true))))
         assertEquals("Agent stopped", agentSummary(agent(false, done("", stopped = true))))
+    }
+
+    @Test
+    fun turnMeterShowsTimeThenTokens() {
+        assertEquals("6s", turnMeter(TurnMeter(0, 0), 6_000))
+        assertEquals("6s · 280 tokens", turnMeter(TurnMeter(0, 280), 6_000))
+        assertEquals("", turnMeter(null, 6_000))
     }
 }

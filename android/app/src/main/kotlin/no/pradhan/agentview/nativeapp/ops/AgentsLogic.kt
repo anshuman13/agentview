@@ -9,6 +9,7 @@ import no.pradhan.agentview.nativeapp.chat.s
 import no.pradhan.agentview.nativeapp.chat.stepLabel
 import no.pradhan.agentview.nativeapp.codex.firstLine
 import no.pradhan.agentview.nativeapp.net.ChatEvent
+import no.pradhan.agentview.nativeapp.net.TurnMeter
 import no.pradhan.agentview.nativeapp.ui.DotState
 import no.pradhan.agentview.nativeapp.ui.plural
 
@@ -113,6 +114,10 @@ fun elapsed(ms: Long): String {
 }
 
 fun tokensText(n: Long): String = if (n < 1000) "$n tokens" else String.format(java.util.Locale.US, if (n < 10_000) "%.1fk tokens" else "%.0fk tokens", n / 1000.0)
+
+// "6s · 280 tokens" beside the working dots; the tokens are left out until the model has streamed some (web agents.ts turnMeter).
+fun turnMeter(turn: TurnMeter?, now: Long): String =
+    if (turn == null) "" else listOfNotNull(elapsed(now - turn.startedAt), if (turn.tokens > 0) tokensText(turn.tokens) else null).joinToString(" · ")
 
 fun agentMeta(a: Agent, now: Long): String = listOfNotNull(
     a.type, a.model, elapsed((a.endedAt ?: now) - a.startedAt),

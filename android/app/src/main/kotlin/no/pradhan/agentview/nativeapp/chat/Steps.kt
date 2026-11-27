@@ -310,9 +310,6 @@ fun rewindReplies(items: List<Item>): Map<String, Item.User> {
 }
 
 // True while a turn runs and nothing has come back since the last sent prompt: the reply start shows the working mark.
-fun awaitingReply(items: List<Item>, running: Boolean): Boolean =
-    running && items.lastOrNull { it !is Item.User || !it.queued } is Item.User
-
 private val DOING = mapOf("Read" to "Reading", "Edited" to "Editing", "Wrote" to "Writing", "Searched" to "Searching", "Listed" to "Listing", "Ran" to "Running", "Fetched" to "Fetching", "Searched the web for" to "Searching the web for", "Delegated" to "Delegating", "Called" to "Calling", "Used" to "Using", "Looked up" to "Looking up", "Loaded" to "Loading", "Pushed" to "Pushing", "Created" to "Creating")
 
 // The step a running turn is on, named as it happens ("Running npm test…"), or "" when none waits on a result (web steps.ts runningStep).

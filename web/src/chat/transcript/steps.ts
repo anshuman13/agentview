@@ -275,16 +275,6 @@ export function rewindReplies(items: Item[]) {
   return out;
 }
 
-// True while a turn runs and nothing has come back since the last sent prompt: the reply start shows the working mark.
-export function awaitingReply(items: Item[], running: boolean) {
-  if (!running) return false;
-  for (let i = items.length - 1; i >= 0; i--) {
-    const it = items[i];
-    if (it.kind !== 'user' || !it.queued) return it.kind === 'user';
-  }
-  return false;
-}
-
 const DOING: Record<string, string> = { Read: 'Reading', Edited: 'Editing', Wrote: 'Writing', Searched: 'Searching', Listed: 'Listing', Ran: 'Running', Fetched: 'Fetching', 'Searched the web for': 'Searching the web for', Delegated: 'Delegating', Called: 'Calling', Used: 'Using', 'Looked up': 'Looking up', Loaded: 'Loading', Pushed: 'Pushing', Created: 'Creating' };
 
 // The step a running turn is on, named as it happens ("Running npm test…"), or '' when none waits on a result. Android Steps.kt runningStep says the same.

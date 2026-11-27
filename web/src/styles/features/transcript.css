@@ -144,6 +144,8 @@ a.tr-obj:hover { text-decoration: underline; }
 .tr-dots { display: inline-flex; flex: none; gap: 3px; height: 1.35em; align-items: center; }
 .tr-dots > i { width: 5px; height: 5px; border-radius: var(--radius-round); background: var(--accent-fill); animation: pulse 1.2s ease-in-out infinite; }
 .tr-dots > i + i { animation-delay: 0.4s; }
+.tr-working { display: flex; align-items: center; gap: var(--sp-4); }
+.tr-meter { color: var(--fg-muted); font-size: var(--fs-md); font-variant-numeric: tabular-nums; }
 .tr-explored { display: flex; flex-direction: column; padding: 0 var(--sp-4) var(--sp-3); }
 .tr-new { display: flex; align-items: center; gap: var(--sp-3); color: var(--danger); font-size: var(--fs-xs); font-weight: var(--type-headline-weight); }
 .tr-new::after { content: ''; flex: 1; border-top: 1px solid var(--danger); }

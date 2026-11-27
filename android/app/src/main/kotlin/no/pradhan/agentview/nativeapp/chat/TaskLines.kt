@@ -46,6 +46,10 @@ import no.pradhan.agentview.nativeapp.ui.Type
 import no.pradhan.agentview.nativeapp.ui.av
 import no.pradhan.agentview.nativeapp.ui.select
 import no.pradhan.agentview.nativeapp.ui.plural
+import no.pradhan.agentview.nativeapp.ui.rememberNow
+import no.pradhan.agentview.nativeapp.ops.turnMeter
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 
 // The turn's tasks from set_status as small lines, and on the right a button that opens the turn's tool calls on their own screen (web Transcript.tsx Tasks).
 @OptIn(ExperimentalLayoutApi::class)
@@ -119,6 +123,18 @@ internal fun TaskLines(hub: Hub, fold: FoldRow.Fold, cwd: String, live: Boolean,
                 Task(spin, fold.now, av.fgStrong)
             }
         }
+    }
+}
+
+// The working dots under a running turn, with how long it has run and the output tokens streamed so far (web Transcript.tsx Working).
+@Composable
+internal fun Working(hub: Hub) {
+    val turn by hub.store.state.select { it.session?.turn }
+    val now by rememberNow(turn != null)
+    val meta = turnMeter(turn, now)
+    Row(Modifier.gap(Tokens.sp24).semantics(mergeDescendants = true) { contentDescription = "Working" }, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
+        WorkDots()
+        if (meta.isNotEmpty()) Text(meta, style = Type.footnote, color = av.fgMuted, maxLines = 1)
     }
 }
 

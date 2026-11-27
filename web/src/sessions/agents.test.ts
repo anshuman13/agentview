@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test';
-import { agentCounts, agentSummary, buildAgents, reportText } from './agents';
+import { agentCounts, agentSummary, buildAgents, reportText, turnMeter } from './agents';
 import { buildTranscript } from '../chat/transcript/steps';
 import type { AgentEvent, ChatEvent } from '../../../shared/protocol';
 
@@ -77,5 +77,13 @@ describe('agentSummary', () => {
     expect(summary([done('Boom\nstack', { isError: true })])).toBe('Boom');
     expect(summary([done('', { isError: true })])).toBe('Agent failed');
     expect(summary([done('', { stopped: true })])).toBe('Agent stopped');
+  });
+});
+
+describe('turnMeter', () => {
+  it('shows the time, and the tokens once there are some', () => {
+    expect(turnMeter({ startedAt: 0, tokens: 0 }, 6_000)).toBe('6s');
+    expect(turnMeter({ startedAt: 0, tokens: 280 }, 6_000)).toBe('6s · 280 tokens');
+    expect(turnMeter(null, 6_000)).toBe('');
   });
 });

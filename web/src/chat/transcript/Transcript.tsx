@@ -17,8 +17,9 @@ import { FindBar, findPending, markHit, takeFind, type FindRequest } from './Fin
 import { showTurn, turnPending } from '../../sessions/openChat';
 import { RewindLink } from './Rewind';
 import { createFoldBuilder, type FoldRow } from './workFold';
-import { ALARM_TOOL, BUILD_TOOL, createTranscriptBuilder, exploreRuns, dayDividers, newMarker, newReplies, openAtNew, rewindReplies, turnAnswers, awaitingReply, docCards, isDocFile, fileMeta, sameItem, type Item, type Rewind } from './steps';
-import { pressable } from '../../ui/util';
+import { ALARM_TOOL, BUILD_TOOL, createTranscriptBuilder, exploreRuns, dayDividers, newMarker, newReplies, openAtNew, rewindReplies, turnAnswers, docCards, isDocFile, fileMeta, sameItem, type Item, type Rewind } from './steps';
+import { pressable, useTick } from '../../ui/util';
+import { turnMeter } from '../../sessions/agents';
 import { useCan } from '../useCan';
 import { copyReply, resume, retry } from '../chatActions';
 import { failedLine } from '../composer/composerLogic';
@@ -45,6 +46,14 @@ export const Transcript = memo(function Transcript() {
   const sessionId = useStore((s) => s.session.sessionId);
   return <TranscriptView key={chat} loaded={!!chat} sessionId={sessionId} events={events} earlier={earlier} cwd={cwd} running={running} bill={billing(provider)} failed={failed} stalled={stalled} label={providerLabel(provider)} />;
 });
+
+// The working dots under a running turn, with how long it has run and the output tokens streamed so far.
+function Working() {
+  const turn = useStore((s) => s.session.turn);
+  const now = useTick(1000, Boolean(turn));
+  const meta = turnMeter(turn, now);
+  return <div className="tr-working" role="status" aria-label="Working"><span className="tr-dots"><i /><i /></span>{meta && <span className="tr-meter">{meta}</span>}</div>;
+}
 
 function EndLine({ text, label, onPress }: { text: string; label: string; onPress: () => void }) {
   const [sent, setSent] = useState(false);
@@ -150,7 +159,7 @@ function TranscriptView({ loaded, sessionId, events, earlier, cwd, running, bill
           : rowOf(r.it, i === 0);
         return day || r === newRow ? <Fragment key={id}>{day && <div className="tr-day"><span>{day}</span></div>}{r === newRow && <div className="tr-new"><span>New</span></div>}{row}</Fragment> : row;
       })}
-      {awaitingReply(items, running) && <div className="tr-working" role="status" aria-label="Working"><span className="tr-dots"><i /><i /></span></div>}
+      {running && <Working />}
       {failText && <EndLine key={events.length} text={failText} label="Retry" onPress={retry} />}
       {stalled && !failed && <EndLine text="No activity for 15 min" label="Resume" onPress={resume} />}
       <UnsentRows />

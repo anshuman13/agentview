@@ -1,4 +1,4 @@
-import type { AgentEvent, AgentStatus, ChatEvent } from '../../../shared/protocol';
+import type { AgentEvent, AgentStatus, ChatEvent, TurnMeter } from '../../../shared/protocol';
 import { createTranscriptBuilder, denied, firstLine, stepLabel, type Item, type ToolResult, type ToolUse } from '../chat/transcript/steps';
 
 export type Agent = {
@@ -110,6 +110,10 @@ export function elapsed(ms: number) {
 }
 
 export const tokens = (n: number) => (n < 1000 ? `${n} tokens` : `${(n / 1000).toFixed(n < 10_000 ? 1 : 0)}k tokens`);
+
+// "6s · 280 tokens" beside the working dots; the tokens are left out until the model has streamed some. Android AgentsLogic.kt turnMeter says the same.
+export const turnMeter = (turn: TurnMeter | null | undefined, now: number) =>
+  turn ? [elapsed(now - turn.startedAt), ...(turn.tokens > 0 ? [tokens(turn.tokens)] : [])].join(' · ') : '';
 
 // Back from an open agent to the list, or undefined while the list shows (the selected agent is gone too).
 export const agentBack = (agents: Agent[], selected: string | null, clear: () => void) =>
