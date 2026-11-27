@@ -212,7 +212,10 @@ cost so far. The status bar usage tooltip adds a Spend block with today's and th
 - Shell commands Claude left running in the background (Bash with run_in_background) are listed above the composer
   on web and Android, each with its label, elapsed time and a Stop (`session.shells`, from the CLI's `local_bash`
   task events). A stopped one marks its step Stopped and adds "Background task stopped · label" to the transcript,
-  without starting a turn
+  without starting a turn. Finished ones stay under a "Finished" heading with a muted duration ("1m 09s", red error
+  icon when it failed) and a chevron that opens the command and its last 40 output lines in mono (read from the CLI's
+  output file); Clear (`clear_shells`) removes them. Rows come from `shared/backgroundShells.ts`, Android
+  `chat/BackgroundShellsLogic.kt`, checked by `shared/fixtures/shell-rows.json`
 - The composer shows "No update for Ns" when nothing has arrived from the server for 30 s (the phone shows it above
   the field). The link reopens by itself after 50 s of silence, and a message that cannot be delivered goes back into
   the box with a notice

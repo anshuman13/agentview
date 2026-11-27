@@ -1,0 +1,32 @@
+[
+  {
+    "name": "running only",
+    "now": 75000,
+    "shells": [{ "toolUseId": "a", "label": "Sleep a minute", "startedAt": 6000 }],
+    "running": [{ "toolUseId": "a", "label": "Sleep a minute", "time": "1m 09s", "failed": false, "detail": "" }],
+    "finished": []
+  },
+  {
+    "name": "finished with command and output",
+    "now": 999000,
+    "shells": [
+      { "toolUseId": "b", "label": "Run tests", "startedAt": 0, "endedAt": 4200, "command": "bun test", "output": "12 pass\n0 fail" },
+      { "toolUseId": "c", "label": "", "startedAt": 0, "endedAt": 3725000, "command": "make build", "failed": true }
+    ],
+    "running": [],
+    "finished": [
+      { "toolUseId": "b", "label": "Run tests", "time": "4s", "failed": false, "detail": "$ bun test\n12 pass\n0 fail" },
+      { "toolUseId": "c", "label": "make build", "time": "1h 02m", "failed": true, "detail": "$ make build\nNo output" }
+    ]
+  },
+  {
+    "name": "running beside finished",
+    "now": 10000,
+    "shells": [
+      { "toolUseId": "d", "label": "Dev server", "startedAt": 0 },
+      { "toolUseId": "e", "label": "Lint", "startedAt": 0, "endedAt": 600, "output": "ok" }
+    ],
+    "running": [{ "toolUseId": "d", "label": "Dev server", "time": "10s", "failed": false, "detail": "" }],
+    "finished": [{ "toolUseId": "e", "label": "Lint", "time": "1s", "failed": false, "detail": "ok" }]
+  }
+]

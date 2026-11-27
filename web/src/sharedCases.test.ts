@@ -19,6 +19,8 @@ import { binLeft, buildFolders, chatBranch, chatPlace, folderBadge, since } from
 import { findingFixPrompt, findingsFixPrompt } from '../../shared/reviewPrompt';
 import { linesQuote } from '../../shared/linesQuote';
 import { markOps, type Mark } from '../../shared/markup';
+import { shellRows } from '../../shared/backgroundShells';
+import type { BackgroundShell } from '../../shared/protocol';
 import { setupPrompt, type SetupKind } from '../../shared/setupPrompt';
 import { appendRule } from '../../shared/steering';
 import { isSpecPath, specProgress, specPrompt, specSlug, specTasks, startTaskPrompt, withoutOpenTasks, type SpecTask } from '../../shared/specTasks';
@@ -602,6 +604,10 @@ describe('cases shared with the Android app', () => {
       expect(elementPrompt(c.el)).toBe(c.prompt);
       expect(withElements(' fix this ', [c.el])).toBe(`fix this\n\n${c.prompt}`);
     });
+  }
+
+  for (const c of cases<{ name: string; now: number; shells: BackgroundShell[]; running: object[]; finished: object[] }>('shell-rows')) {
+    it(`shellRows: ${c.name}`, () => expect(shellRows(c.shells, c.now)).toEqual({ running: c.running, finished: c.finished } as never));
   }
 
   for (const c of cases<{ name: string; w: number; h: number; marks: Mark[]; ops: object[] }>('markup-ops')) {

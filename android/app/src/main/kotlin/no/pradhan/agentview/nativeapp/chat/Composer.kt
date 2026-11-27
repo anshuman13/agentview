@@ -73,10 +73,14 @@ import no.pradhan.agentview.nativeapp.app.refreshWorkspace
 import no.pradhan.agentview.nativeapp.app.submit
 import no.pradhan.agentview.nativeapp.ui.AvIcon
 import no.pradhan.agentview.nativeapp.ui.rememberNow
-import no.pradhan.agentview.nativeapp.ops.elapsed
 import no.pradhan.agentview.nativeapp.app.stopTask
+import no.pradhan.agentview.nativeapp.app.clearShells
+import androidx.compose.ui.draw.rotate
 import no.pradhan.agentview.nativeapp.ui.Chip
 import no.pradhan.agentview.nativeapp.ui.IconBtn
+import no.pradhan.agentview.nativeapp.ui.Button
+import no.pradhan.agentview.nativeapp.ui.ButtonSize
+import no.pradhan.agentview.nativeapp.ui.ButtonVariant
 import no.pradhan.agentview.nativeapp.ui.Tokens
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
@@ -155,20 +159,40 @@ fun Composer(hub: Hub, chatId: String, sessionId: String?, session: SessionInfo?
     ComposerSheets(hub, s, uploading, session, sheet, attach) { sheet = it }
 }
 
-// Shell commands the agent left running in the background, with how long each has run and a Stop.
+// Shell commands the agent left running in the background, with how long each has run and a Stop, then the finished ones (web BackgroundShells.tsx).
 @Composable
 private fun BackgroundShells(hub: Hub) {
     val shells by hub.store.state.select { it.session?.shells.orEmpty() }
     if (shells.isEmpty()) return
-    val now by rememberNow(true)
+    val now by rememberNow(shells.any { it.endedAt == null })
+    val rows = shellRows(shells, now)
+    var open by remember { mutableStateOf<String?>(null) }
     Column(Modifier.fillMaxWidth().semantics { contentDescription = "Background tasks" }) {
-        shells.forEach { t ->
+        rows.running.forEach { t ->
             Row(Modifier.fillMaxWidth().padding(start = Tokens.sp4), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Tokens.sp3)) {
                 AvIcon("terminal", tint = av.fgMuted)
                 Text(t.label, Modifier.weight(1f), style = Type.footnote, color = av.fg, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Text(elapsed(now - t.startedAt), style = Type.footnote, color = av.fgMuted)
+                Text(t.time, style = Type.footnote, color = av.fgMuted)
                 IconBtn("debug-stop", "Stop ${t.label}", { hub.stopTask(t.toolUseId) }, enabled = !hub.readOnly, iconSize = Tokens.icon)
             }
+        }
+        if (rows.finished.isNotEmpty()) Row(Modifier.fillMaxWidth().padding(start = Tokens.sp4), verticalAlignment = Alignment.CenterVertically) {
+            Text("Finished", Modifier.weight(1f), style = Type.footnote, color = av.fgMuted)
+            Button("Clear", { hub.clearShells() }, variant = ButtonVariant.Plain, size = ButtonSize.Sm, enabled = !hub.readOnly)
+        }
+        rows.finished.forEach { t ->
+            val expanded = open == t.toolUseId
+            Row(Modifier.fillMaxWidth().heightIn(min = Tokens.touch).clickable { open = if (expanded) null else t.toolUseId }.padding(start = Tokens.sp4, end = Tokens.sp4).semantics { contentDescription = "${t.label}, ${t.time}" }, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Tokens.sp3)) {
+                AvIcon(if (t.failed) "error" else "terminal", tint = if (t.failed) av.danger else av.fgMuted)
+                Text(t.label, Modifier.weight(1f), style = Type.footnote, color = av.fg, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(t.time, style = Type.footnote, color = av.fgMuted)
+                AvIcon("chevron-right", null, Tokens.icon, Modifier.rotate(if (expanded) 90f else 0f), tint = av.fgMuted)
+            }
+            if (expanded) Text(
+                t.detail,
+                Modifier.fillMaxWidth().padding(horizontal = Tokens.sp4).heightIn(max = Tokens.touch * 5).clip(RoundedCornerShape(Tokens.radiusSm)).background(av.sunken).verticalScroll(rememberScrollState()).padding(Tokens.sp3),
+                style = Type.footnote.copy(fontFamily = FontFamily.Monospace), color = av.fg,
+            )
         }
     }
 }

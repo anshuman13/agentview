@@ -1346,6 +1346,14 @@ class SharedCasesTest {
         }
     }
 
+    @Test fun shellRowsCases() {
+        for (c in cases("shell-rows")) {
+            fun rows(k: String) = c.getValue(k).jsonArray.map { r -> r.jsonObject.let { o -> no.pradhan.agentview.nativeapp.chat.ShellRow(o.str("toolUseId"), o.str("label"), o.str("time"), o.getValue("failed").jsonPrimitive.boolean, o.str("detail")) } }
+            val shells = c.getValue("shells").jsonArray.map { protocolJson.decodeFromJsonElement<no.pradhan.agentview.nativeapp.net.BackgroundShell>(it) }
+            assertEquals(c.str("name"), no.pradhan.agentview.nativeapp.chat.ShellRows(rows("running"), rows("finished")), no.pradhan.agentview.nativeapp.chat.shellRows(shells, c.getValue("now").jsonPrimitive.long))
+        }
+    }
+
     @Test fun markOpsCases() {
         for (c in cases("markup-ops")) {
             val marks = c.getValue("marks").jsonArray.map { e ->

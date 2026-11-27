@@ -360,6 +360,11 @@ export class AgentSession implements AgentHost {
     return this.stopper.task(toolUseId);
   }
 
+  clearShells() {
+    const shells = this.state.session.shells ?? [];
+    if (shells.some((t) => t.endedAt)) this.setSession({ shells: shells.filter((t) => !t.endedAt) });
+  }
+
   adopt(toolUseId: string) {
     this.log.adopt(toolUseId);
   }

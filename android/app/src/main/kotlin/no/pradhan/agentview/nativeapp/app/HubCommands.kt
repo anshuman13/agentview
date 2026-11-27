@@ -26,6 +26,7 @@ import no.pradhan.agentview.nativeapp.net.setReviewCmd
 import no.pradhan.agentview.nativeapp.net.retryCmd
 import no.pradhan.agentview.nativeapp.net.steerCmd
 import no.pradhan.agentview.nativeapp.net.stopTaskCmd
+import no.pradhan.agentview.nativeapp.net.clearShellsCmd
 import no.pradhan.agentview.nativeapp.net.triesKeepCmd
 import no.pradhan.agentview.nativeapp.net.triesSendCmd
 import no.pradhan.agentview.nativeapp.net.usageCmd
@@ -171,6 +172,7 @@ internal suspend fun Hub.typeInTerminal(cmd: String) {
 fun Hub.rewind(id: String) = post(rewindCmd(id), store.wanted)
 
 fun Hub.stopTask(toolUseId: String) = post(stopTaskCmd(toolUseId), store.wanted)
+fun Hub.clearShells() = post(clearShellsCmd(), store.wanted)
 
 fun Hub.setModel(model: String) { setLastModel(modelGroup(store.state.value.session?.provider, providers.value), model); post(setModelCmd(model), store.wanted) }
 

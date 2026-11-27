@@ -30,11 +30,27 @@ export class TaskTracker {
     this.syncShells();
   }
 
-  // Background shell commands go to the clients with their start time, so they can show elapsed time and a Stop.
-  private syncShells() {
-    const shells: BackgroundShell[] = [...this.running.values()].filter((t) => t.shell && t.toolUseId).map((t) => ({ toolUseId: t.toolUseId, label: t.description, startedAt: t.startedAt ?? Date.now() }));
+  // Background shell commands go to the clients with their start time, so they can show elapsed time and a Stop; finished ones stay until the user clears them.
+  private syncShells(ended?: BackgroundShell) {
+    const running: BackgroundShell[] = [...this.running.values()].filter((t) => t.shell && t.toolUseId).map((t) => ({ toolUseId: t.toolUseId, label: t.description, startedAt: t.startedAt ?? Date.now() }));
     const old = this.host.state.session.shells ?? [];
+    const finished = old.filter((t) => t.endedAt && t.toolUseId !== ended?.toolUseId);
+    const shells = [...running, ...(ended ? [ended] : []), ...finished];
     if (shells.length || old.length) this.host.setSession({ shells });
+  }
+
+  // A background shell that ended joins the finished ones with its command; the notification adds how it ended and its last output.
+  private shellEnded(task: RunningTask, failed: boolean, outputFile?: string) {
+    if (!task.shell || !task.toolUseId) return this.syncShells();
+    const prev = this.host.state.session.shells?.find((t) => t.toolUseId === task.toolUseId && t.endedAt);
+    const use = this.host.eventById(task.toolUseId);
+    const command = use?.kind === 'tool_use' && typeof use.input.command === 'string' ? use.input.command : undefined;
+    const ended: BackgroundShell = { toolUseId: task.toolUseId, label: task.description, startedAt: task.startedAt ?? Date.now(), endedAt: prev?.endedAt ?? Date.now(), ...(command && { command }), ...((failed || prev?.failed) && { failed: true }) };
+    this.syncShells(ended);
+    if (outputFile) void outputTail(outputFile).then((output) => {
+      const shells = this.host.state.session.shells ?? [];
+      if (output && shells.some((t) => t.toolUseId === task.toolUseId)) this.host.setSession({ shells: shells.map((t) => (t.toolUseId === task.toolUseId ? { ...t, output } : t)) });
+    });
   }
 
   isRunning(taskId: string) {
@@ -73,9 +89,11 @@ export class TaskTracker {
     if (task?.shell === false && msg.patch.is_backgrounded) task.shell = true;
     if (msg.patch.status && !['pending', 'running', 'paused'].includes(msg.patch.status)) {
       this.running.delete(msg.task_id);
-      if (task?.shell !== undefined) this.endedShells.set(msg.task_id, task);
-    }
-    if (task?.shell !== undefined) this.syncShells();
+      if (task?.shell !== undefined) {
+        this.endedShells.set(msg.task_id, task);
+        this.shellEnded(task, msg.patch.status === 'failed');
+      }
+    } else if (task?.shell !== undefined) this.syncShells();
     const toolUseId = taskToolUse(this.taskIds, this.agents, msg.task_id);
     const { status, end_time, is_backgrounded } = msg.patch;
     if (toolUseId) patchAgent(this.host, toolUseId, () => ({
@@ -89,7 +107,7 @@ export class TaskTracker {
     this.running.delete(msg.task_id);
     this.endedShells.delete(msg.task_id);
     const toolUseId = msg.tool_use_id ? agentToolUse(this.host, msg.tool_use_id) : taskToolUse(this.taskIds, this.agents, msg.task_id);
-    if (task?.shell !== undefined) this.syncShells();
+    if (task?.shell !== undefined) this.shellEnded(task, msg.status === 'failed', msg.output_file);
     if (!toolUseId) return;
     // A stopped shell command gets no turn of its own: mark its step stopped and say so in the transcript.
     if (task?.shell !== undefined && msg.status === 'stopped') return this.shellStopped(toolUseId, msg.summary || task.description);
@@ -104,4 +122,10 @@ export class TaskTracker {
     this.host.pushEvent({ id: randomUUID(), kind: 'tool_result', toolUseId, text: 'Stopped', isError: false, at: Date.now(), stopped: true });
     this.host.system(`Background task stopped · ${label}`);
   }
+}
+
+// The last lines a background command wrote, read from the CLI's output file.
+async function outputTail(path: string) {
+  const text = await Bun.file(path).slice(-8192).text().catch(() => '');
+  return text.split('\n').slice(-40).join('\n').trimEnd();
 }

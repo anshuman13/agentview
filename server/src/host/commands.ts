@@ -97,6 +97,8 @@ export function command(chat: AgentSession, msg: ClientMessage): Promise<unknown
       return chat.rewind(String(msg.id));
     case 'stop_task':
       return chat.stopTask(String(msg.toolUseId));
+    case 'clear_shells':
+      return chat.clearShells();
     case 'mcp_status':
       return void chat.mcp.refresh();
     case 'usage':

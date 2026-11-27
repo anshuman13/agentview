@@ -1046,6 +1046,8 @@ describe('restart resume', () => {
     expect(s.state.session.shells).toMatchObject([{ toolUseId: 'tu1', label: 'Sleep a minute' }]);
     handle({ type: 'system', subtype: 'task_updated', task_id: 't1', patch: { status: 'killed' } });
     handle({ type: 'system', subtype: 'task_notification', task_id: 't1', tool_use_id: 'tu1', status: 'stopped', summary: 'Sleep a minute' });
+    expect(s.state.session.shells).toMatchObject([{ toolUseId: 'tu1', label: 'Sleep a minute', command: 'sleep 60', endedAt: expect.any(Number) }]);
+    s.clearShells();
     expect(s.state.session.shells).toEqual([]);
     expect(s.state.session.running).toBe(false);
     expect(s.state.events.slice(-2)).toMatchObject([{ kind: 'tool_result', toolUseId: 'tu1', stopped: true }, { kind: 'system', text: 'Background task stopped · Sleep a minute' }]);

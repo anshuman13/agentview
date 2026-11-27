@@ -257,9 +257,9 @@ data class ContextUsageRow(val id: String = "", val name: String = "", val token
 @Serializable
 data class TurnMeter(val startedAt: Long = 0, val tokens: Long = 0)
 
-// shared/protocol.ts BackgroundShell: a shell command the agent left running in the background.
+// shared/protocol.ts BackgroundShell: a shell command the agent left running in the background; endedAt, command and output once it has finished.
 @Serializable
-data class BackgroundShell(val toolUseId: String, val label: String = "", val startedAt: Long = 0)
+data class BackgroundShell(val toolUseId: String, val label: String = "", val startedAt: Long = 0, val endedAt: Long? = null, val command: String? = null, val output: String? = null, val failed: Boolean = false)
 
 @Serializable
 data class UsageWindow(val pct: Double = 0.0)
@@ -428,3 +428,4 @@ fun closeCmd(id: String) = cmd("close") { put("id", id) }
 fun openSessionCmd(sessionId: String) = cmd("open_session") { put("sessionId", sessionId) }
 fun rewindCmd(id: String) = cmd("rewind") { put("id", id) }
 fun stopTaskCmd(toolUseId: String) = cmd("stop_task") { put("toolUseId", toolUseId) }
+fun clearShellsCmd() = cmd("clear_shells")

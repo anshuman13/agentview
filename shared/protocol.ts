@@ -132,7 +132,7 @@ export type SessionInfo = {
   instructionFiles?: string[];
   // The shell line that continues the chat in the provider's own CLI; null when it has none.
   resumeCommand?: string | null;
-  // Shell commands the agent left running in the background.
+  // Shell commands the agent left running in the background, and the finished ones until the user clears them.
   shells?: BackgroundShell[];
   // The running turn: when it began and the output tokens the model has streamed in it so far.
   turn?: TurnMeter | null;
@@ -145,7 +145,8 @@ export type ContextUsage = { total: number; max: number; rows: Array<{ id: strin
 
 export type TurnMeter = { startedAt: number; tokens: number };
 
-export type BackgroundShell = { toolUseId: string; label: string; startedAt: number };
+// endedAt is set once the command has finished; command and output (its last lines) come with it.
+export type BackgroundShell = { toolUseId: string; label: string; startedAt: number; endedAt?: number; command?: string; output?: string; failed?: boolean };
 
 export type SessionUpdate = Omit<SessionInfo, 'commands' | 'mcp'> & Partial<Pick<SessionInfo, 'commands' | 'mcp'>>;
 
@@ -431,6 +432,7 @@ export type ClientMessage =
   | { type: 'interrupt' }
   | { type: 'rewind'; id: string }
   | { type: 'stop_task'; toolUseId: string }
+  | { type: 'clear_shells' }
   | { type: 'view'; id: string }
   | { type: 'retry' }
   | { type: 'close'; id: string }

@@ -86,6 +86,7 @@ export const sendNow = (id: string) => send({ type: 'send_now', id });
 export const interrupt = () => send({ type: 'interrupt' });
 export const compact = () => send({ type: 'prompt', text: '/compact' });
 export const stopTask = (toolUseId: string) => send({ type: 'stop_task', toolUseId });
+export const clearShells = () => send({ type: 'clear_shells' });
 export const rewindFiles = (id: string) => send({ type: 'rewind', id });
 export const answerPermission = (id: string, allow: boolean, always?: boolean, chat?: string) => send({ type: 'permission', id, allow, always }, chat);
 export const answerQuestion = (id: string, answers: Record<string, string>, chat?: string) => send({ type: 'answer', id, answers }, chat);
