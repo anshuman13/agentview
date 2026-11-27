@@ -125,6 +125,8 @@
 .tr-doing { min-width: 0; margin-left: var(--sp-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--fg-strong); }
 .tr-thought { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--fg-muted); font-style: italic; }
 @media (hover: hover) { .tr-tools:hover { color: var(--fg); } }
+.tr-tools.on { color: var(--fg-strong); }
+.tr-tools.on > .codicon:last-child { transform: rotate(180deg); }
 .tr-tasks { display: flex; flex-direction: column; margin: 0; padding: 0; list-style: none; border: 1px solid var(--border-card); border-radius: var(--shape-lg); overflow: hidden; font-size: var(--fs-md); }
 .tr-tasks > li { display: flex; gap: var(--sp-4); align-items: flex-start; padding: var(--sp-4) var(--sp-6); color: var(--fg-muted); line-height: 1.35; }
 .tr-tasks > li + li { border-top: 1px solid var(--border-card); }

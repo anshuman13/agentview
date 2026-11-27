@@ -16,6 +16,7 @@ import { useWorkbenchKeys } from './useWorkbenchKeys';
 import { useWorkbenchCommands } from './useWorkbenchCommands';
 import { activeOf, showingOf, type Editor } from './workbenchLogic';
 import { narrow } from './useNarrow';
+import { setShownWork } from '../../chat/chatActions';
 
 
 // The workbench's navigation: the phone tab, the desktop editor, the sidebar view and the panes that open and close.
@@ -133,6 +134,11 @@ export function useWorkbench() {
     return () => window.removeEventListener('open-work', open);
   }, []);
   const closeWork = () => { setWorkTurn(null); setEditor((e) => (e === 'work' ? 'file' : e)); if (narrow()) setTab('chat'); };
+  useEffect(() => {
+    const close = () => { if (narrow()) closeWork(); };
+    window.addEventListener('close-work', close);
+    return () => window.removeEventListener('close-work', close);
+  }, []);
 
   useWorkbenchCommands({
     openAssistant, openPage, toggleTheme, setView, setSidebar, setTab, setEditor, setBrowse, setChatOpen, setTerminal, setPhone,
@@ -143,6 +149,8 @@ export function useWorkbench() {
   const showing = showingOf(tab, editor);
   const unreachable = useUnreachable();
   const active = activeOf(showing, unreachable, openFile);
+  const shownTurn = active === 'work' ? workTurn : null;
+  useEffect(() => setShownWork('workbench', shownTurn), [shownTurn]);
   const mobileExplorer = tab === 'code' && (!openFile || browse) && !isPage(editor) && editor !== 'work';
   const chatsView = view === 'chats' || view === 'sessions';
   const inChats = tab === 'repos' && chatsView;

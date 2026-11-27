@@ -81,6 +81,7 @@ import no.pradhan.agentview.nativeapp.net.OfflineState
 import no.pradhan.agentview.nativeapp.net.offlineBanner
 import no.pradhan.agentview.nativeapp.ops.AgentScreen
 import no.pradhan.agentview.nativeapp.chat.WorkScreen
+import no.pradhan.agentview.nativeapp.chat.workToggle
 import no.pradhan.agentview.nativeapp.ops.DeployScreen
 import no.pradhan.agentview.nativeapp.ops.McpScreen
 import no.pradhan.agentview.nativeapp.ops.PullsScreen
@@ -245,7 +246,14 @@ private fun SideRail(dests: List<Dest>) {
 @Composable
 private fun AppNavHost(hub: Hub, nav: NavHostController, twoPane: Boolean, modifier: Modifier) {
     val openAgent = { id: String -> nav.navigate("agent/${Uri.encode(id)}") }
-    val openWork = { id: String -> nav.navigate("work/${Uri.encode(id)}") }
+    val openWork = { id: String ->
+        val shown = nav.currentBackStackEntry?.takeIf { it.destination.route == "work/{id}" }?.arguments?.getString("id")
+        when (val next = workToggle(shown, id)) {
+            null -> nav.popBackStack()
+            else -> nav.navigate("work/${Uri.encode(next)}") { if (shown != null) popUpTo("work/{id}") { inclusive = true } }
+        }
+        Unit
+    }
     NavHost(nav, startDestination = Tab.Codex.route, modifier = modifier) {
         composable(Tab.Codex.route) { CodexScreen(hub) }
         composable(Tab.Chat.route) { if (twoPane) TwoPane(hub, openAgent, openWork) else ChatScreen(hub, openAgent, openWork) { nav.goTab(Tab.Sessions.route) } }

@@ -4,7 +4,7 @@ import { Icon } from '../../ui/Icon';
 import { Button, Chip } from '../../ui/Button';
 import { MemoryPick } from '../cards/Memory';
 import { proposalState, usedClaimState, type Claim, type FoldRow, type Proposal } from './workFold';
-import { openWork } from '../chatActions';
+import { shownWork, toggleWork } from '../chatActions';
 import { runningStep } from './steps';
 import { EditMarks } from './StepRows';
 import { useAssistantTable } from '../../codex/data';
@@ -21,6 +21,7 @@ export const Tasks = memo(function Tasks({ row: { id, hidden, steps: all, now, t
   const [proposing, setProposing] = useState(false);
   const [memory, setMemory] = useState(false);
   const cwd = useStore((s) => s.session.cwd);
+  const open = shownWork.use((s) => Object.values(s).includes(id));
   const steps = live ? all : all.filter((s) => s.done);
   const done = steps.filter((s) => s.done).length;
   const current = live ? steps.find((s) => !s.done) : undefined;
@@ -35,7 +36,7 @@ export const Tasks = memo(function Tasks({ row: { id, hidden, steps: all, now, t
         {claims.length > 0 && <Chip size="sm" on={reading} className="tr-claims-chip" aria-expanded={reading} onClick={() => setReading((v) => !v)}>{`Used ${plural(claims.length, 'claim')}`}</Chip>}
         {proposed.length > 0 && <Chip size="sm" on={proposing} className="tr-claims-chip" aria-expanded={proposing} onClick={() => setProposing((v) => !v)}>{`Proposed ${plural(proposed.length, 'claim')}`}</Chip>}
         {remembered.length > 0 && <Chip size="sm" className="tr-claims-chip" onClick={() => setMemory(true)}>{`Remembered ${plural(remembered.length, 'memory', 'memories')}`}</Chip>}
-        {tools > 0 && <button type="button" className="tr-tools" title="Open this turn's tool calls in a tab" onClick={() => openWork(id)}>{doing ? <>{spin}<span className="tr-doing">{doing}</span></> : `Used ${plural(tools, 'tool')}`}<Icon name="chevron-right" small /></button>}
+        {tools > 0 && <button type="button" className={`tr-tools${open ? ' on' : ''}`} aria-pressed={open} title={open ? "Close this turn's tool calls" : "Open this turn's tool calls in a tab"} onClick={() => toggleWork(id)}>{doing ? <>{spin}<span className="tr-doing">{doing}</span></> : `Used ${plural(tools, 'tool')}`}<Icon name="chevron-right" small /></button>}
         {tools > 0 && <EditMarks count={work} />}
       </div>
       {thinking && <div className="tr-thought">{thinking}</div>}

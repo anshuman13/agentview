@@ -23,6 +23,9 @@ import no.pradhan.agentview.nativeapp.ui.Type
 import no.pradhan.agentview.nativeapp.ui.av
 import no.pradhan.agentview.nativeapp.ui.select
 
+// The turn whose tool calls a turn's tools button shows next: none when that turn's are already shown (web toggleWork).
+internal fun workToggle(shown: String?, turn: String): String? = turn.takeIf { it != shown }
+
 // One turn's tool calls and Claude's text between them, in the order they ran (web WorkPane.tsx). Opened from the tools button of a turn.
 @Composable
 fun WorkScreen(hub: Hub, turn: String, onBack: () -> Unit, onOpenAgent: (String) -> Unit) {

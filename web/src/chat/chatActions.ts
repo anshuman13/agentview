@@ -1,5 +1,6 @@
 import { embedded, getState, notice, prompt, send, setUi, subscribe } from '../app/store';
 import { showChat } from '../ui/util';
+import { createStore } from '../ui/createStore';
 import { handoffText } from './composer/composerLogic';
 import { copyText, showSnack } from '../codex/view';
 import { removeMemory, restoreMemory, type RemovedMemory } from './chatApi';
@@ -8,8 +9,13 @@ import type { MemoryFile } from './cards/memoryLogic';
 // Puts text into the composer; the composer listens.
 export const insertText = (text: string) => window.dispatchEvent(new CustomEvent('agentview:insert', { detail: { text } }));
 
-// Opens one turn's tool calls in their own tab; the workbench listens.
-export const openWork = (turn: string) => window.dispatchEvent(new CustomEvent('open-work', { detail: turn }));
+// The turn whose tool calls each host shows (the desktop rail, the phone's work tab), so the tools button can toggle.
+export const shownWork = createStore<Record<string, string | null>>({});
+export const setShownWork = (host: string, turn: string | null) => shownWork.patch({ [host]: turn });
+export const workShown = (turn: string) => Object.values(shownWork.get()).includes(turn);
+
+// Opens one turn's tool calls in their own tab, or closes them when that turn's are already shown; the workbench listens.
+export const toggleWork = (turn: string) => window.dispatchEvent(new CustomEvent(workShown(turn) ? 'close-work' : 'open-work', { detail: turn }));
 
 // Side chat (like Claude desktop's): forks this chat into the column beside it, so a question does not land in the
 // running chat. The server views the fork once it starts; the original moves back to the main column.
