@@ -65,6 +65,10 @@ import no.pradhan.agentview.nativeapp.sessions.chatMatches
 import no.pradhan.agentview.nativeapp.sessions.queryWords
 import no.pradhan.agentview.nativeapp.sessions.since
 import no.pradhan.agentview.nativeapp.sessions.binLeft
+import no.pradhan.agentview.nativeapp.sessions.chatBranch
+import no.pradhan.agentview.nativeapp.sessions.folderBadge
+import no.pradhan.agentview.nativeapp.sessions.FolderBadge
+import no.pradhan.agentview.nativeapp.sessions.Glance
 import no.pradhan.agentview.nativeapp.chat.failedLine
 import no.pradhan.agentview.nativeapp.chat.mergeTail
 import no.pradhan.agentview.nativeapp.chat.trimHeld
@@ -1308,6 +1312,18 @@ class SharedCasesTest {
 
     @Test fun linesQuoteCases() {
         for (c in cases("lines-quote")) assertEquals(c.str("name"), c.str("expected"), linesQuote(c.str("path"), c.getValue("start").jsonPrimitive.int, c.getValue("end").jsonPrimitive.int, c.str("text")))
+    }
+
+    @Test fun chatBranchCases() {
+        for (c in cases("chat-branch")) assertEquals(c.str("name"), c.prim("expected")?.contentOrNull, chatBranch(c.prim("saved")?.contentOrNull, c.prim("repo")?.contentOrNull))
+    }
+
+    @Test fun folderBadgeCases() {
+        for (c in cases("folder-badge")) {
+            val e = c["expected"]?.takeIf { it !is JsonNull }?.jsonObject
+            val got = folderBadge(Glance(c.getValue("running").jsonPrimitive.int, c.getValue("needs").jsonPrimitive.int, c.getValue("unread").jsonPrimitive.int))
+            assertEquals(c.str("name"), e?.let { FolderBadge(it.getValue("count").jsonPrimitive.int, it.str("label")) }, got)
+        }
     }
 
     @Test fun toggleConnectorCases() {

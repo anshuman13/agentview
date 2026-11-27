@@ -11,7 +11,7 @@ import { ago, markSegments, plural, pressable, save, stored } from '../ui/util';
 import { queryWords } from '../codex/data/ask/match';
 import { Bin } from './Bin';
 import { chatOrder, nextUnread, stepChat } from './chatNav';
-import { byUrgency, chatFinder, chatState, doneChats, findHere, flip, groupByRepo, groupGlance, rootLookup, rowsById, holdOrder, newChatGroups, orderGroups, waitingChats, repoName, usePins, useWorkspace, type ChatSession, type Folder, type HeldOrder, type RepoGroup } from './folders';
+import { byUrgency, chatFinder, chatState, doneChats, findHere, flip, folderBadge, groupByRepo, groupGlance, rootLookup, rowsById, holdOrder, newChatGroups, orderGroups, waitingChats, repoName, usePins, useWorkspace, type ChatSession, type Folder, type HeldOrder, type RepoGroup } from './folders';
 import { FilterInput } from './FilterInput';
 import { LiveRow, SavedRow, chatActions, metaLine } from './ChatRows';
 import { searchMessages } from './sessionApi';
@@ -234,11 +234,8 @@ export function OpenChats() {
 
 function GroupGlance({ g, seen }: { g: RepoGroup; seen: Record<string, number> }) {
   const live = useStore((s) => s.live);
-  const { running, needs, unread } = groupGlance(g, seen, live);
-  if (needs > 0) return <span className="badge waiting" title={`${needs} need you`}>{needs}</span>;
-  if (running > 0) return <span className="badge running" title={`${running} running`}>{running}</span>;
-  if (unread > 0) return <span className="badge quiet" title={`${unread} unread`}>{unread}</span>;
-  return null;
+  const badge = folderBadge(groupGlance(g, seen, live));
+  return badge && <span className="badge new" title={badge.label} aria-label={badge.label}>{badge.count}</span>;
 }
 
 type MessageHit = { sessionId: string; parentId?: string; role: 'user' | 'assistant'; text: string; at: string; title: string };

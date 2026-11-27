@@ -113,6 +113,12 @@ fun chatPlace(ws: Workspace, cwd: String): String {
 
 fun isDefaultBranch(b: String?) = b.isNullOrEmpty() || b == "main" || b == "master" || b == "HEAD"
 
+// web chatBranch: the chat's own branch, or its folder's when the saved one is a helper subagent's worktree; none on a default branch or HEAD.
+fun chatBranch(saved: String?, repo: String?): String? {
+    val b = if (saved != null && !saved.startsWith("worktree-agent-")) saved else repo
+    return b.takeIf { !isDefaultBranch(it) }
+}
+
 enum class ChatState { Needs, Failed, Running, Done }
 
 // builds is buildsState of the row's open build chats: their Needs you and Running lift the row.
@@ -320,6 +326,16 @@ fun waitingRows(live: List<LiveChat>, ws: Workspace, filter: String): List<LiveC
 }
 
 data class Glance(val running: Int, val needs: Int, val unread: Int)
+
+data class FolderBadge(val count: Int, val label: String)
+
+// web folderBadge: a folder's one badge counts the chats to look at (need you or unread); running chats show on their rows.
+fun folderBadge(g: Glance): FolderBadge? {
+    val count = g.needs + g.unread
+    if (count == 0) return null
+    val label = listOfNotNull(g.needs.takeIf { it > 0 }?.let { "$it ${if (it == 1) "needs" else "need"} you" }, g.unread.takeIf { it > 0 }?.let { "$it unread" }).joinToString(", ")
+    return FolderBadge(count, label)
+}
 
 fun groupGlance(g: RepoGroup, seen: Map<String, Long>, live: List<LiveChat> = emptyList()): Glance {
     var running = 0

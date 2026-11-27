@@ -1,0 +1,6 @@
+[
+  {"name": "counts chats that need you or are unread", "running": 2, "needs": 1, "unread": 2, "expected": {"count": 3, "label": "1 needs you, 2 unread"}},
+  {"name": "running alone shows no badge", "running": 2, "needs": 0, "unread": 0, "expected": null},
+  {"name": "unread only", "running": 0, "needs": 0, "unread": 1, "expected": {"count": 1, "label": "1 unread"}},
+  {"name": "needs only", "running": 0, "needs": 2, "unread": 0, "expected": {"count": 2, "label": "2 need you"}}
+]

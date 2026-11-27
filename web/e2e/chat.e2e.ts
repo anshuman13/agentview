@@ -132,3 +132,21 @@ test('top-left button toggles the sidebar', async () => {
   await page.getByRole('button', { name: 'Show the sidebar' }).click();
   await expect(search).toBeVisible();
 });
+
+test('session list rows stay one line each with the chat branch only', async () => {
+  const rows = page.locator('.chats .chat-row');
+  await expect(rows.filter({ hasText: 'Detached checkout' })).toBeVisible();
+  const list = (await page.locator('.chats').boundingBox())!;
+  for (const row of await rows.all()) {
+    if (!(await row.isVisible())) continue;
+    const title = row.locator('.ui-row-title');
+    const h = await title.evaluate((n) => [n.getBoundingClientRect().height, parseFloat(getComputedStyle(n).lineHeight)]);
+    expect(h[0]).toBeLessThanOrEqual(h[1] + 1);
+    const b = (await row.boundingBox())!;
+    expect(b.x + b.width).toBeLessThanOrEqual(list.x + list.width + 1);
+  }
+  await expect(page.locator('.chats')).not.toContainText('worktree-agent');
+  await expect(page.locator('.chats')).not.toContainText('HEAD');
+  await expect(page.locator('.chats .chat-row .dot.idle').first()).toBeVisible();
+  await expect(page.locator('.chats .chat-build .chat-run').filter({ hasText: 'Running' }).locator('.codicon, svg, i').first()).toBeVisible();
+});

@@ -15,7 +15,7 @@ import { START_MODES, billing, checkedModel, menuModes, modeSteps, modelRow, new
 import { recentInRepo } from './app/newChat';
 import { blockedRule, planFeedback, planParagraphs } from './chat/cards/pendingLogic';
 import { needsEarlier } from './chat/transcript/window';
-import { binLeft, buildFolders, chatPlace, since } from './sessions/folders';
+import { binLeft, buildFolders, chatBranch, chatPlace, folderBadge, since } from './sessions/folders';
 import { findingFixPrompt, findingsFixPrompt } from '../../shared/reviewPrompt';
 import { linesQuote } from '../../shared/linesQuote';
 import { setupPrompt, type SetupKind } from '../../shared/setupPrompt';
@@ -585,6 +585,14 @@ describe('cases shared with the Android app', () => {
 
   for (const c of cases<{ name: string; path: string; start: number; end: number; text: string; expected: string }>('lines-quote')) {
     it(`linesQuote: ${c.name}`, () => expect(linesQuote(c.path, c.start, c.end, c.text)).toBe(c.expected));
+  }
+
+  for (const c of cases<{ name: string; saved: string | null; repo: string | null; expected: string | null }>('chat-branch')) {
+    it(`chatBranch: ${c.name}`, () => expect(chatBranch(c.saved, c.repo) ?? null).toBe(c.expected));
+  }
+
+  for (const c of cases<{ name: string; needs: number; unread: number; expected: object | null }>('folder-badge')) {
+    it(`folderBadge: ${c.name}`, () => expect(folderBadge(c) as object | null).toEqual(c.expected));
   }
 
   for (const c of cases<{ name: string; tools: string; id: string; expected: string }>('toggle-connector')) {

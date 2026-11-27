@@ -2,6 +2,7 @@
 import chat from './fixtures/chat.json';
 import earlier from './fixtures/earlier.json';
 import live from './fixtures/live.json';
+import sessions from './fixtures/sessions.json';
 import spawned from './fixtures/spawned.json';
 
 const PORT = Number(process.env.STUB_PORT ?? 7788);
@@ -41,6 +42,8 @@ const GET: Record<string, (u: URL) => unknown> = {
   '/api/chat/subchats': () => [],
   '/api/assistant/changes': () => ({ version: 1, changes: [] }),
   '/api/sessions/seen': () => ({}),
+  '/api/sessions': () => sessions.chats.map((c) => ({ ...c, lastModified: Date.now() - 3_600_000 })),
+  '/api/repos': () => sessions.repos,
   '/api/git/status': () => ({ branch: 'main', ahead: 0, behind: 0, files: [] }),
   '/api/settings': () => ({ deploy: false, accountLabels: { main: 'Account 1', alt: 'Account 2', alt2: 'Account 3' } }),
 };

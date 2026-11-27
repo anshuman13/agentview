@@ -21,6 +21,8 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.ClipboardManager
@@ -159,7 +161,7 @@ class ChatRows(
     @Composable
     fun LiveRow(c: LiveChat, repo: String? = null) {
         val s = c.sessionId?.let { saved[it] }
-        val branch = (s?.gitBranch ?: repoBranch(c.cwd)).takeIf { !isDefaultBranch(it) }
+        val branch = chatBranch(s?.gitBranch, repoBranch(c.cwd))
         val builds = buildsState(live, s?.buildMembers)
         val state = chatState(c, s, seen, builds)
         val id = saved.rowId(c.sessionId)
@@ -199,7 +201,7 @@ class ChatRows(
 
     @Composable
     fun SavedRow(s: SavedSession, repo: String? = null) {
-        val branch = (s.gitBranch ?: repoBranch(s.cwd)).takeIf { !isDefaultBranch(it) }
+        val branch = chatBranch(s.gitBranch, repoBranch(s.cwd))
         val builds = buildsState(live, s.buildMembers)
         Column { ChatRow(
             title = (if (opening.value == s.sessionId) "Opening… " else "") + s.title.ifBlank { "Untitled" },
@@ -232,11 +234,7 @@ fun RepoRow(g: RepoGroup, seen: Map<String, Long>, live: List<LiveChat>, onClick
         else -> metaLine(plural(chats, "chat"), since(g.last))
     }
     ListRow(g.name, meta, leading = { RepoMark(g.name) }, onClick = onClick, trailing = {
-        when {
-            glance.needs > 0 -> Badge("${glance.needs}", BadgeTone.Waiting)
-            glance.running > 0 -> Badge("${glance.running}", BadgeTone.Running)
-            glance.unread > 0 -> Badge("${glance.unread}", BadgeTone.Quiet)
-        }
+        folderBadge(glance)?.let { Badge("${it.count}", BadgeTone.New, Modifier.semantics { contentDescription = it.label }) }
         Chevron()
     })
 }
@@ -259,7 +257,7 @@ internal fun StateDot(state: ChatState?) {
         ChatState.Failed -> DotState.Bad to "Failed"
         ChatState.Running -> DotState.Running to "Running"
         ChatState.Done -> DotState.Unread to "Unread"
-        null -> return
+        null -> DotState.Idle to null
     }
     StatusDot(d, desc = word)
 }
@@ -299,7 +297,7 @@ private fun ChatRow(title: String, meta: androidx.compose.ui.text.AnnotatedStrin
 }
 
 @Composable
-private fun ChatListRow(title: String, meta: AnnotatedString, shown: ChatState?, unread: Boolean, selected: Boolean, actions: RowActions, onClick: () -> Unit, run: LiveRun?, badge: RunBadge?, onResume: (() -> Unit)?) {
+internal fun ChatListRow(title: String, meta: AnnotatedString, shown: ChatState?, unread: Boolean, selected: Boolean, actions: RowActions, onClick: () -> Unit, run: LiveRun?, badge: RunBadge?, onResume: (() -> Unit)?) {
     ListRow(
         boldIf(unread, title),
         meta, lines = 1, metaLines = 1, selected = selected, onClick = onClick,

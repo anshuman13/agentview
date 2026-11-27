@@ -144,7 +144,13 @@ export function worktreeRequest(d: Folder, track: (branch: string | null, error?
 }
 
 const WEEK = 7 * 864e5;
-export const isDefault = (b?: string) => !b || b === 'main' || b === 'master';
+export const isDefault = (b?: string | null) => !b || b === 'main' || b === 'master' || b === 'HEAD';
+
+// The branch a chat row shows: the chat's own, or its folder's when the saved one is a helper subagent's worktree; none on a default branch or detached HEAD.
+export function chatBranch(saved?: string | null, repo?: string | null) {
+  const b = saved && !saved.startsWith('worktree-agent-') ? saved : repo;
+  return isDefault(b) ? undefined : b!;
+}
 
 export const KINDS: [RepoKind, string, string][] = [
   ['new', 'New', 'new-folder'], ['web', 'Web apps', 'globe'], ['service', 'Services', 'server'], ['infra', 'Infra', 'layers'], ['data', 'Data', 'database'],
@@ -403,6 +409,14 @@ export function groupGlance(g: RepoGroup, seen: Record<string, number>, live: Li
   for (const c of g.open) count(chatState({ live: c }, seen));
   for (const s of g.recent) count(chatState({ saved: s, builds: buildsState(live, s.buildMembers) }, seen));
   return { ...n, last: g.last };
+}
+
+// A folder's one badge: the chats to look at (need you or unread); running chats show on their rows.
+export function folderBadge({ needs, unread }: { needs: number; unread: number }) {
+  const count = needs + unread;
+  if (!count) return null;
+  const label = [needs && `${needs} ${needs === 1 ? 'needs' : 'need'} you`, unread && `${unread} unread`].filter(Boolean).join(', ');
+  return { count, label };
 }
 
 // Each chat row by its root id and every member id, so an open chat on a sub-chat finds its row.

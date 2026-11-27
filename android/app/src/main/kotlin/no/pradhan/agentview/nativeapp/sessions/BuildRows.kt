@@ -19,6 +19,7 @@ import no.pradhan.agentview.nativeapp.ui.AvIcon
 import no.pradhan.agentview.nativeapp.ui.Badge
 import no.pradhan.agentview.nativeapp.ui.BadgeTone
 import no.pradhan.agentview.nativeapp.ui.ListRow
+import no.pradhan.agentview.nativeapp.ui.RowLabel
 import no.pradhan.agentview.nativeapp.ui.Tokens
 import no.pradhan.agentview.nativeapp.ui.av
 
@@ -38,7 +39,10 @@ fun BuildRows(hub: Hub, sessionId: String?, members: List<String>?, state: ChatS
         ListRow(
             b.title, b.meta.ifEmpty { null }, lines = 1, metaLines = 1, compact = true,
             leading = { AvIcon("tools", null, Tokens.iconSm) },
-            state = { Badge(b.status, if (b.needs) BadgeTone.Waiting else BadgeTone.Quiet) },
+            state = {
+                if (b.needs) Badge(b.status, BadgeTone.Waiting)
+                else { if (b.status == "Running") AvIcon("sync", null, Tokens.iconSm, Modifier.padding(end = Tokens.sp1), tint = av.fgMuted); RowLabel(b.status) }
+            },
             modifier = Modifier.background(av.groupCard).padding(start = Tokens.leadWidth + Tokens.sp8),
             onClick = {
                 val chat = b.chatId?.takeIf { id -> hub.store.state.value.live.any { it.id == id } }

@@ -26,7 +26,7 @@ export function BuildRows({ sessionId, members, state }: { sessionId?: string; m
       {rows.map((b) => (
         <div key={b.sessionId} className="chat-row chat-build">
           <Row lines={1} data-chat-row title={b.title} meta={b.meta || undefined} leading={<Icon name="tools" small />}
-            state={<span className={`chat-run ${b.needs ? 'warn' : ''}`}>{b.status}</span>}
+            state={<span className={`chat-run ${b.needs ? 'warn' : ''}`}>{b.status === 'Running' && <Icon name="sync" small />}{b.status}</span>}
             onClick={() => showChat(b.chatId ? { chatId: b.chatId, sessionId: b.sessionId } : { sessionId: b.sessionId })} />
         </div>
       ))}

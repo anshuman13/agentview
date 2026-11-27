@@ -1,0 +1,8 @@
+[
+  {"name": "the chat's own feature branch", "saved": "anshuman/x", "repo": "main", "expected": "anshuman/x"},
+  {"name": "a subagent worktree branch falls back to the folder branch", "saved": "worktree-agent-a40af731e45f0b52f", "repo": "feat/rows", "expected": "feat/rows"},
+  {"name": "a subagent worktree branch on main shows nothing", "saved": "worktree-agent-a40af731e45f0b52f", "repo": "main", "expected": null},
+  {"name": "detached HEAD shows nothing", "saved": "HEAD", "repo": "HEAD", "expected": null},
+  {"name": "no saved branch uses the folder branch", "saved": null, "repo": "fix/x", "expected": "fix/x"},
+  {"name": "default branch shows nothing", "saved": "master", "repo": null, "expected": null}
+]

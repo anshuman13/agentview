@@ -1,0 +1,7 @@
+{
+  "repos": [{ "name": "repo", "root": "/", "kind": "service", "cwd": "/repo", "branch": "main", "dirty": 0, "lastCommit": 0, "paseo": false }],
+  "chats": [
+    { "sessionId": "s1", "title": "Fix the login bug", "cwd": "/repo", "gitBranch": "worktree-agent-a40af731e45f0b52f", "lastModified": 0, "provider": "claude", "buildMembers": ["b1"] },
+    { "sessionId": "s3", "title": "Detached checkout with a title long enough to need cutting on a phone", "cwd": "/repo", "gitBranch": "HEAD", "lastModified": 0, "provider": "claude" }
+  ]
+}

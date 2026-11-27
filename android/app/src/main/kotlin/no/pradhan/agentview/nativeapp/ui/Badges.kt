@@ -133,7 +133,7 @@ fun StatusDot(state: DotState, modifier: Modifier = Modifier, desc: String? = do
         val t = rememberInfiniteTransition(label = "dot")
         t.animateFloat(1f, 0.6f, infiniteRepeatable(tween(Tokens.dur * 6), RepeatMode.Reverse), label = "pulse").value
     } else 1f
-    val ring = if (state == DotState.Agent) c.agent else null
+    val ring = when (state) { DotState.Agent -> c.agent; DotState.Idle -> c.fgFaint; else -> null }
     val named = if (desc != null) Modifier.semantics { contentDescription = desc } else Modifier
     Box(modifier.then(named).size(Tokens.dot).alpha(pulse).clip(CircleShape).background(color).then(if (ring != null) Modifier.border(Tokens.stroke, ring, CircleShape) else Modifier))
 }

@@ -12,6 +12,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.foundation.layout.padding
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import kotlinx.coroutines.launch
@@ -88,8 +89,8 @@ fun RunBadgeView(badge: RunBadge, run: LiveRun) = when (badge) {
     RunBadge.Needs -> Badge("Needs you", BadgeTone.Waiting)
     RunBadge.Paused -> Badge("Paused", BadgeTone.Waiting)
     RunBadge.Next -> {
-        AvIcon("sync", null, Tokens.iconSm, tint = av.fgMuted)
-        run.nextAt?.let { RowLabel(clock(it)) } ?: Unit
+        AvIcon("sync", null, Tokens.iconSm, Modifier.padding(end = Tokens.sp1), tint = av.fgMuted)
+        RowLabel(run.nextAt?.let { clock(it) } ?: "Running")
     }
 }
 

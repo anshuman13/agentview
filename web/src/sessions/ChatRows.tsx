@@ -9,7 +9,7 @@ import { providerMark, shortModel } from '../../../shared/providers';
 import { save } from '../ui/util';
 import { RenameInput } from './RenameInput';
 import { CheckIcon, prText, usePullRequests } from '../ops/pulls';
-import { archiveChat, buildsState, chatMenuItems, chatSwipe, chatLine, chatState, closeChat, isDefault, renameChat, repoName, removeRequest, restoreChat, rootLookup, rowsById, since, type ChatSession, type ChatState, type Folder } from './folders';
+import { archiveChat, buildsState, chatMenuItems, chatSwipe, chatLine, chatBranch, chatState, closeChat, renameChat, repoName, removeRequest, restoreChat, rootLookup, rowsById, since, type ChatSession, type ChatState, type Folder } from './folders';
 import { askLine } from './runLogic';
 import { Swipe } from '../codex/gestures/Swipe';
 import { copyText, showSnack } from '../codex/view';
@@ -69,7 +69,7 @@ function RunTag({ run }: { run: ChatRun }) {
 
 const DOT = { needs: ['waiting', 'Needs you'], failed: ['bad', 'Failed'], running: ['running', 'Running'], done: ['unread', 'Unread'] } as const;
 
-export const StateDot = ({ state }: { state?: ChatState | null }) => (state ? <span className={`dot ${DOT[state][0]}`} role="img" aria-label={DOT[state][1]} /> : <span />);
+export const StateDot = ({ state }: { state?: ChatState | null }) => (state ? <span className={`dot ${DOT[state][0]}`} role="img" aria-label={DOT[state][1]} /> : <span className="dot idle" />);
 
 function ChatRow({ sessionId, title, cwd, lastModified, live, opening, meta, state, selected, pinned, actions, onOpen, onPin, onBeside, onClose }: ChatRowProps) {
   const [renaming, setRenaming] = useState(false);
@@ -165,16 +165,11 @@ export const metaLine = (...parts: (string | undefined)[]) => parts.filter(Boole
 
 const draftMeta = (draft: string) => <><span className="chat-draft">Draft:</span> {draft}</>;
 
-const branchOf = (saved?: string | null, repoBranch?: string) => {
-  const b = saved || repoBranch;
-  return isDefault(b) ? undefined : b;
-};
-
 export function SavedRow({ s, repo, branch, opening, pinned, actions, onOpen, onPin }: { s: ChatSession; repo?: string; branch?: string; opening: boolean; pinned: boolean; actions: Actions; onOpen: () => void; onPin: Pin }) {
   const seen = useStore((x) => x.seen);
   const builds = useStore((x) => buildsState(x.live, s.buildMembers));
   const draft = draftLine(readDraft(s.sessionId));
-  return <><ChatRow sessionId={s.sessionId} title={s.title} cwd={s.cwd} lastModified={s.lastModified} opening={opening} meta={draft ? draftMeta(draft) : s.summary ? metaLine(since(s.lastModified), s.subs, s.summary) : metaLine(repo, branchOf(s.gitBranch, branch), s.subs, providerMark(s.provider), since(s.lastModified))} state={chatState({ saved: s, builds }, seen)} pinned={pinned} actions={actions} onOpen={onOpen} onPin={onPin} /><BuildRows sessionId={s.sessionId} members={s.buildMembers} state={builds} /></>;
+  return <><ChatRow sessionId={s.sessionId} title={s.title} cwd={s.cwd} lastModified={s.lastModified} opening={opening} meta={draft ? draftMeta(draft) : s.summary ? metaLine(since(s.lastModified), s.subs, s.summary) : metaLine(repo, chatBranch(s.gitBranch, branch), s.subs, providerMark(s.provider), since(s.lastModified))} state={chatState({ saved: s, builds }, seen)} pinned={pinned} actions={actions} onOpen={onOpen} onPin={onPin} /><BuildRows sessionId={s.sessionId} members={s.buildMembers} state={builds} /></>;
 }
 
 export function WaitingRows({ rows, chats, folders, viewing, ask, pins, setPin, setChats }: { rows: LiveChat[]; chats: ChatSession[]; folders: Folder[]; viewing: string; ask: (r: ConfirmRequest) => void; pins: string[]; setPin: (id: string, on: boolean) => Promise<boolean>; setChats: SetChats }) {
@@ -198,7 +193,7 @@ export function LiveRow({ c, saved, repo, branch, selected, pinned, actions, ask
   const draft = selected ? '' : draftLine(readDraft(draftKey(c.id, c.sessionId), c.id));
   const main = draft ? draftMeta(draft) : (
     <>
-      {metaLine(repo, branchOf(saved?.gitBranch, branch), saved?.subs, c.model && shortModel(c.model), providerMark(c.provider), when)}
+      {metaLine(repo, chatBranch(saved?.gitBranch, branch), saved?.subs, c.model && shortModel(c.model), providerMark(c.provider), when)}
       {c.pr && <> · {pr ? <a className="chat-pr" href={pr.url} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()}>{prText(c.pr, pr)}{checkIcon}</a> : <>#{c.pr}{checkIcon}</>}</>}
       {c.todos && ` · ${c.todos.done}/${c.todos.total}`}
       {line.edits && <> · <span className="chat-add">+{line.edits.add}</span> <span className="chat-del">-{line.edits.del}</span></>}
