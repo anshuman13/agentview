@@ -158,9 +158,7 @@ fun Transcript(hub: Hub, view: ChatView, earlier: Int, settled: Boolean, chatId:
                 if (settled && noEvents == view.events.isEmpty() && !(blank && (loading || earlierDue))) EmptyState("No messages yet", "Your prompts, the agent's steps and replies show up here", icon = "comment-discussion") else Loading("Loading the chat…")
             }
         }
-        val dayOf = view.dayOf
-        val pill by remember(dayOf) { derivedStateOf { if (listState.isScrollInProgress) listState.layoutInfo.visibleItemsInfo.lastOrNull()?.key?.let { dayOf[it] } else null } }
-        pill?.let { DayPill(it, Modifier.align(Alignment.TopCenter).padding(top = Tokens.sp4)) }
+        ScrollDayPill(listState, view.dayOf, Modifier.align(Alignment.TopCenter).padding(top = Tokens.sp4))
         if (!atBottom) JumpButton(replies, Modifier.align(Alignment.BottomEnd).padding(end = Tokens.sp4, bottom = Tokens.sp4)) {
             stick.value = true
             pin.value = false
@@ -210,6 +208,13 @@ private fun DayDivider(label: String) {
         Text(label, style = Type.label, color = av.fgMuted, fontWeight = FontWeight.SemiBold)
         HorizontalDivider(Modifier.weight(1f), color = av.border, thickness = Tokens.hairline)
     }
+}
+
+// Reads the scroll state here so showing and hiding the pill on each drag does not recompose the whole Transcript.
+@Composable
+private fun ScrollDayPill(listState: LazyListState, dayOf: Map<String, String>, modifier: Modifier) {
+    val pill by remember(dayOf) { derivedStateOf { if (listState.isScrollInProgress) listState.layoutInfo.visibleItemsInfo.lastOrNull()?.key?.let { dayOf[it] } else null } }
+    pill?.let { DayPill(it, modifier) }
 }
 
 // Slack's floating date while scrolling a chat that spans several days.
