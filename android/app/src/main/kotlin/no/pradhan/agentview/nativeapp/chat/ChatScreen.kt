@@ -118,6 +118,7 @@ fun ChatScreen(hub: Hub, onOpenAgent: (String) -> Unit, onOpenWork: (String) -> 
         ChatHeader(hub, live, session, view.cost, view.items.any { it is Item.Assistant }, panels, left.isNotEmpty(), running, cwd, onChats) { review = 0 }
         ChatStatus(live, session, view.cost, remember(view.events) { lastReplyAt(view.events) }, if (view.agents.isNotEmpty() || live.agentList.isNotEmpty() || run != null) agentChipCount(view.agents.size, live.agentList.size) else null) { panels.agents = true }
         Hairline()
+        BuildBar(hub, session?.sessionId, view.events)
         if (panels.find) {
             BackHandler { panels.find = false }
             FindBar(hub, view.events, earlier, findRequest) { panels.find = false }

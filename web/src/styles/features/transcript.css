@@ -161,3 +161,8 @@
 .tr-steps-head > span + .tr-tools::before { content: '\00b7'; margin-right: var(--sp-3); }
 .tr-subs { display: flex; flex-direction: column; gap: var(--sp-3); }
 .tr-sub-feed { display: flex; flex-direction: column; gap: var(--sp-5); padding: var(--sp-4) var(--sp-6) var(--sp-6); }
+.tr-buildbar { flex: none; border-bottom: 1px solid var(--border); }
+.tr-buildbar-row { display: flex; align-items: center; gap: var(--sp-3); min-height: 36px; padding: var(--sp-2) var(--sp-8); cursor: pointer; color: var(--meta-fg); }
+.tr-buildbar-row:hover { background: var(--hover); }
+.tr-buildbar-title { flex: none; max-width: 40%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--fg); font-size: var(--fs-sm); }
+.tr-buildbar-meta { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--fs-xs); }

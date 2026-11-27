@@ -8,6 +8,7 @@ import { BlockedCard } from '../cards/Pending';
 import { ReviewCard } from '../cards/ReviewCard';
 import { AlarmCard } from './AlarmCard';
 import { BuildCard } from './BuildCard';
+import { BuildBar } from './BuildBar';
 import { SketchCard } from './SketchCard';
 import { DocCard } from './DocCard';
 import { SubChatRows } from './SubChatRows';
@@ -140,6 +141,7 @@ function TranscriptView({ sessionId, events, earlier, cwd, running, bill, failed
 
   return (
     <div className="tr-host">
+    <BuildBar sessionId={sessionId} events={events} />
     {finding && <FindBar key={begun.n} events={events} earlier={earlier} start={begun.request} go={goToHit} onClose={() => setFinding(false)} />}
     <div ref={box} className="tr" onScroll={onScroll}>
       <div ref={rows} className="tr-rows">

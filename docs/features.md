@@ -553,7 +553,9 @@ transcript the tool call shows as a build card (`BuildCard.tsx`, `BuildCard.kt`,
 `BuildCardLogic.kt` on `shared/fixtures/build-card.json`): the spec name, the state (Writing spec, Waiting for approval,
 Running, Paused, Needs you, Done, Stopped), "Task n of N", the last round and Open, from `GET /api/chat/spawned`,
 refreshed when the chat's events change and every 30 s until the build ends. A card whose build is not found shows the
-tool's result text. The build chat's header shows "Started from <parent title>" under the title, and a tap opens the
+tool's result text. While a build the chat started is open (not Done or Stopped), a bar pinned under the chat header
+(`BuildBar.tsx`, `BuildBar.kt`, rows from `buildRows`) shows its spec, "Task n of N", the last round and the state; a
+tap opens the build chat. The build chat's header shows "Started from <parent title>" under the title, and a tap opens the
 parent chat (`startedFrom.ts`, `startedFrom` in `Folders.kt`).
 
 On the web a chat's run heads its Agents rail (`RailHead`), on Android its Agents sheet (`RunActions` and `RunRows` in
