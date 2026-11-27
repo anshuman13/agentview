@@ -8,12 +8,13 @@ import { useCan } from '../useCan';
 import { Voice, type useDictation } from './Voice';
 import type { Use } from './composerLogic';
 import { keyText } from '../../app/shell/keys';
-import { providerLabel, shortModel } from '../../../../shared/providers';
+import { providerLabel, settingsLabel } from '../../../../shared/providers';
 
 export function useModeText() {
-  const { effort, modelName, effortName, menu } = useChatSettings();
+  const { effort, modelName, mode, review } = useChatSettings();
+  const provider = useStore((s) => s.session.provider);
   const canEffort = useCan('effort');
-  return `${shortModel(modelName)}${effort && canEffort ? ` · ${effortName}` : ''} · ${menu.label}`;
+  return settingsLabel(modelName, effort, canEffort, provider, mode, review);
 }
 
 function ModeChip({ setPick }: { setPick: (p: Pick) => void }) {

@@ -10,8 +10,8 @@ import { TABLES } from '../../shared/tables';
 import { editCount, stripRound } from '../../shared/edits';
 import { exploreLabelOf, exploreRunsOf, type ExploreRow } from '../../shared/explore';
 import { FEATURES, featureRows, paletteFeature, shownFeature, type UseDays } from '../../shared/featureUse';
-import type { Capabilities, ChatEvent, Finding, ChatRun, LiveChat, Provider, SavedSession, SpawnedBuild, Try } from '../../shared/protocol';
-import { START_MODES, billing, checkedModel, menuModes, modeSteps, modelRow, newestModels, providerLabel, providerMark, providerModes, shortModel, startModeFor, startTexts, type Billing } from '../../shared/providers';
+import type { Capabilities, ChatEvent, Finding, ChatRun, Effort, LiveChat, Provider, SavedSession, SpawnedBuild, Try } from '../../shared/protocol';
+import { START_MODES, billing, checkedModel, menuModes, modeSteps, modelRow, newestModels, providerLabel, providerMark, providerModes, settingsLabel, shortModel, startModeFor, startTexts, type Billing } from '../../shared/providers';
 import { recentInRepo } from './app/newChat';
 import { binLeft, buildFolders, chatPlace, since } from './sessions/folders';
 import { findingFixPrompt, findingsFixPrompt } from '../../shared/reviewPrompt';
@@ -869,6 +869,10 @@ describe('cases shared with the Android app', () => {
 
   for (const c of cases<{ name: string; shown: [string, string][]; model: string | null; row: string | null }>('model-row')) {
     it(`modelRow: ${c.name}`, () => expect(modelRow(c.shown.map(([value, displayName]) => ({ value, displayName })), c.model)).toBe(c.row));
+  }
+
+  for (const c of cases<{ name: string; model: string; effort: Effort | null; canEffort: boolean; provider: Provider; mode: string; review: boolean; label: string }>('settings-label')) {
+    it(`settingsLabel: ${c.name}`, () => expect(settingsLabel(c.model, c.effort, c.canEffort, c.provider, c.mode, c.review)).toBe(c.label));
   }
 
   for (const c of cases<{ name: string; mode: string; review: boolean; picked: string; send: { mode: string | null; review: boolean | null } }>('mode-steps')) {

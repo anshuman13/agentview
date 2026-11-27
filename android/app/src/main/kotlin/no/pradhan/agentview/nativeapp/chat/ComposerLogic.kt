@@ -115,8 +115,9 @@ fun modelRow(shown: List<ModelInfo>, model: String?): String? {
     return (shown.firstOrNull { it.value == model } ?: shown.firstOrNull { shortModel(it.displayName) == name })?.value
 }
 
-// The settings chip text: the short model name, plus the mode label unless it is plain Default.
-fun settingsLabel(model: String, mode: String, review: Boolean, provider: String?) = if (mode == "default" && !review) shortModel(model) else "${shortModel(model)} · ${menuModes(provider, mode, review).label}"
+// shared/providers.ts settingsLabel: "Opus 5.5 · Medium · Auto"; the effort only when set and the provider offers it.
+fun settingsLabel(model: String, effort: String?, canEffort: Boolean, provider: String?, mode: String, review: Boolean) =
+    "${shortModel(model)}${if (effort != null && canEffort) " · ${EFFORT_LABEL[effort] ?: effort}" else ""} · ${menuModes(provider, mode, review).label}"
 
 fun modelName(s: SessionInfo?): String {
     if (s == null) return "Model"

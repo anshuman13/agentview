@@ -1,0 +1,8 @@
+[
+  { "name": "effort set shows model, effort and mode", "model": "Opus 5.5", "effort": "medium", "canEffort": true, "provider": "claude", "mode": "auto", "review": false, "label": "Opus 5.5 · Medium · Auto" },
+  { "name": "no effort leaves it out", "model": "claude-opus-5-5", "effort": null, "canEffort": true, "provider": "claude", "mode": "auto", "review": false, "label": "Opus 5.5 · Auto" },
+  { "name": "a provider without effort leaves it out", "model": "gpt-5", "effort": "high", "canEffort": false, "provider": "openrouter", "mode": "default", "review": false, "label": "gpt-5 · Default" },
+  { "name": "Default mode is still named", "model": "Sonnet 5.5", "effort": "xhigh", "canEffort": true, "provider": "claude", "mode": "default", "review": false, "label": "Sonnet 5.5 · Extra high · Default" },
+  { "name": "auto with review reads Supervised", "model": "Opus 5.5", "effort": "high", "canEffort": true, "provider": "claude", "mode": "auto", "review": true, "label": "Opus 5.5 · High · Supervised" },
+  { "name": "another mode with review adds Review", "model": "Opus 5.5", "effort": null, "canEffort": true, "provider": "claude", "mode": "default", "review": true, "label": "Opus 5.5 · Default · Review" }
+]

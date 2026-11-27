@@ -400,7 +400,7 @@ private fun AddSheet(s: ComposerState, uploading: Int, session: SessionInfo?, at
     val c = av
     val pct = contextPercent(session?.context, session?.contextWindow)
     val icon = { name: String -> @Composable { AvIcon(name, null, Tokens.iconMd, tint = c.fgMuted) } }
-    val settings = settingsLabel(modelName(session), session?.permissionMode ?: "default", session?.review == true, session?.provider)
+    val settings = settingsLabel(modelName(session), session?.effort, session?.capabilities?.effort ?: true, session?.provider, session?.permissionMode ?: "default", session?.review == true)
     Sheet({ onSheet(null) }, "Add", padded = false, full = false) {
         Group {
             ListRow("Photo", leading = icon("file-media"), onClick = { onSheet(null); attach.choosePhoto() })

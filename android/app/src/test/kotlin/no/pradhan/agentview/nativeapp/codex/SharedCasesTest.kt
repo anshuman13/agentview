@@ -45,6 +45,7 @@ import no.pradhan.agentview.nativeapp.chat.addUse
 import no.pradhan.agentview.nativeapp.chat.attachMark
 import no.pradhan.agentview.nativeapp.chat.buildHistory
 import no.pradhan.agentview.nativeapp.chat.composerPlaceholder
+import no.pradhan.agentview.nativeapp.chat.settingsLabel
 import no.pradhan.agentview.nativeapp.chat.ghostFor
 import no.pradhan.agentview.nativeapp.chat.quoteText
 import no.pradhan.agentview.nativeapp.chat.withUses
@@ -1466,6 +1467,12 @@ class SharedCasesTest {
         for (c in cases("model-row")) {
             val shown = c.getValue("shown").jsonArray.map { val p = it.jsonArray; ModelInfo(p[0].jsonPrimitive.content, p[1].jsonPrimitive.content) }
             assertEquals(c.str("name"), c.nullable("row")?.jsonPrimitive?.content, modelRow(shown, c.nullable("model")?.jsonPrimitive?.content))
+        }
+    }
+
+    @Test fun settingsLabelCases() {
+        for (c in cases("settings-label")) {
+            assertEquals(c.str("name"), c.str("label"), settingsLabel(c.str("model"), c.nullable("effort")?.jsonPrimitive?.content, c.getValue("canEffort").jsonPrimitive.boolean, c.str("provider"), c.str("mode"), c.getValue("review").jsonPrimitive.boolean))
         }
     }
 

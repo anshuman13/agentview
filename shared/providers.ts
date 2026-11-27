@@ -1,4 +1,4 @@
-import { PERMISSION_MODES, type Provider } from './protocol.js';
+import { EFFORT_LABEL, PERMISSION_MODES, type Effort, type Provider } from './protocol.js';
 import { BUILD_COMMAND } from './build.js';
 
 // What each provider fixes: its name, how its use is billed and the permission modes it offers.
@@ -57,6 +57,11 @@ export function menuModes(p: Provider | undefined, mode: string, review: boolean
     checked: supervised ? SUPERVISED.value : mode,
     label: supervised ? SUPERVISED.label : review ? `${name} · Review` : name,
   };
+}
+
+// The composer settings chip: "Opus 5.5 · Medium · Auto"; the effort only when set and the provider offers it (Android settingsLabel).
+export function settingsLabel(model: string, effort: Effort | null | undefined, canEffort: boolean, p: Provider | undefined, mode: string, review: boolean) {
+  return `${shortModel(model)}${effort && canEffort ? ` · ${EFFORT_LABEL[effort]}` : ''} · ${menuModes(p, mode, review).label}`;
 }
 
 // What picking a row of the menu sends: a permission mode and a review switch, each null when it already holds.
