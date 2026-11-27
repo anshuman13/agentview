@@ -42,7 +42,7 @@ const Block = memo(
   function Block({ m, token, fade }: { m: Md; token: Token; fade?: boolean }) {
     const html = m.md.parser([token]);
     const ref = useRef<HTMLDivElement>(null);
-    const tails = useRef<{ tails: Tail[]; len: number }>({ tails: [], len: 0 });
+    const tails = useRef<{ tails: Tail[]; len: number | null }>({ tails: [], len: null });
     useLayoutEffect(() => {
       const el = ref.current;
       if (!el || !fade || reduceMotion?.matches) return;

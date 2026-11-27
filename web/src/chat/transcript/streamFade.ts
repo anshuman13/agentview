@@ -4,7 +4,9 @@ export type Tail = { start: number; at: number };
 export type FadeRange = { start: number; end: number; delay: number };
 
 // Each chunk of streamed text fades from the moment it arrived; a re-render keeps it at the same point of its fade.
-export function nextTails(tails: Tail[], prevLen: number, len: number, now: number): Tail[] {
+// prevLen is null on a block's first render: text already there when it mounts counts as shown.
+export function nextTails(tails: Tail[], prevLen: number | null, len: number, now: number): Tail[] {
+  if (prevLen === null) return [];
   const live = tails.filter((t) => now - t.at < FADE_MS && t.start < len);
   return len > prevLen ? [...live, { start: prevLen, at: now }] : live;
 }

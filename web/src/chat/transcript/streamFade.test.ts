@@ -14,6 +14,12 @@ describe('stream fade', () => {
     expect(fadeRanges(t, 12, FADE_MS + 1)).toEqual([{ start: 10, end: 12, delay: 0 }]);
   });
 
+  it('treats text already there on the first render as shown and fades only later growth', () => {
+    const a = nextTails([], null, 40, 1000);
+    expect(fadeRanges(a, 40, 1000)).toEqual([]);
+    expect(fadeRanges(nextTails(a, 40, 46, 1050), 46, 1050)).toEqual([{ start: 40, end: 46, delay: 0 }]);
+  });
+
   it('adds nothing when the text did not grow', () => {
     expect(nextTails([], 8, 8, 0)).toEqual([]);
   });

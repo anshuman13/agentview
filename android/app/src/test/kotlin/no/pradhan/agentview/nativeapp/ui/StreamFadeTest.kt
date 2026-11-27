@@ -20,6 +20,13 @@ class StreamFadeTest {
         assertEquals(listOf(FadeRange(10, 12, 0f)), fadeRanges(t, 12, now))
     }
 
+    @Test fun textThereOnTheFirstRenderIsShownAndOnlyLaterGrowthFades() {
+        val a = nextTails(emptyList(), null, 40, 1000)
+        assertEquals(emptyList<FadeRange>(), fadeRanges(a, 40, 1000))
+        val b = nextTails(a, 40, 46, 1050)
+        assertEquals(listOf(40 to 46), fadeRanges(b, 46, 1050).map { it.start to it.end })
+    }
+
     @Test fun nothingIsAddedWhenTheTextDidNotGrow() {
         assertEquals(emptyList<Tail>(), nextTails(emptyList(), 8, 8, 0))
     }

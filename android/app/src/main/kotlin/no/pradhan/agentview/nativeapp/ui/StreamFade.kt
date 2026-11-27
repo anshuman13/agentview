@@ -17,7 +17,9 @@ data class Tail(val start: Int, val at: Long)
 data class FadeRange(val start: Int, val end: Int, val alpha: Float)
 
 // Each chunk of streamed text fades from the moment it arrived; finished chunks drop out and are not faded again.
-fun nextTails(tails: List<Tail>, prevLen: Int, len: Int, now: Long): List<Tail> {
+// prevLen is null on the first composition: text already there (reopened chat, replay, scrolled back) counts as shown.
+fun nextTails(tails: List<Tail>, prevLen: Int?, len: Int, now: Long): List<Tail> {
+    if (prevLen == null) return emptyList()
     val live = tails.filter { now - it.at < Tokens.motionDuration && it.start < len }
     return if (len > prevLen) live + Tail(prevLen, now) else live
 }
@@ -32,7 +34,7 @@ fun fadeRanges(tails: List<Tail>, len: Int, now: Long): List<FadeRange> =
 // True inside a streaming reply when motion is on; set by Markdown.
 val LocalStreamFade = staticCompositionLocalOf { false }
 
-private class FadeState { var tails = emptyList<Tail>(); var len = 0 }
+private class FadeState { var tails = emptyList<Tail>(); var len: Int? = null }
 
 private fun nowMs() = System.nanoTime() / 1_000_000
 
