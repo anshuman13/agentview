@@ -3,7 +3,7 @@ import { MemoryPick, RememberPick } from './cards/Memory';
 import { TodosPick } from './cards/Todos';
 import { ImagesPick } from './cards/Images';
 import { EFFORT_LABEL } from '../../../shared/protocol';
-import { menuModes, providerModes } from '../../../shared/providers';
+import { menuModes, modelRow, providerModes } from '../../../shared/providers';
 import { CopyPick, ForkPick, HooksPick, PromptsPick, RemindPick, SettingsMenu, ToolsPick } from './SettingsMenu';
 import { AccountPick, EffortPick, ModePick, ModelPick } from './SettingsPickers';
 
@@ -18,7 +18,8 @@ export function useChatSettings() {
   const models = useStore((s) => s.session.models);
   const effort = useStore((s) => s.session.effort);
   const review = useStore((s) => s.session.review) ?? false;
-  const modelName = models.find((m) => m.value === (model ?? 'default'))?.displayName ?? model ?? 'Default';
+  const row = modelRow(models, model ?? 'default');
+  const modelName = models.find((m) => m.value === row)?.displayName ?? model ?? 'Default';
   const effortName = effort ? EFFORT_LABEL[effort] : 'Default';
   const modes = providerModes(provider);
   const menu = menuModes(provider, mode, review);

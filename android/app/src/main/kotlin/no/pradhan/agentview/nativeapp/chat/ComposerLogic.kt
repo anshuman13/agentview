@@ -120,7 +120,8 @@ fun settingsLabel(model: String, mode: String, review: Boolean, provider: String
 
 fun modelName(s: SessionInfo?): String {
     if (s == null) return "Model"
-    return s.models.firstOrNull { it.value == (s.model ?: "default") }?.displayName ?: s.model ?: "Default"
+    val row = modelRow(s.models, s.model ?: "default")
+    return s.models.firstOrNull { it.value == row }?.displayName ?: s.model ?: "Default"
 }
 
 val IMAGE_MARK = Regex("\\[Image: ([^\\]]+)]")
