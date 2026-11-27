@@ -10,7 +10,7 @@ layers, elevation levels, the shape scale, type roles and touch targets.
 
 ## Principles
 
-- Calm: neutral greys (Claude desktop look, 26 Nov 2026), Space Grotesk for text, a serif for reading replies and JetBrains Mono for code, no borders where spacing does the job, hover only under
+- Calm: neutral greys (Claude desktop look, 26 Nov 2026), Space Grotesk for text and replies, JetBrains Mono for code, no borders where spacing does the job, hover only under
   `(hover: hover)`, short motion (`--dur`, 120ms; see Motion).
 - Content first: chrome is quiet grey; controls get louder only when they act or are selected.
 - One accent: blue `--accent` marks interaction (focus, selection, links, the one primary action).
@@ -54,7 +54,7 @@ Each role names an Apple text style. Desktop keeps dense sizes; coarse pointers 
 | footnote | Footnote | 12px | 12px | 400 |
 | caption | Caption 2 | 11px | 12px | 400 |
 | label | Footnote, 500 | 12px | 12px | 500 |
-| reading | Reply text, serif (`--font-serif`) | 17/27px | 18/28px | 400 |
+| reading | Reply and message text, app font | 15/21px | 16/24px | 400 |
 
 List row titles are `--row-title` 14px on desktop (16px on the phone). Section labels (sidebar title, sessions group header, More "Tools", git section heads) are `--type-section-size` 12px, `--type-section-weight` 400 (500 for panel heads), sentence case without uppercase or tracking (26 Nov 2026).
 
@@ -62,7 +62,7 @@ Tokens: `--type-{role}-size`, `--type-{role}-weight`, `--type-{role}-line`; `--t
 subheadline. The Apple scale is `--fs-large-title` 34, `--fs-title1` 28, `--fs-title2` 22,
 `--fs-title3` 20, `--fs-headline` and `--fs-body` 17, `--fs-callout` 16, `--fs-subheadline` 15,
 `--fs-footnote` 13, `--fs-caption` 12, `--fs-caption2` 11; the older `--fs-*` steps alias it.
-`reading` sets the Markdown of an assistant reply (headings and lists included, bold 700) in the system serif stack (`ui-serif, Iowan Old Style, Charter, Georgia, Noto Serif`; no font files, so the face differs by platform). Code stays mono; titles, buttons, tabs, the composer and tool lines stay sans.
+`reading` sets the Markdown of an assistant reply and a user message in the app font, like Claude Code (27 Nov 2026; the serif `--font-serif` is left for wiki and meeting titles). Code stays mono.
 Touch runs the text roles one step below Apple's sizes. Inputs stay at 16px so iOS does not zoom.
 
 ### Spacing (EUI density)
@@ -388,7 +388,7 @@ Page shell: Codex pages and the Deploy, MCP and GitHub lists are `.wk` > `.wk-sc
 
 - **Bottom bar**: at max-width 900px the tab bar is a pill floating `--sp-4` from the sides and `--sp-2` above the safe area (`--surface`, 1px `--border`, `--elev-2`), icon above label, with a neutral `--raised` pill filling the selected tab. The composer is one floating pill (`--raised`, 1px `--border`) just above it: a round + (Add menu), the field, always a mic (dictation, fills the field and never sends), and a round `--fg` button with a `--bg` glyph that is Send or Queue with text, Stop while running with an empty field, and Talk when empty and idle. Talk dictates, and when the dictation ends (second tap, release after a hold, or the recognizer ends) the field is sent with `voice: true`; Talk sends nothing when nothing is heard, and the Dictate mic and Talk both show why voice input stopped in a message that lasts 7 s; with no recognizer it is a disabled Send arrow. SendAt sits left of the round button when text is typed. Above one line the radius becomes `--shape-lg`. The bar hides on the Chat tab while composing (`data-composing` on `.workbench`) and slides back in `--dur`; reduced motion shows and hides it instantly.
 
-- **Chat layout** (Claude app look): an assistant reply is full width with no bubble, in the `reading` role, with a quiet row of icon-only buttons under the last reply of a finished turn (Copy the Markdown source, Rewind files). A user message is right-aligned, at most 85% wide, `--raised` with a 1px `--border` and `--shape-lg`, in sans, with a `mic` glyph before the text when it was spoken (`voice: true`; not kept across a server restart). A tool step is one `--fg-muted` line: a codicon by tool kind, verb and object, and a chevron that opens its detail; failed and denied steps keep `--err` text. Tool result cards (file, doc, sketch, spec, agent, review, pending) are Report cards through `TranscriptBox`: `--shape-lg`, `--surface`, 1px `--border`, a header row (icon, headline title, a `--link` action such as Open or Stop) over a hairline, then the body; Pending and Review show icon and title in the header and keep their buttons in the body. Above 900px the messages and the composer share one centred column of at most 90ch, so their edges line up. At 900px or less the chat header is a hamburger (chats list), a centred one-line title, New chat and More; the status line stays one centred muted line below, with the agents button at its end.
+- **Chat layout** (Claude app look): an assistant reply is full width with no bubble, in the `reading` role (app font), with a quiet row of icon-only buttons under the last reply of a finished turn (Copy the Markdown source, Rewind files). A user message is right-aligned, at most 85% wide, filled with `--fg` mixed 5% into `--bg`, no border, `--shape-lg`, in the `reading` size, with a `mic` glyph before the text when it was spoken (`voice: true`; not kept across a server restart). A tool step is one `--fg-muted` line: a codicon by tool kind, verb and object, and a chevron that opens its detail; failed and denied steps keep `--err` text. Tool result cards (file, doc, sketch, spec, agent, review, pending) are Report cards through `TranscriptBox`: `--shape-lg`, `--surface`, 1px `--border`, a header row (icon, headline title, a `--link` action such as Open or Stop) over a hairline, then the body; Pending and Review show icon and title in the header and keep their buttons in the body. Above 900px the messages and the composer share one centred column of at most 90ch, so their edges line up. At 900px or less the chat header is a hamburger (chats list), a centred one-line title, New chat and More; the status line stays one centred muted line below, with the agents button at its end.
 
 ## Phone (native Android)
 
@@ -407,7 +407,7 @@ Rules for the native app in `android/`. TokenGen applies `NATIVE_OVERRIDES`, `NA
 | display | 28/36 | 700 |
 | title | 22/28 | 700 |
 | headline, body | 16/24 | 600, 400 |
-| reading (serif `ReadingFont`) | 18/28 | 400 |
+| reading | 16/24 | 400 |
 | callout | 14/20 | 500 |
 | subheadline, meta, footnote | 14/20 | 400 |
 | caption | 12/16 | 400 |
@@ -492,7 +492,7 @@ The Wiki page keeps 16dp side margins and 16dp above the title. In the hero, tit
 Done: Summary uses Panel (filter card), every empty list or report uses EmptyState (the old
 `.as-empty` and `.empty-state` styles are gone), and the menus use Menu. Chips are done: as-chip, cp-chip, mcp-chip and ag-chip use Chip, which takes `tone` (`work`, `personal`, `accent`) and `quiet` (dashed, faint). `mt-add` stays a form, since it is an input row, and uses Chip tokens (height, radius, accent-soft on focus).
 
-As of 23 Nov 2026 the light and dark themes use the Claude mobile app look: warm greys (#1C1B19 or #FAF9F5 page, #262522 or #F3F1EB for cards and chrome), blue as the single accent (#7AA7F0 or #2B59A8 for text, #2F6BD8 fills), teal agents, a serif for replies, and Space Grotesk with JetBrains Mono elsewhere. Work and info stay blue beside the blue accent; this clash is accepted, since Work is a dot next to a "Work" label in Codex lists and never in the chat. Meeting and knowledge icons are neutral.
+As of 23 Nov 2026 the light and dark themes use the Claude mobile app look: warm greys (#1C1B19 or #FAF9F5 page, #262522 or #F3F1EB for cards and chrome), blue as the single accent (#7AA7F0 or #2B59A8 for text, #2F6BD8 fills), teal agents, and Space Grotesk with JetBrains Mono elsewhere. Work and info stay blue beside the blue accent; this clash is accepted, since Work is a dot next to a "Work" label in Codex lists and never in the chat. Meeting and knowledge icons are neutral.
 
 As of 26 Nov 2026 the greys follow the Claude desktop app instead (see Colour roles): neutral #191919 or #FFFFFF page, #232424 or #FCFCFC sidebar, neutral `--selected` for selected rows instead of blue `--accent-soft`, a 1px #257DE0 focus ring, instant hover, `--radius-sm` 6px, 14px row titles and 12px sentence-case section labels. Android `NATIVE_COLORS` uses the same neutrals. Blue accent, teal agents, the serif and fonts are unchanged. Measurements and open items are in `.claude/specs/claude-look-ref/colors.md` and `compare.md`.
 
