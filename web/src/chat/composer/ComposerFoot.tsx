@@ -1,5 +1,6 @@
 import { useRef } from 'react';
-import { send, useStore } from '../../app/store';
+import { useStore } from '../../app/store';
+import { interrupt } from '../chatActions';
 import { Chip, IconButton } from '../../ui/Button';
 import { Icon } from '../../ui/Icon';
 import { plural } from '../../ui/util';
@@ -44,7 +45,7 @@ export function SendButton({ typed, shell, submit }: { typed: boolean; shell: bo
   const label = useStore((s) => providerLabel(s.session.provider));
   if (running && !typed) {
     return (
-      <button className="cp-stop" title={stopping ? 'Stopping…' : `Stop ${label}`} aria-label={stopping ? 'Stopping' : 'Stop'} disabled={stopping} onPointerDown={(e) => e.preventDefault()} onClick={() => send({ type: 'interrupt' })}>
+      <button className="cp-stop" title={stopping ? 'Stopping…' : `Stop ${label}`} aria-label={stopping ? 'Stopping' : 'Stop'} disabled={stopping} onPointerDown={(e) => e.preventDefault()} onClick={interrupt}>
         <Icon name={stopping ? 'loading' : 'debug-stop'} small spin={stopping} />
       </button>
     );

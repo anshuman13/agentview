@@ -1,4 +1,4 @@
-import { send } from '../../app/store';
+import { reviewChange } from '../chatActions';
 import { Button } from '../../ui/Button';
 import { Icon } from '../../ui/Icon';
 import { Panel } from '../../ui/Panel';
@@ -6,8 +6,6 @@ import { plural } from '../../ui/util';
 import type { ChatEvent, ReviewFile, ReviewHunk } from '../../../../shared/protocol';
 
 type ReviewEvent = Extract<ChatEvent, { kind: 'review' }>;
-
-const decide = (id: string, action: 'keep' | 'undo', file?: string, hunk?: number) => send({ type: 'review', id, action, file, hunk });
 
 const STATE = { kept: 'Kept', undone: 'Undone' };
 
@@ -22,8 +20,8 @@ function Hunk({ id, file, k, h }: { id: string; file: string; k: number; h: Revi
       <div className="pd-actions">
         {h.state ? <span className="pd-hint">{STATE[h.state]}</span> : (
           <>
-            <Button size="sm" variant="filled" onClick={() => decide(id, 'keep', file, k)}>Keep</Button>
-            <Button size="sm" variant="gray" onClick={() => decide(id, 'undo', file, k)}>Undo</Button>
+            <Button size="sm" variant="filled" onClick={() => reviewChange(id, 'keep', file, k)}>Keep</Button>
+            <Button size="sm" variant="gray" onClick={() => reviewChange(id, 'undo', file, k)}>Undo</Button>
           </>
         )}
       </div>
@@ -43,8 +41,8 @@ function FileReview({ id, f }: { id: string; f: ReviewFile }) {
         <span className="pd-count">
           {undecided ? (
             <>
-              <Button size="sm" variant="filled" onClick={() => decide(id, 'keep', f.path)}>Keep file</Button>
-              {!f.binary && <Button size="sm" variant="gray" onClick={() => decide(id, 'undo', f.path)}>Undo file</Button>}
+              <Button size="sm" variant="filled" onClick={() => reviewChange(id, 'keep', f.path)}>Keep file</Button>
+              {!f.binary && <Button size="sm" variant="gray" onClick={() => reviewChange(id, 'undo', f.path)}>Undo file</Button>}
             </>
           ) : f.state && STATE[f.state]}
         </span>
@@ -69,7 +67,7 @@ export function ReviewCard({ ev }: { ev: ReviewEvent }) {
         <Icon name="diff" small />
         <span className="pd-title">Review {plural(count, 'change')}</span>
       </div>
-      <div className="pd-actions"><Button size="sm" variant="filled" onClick={() => decide(ev.id, 'keep')}>Keep all</Button></div>
+      <div className="pd-actions"><Button size="sm" variant="filled" onClick={() => reviewChange(ev.id, 'keep')}>Keep all</Button></div>
       {ev.files.map((f) => <FileReview key={f.path} id={ev.id} f={f} />)}
     </Panel>
   );

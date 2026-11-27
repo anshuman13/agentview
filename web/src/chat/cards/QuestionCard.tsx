@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { send } from '../../app/store';
+import { answerQuestion } from '../chatActions';
 import { Button } from '../../ui/Button';
 import { Panel } from '../../ui/Panel';
 import type { PendingQuestion } from '../../../../shared/protocol';
@@ -18,7 +18,7 @@ export function QuestionCard({ q, first }: { q: PendingQuestion; first: boolean 
   const go = (to: number) => { setStep(to); setPicked([]); setOther(null); };
   const answer = (value: string) => {
     const next = { ...answers, [qq.question]: value };
-    if (step + 1 >= total) return send({ type: 'answer', id: q.id, answers: next });
+    if (step + 1 >= total) return answerQuestion(q.id, next);
     setAnswers(next);
     go(step + 1);
   };

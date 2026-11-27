@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode, type RefObject } from 'react';
-import { send, useStore } from '../../app/store';
+import { useStore } from '../../app/store';
+import { allowBlocked, answerPermission, steer } from '../chatActions';
 import { Button, ShowToggle } from '../../ui/Button';
 import { Icon } from '../../ui/Icon';
 import { Panel } from '../../ui/Panel';
@@ -67,7 +68,8 @@ function PlanCard({ p, mode, first }: CardProps) {
   const [editing, setEditing] = useState<number | null>(null);
   const keep = () => {
     const text = planFeedback(paragraphs, notes);
-    send(text ? { type: 'steer', text } : { type: 'permission', id: p.id, allow: false });
+    if (text) steer(text);
+    else answerPermission(p.id, false);
   };
   const save = (i: number, text: string) => {
     setNotes((n) => ({ ...n, [i]: text.trim() }));
@@ -111,7 +113,7 @@ function PlanCard({ p, mode, first }: CardProps) {
 function Decision({ p, mode, first, cardRef, yes, no, onNo }: CardProps & { cardRef: RefObject<HTMLElement | null>; yes: string; no: string; onNo?: () => void }) {
   const always = p.canAlwaysAllow && p.toolName !== 'ExitPlanMode';
   const keys = !p.confirmFirst;
-  const reply = (allow: boolean, all?: boolean) => send({ type: 'permission', id: p.id, allow, always: all });
+  const reply = (allow: boolean, all?: boolean) => answerPermission(p.id, allow, all);
   const decline = onNo ?? (() => reply(false));
   useCardKeys(cardRef, first, (k) => {
     if (k === 'n') decline();
@@ -212,7 +214,7 @@ export function BlockedCard({ ev }: { ev: Extract<ChatEvent, { kind: 'blocked' }
       <div className="pd-head"><Icon name="shield" small /><span className="pd-title">Auto mode blocked this</span></div>
       <pre className="pd-code">{rule}</pre>
       {ev.reason && <div className="pd-desc">{ev.reason}</div>}
-      {ev.allowed ? <div className="pd-hint">Allowed for this chat</div> : <div className="pd-actions"><Button size="sm" variant="filled" onClick={() => send({ type: 'allow_blocked', id: ev.id })}>Allow and retry</Button></div>}
+      {ev.allowed ? <div className="pd-hint">Allowed for this chat</div> : <div className="pd-actions"><Button size="sm" variant="filled" onClick={() => allowBlocked(ev.id)}>Allow and retry</Button></div>}
     </Panel>
   );
 }

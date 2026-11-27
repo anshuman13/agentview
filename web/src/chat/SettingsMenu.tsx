@@ -1,4 +1,5 @@
-import { notice, send, useStore } from '../app/store';
+import { notice, useStore } from '../app/store';
+import { runHook } from './chatActions';
 import { chatImages, lastReply, remindChoices, sentPrompts } from './composer/composerLogic';
 import { time } from '../sessions/brief/time';
 import { QuickPick } from '../ui/QuickPick';
@@ -164,7 +165,7 @@ export function HooksPick({ pick, close, back }: SubProps) {
       anchor={pick.at}
       title="Hooks"
       items={hooks.length ? hooks.map((name) => ({ value: name, label: name })) : [{ value: '', label: 'No hooks for this repo' }]}
-      onPick={(v) => { if (v) send({ type: 'run_hook', name: v }); close(); }}
+      onPick={(v) => { if (v) runHook(v); close(); }}
       onClose={close}
     />
   );

@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { send, useStore } from '../../app/store';
+import { useStore } from '../../app/store';
+import { rewindFiles } from '../chatActions';
 import { IconButton } from '../../ui/Button';
 import { Confirm, type ConfirmRequest } from '../../ui/Confirm';
 import { providerLabel } from '../../../../shared/providers';
@@ -10,7 +11,7 @@ const request = ({ id, prompt }: Rewind, label: string): ConfirmRequest => ({
   detail: `Puts every file ${label} changed back to how it was before "${prompt.split('\n')[0].slice(0, 80)}". Edits from later turns are undone too; the conversation stays.`,
   action: 'Rewind',
   icon: 'discard',
-  run: async () => send({ type: 'rewind', id }),
+  run: async () => rewindFiles(id),
 });
 
 export function RewindLink({ rewind }: { rewind: Rewind }) {

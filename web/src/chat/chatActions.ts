@@ -121,3 +121,25 @@ export function askChat(text: string) {
   showChat();
   send({ type: 'prompt', text });
 }
+
+export const retry = () => send({ type: 'retry' });
+export const resume = () => send({ type: 'steer', text: 'continue' });
+export const steer = (text: string) => send({ type: 'steer', text });
+export const sendNow = (id: string) => send({ type: 'send_now', id });
+export const interrupt = () => send({ type: 'interrupt' });
+export const compact = () => send({ type: 'prompt', text: '/compact' });
+export const stopTask = (toolUseId: string) => send({ type: 'stop_task', toolUseId });
+export const rewindFiles = (id: string) => send({ type: 'rewind', id });
+export const answerPermission = (id: string, allow: boolean, always?: boolean) => send({ type: 'permission', id, allow, always });
+export const answerQuestion = (id: string, answers: Record<string, string>) => send({ type: 'answer', id, answers });
+export const allowBlocked = (id: string) => send({ type: 'allow_blocked', id });
+export const reviewChange = (id: string, action: 'keep' | 'undo', file?: string, hunk?: number) => send({ type: 'review', id, action, file, hunk });
+export const runHook = (name: string) => send({ type: 'run_hook', name });
+export const setModel = (model: string) => send({ type: 'set_model', model });
+export const setEffort = (effort: string) => send({ type: 'set_effort', effort });
+export const setAccount = (account: string) => send({ type: 'set_account', account });
+
+export function setMode(step: { mode: string | null; review: boolean | null }) {
+  if (step.mode) send({ type: 'set_permission_mode', mode: step.mode });
+  if (step.review !== null) send({ type: 'set_review', on: step.review });
+}

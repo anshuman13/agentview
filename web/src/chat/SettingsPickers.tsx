@@ -1,5 +1,6 @@
 import { useState, type ComponentProps } from 'react';
-import { send, useStore } from '../app/store';
+import { useStore } from '../app/store';
+import { setAccount, setEffort, setMode, setModel } from './chatActions';
 import { QuickPick } from '../ui/QuickPick';
 import { Icon } from '../ui/Icon';
 import { Row } from '../ui/Row';
@@ -55,7 +56,7 @@ export function ModelPick({ pick, close, back }: Props) {
       onPick={(v) => {
         if (v === OLDER) return setAll(true);
         rememberModel(provider, v);
-        send({ type: 'set_model', model: v });
+        setModel(v);
         close();
       }}
       onClose={close}
@@ -72,7 +73,7 @@ export function EffortPick({ pick, close, back }: Props) {
       title="Select effort"
       current={effort}
       items={effortsFor(models, model).map((e) => ({ value: e, label: EFFORT_LABEL[e] }))}
-      onPick={(v) => { send({ type: 'set_effort', effort: v }); close(); }}
+      onPick={(v) => { setEffort(v); close(); }}
       onClose={close}
     />
   );
@@ -88,7 +89,7 @@ export function AccountPick({ pick, close, back }: Props) {
       title="Select Claude account"
       current={account}
       items={accounts.map((a) => ({ value: a, label: ACCOUNT_LABEL[a], detail: ACCOUNT_NOTE[a] }))}
-      onPick={(v) => { send({ type: 'set_account', account: v }); close(); }}
+      onPick={(v) => { setAccount(v); close(); }}
       onClose={close}
     />
   );
@@ -104,9 +105,7 @@ export function ModePick({ pick, close, back }: Props) {
       current={menu.checked}
       items={menu.list}
       onPick={(v) => {
-        const step = modeSteps(mode, review, v);
-        if (step.mode) send({ type: 'set_permission_mode', mode: step.mode });
-        if (step.review !== null) send({ type: 'set_review', on: step.review });
+        setMode(modeSteps(mode, review, v));
         close();
       }}
       onClose={close}

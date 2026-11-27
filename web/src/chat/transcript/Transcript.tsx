@@ -1,5 +1,5 @@
 import { Fragment, memo, useEffect, useLayoutEffect, useMemo, useRef, useState, type RefObject } from 'react';
-import { send, setAtLatest, useStore } from '../../app/store';
+import { setAtLatest, useStore } from '../../app/store';
 import { Icon } from '../../ui/Icon';
 import { Button, IconButton } from '../../ui/Button';
 import { EmptyState } from '../../ui/Panel';
@@ -18,7 +18,7 @@ import { createFoldBuilder, type FoldRow } from './workFold';
 import { ALARM_TOOL, BUILD_TOOL, createTranscriptBuilder, exploreRuns, dayDividers, newMarker, newReplies, openAtNew, rewindReplies, turnAnswers, docCards, isDocFile, fileMeta, sameItem, type Item, type Rewind } from './steps';
 import { pressable } from '../../ui/util';
 import { useCan } from '../useCan';
-import { copyReply } from '../chatActions';
+import { copyReply, resume, retry } from '../chatActions';
 import { failedLine } from '../composer/composerLogic';
 import { billing, providerLabel } from '../../../../shared/providers';
 import { isSketchPath } from '../../../../shared/sketches';
@@ -175,8 +175,8 @@ function TranscriptView({ sessionId, events, earlier, cwd, running, bill, failed
           : rowOf(r.it, i === 0);
         return day || r === newRow ? <Fragment key={id}>{day && <div className="tr-day"><span>{day}</span></div>}{r === newRow && <div className="tr-new"><span>New</span></div>}{row}</Fragment> : row;
       })}
-      {failText && <EndLine key={events.length} text={failText} label="Retry" onPress={() => send({ type: 'retry' })} />}
-      {stalled && !failed && <EndLine text="No activity for 15 min" label="Resume" onPress={() => send({ type: 'steer', text: 'continue' })} />}
+      {failText && <EndLine key={events.length} text={failText} label="Retry" onPress={retry} />}
+      {stalled && !failed && <EndLine text="No activity for 15 min" label="Resume" onPress={resume} />}
       <UnsentRows />
       <QuoteButton rows={rows} />
       </div>

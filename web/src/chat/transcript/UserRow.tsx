@@ -1,9 +1,9 @@
 import { useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { cancelUnsent, queuedFor, send, useStore } from '../../app/store';
+import { cancelUnsent, queuedFor, useStore } from '../../app/store';
 import { Icon } from '../../ui/Icon';
 import { Button, IconButton, ShowToggle } from '../../ui/Button';
 import { readBox, saveBox } from './boxOpen';
-import { copyPrompt } from '../chatActions';
+import { copyPrompt, sendNow } from '../chatActions';
 import { imageUrl } from '../chatApi';
 import { userParts } from '../composer/composerLogic';
 import type { Item } from './steps';
@@ -67,7 +67,7 @@ export function UserRow({ it, label, readOnly }: { it: Extract<Item, { kind: 'us
       {it.voice && <span className="tr-mic" title="Spoken"><Icon name="mic" small /></span>}
       <UserText id={it.id} text={it.text} />
       {it.stopping && <span className="tr-stop"><Icon name="loading" small spin />{`Stopping ${label} to send this`}</span>}
-      {it.queued && <span className="tr-stop"><Icon name="clock" small />{`Waiting for ${label}'s next step`}<Button variant="plain" size="sm" className="tl-send-now" title={`Stop ${label}'s current step and send this now`} onClick={() => send({ type: 'send_now', id: it.id })}>Send now</Button></span>}
+      {it.queued && <span className="tr-stop"><Icon name="clock" small />{`Waiting for ${label}'s next step`}<Button variant="plain" size="sm" className="tl-send-now" title={`Stop ${label}'s current step and send this now`} onClick={() => sendNow(it.id)}>Send now</Button></span>}
       {!it.stopping && !it.queued && !readOnly && <span className="tr-acts"><IconButton icon="reply" label="Use again" onClick={() => window.dispatchEvent(new CustomEvent('agentview:insert', { detail: { text: it.text } }))} /><IconButton icon="copy" label="Copy" onClick={() => copyPrompt(it.text)} /></span>}
     </div>
   );

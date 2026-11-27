@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { send, setUi } from '../../app/store';
+import { setUi } from '../../app/store';
+import { stopTask } from '../chatActions';
 import { Icon } from '../../ui/Icon';
 import { Markdown } from '../Chat';
 import { CopyPathItems } from '../../workspace/CopyPathItems';
@@ -87,7 +88,7 @@ export function AgentRow({ it, cwd }: { it: Extract<Item, { kind: 'agent' }>; cw
       meta={[type, dur, steps.length > 0 && plural(steps.length, 'step')].filter(Boolean).join(' · ')}
       state={badge}
       icon={<Icon name="sparkle" />}
-      action={running && canStop ? <LinkAction label="Stop" title="Stop this agent" onClick={() => send({ type: 'stop_task', toolUseId: use.id })} /> : undefined}
+      action={running && canStop ? <LinkAction label="Stop" title="Stop this agent" onClick={() => stopTask(use.id)} /> : undefined}
       summary={agentSummary(it)}
     >
       {steps.length > 0 && <div className="tr-sub">{steps.map((s) => <Row key={s.id} it={s} cwd={cwd} settled={!running} />)}</div>}
