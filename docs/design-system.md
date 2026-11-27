@@ -72,6 +72,8 @@ panel padding `--sp-8` (`--sp-2 --sp-6` for dense list panels); between sections
 Markdown (`.md` on web, `MdBlocks` on Android; replies, wiki and meeting pages) spaces paragraphs, lists, code and
 tables `--md-gap` (14px, 16dp on Android), list items `--md-item-gap` (4px) and puts `--md-head-gap` (20px) above a
 heading, close to Claude.app's 0.8 em block gap (27 Nov 2026).
+Tables on both draw row dividers only (`--border-strong` under the header, `--border` under each row), a semibold
+header with no fill, cells padded 8px top and bottom and 12px on the right, and scroll sideways when wide.
 
 ### Shape (Material 3 scale, fewer steps)
 

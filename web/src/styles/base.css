@@ -69,7 +69,8 @@ pre.wrap { white-space: pre-wrap; word-break: break-word; font-family: inherit; 
 .md a { color: var(--link); text-decoration: none; }
 @media (hover: hover) { .md a:hover { text-decoration: underline; } }
 .md table { display: block; max-width: 100%; overflow-x: auto; border-collapse: collapse; }
-.md :is(th, td) { border: 1px solid var(--border-strong); padding: 3px var(--sp-4); text-align: left; word-break: normal; overflow-wrap: normal; }
+.md :is(th, td) { border-bottom: 1px solid var(--border); padding: var(--sp-4) var(--sp-6) var(--sp-4) 0; text-align: left; word-break: normal; overflow-wrap: normal; }
+.md th { border-bottom-color: var(--border-strong); font-weight: 600; }
 .md blockquote { border-left: 3px solid var(--border-strong); padding-left: var(--sp-5); color: var(--fg-muted); }
 .md strong { color: var(--fg); }
 @media (max-width: 900px) {
