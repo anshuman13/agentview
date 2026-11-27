@@ -17,6 +17,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
@@ -44,6 +46,7 @@ import no.pradhan.agentview.nativeapp.ui.select
 import no.pradhan.agentview.nativeapp.ui.plural
 
 // The turn's tasks from set_status as small lines, and on the right a button that opens the turn's tool calls on their own screen (web Transcript.tsx Tasks).
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 internal fun TaskLines(hub: Hub, fold: FoldRow.Fold, cwd: String, live: Boolean, onOpenWork: (String) -> Unit) {
     // A finished turn shows only the tasks it marked done: the steps it never reached are no longer next.
@@ -59,7 +62,7 @@ internal fun TaskLines(hub: Hub, fold: FoldRow.Fold, cwd: String, live: Boolean,
         MemorySheet(hub, cwd, files, fold.remembered.singleOrNull()) { memory = false }
     }
     Column(verticalArrangement = Arrangement.spacedBy(Tokens.sp1)) {
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Tokens.sp3), verticalAlignment = Alignment.CenterVertically) {
+        FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Tokens.sp3), itemVerticalAlignment = Alignment.CenterVertically) {
             if (steps.isNotEmpty()) Text(if (done < steps.size) "Tasks \u00b7 $done of ${steps.size}" else plural(steps.size, "task"), style = Type.footnote, color = av.fgMuted)
             if (steps.isNotEmpty() && fold.work.tools > 0 && fold.claims.isEmpty() && fold.proposed.isEmpty() && fold.remembered.isEmpty()) Text("\u00b7", style = Type.footnote, color = av.fgMuted)
             if (fold.claims.isNotEmpty()) Chip("Used ${plural(fold.claims.size, "claim")}", { reading = !reading }, on = reading)
@@ -69,7 +72,7 @@ internal fun TaskLines(hub: Hub, fold: FoldRow.Fold, cwd: String, live: Boolean,
                 Modifier.heightIn(min = Tokens.touchSm).clickable { onOpenWork(fold.id) },
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text("Used ${plural(fold.work.tools, "tool")}", style = Type.footnote, color = av.fgMuted)
+                Text("Used ${plural(fold.work.tools, "tool")}", style = Type.footnote, color = av.fgMuted, maxLines = 1, softWrap = false)
                 AvIcon("chevron-right", null, Tokens.sp5, tint = av.fgMuted)
             }
         }
