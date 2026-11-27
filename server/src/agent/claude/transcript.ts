@@ -90,6 +90,9 @@ function assistantBlock(st: HistoryState, b: any, at: number, id: string) {
   if (b.type === 'text') {
     st.lastText = b.text;
     st.events.push({ id, kind: 'assistant', text: b.text, streaming: false, at });
+  } else if (b.type === 'thinking') {
+    const ev = thinkingEvent(id, b, at);
+    if (ev) st.events.push(ev);
   } else if (b.type === 'server_tool_use' && b.name === 'advisor') {
     st.events.push(advisorEvent(b.id, at));
   } else if (b.type === 'tool_use') {
@@ -316,6 +319,12 @@ export function liveReport(text: string, output: any) {
 
 export function advisorEvent(id: string, at: number): ChatEvent {
   return { id, kind: 'tool_use', name: 'Advisor', input: {}, summary: 'Consulted the advisor', at };
+}
+
+// The first line of a thinking block, or null when it has no text (the API may send it redacted).
+export function thinkingEvent(id: string, block: { thinking?: unknown }, at: number): ChatEvent | null {
+  const line = typeof block.thinking === 'string' ? block.thinking.trim().split('\n')[0].replace(/\*\*/g, '').trim() : '';
+  return line ? { id, kind: 'thinking', text: line.slice(0, 200), at } : null;
 }
 
 export function contextFrom(usage: any): number | null {

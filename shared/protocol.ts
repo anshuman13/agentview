@@ -63,6 +63,8 @@ export type ChatEvent =
   | { id: string; kind: 'plan'; next: string[]; at: number }
   | { id: string; kind: 'review'; files: ReviewFile[]; result?: string; at: number }
   | { id: string; kind: 'blocked'; rule: string; reason: string; allowed: boolean; at: number }
+  // The first line of a top-level thinking block.
+  | { id: string; kind: 'thinking'; text: string; at: number }
   | AgentEvent;
 
 // The event with an append applied, or null when the event is not one it fits (a gap waits for the full event).

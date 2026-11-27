@@ -24,6 +24,16 @@ describe('historyFrom ids', () => {
   });
 });
 
+describe('thinking', () => {
+  it('keeps the first line of a thinking block and drops an empty one', () => {
+    const events = historyFrom([
+      msg('u1', 'user', 'q'),
+      msg('a1', 'assistant', [{ type: 'thinking', thinking: '' }, { type: 'thinking', thinking: '**Checking the tests**\nmore' }, { type: 'text', text: 'done' }]),
+    ]).events;
+    expect(events.filter((e) => e.kind === 'thinking')).toEqual([{ id: 'a1:1', kind: 'thinking', text: 'Checking the tests', at: Date.parse('2026-10-15T10:00:00Z') }]);
+  });
+});
+
 describe('clipInput', () => {
   const file = Array.from({ length: 500 }, (_, i) => `line ${i} ${'x'.repeat(20)}`).join('\n');
 

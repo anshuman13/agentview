@@ -7,7 +7,7 @@ import { limitReset } from './limitText.js';
 import type { Rewinds } from './rewinds.js';
 import type { TaskTracker } from './taskTracker.js';
 import { agentResult, isAgent, patchAgent } from './subagents.js';
-import { AGENT_TOOLS, ASYNC_LAUNCH, advisorEvent, agentEvent, liveReport, cacheFrom, contextFrom, noteLaunch, notificationResults, toolResultText } from './transcript.js';
+import { AGENT_TOOLS, ASYNC_LAUNCH, advisorEvent, agentEvent, liveReport, cacheFrom, contextFrom, noteLaunch, notificationResults, thinkingEvent, toolResultText } from './transcript.js';
 import { toolUseEvent, clipResult, EDIT_TOOLS, editedPath } from '../steps.js';
 
 
@@ -36,6 +36,8 @@ export class Messages {
     const { session } = host.state;
     host.setSession({ cache: cacheFrom(msg.message.usage, Date.now(), session.cache), context: contextFrom(msg.message.usage) ?? session.context });
     for (const block of msg.message.content) {
+      const thought = block.type === 'thinking' ? thinkingEvent(randomUUID(), block, Date.now()) : null;
+      if (thought) host.pushEvent(thought);
       if (block.type === 'server_tool_use' && block.name === 'advisor') host.pushEvent(advisorEvent(block.id, Date.now()));
       if (block.type === 'tool_use') this.toolUse(block);
       // The CLI marks its own usage-limit notice with error 'rate_limit'; Claude's replies never carry it.
