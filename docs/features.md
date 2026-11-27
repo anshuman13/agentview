@@ -697,3 +697,5 @@ The palette's Keyboard shortcuts command shows the same list.
 ## Copy a file path
 
 Copy path, Copy relative path (left out for a path outside the chat's folder) and Copy name copy a file's path with `pathCopies` (`web/src/workspace/copyPathLogic.ts`, `FilesLogic.kt`, cases in `shared/fixtures/copy-path.json`) and show "Path copied", "Relative path copied" or "Name copied" (web adds "Copy failed"). On web a right-click on an Explorer row or a file link in a chat reply opens them at the pointer (`CopyPathMenu`; a bottom sheet at phone widths, where a long press on an Explorer row opens it too), and the More menu of a chat file or doc card and of a sketch lists them. On Android a long press on a Files row or a chat file or doc card opens them as a dropdown, and the Sketches More menu lists them; inline links in a reply have none. Copying writes nothing to the server, so it works in read-only runs.
+
+UI reference test, do not merge.
