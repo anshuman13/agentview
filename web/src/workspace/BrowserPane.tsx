@@ -2,12 +2,56 @@ import { useEffect, useRef, useState } from 'react';
 import { Icon } from '../ui/Icon';
 import { Button, IconButton } from '../ui/Button';
 import { EmptyState } from '../ui/Panel';
-import { readFlag, saveFlag } from '../ui/util';
+import { Menu, MenuItem } from '../ui/Menu';
+import { Row } from '../ui/Row';
+import { useLoad, type Load } from '../ui/useLoad';
+import { ago, readFlag, saveFlag } from '../ui/util';
+import { fetchDevServers, type DevServer } from './fileApi';
 import { useChromeSocket, type ChromeState, type Tab } from './useChromeSocket';
 import { useFrameInput } from './useFrameInput';
 import { Markup } from './Markup';
 
 type Send = (m: object) => unknown;
+
+const devServerUrl = (port: number) => `http://localhost:${port}`;
+const startedText = (at: number) => (at ? `Started ${ago(at, ' ago').replace(/^now$/, 'just now')}` : '');
+
+// Dev servers (Claude.app's servers button): TCP ports listening on localhost whose process runs in the chat's folder.
+function ServersButton({ open }: { open: (url: string) => void }) {
+  const [shown, setShown] = useState(false);
+  const trigger = useRef<HTMLButtonElement>(null);
+  const [load] = useLoad(shown ? fetchDevServers : null, String(shown));
+  const pick = (url: string) => { setShown(false); open(url); };
+  return (
+    <div className="browser-servers">
+      <IconButton ref={trigger} icon="server-process" label="Dev servers" title="Dev servers running from this chat's folder" on={shown} onClick={() => setShown((v) => !v)} />
+      {shown && (
+        <Menu trigger={trigger} onClose={() => setShown(false)}>
+          {load.busy || !load.data ? (
+            <MenuItem icon={load.error ? 'warning' : 'loading'} spin={!load.error} disabled>{load.error || 'Looking for dev servers…'}</MenuItem>
+          ) : !load.data.length ? (
+            <MenuItem icon="server-process" disabled>No dev servers running in this folder</MenuItem>
+          ) : load.data.map((s) => (
+            <MenuItem key={s.port} icon="server-process" className="dev-server-row" title={`${devServerUrl(s.port)} · ${s.cwd}`} onClick={() => pick(devServerUrl(s.port))}>
+              {s.name} :{s.port}<span className="muted">{startedText(s.startedAt)}</span>
+            </MenuItem>
+          ))}
+        </Menu>
+      )}
+    </div>
+  );
+}
+
+function DevServerList({ load, open }: { load: Load<DevServer[]>; open: (url: string) => void }) {
+  if (!load.data?.length) return null;
+  return (
+    <div className="dev-servers">
+      {load.data.map((s) => (
+        <Row key={s.port} leading={<Icon name="server-process" />} title={`${s.name} :${s.port}`} meta={startedText(s.startedAt)} lines={1} onClick={() => open(devServerUrl(s.port))} />
+      ))}
+    </div>
+  );
+}
 
 type BarProps = { picking: boolean; setPicking: (v: boolean) => void; marking: boolean; setMarking: (v: boolean) => void; send: Send; tabs: Tab[]; tab: Tab | undefined; pinned: string | null; phone: boolean; setPhone: (v: boolean) => void; focusKeyboard: () => void; goFull: () => void };
 
@@ -43,6 +87,7 @@ function BrowserBar({ picking, setPicking, marking, setMarking, send, tabs, tab,
         <option value="">Follow Claude</option>
         {tabs.map((t) => <option key={t.id} value={t.id}>{t.title || t.url}</option>)}
       </select>
+      <ServersButton open={(u) => send({ t: 'nav', url: u })} />
       <IconButton icon="inspect" label="Pick an element" on={picking} aria-pressed={picking} title={picking ? 'Click an element to add it to the prompt. Esc ends picking' : 'Pick an element on the page and add it to the prompt'} onClick={() => setPicking(!picking)} />
       <IconButton icon="edit" label="Mark up" on={marking} aria-pressed={marking} title={marking ? 'Close markup. Esc also closes it' : 'Draw on the page and add it to the chat'} onClick={() => setMarking(!marking)} />
       {tab && <IconButton icon="close" label="Close tab" title="Close this tab in Chrome" onClick={() => send({ t: 'close', id: tab.id })} />}
@@ -74,6 +119,7 @@ export function BrowserPane({ onEmpty }: { onEmpty?: () => void }) {
   const setPicking = (v: boolean) => { setPickingNow(v); if (v) setMarkingNow(false); };
   const setMarking = (v: boolean) => { setMarkingNow(v); if (v) setPickingNow(false); };
   const on = state.state === 'on';
+  const [servers] = useLoad(on && !hasFrame ? fetchDevServers : null, `${on}-${hasFrame}`);
 
   // Pick mode: the pointer outlines the element under it in Chrome, a click or tap adds it to the prompt, Esc ends it.
   useEffect(() => {
@@ -134,7 +180,7 @@ export function BrowserPane({ onEmpty }: { onEmpty?: () => void }) {
         />
         {marking && hasFrame && <Markup img={img} onClose={() => setMarkingNow(false)} />}
         {!hasFrame && (
-          <EmptyState size="md" icon="globe" title={tabs.length ? 'Waiting for the tab to draw' : 'No tab open in Chrome'} hint="Chrome only draws the tab that is in front. Pick a tab above to bring it forward" />
+          <EmptyState size="md" icon="globe" title={tabs.length ? 'Waiting for the tab to draw' : 'No tab open in Chrome'} hint="Chrome only draws the tab that is in front. Pick a tab above to bring it forward" action={<DevServerList load={servers} open={(u) => send({ t: 'nav', url: u })} />} />
         )}
         <textarea ref={kbd} className="chrome-kbd" aria-label="Type into the page" autoCapitalize="off" autoComplete="off" spellCheck={false} onKeyDown={input.onKey} onInput={input.onText} onPaste={(e) => { e.preventDefault(); send({ t: 'text', text: e.clipboardData.getData('text') }); }} />
       </div>

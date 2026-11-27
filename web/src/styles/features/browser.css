@@ -39,3 +39,7 @@
 .markup-swatch { display: inline-block; width: 14px; height: 14px; border-radius: var(--radius-pill); border: 1px solid var(--border-strong); vertical-align: -2px; }
 .markup-colours { position: relative; }
 .markup-colours > .ui-menu { top: auto; right: auto; bottom: calc(100% + var(--sp-3)); left: 0; white-space: nowrap; }
+.browser-servers { position: relative; }
+.browser-servers > .ui-menu { white-space: nowrap; }
+.dev-server-row .muted { margin-left: auto; padding-left: var(--sp-6); color: var(--fg-muted); font-size: var(--fs-xs); }
+.dev-servers { display: flex; flex-direction: column; gap: var(--sp-1); width: min(360px, 100%); margin-top: var(--sp-4); }

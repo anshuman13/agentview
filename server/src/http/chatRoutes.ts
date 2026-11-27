@@ -11,6 +11,7 @@ import { dismissFinding, getFindings } from '../session/findings.js';
 import { deployRoute } from '../integrations/deploy.js';
 import { deployUrl } from '../settings.js';
 import { gitRoute } from '../workspace/git.js';
+import { listDevServers } from '../workspace/devServers.js';
 import type { ClientMessage } from '../../../shared/protocol.js';
 import { readBody, failed } from '../json.js';
 import { isPhone } from '../presence.js';
@@ -73,6 +74,7 @@ export function chatSessionRoutes(d: RouteDeps): Record<string, Entry<ChatCtx>> 
       if (typeof file !== 'string' || typeof raw !== 'string' || !Array.isArray(lines) || !lines.every((l) => typeof l === 'string')) return failed(400, 'path, raw and lines are required');
       return restoreMemory(provider(chat.provider ?? 'claude').memoryDirs(chat.cwd), file, raw, lines).catch(refused);
     }, true),
+    'ANY /api/dev-servers': entry(({ chat }) => listDevServers(chat.cwd)),
     'ANY /api/findings': entry(({ url, chat }) => getFindings(chat.cwd, url.searchParams.get('target') ?? 'local')),
     'POST /api/findings/dismiss': entry(({ body, chat }) => dismissFinding(chat.cwd, String(body.target ?? 'local'), String(body.key ?? '')), true),
     'POST /api/attention/dismiss': entry(({ body }) => dismissAttention(String(body.id ?? '')), true),

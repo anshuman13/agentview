@@ -44,6 +44,8 @@ import androidx.compose.ui.layout.ContentScale
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import no.pradhan.agentview.nativeapp.app.Hub
+import no.pradhan.agentview.nativeapp.app.devServers
+import no.pradhan.agentview.nativeapp.ui.AvIcon
 import no.pradhan.agentview.nativeapp.net.LiveSocket
 import no.pradhan.agentview.nativeapp.ui.Button
 import no.pradhan.agentview.nativeapp.ui.ButtonSize
@@ -106,6 +108,10 @@ fun BrowserScreen(hub: Hub, onBack: () -> Unit) {
     // The page reports after each tap whether it landed in a text field; the keyboard stays open only then.
     LaunchedEffect(editable) { if (editable) runCatching { kbdFocus.requestFocus(); keyboard?.show() } else keyboard?.hide() }
     fun closeTab(id: String) = send("close", mapOf("id" to id))
+    // Dev servers (web ServersButton): listening ports run from the chat's folder; a tap opens one in the shown tab.
+    var servers by remember { mutableStateOf<List<DevServer>?>(null) }
+    var serversTick by remember { mutableStateOf(0) }
+    LaunchedEffect(state.state, serversTick) { if (state.state == "on") servers = runCatching { hub.devServers() }.getOrNull() ?: servers }
 
     Column(Modifier.fillMaxSize()) {
         PageHeader("Browser", onBack, subtitle = tab?.let { { androidx.compose.material3.Text(it.title.ifEmpty { it.url }, maxLines = 1) } }) {
@@ -161,6 +167,19 @@ fun BrowserScreen(hub: Hub, onBack: () -> Unit) {
                                     tabs.tabs.forEachIndexed { i, t ->
                                         if (i > 0) Hairline()
                                         ListRow(t.title.ifEmpty { t.url }, t.url, selected = t.id == tabs.current, onClick = { send("tab", mapOf("id" to t.id)) }, trailing = { IconBtn("close", "Close tab", { closeTab(t.id) }) })
+                                    }
+                                }
+                            }
+                        }
+                        servers?.let { list ->
+                            item { SectionHeader("Dev servers", list.size.toString(), action = { IconBtn("refresh", "Find dev servers", { serversTick++ }) }) }
+                            item {
+                                if (list.isEmpty()) EmptyState("No dev servers running in this folder", null, icon = "server-process")
+                                else Group {
+                                    val now = System.currentTimeMillis()
+                                    list.forEachIndexed { i, d ->
+                                        if (i > 0) Hairline()
+                                        ListRow("${d.name} :${d.port}", devServerStarted(d.startedAt, now), leading = { AvIcon("server-process") }, lines = 1, onClick = if (hub.readOnly) null else ({ send("nav", mapOf("url" to devServerUrl(d.port))) }))
                                     }
                                 }
                             }

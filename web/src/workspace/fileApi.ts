@@ -51,3 +51,7 @@ export async function downloadSketch(file: SketchFile) {
 export type SearchHit = { path: string; line: number; text: string };
 
 export const searchFiles = (q: string) => fetchJson<{ hits: SearchHit[]; more: boolean }>(api(`/api/search?q=${encodeURIComponent(q)}`));
+
+export type DevServer = { port: number; pid: number; name: string; cwd: string; startedAt: number };
+
+export const fetchDevServers = () => fetchJson<DevServer[]>(api('/api/dev-servers'));

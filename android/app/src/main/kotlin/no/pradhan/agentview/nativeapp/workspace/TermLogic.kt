@@ -157,6 +157,16 @@ fun termGone(code: Int) = code == 4404
 private val DELAYS = listOf(1000L, 2000L, 4000L, 8000L, 10000L)
 fun termDelay(attempt: Int) = DELAYS[minOf(attempt, DELAYS.size - 1)]
 
+// Dev servers of web BrowserPane ServersButton: localhost ports whose process runs in the chat's folder (/api/dev-servers).
+@kotlinx.serialization.Serializable
+data class DevServer(val port: Int, val pid: Int = 0, val name: String = "", val cwd: String = "", val startedAt: Long = 0)
+
+fun parseDevServers(body: String): List<DevServer> = protocolJson.decodeFromString(kotlinx.serialization.builtins.ListSerializer(DevServer.serializer()), body)
+
+fun devServerUrl(port: Int) = "http://localhost:$port"
+
+fun devServerStarted(at: Long, now: Long) = if (at <= 0) "" else "Started " + no.pradhan.agentview.nativeapp.ui.agoShort(at, now, " ago").replace(Regex("^now$"), "just now")
+
 // The streamed Chrome tab of web/src/workspace/BrowserPane.tsx, read only.
 data class ChromeTab(val id: String, val title: String, val url: String)
 

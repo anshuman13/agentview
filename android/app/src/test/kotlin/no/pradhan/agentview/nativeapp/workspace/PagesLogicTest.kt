@@ -418,4 +418,13 @@ class ReviewDiffTest {
         assertEquals("No results match \u201czz\u201d", mcpNoMatchText(" zz "))
         assertEquals("No servers match these filters", mcpNoMatchText(""))
     }
+
+    @Test fun devServersParseAndShowWhenTheyStarted() {
+        val list = parseDevServers("""[{"port":5173,"pid":100,"name":"dev (vite)","cwd":"/w/app","startedAt":1000}]""")
+        assertEquals(listOf(DevServer(5173, 100, "dev (vite)", "/w/app", 1000)), list)
+        assertEquals("http://localhost:5173", devServerUrl(5173))
+        assertEquals("Started 3m ago", devServerStarted(1000, 1000 + 180_000))
+        assertEquals("Started just now", devServerStarted(1000, 1000))
+        assertEquals("", devServerStarted(0, 1000))
+    }
 }

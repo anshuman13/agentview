@@ -80,6 +80,10 @@ async function input(m: any, ws: Peer) {
       if (id) await call('Target.closeTarget', { targetId: id });
       return;
     }
+    // With no tab shown (the empty pane's dev servers), the address opens in a new tab.
+    case 'nav':
+      if (!view.watching?.session && typeof m.url === 'string' && /^https?:\/\//i.test(m.url)) return call('Target.createTarget', { url: m.url });
+      break;
     case 'size': {
       const { size, dims } = viewerSize(m);
       return resize(ws, size, dims);

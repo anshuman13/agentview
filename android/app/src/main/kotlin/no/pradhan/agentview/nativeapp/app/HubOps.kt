@@ -7,7 +7,9 @@ import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.async
 import no.pradhan.agentview.nativeapp.ops.DeployJob
 import no.pradhan.agentview.nativeapp.ops.DeployStatus
+import no.pradhan.agentview.nativeapp.workspace.DevServer
 import no.pradhan.agentview.nativeapp.workspace.Finding
+import no.pradhan.agentview.nativeapp.workspace.parseDevServers
 import no.pradhan.agentview.nativeapp.ops.McpConnector
 import no.pradhan.agentview.nativeapp.ops.McpServer
 import no.pradhan.agentview.nativeapp.workspace.ReviewFindings
@@ -43,6 +45,8 @@ fun Hub.runDeploy(app: String, env: String, ref: String, done: (DeployJob?) -> U
 
 fun Hub.rollbackDeploy(app: String, env: String, sha: String, done: (DeployJob?) -> Unit) =
     write("/api/deploy/rollback", rollbackBody(app, env, sha), "Could not start the deploy", ::parseDeployJob, done)
+
+suspend fun Hub.devServers(): List<DevServer> = parseDevServers(read("/api/dev-servers"))
 
 suspend fun Hub.reviewFindings(target: String): ReviewFindings? = parseFindings(read("/api/findings?target=${enc(target)}"))
 
