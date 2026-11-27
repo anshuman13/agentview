@@ -7,8 +7,11 @@ import { pressable, useOnUnmount } from '../../ui/util';
 import { touch } from '../../app/touch/touch';
 import { Markdown } from '../Chat';
 import { str } from '../transcript/steps';
-import type { ChatEvent, PendingPermission, PendingQuestion } from '../../../../shared/protocol';
+import type { ChatEvent, PendingPermission } from '../../../../shared/protocol';
 import { lineDiff } from '../../../../shared/lineDiff';
+import { blockedRule, MODE_HINTS, planFeedback, planParagraphs } from './pendingLogic';
+import { QuestionCard } from './QuestionCard';
+import { useCardKeys } from './useCardKeys';
 
 export function Pending() {
   const pending = useStore((s) => s.pending);
@@ -35,29 +38,6 @@ export function Pending() {
   );
 }
 
-function useKeys(ref: RefObject<HTMLElement | null>, first: boolean, onKey: (key: string) => boolean | void) {
-  const cb = useRef(onKey);
-  cb.current = onKey;
-  useEffect(() => {
-    const h = (e: KeyboardEvent) => {
-      if (e.metaKey || e.ctrlKey || e.altKey || e.repeat || document.querySelector('.overlay')) return;
-      const el = document.activeElement;
-      if (el?.matches('input, textarea, select, [contenteditable="true"]')) return;
-      if (!first && !(el && ref.current?.contains(el))) return;
-      if (cb.current(e.key.toLowerCase())) e.preventDefault();
-    };
-    window.addEventListener('keydown', h);
-    return () => window.removeEventListener('keydown', h);
-  }, [first, ref]);
-}
-
-const MODE_HINTS: Record<string, string> = {
-  auto: 'Auto mode asks only for risky actions',
-  default: 'Default mode asks before edits and commands',
-  acceptEdits: 'Accept edits mode asks before commands, not file edits',
-  plan: 'Plan mode asks before it starts building',
-};
-
 const ICONS: Record<string, string> = {
   Bash: 'terminal', Edit: 'edit', MultiEdit: 'edit', Write: 'new-file', WebFetch: 'globe', WebSearch: 'search', Agent: 'sparkle', Task: 'sparkle',
 };
@@ -78,34 +58,6 @@ function PermissionCard({ p, mode, first }: CardProps) {
       <Decision p={p} mode={mode} first={first} cardRef={ref} yes="Allow" no="Deny" />
     </Panel>
   );
-}
-
-const QUOTE_MAX = 80;
-
-// The plan's blocks split at blank lines, leaving fenced code whole.
-export function planParagraphs(plan: string): string[] {
-  const out: string[] = [];
-  let cur: string[] = [];
-  let fence = false;
-  for (const line of plan.split('\n')) {
-    if (/^\s*(```|~~~)/.test(line)) fence = !fence;
-    if (!fence && !line.trim()) {
-      if (cur.length) out.push(cur.join('\n'));
-      cur = [];
-    } else cur.push(line);
-  }
-  if (cur.length) out.push(cur.join('\n'));
-  return out;
-}
-
-// One message quoting each commented paragraph, then the comment; empty when there are none.
-export function planFeedback(paragraphs: string[], notes: Record<number, string>) {
-  const parts = paragraphs.flatMap((p, i) => {
-    const note = notes[i]?.trim();
-    const flat = p.replace(/\s+/g, ' ').trim();
-    return note ? [`> ${flat.length > QUOTE_MAX ? `${flat.slice(0, QUOTE_MAX).trimEnd()}…` : flat}\n${note}`] : [];
-  });
-  return parts.length ? `Comments on the plan:\n\n${parts.join('\n\n')}` : '';
 }
 
 function PlanCard({ p, mode, first }: CardProps) {
@@ -161,7 +113,7 @@ function Decision({ p, mode, first, cardRef, yes, no, onNo }: CardProps & { card
   const keys = !p.confirmFirst;
   const reply = (allow: boolean, all?: boolean) => send({ type: 'permission', id: p.id, allow, always: all });
   const decline = onNo ?? (() => reply(false));
-  useKeys(cardRef, first, (k) => {
+  useCardKeys(cardRef, first, (k) => {
     if (k === 'n') decline();
     else if (k === 'y' && keys) reply(true);
     else if (k === 'a' && keys && always) reply(true, true);
@@ -253,101 +205,8 @@ function Diff({ a, b }: { a: string; b: string }) {
   );
 }
 
-function QuestionCard({ q, first }: { q: PendingQuestion; first: boolean }) {
-  const ref = useRef<HTMLElement>(null);
-  const [step, setStep] = useState(0);
-  const [answers, setAnswers] = useState<Record<string, string>>({});
-  const [picked, setPicked] = useState<string[]>([]);
-  const [other, setOther] = useState<string | null>(null);
-  const qq = q.questions[step];
-  const total = q.questions.length;
-  const multi = Boolean(qq?.multiSelect);
-
-  const go = (to: number) => { setStep(to); setPicked([]); setOther(null); };
-  const answer = (value: string) => {
-    const next = { ...answers, [qq.question]: value };
-    if (step + 1 >= total) return send({ type: 'answer', id: q.id, answers: next });
-    setAnswers(next);
-    go(step + 1);
-  };
-  const pick = (label: string) => {
-    if (!multi) return answer(label);
-    setPicked(picked.includes(label) ? picked.filter((x) => x !== label) : [...picked, label]);
-  };
-  const result = [...picked, other?.trim() ?? ''].filter(Boolean).join(', ');
-
-  useKeys(ref, first, (k) => {
-    const n = Number(k);
-    if (!qq || !Number.isInteger(n) || n < 1) return false;
-    if (n <= qq.options.length) pick(qq.options[n - 1].label);
-    else if (n === qq.options.length + 1) setOther(other ?? '');
-    else return false;
-    return true;
-  });
-  if (!qq) return null;
-
-  return (
-    <Panel ref={ref} className="pd" tabIndex={-1} role="group" aria-label={qq.question}>
-      <div className="pd-head">
-        <span className="pd-label">{qq.header || 'Question'}</span>
-        {total > 1 && <span className="pd-count">{step + 1} of {total}</span>}
-      </div>
-      <div className="pd-ask">{qq.question}</div>
-      <div className="pd-options" role={multi ? 'group' : 'radiogroup'}>
-        {qq.options.map((o, n) => (
-          <Option key={o.label} n={n + 1} multi={multi} on={picked.includes(o.label) || answers[qq.question] === o.label} onPick={() => pick(o.label)} label={o.label} description={o.description} preview={o.preview} />
-        ))}
-        {other === null ? (
-          <Option n={qq.options.length + 1} multi={multi} on={false} onPick={() => setOther('')} label="Other" className="pd-other" />
-        ) : (
-          <input
-            autoFocus
-            className="pd-other-input"
-            value={other}
-            placeholder="Type your answer, Enter to send"
-            aria-label="Your answer"
-            onChange={(e) => setOther(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && result && !e.nativeEvent.isComposing) answer(result);
-              if (e.key === 'Escape') {
-                setOther(null);
-                requestAnimationFrame(() => ref.current?.querySelector<HTMLElement>('.pd-other')?.focus());
-              }
-            }}
-          />
-        )}
-      </div>
-      {(step > 0 || multi || other !== null) && (
-        <div className="pd-actions pd-nav">
-          {step > 0 && <Button size="sm" onClick={() => go(step - 1)}>Back</Button>}
-          {(multi || other !== null) && (
-            <Button size="sm" disabled={!result} onClick={() => answer(result)}>{step + 1 < total ? 'Next' : 'Done'}</Button>
-          )}
-        </div>
-      )}
-    </Panel>
-  );
-}
-
-type OptionProps = { n: number; multi: boolean; on: boolean; label: string; description?: string; preview?: string; className?: string; onPick: () => void };
-
-function Option({ n, multi, on, label, description, preview, className, onPick }: OptionProps) {
-  return (
-    <button className={`pd-option${on ? ' on' : ''}${className ? ` ${className}` : ''}`} role={multi ? 'checkbox' : 'radio'} aria-checked={on} onClick={onPick}>
-      {multi ? <span className="pd-mark" aria-hidden>{on ? '[x]' : '[ ]'}</span> : <span className="pd-dot" aria-hidden />}
-      <span className="pd-opt">
-        <span className="pd-opt-label">{label}</span>
-        {description && <span className="pd-opt-desc">{description}</span>}
-        {preview && <pre className="pd-preview">{preview}</pre>}
-      </span>
-      {!multi && !className && <span className="pd-pick" aria-hidden>Pick</span>}
-      <kbd>{n}</kbd>
-    </button>
-  );
-}
-
 export function BlockedCard({ ev }: { ev: Extract<ChatEvent, { kind: 'blocked' }> }) {
-  const rule = ev.rule.startsWith('Bash(') ? ev.rule.slice(5, -1).replace(/\\([\\()])/g, '$1') : ev.rule;
+  const rule = blockedRule(ev.rule);
   return (
     <Panel className="pd blocked-card">
       <div className="pd-head"><Icon name="shield" small /><span className="pd-title">Auto mode blocked this</span></div>

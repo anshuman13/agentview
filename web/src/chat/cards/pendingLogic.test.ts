@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test';
-import { planFeedback, planParagraphs } from './Pending';
+import { blockedRule, planFeedback, planParagraphs } from './pendingLogic';
 import { lineDiff } from '../../../../shared/lineDiff';
 
 describe('lineDiff', () => {
@@ -18,5 +18,12 @@ describe('plan comments', () => {
     const text = planFeedback(paras, { 0: ' use a worktree ', 1: 'too big', 2: '  ' });
     expect(text).toBe(`Comments on the plan:\n\n> First step\nuse a worktree\n\n> Second ${'x'.repeat(73)}…\ntoo big`);
     expect(planFeedback(paras, {})).toBe('');
+  });
+});
+
+describe('blockedRule', () => {
+  it('unescapes a Bash rule and keeps any other rule', () => {
+    expect(blockedRule('Bash(rm -rf \\(x\\) \\\\y)')).toBe('rm -rf (x) \\y');
+    expect(blockedRule('WebFetch(domain:x.com)')).toBe('WebFetch(domain:x.com)');
   });
 });

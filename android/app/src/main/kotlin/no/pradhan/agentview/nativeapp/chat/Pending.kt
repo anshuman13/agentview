@@ -106,35 +106,6 @@ fun PermissionCard(p: Pending.Permission, mode: String, hub: Hub) {
     }
 }
 
-private const val QUOTE_MAX = 80
-
-// Port of web/src/chat/Pending.tsx planParagraphs: the plan's blocks split at blank lines, leaving fenced code whole.
-fun planParagraphs(plan: String): List<String> {
-    val out = mutableListOf<String>()
-    var cur = mutableListOf<String>()
-    var fence = false
-    for (line in plan.lines()) {
-        if (line.trimStart().let { it.startsWith("```") || it.startsWith("~~~") }) fence = !fence
-        if (!fence && line.isBlank()) {
-            if (cur.isNotEmpty()) out += cur.joinToString("\n")
-            cur = mutableListOf()
-        } else cur += line
-    }
-    if (cur.isNotEmpty()) out += cur.joinToString("\n")
-    return out
-}
-
-private fun planQuote(paragraph: String): String {
-    val flat = paragraph.replace(Regex("\\s+"), " ").trim()
-    return "> " + if (flat.length > QUOTE_MAX) flat.take(QUOTE_MAX).trimEnd() + "…" else flat
-}
-
-// Port of planFeedback: one message quoting each commented paragraph, then the comment; empty when there are none.
-fun planFeedback(paragraphs: List<String>, notes: Map<Int, String>): String {
-    val parts = paragraphs.mapIndexedNotNull { i, p -> notes[i]?.trim()?.takeIf { it.isNotEmpty() }?.let { "${planQuote(p)}\n$it" } }
-    return if (parts.isEmpty()) "" else "Comments on the plan:\n\n" + parts.joinToString("\n\n")
-}
-
 @Composable
 private fun PlanCard(p: Pending.Permission, mode: String, hub: Hub) {
     val paragraphs = remember(p.input) { planParagraphs(p.input.s("plan")) }
@@ -280,7 +251,7 @@ private fun OptionRow(multi: Boolean, on: Boolean, label: String, description: S
 
 @Composable
 fun BlockedCard(ev: ChatEvent, hub: Hub) {
-    val rule = if (ev.rule.startsWith("Bash(")) ev.rule.removePrefix("Bash(").removeSuffix(")").replace(Regex("\\\\([\\\\()])"), "$1") else ev.rule
+    val rule = blockedRule(ev.rule)
     Panel {
         Title("Auto mode blocked this")
         CodeBlock(rule, modifier = Modifier.heightIn(max = Tokens.scrollShort))
