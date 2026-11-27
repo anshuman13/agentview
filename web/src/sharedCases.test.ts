@@ -33,7 +33,7 @@ import { latestTodos, todoCount, todoCurrent, todoProgress, type TodoItem } from
 import { mergeTail, trimHeld } from './app/runtime/pageEvents';
 import { alarmCard, buildTranscript, dayDividers, duration, newMarker, newReplies, openAtNew, rewindReplies, stepLabel, stepTone, turnAnswers, type Item } from './chat/transcript/steps';
 import { filePath } from './chat/transcript/md';
-import { buildCard, type BuildCardInput } from './chat/transcript/buildCardLogic';
+import { buildCard, buildRows, type BuildCardInput } from './chat/transcript/buildCardLogic';
 import { unreadOrder, type UnreadChat } from './sessions/chatNav';
 import { foldTurns, proposalState, rememberedOf, usedClaimState, workTitle } from './chat/transcript/workFold';
 import { memoryMark, type MemoryFile, type MemoryMark } from './chat/cards/memoryLogic';
@@ -137,6 +137,10 @@ describe('cases shared with the Android app', () => {
 
   for (const c of cases<{ name: string; input: BuildCardInput; result: string | null; index: number; builds: SpawnedBuild[]; expected: object }>('build-card')) {
     it(`buildCard: ${c.name}`, () => expect(buildCard(c.input, c.result, c.index, c.builds)).toEqual(c.expected));
+  }
+
+  for (const c of cases<{ name: string; builds: SpawnedBuild[]; expected: object[] }>('build-rows')) {
+    it(`buildRows: ${c.name}`, () => expect(buildRows(c.builds)).toEqual(c.expected));
   }
 
   for (const c of cases<{ name: string; events: ChatEvent[]; expected: string[] }>('remembered')) {

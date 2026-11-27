@@ -46,3 +46,10 @@ fun buildCard(spec: String, request: String, result: String?, index: Int, builds
         true,
     )
 }
+
+data class BuildRow(val sessionId: String, val chatId: String?, val title: String, val status: String, val needs: Boolean, val meta: String)
+
+// web buildCardLogic.ts buildRows: the open builds a chat started, as indented rows under its Sessions row.
+fun buildRows(builds: List<SpawnedBuild>) = builds.filter { it.state != "done" && it.state != "stopped" }.map { b ->
+    BuildRow(b.sessionId, b.chatId, b.title.ifEmpty { "Build" }, STATUS[b.state] ?: b.state, b.state == "needs" || b.state == "approval", listOf(taskText(b), b.round.orEmpty()).filter { it.isNotEmpty() }.joinToString(" · "))
+}

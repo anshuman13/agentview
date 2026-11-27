@@ -108,6 +108,7 @@ import no.pradhan.agentview.nativeapp.chat.ALARM_TOOL
 import no.pradhan.agentview.nativeapp.chat.alarmCard
 import no.pradhan.agentview.nativeapp.chat.BuildCardOpen
 import no.pradhan.agentview.nativeapp.chat.buildCard
+import no.pradhan.agentview.nativeapp.chat.buildRows
 import no.pradhan.agentview.nativeapp.net.SpawnedBuild
 import no.pradhan.agentview.nativeapp.chat.rememberedOf
 import no.pradhan.agentview.nativeapp.chat.Proposal
@@ -430,6 +431,14 @@ class SharedCasesTest {
             val want = c.getValue("expected").jsonObject
             val open = (want["open"] as? JsonObject)?.let { o -> o["chat"]?.let { BuildCardOpen.Chat(it.jsonPrimitive.content) } ?: BuildCardOpen.Session(o.str("session")) }
             assertEquals(c.str("name"), listOf(want.str("title"), want.str("status"), want.str("tasks"), want.str("round"), open, want.getValue("found").jsonPrimitive.boolean), listOf(got.title, got.status, got.tasks, got.round, got.open, got.found))
+        }
+    }
+
+    @Test fun buildRowsCases() {
+        for (c in cases("build-rows")) {
+            val got = buildRows(c.getValue("builds").jsonArray.map { it.decode<SpawnedBuild>() })
+            val want = c.getValue("expected").jsonArray.map { it.jsonObject }.map { w -> listOf(w.str("sessionId"), w.nullable("chatId")?.jsonPrimitive?.content, w.str("title"), w.str("status"), w.getValue("needs").jsonPrimitive.boolean, w.str("meta")) }
+            assertEquals(c.str("name"), want, got.map { listOf(it.sessionId, it.chatId, it.title, it.status, it.needs, it.meta) })
         }
     }
 

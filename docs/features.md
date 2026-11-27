@@ -597,7 +597,10 @@ A build chat whose root has `spawnedBy` folds into the row of the chat that star
 the parent's title and opens the parent's latest sub-chat, the count label adds "1 build" or "2 builds" ("12 sub-chats
 · 1 build"), and the row's last activity, unread dot, running state and Needs you include the builds (`buildMembers`),
 so a build that waits for you lifts its parent's row into Needs you. Archive and Restore move the builds too. A build
-whose parent is not listed shows on its own.
+whose parent is not listed shows on its own. Under the row, each of those builds that is not done or stopped shows as
+an indented child row (title, "Task n of N" and the last round line, and its state: Running, Paused, Needs you), read
+from `/api/chat/spawned` when the row loads, when the builds' state changes and every 30 s (`buildRows` in
+`buildCardLogic.ts` and `BuildCardLogic.kt`, `shared/fixtures/build-rows.json`); a tap opens the build chat.
 
 Opening the row resumes the latest sub-chat; `?session=` and `/api/events?session=` take any id of the group, and the
 header shows the root's title. Above the live transcript the earlier sub-chats show oldest first as collapsed rows

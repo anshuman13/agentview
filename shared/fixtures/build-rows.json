@@ -1,0 +1,17 @@
+[
+  {
+    "name": "open builds only, running with task and round",
+    "builds": [
+      { "chatId": "c1", "sessionId": "s1", "title": "chat-view-review", "state": "running", "done": 42, "total": 72, "round": "Removed Done today" },
+      { "sessionId": "s2", "title": "old", "state": "done", "done": 3, "total": 3 },
+      { "sessionId": "s3", "title": "", "state": "needs", "done": 0, "total": 4 },
+      { "sessionId": "s4", "title": "x", "state": "stopped", "done": 1, "total": 2 },
+      { "sessionId": "s5", "title": "spec", "state": "paused", "done": 0, "total": 0 }
+    ],
+    "expected": [
+      { "sessionId": "s1", "chatId": "c1", "title": "chat-view-review", "status": "Running", "needs": false, "meta": "Task 43 of 72 · Removed Done today" },
+      { "sessionId": "s3", "title": "Build", "status": "Needs you", "needs": true, "meta": "Task 1 of 4" },
+      { "sessionId": "s5", "title": "spec", "status": "Paused", "needs": false, "meta": "" }
+    ]
+  }
+]

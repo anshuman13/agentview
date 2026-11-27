@@ -39,3 +39,16 @@ export function buildCard(input: BuildCardInput, result: string | null | undefin
     found: true,
   };
 }
+
+export type BuildRow = { sessionId: string; chatId?: string; title: string; status: string; needs: boolean; meta: string };
+
+// The open builds a chat started, as indented rows under its Sessions row: title, task, state and last round.
+export const buildRows = (builds: SpawnedBuild[]): BuildRow[] =>
+  builds.filter((b) => b.state !== 'done' && b.state !== 'stopped').map((b) => ({
+    sessionId: b.sessionId,
+    ...(b.chatId && { chatId: b.chatId }),
+    title: b.title || 'Build',
+    status: STATUS[b.state],
+    needs: b.state === 'needs' || b.state === 'approval',
+    meta: [taskText(b), b.round].filter(Boolean).join(' · '),
+  }));

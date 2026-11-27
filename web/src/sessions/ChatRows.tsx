@@ -17,6 +17,7 @@ import { isMuted, setMuted } from '../app/runtime/mute';
 import { draftKey, draftLine, readDraft } from '../chat/composer/composerLogic';
 import { clock } from '../../../shared/util';
 import { useChatRun } from './useChatRun';
+import { BuildRows } from './BuildRows';
 
 type SetChats = (f: (l: SavedSession[]) => SavedSession[]) => void;
 type Pin = (on: boolean) => Promise<boolean>;
@@ -173,7 +174,7 @@ export function SavedRow({ s, repo, branch, opening, pinned, actions, onOpen, on
   const seen = useStore((x) => x.seen);
   const builds = useStore((x) => buildsState(x.live, s.buildMembers));
   const draft = draftLine(readDraft(s.sessionId));
-  return <ChatRow sessionId={s.sessionId} title={s.title} cwd={s.cwd} lastModified={s.lastModified} opening={opening} meta={draft ? draftMeta(draft) : s.summary ? metaLine(since(s.lastModified), s.subs, s.summary) : metaLine(repo, branchOf(s.gitBranch, branch), s.subs, providerMark(s.provider), since(s.lastModified))} state={chatState({ saved: s, builds }, seen)} pinned={pinned} actions={actions} onOpen={onOpen} onPin={onPin} />;
+  return <><ChatRow sessionId={s.sessionId} title={s.title} cwd={s.cwd} lastModified={s.lastModified} opening={opening} meta={draft ? draftMeta(draft) : s.summary ? metaLine(since(s.lastModified), s.subs, s.summary) : metaLine(repo, branchOf(s.gitBranch, branch), s.subs, providerMark(s.provider), since(s.lastModified))} state={chatState({ saved: s, builds }, seen)} pinned={pinned} actions={actions} onOpen={onOpen} onPin={onPin} /><BuildRows sessionId={s.sessionId} members={s.buildMembers} state={builds} /></>;
 }
 
 export function WaitingRows({ rows, chats, folders, viewing, ask, pins, setPin, setChats }: { rows: LiveChat[]; chats: ChatSession[]; folders: Folder[]; viewing: string; ask: (r: ConfirmRequest) => void; pins: string[]; setPin: (id: string, on: boolean) => Promise<boolean>; setChats: SetChats }) {
@@ -206,6 +207,7 @@ export function LiveRow({ c, saved, repo, branch, selected, pinned, actions, ask
   return (
     <>
       <ChatRow sessionId={saved?.sessionId ?? rootOf(c.sessionId) ?? undefined} title={c.title} cwd={c.cwd} lastModified={saved?.lastModified ?? c.lastActive} live={c} meta={main} state={chatState({ live: c, saved, builds }, seen)} selected={selected} pinned={pinned} actions={actions} onOpen={() => { if (!selected) send({ type: 'view', id: c.id }); }} onPin={onPin} onBeside={onBeside} onClose={() => closeChat(c, ask)} />
+      <BuildRows sessionId={saved?.sessionId} members={saved?.buildMembers} state={builds} />
     </>
   );
 }

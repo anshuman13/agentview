@@ -2,6 +2,7 @@ package no.pradhan.agentview.nativeapp.sessions
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -159,9 +160,10 @@ class ChatRows(
     fun LiveRow(c: LiveChat, repo: String? = null) {
         val s = c.sessionId?.let { saved[it] }
         val branch = (s?.gitBranch ?: repoBranch(c.cwd)).takeIf { !isDefaultBranch(it) }
-        val state = chatState(c, s, seen, buildsState(live, s?.buildMembers))
+        val builds = buildsState(live, s?.buildMembers)
+        val state = chatState(c, s, seen, builds)
         val id = saved.rowId(c.sessionId)
-        ChatRow(
+        Column { ChatRow(
             title = c.title.ifBlank { "Untitled" },
             meta = liveMeta(c, s, repo, branch, prFor(c)),
             state = state,
@@ -171,6 +173,7 @@ class ChatRows(
             onResume = if (c.stalled) ({ hub.resume(c.id) }) else null,
             onClick = { hub.open(c.id); onOpen() },
         )
+        BuildRows(hub, s?.sessionId, s?.buildMembers, builds, onOpen) }
     }
 
     @Composable
@@ -197,15 +200,17 @@ class ChatRows(
     @Composable
     fun SavedRow(s: SavedSession, repo: String? = null) {
         val branch = (s.gitBranch ?: repoBranch(s.cwd)).takeIf { !isDefaultBranch(it) }
-        ChatRow(
+        val builds = buildsState(live, s.buildMembers)
+        Column { ChatRow(
             title = (if (opening.value == s.sessionId) "Opening… " else "") + s.title.ifBlank { "Untitled" },
             meta = draftSnippet(hub.draftOfSession(s.sessionId))?.let { draftMeta(it) }
                 ?: AnnotatedString(s.summary?.takeIf { it.isNotBlank() }?.let { metaLine(since(s.lastModified), s.subs, it) } ?: metaLine(repo, branch, s.subs, providerMark(s.provider), since(s.lastModified))),
-            state = chatState(null, s, seen, buildsState(live, s.buildMembers)),
+            state = chatState(null, s, seen, builds),
             selected = false,
             actions = actions(s.sessionId, s.title, null),
             onClick = { scope.launch { opening.value = s.sessionId; if (hub.openSaved(s.sessionId)) onOpen(); opening.value = null } },
         )
+        BuildRows(hub, s.sessionId, s.buildMembers, builds, onOpen) }
     }
 }
 
