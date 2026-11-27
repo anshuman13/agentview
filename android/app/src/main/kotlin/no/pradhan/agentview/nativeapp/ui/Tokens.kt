@@ -354,6 +354,9 @@ val LightColors = AvColors(
 
 object Tokens {
     val listPad = 16.dp
+    val mdGap = 16.dp
+    val mdItemGap = 4.dp
+    val mdHeadGap = 20.dp
     val rowH = 40.dp
     val rowStateW = 80.dp
     val hairline = 1.dp

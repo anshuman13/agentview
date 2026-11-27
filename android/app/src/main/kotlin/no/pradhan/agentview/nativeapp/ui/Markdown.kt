@@ -104,7 +104,7 @@ fun Markdown(text: String, modifier: Modifier = Modifier, streaming: Boolean = f
 private fun MdBlocks(blocks: List<MdBlock>, modifier: Modifier = Modifier, reading: Boolean = false) {
     val parentFresh = LocalFreshBlock.current
     val seen = remember { blocks.size }
-    Column(modifier, verticalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
+    Column(modifier, verticalArrangement = Arrangement.spacedBy(Tokens.mdGap)) {
         blocks.forEachIndexed { i, b ->
             CompositionLocalProvider(LocalFreshBlock provides (parentFresh || i >= seen)) { MdBlockView(b, reading) }
         }
@@ -120,14 +120,14 @@ private fun MdBlockView(b: MdBlock, reading: Boolean) {
             fadedText(inlineText(b.inlines), body.color),
             style = if (reading) body.copy(fontWeight = FontWeight.Bold, fontSize = if (b.level <= 1) body.fontSize * 1.25f else body.fontSize)
                 else (if (b.level <= 1) Type.headline.copy(fontSize = Tokens.fsXl) else Type.headline).copy(color = av.fg),
-            modifier = Modifier.padding(top = Tokens.sp4),
+            modifier = Modifier.padding(top = Tokens.mdHeadGap - Tokens.mdGap),
         )
         is MdBlock.Code -> CodeBlock(b.text, b.lang)
         is MdBlock.Quote -> Row(Modifier.height(IntrinsicSize.Min)) {
             Box(Modifier.width(Tokens.bar).fillMaxHeight().background(av.borderStrong))
             MdBlocks(b.blocks, Modifier.padding(start = Tokens.sp4), reading)
         }
-        is MdBlock.Items -> Column(verticalArrangement = Arrangement.spacedBy(Tokens.sp2)) {
+        is MdBlock.Items -> Column(verticalArrangement = Arrangement.spacedBy(Tokens.mdItemGap)) {
             b.items.forEachIndexed { n, item ->
                 Row {
                     Text(if (b.ordered) "${b.start + n}." else "•", style = body, color = av.fgMuted, modifier = Modifier.width(Tokens.leadWidth).padding(start = Tokens.sp2))

@@ -69,6 +69,9 @@ Touch runs the text roles one step below Apple's sizes. Inputs stay at 16px so i
 
 2px unit: `--sp-N` = N x 2px. Inside a control `--sp-2` to `--sp-6`; between controls `--sp-4`;
 panel padding `--sp-8` (`--sp-2 --sp-6` for dense list panels); between sections `--sp-12`.
+Markdown (`.md` on web, `MdBlocks` on Android; replies, wiki and meeting pages) spaces paragraphs, lists, code and
+tables `--md-gap` (14px, 16dp on Android), list items `--md-item-gap` (4px) and puts `--md-head-gap` (20px) above a
+heading, close to Claude.app's 0.8 em block gap (27 Nov 2026).
 
 ### Shape (Material 3 scale, fewer steps)
 
