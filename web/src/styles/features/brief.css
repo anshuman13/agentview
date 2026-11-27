@@ -119,3 +119,4 @@ button.rail-s { cursor: pointer; }
   .brief-status { padding-top: var(--sp-1); }
   .brief-input { padding-top: var(--sp-2); }
 }
+@media (min-width: 901px) { .brief-input > .cp { max-width: 90ch; margin-inline: auto; } }
