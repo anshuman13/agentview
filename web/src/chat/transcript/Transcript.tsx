@@ -3,6 +3,7 @@ import { setAtLatest, useStore } from '../../app/store';
 import { Icon } from '../../ui/Icon';
 import { Button, IconButton } from '../../ui/Button';
 import { EmptyState } from '../../ui/Panel';
+import { Loading } from '../../ui/Skeleton';
 import { Markdown } from '../Chat';
 import { BlockedCard } from '../cards/Pending';
 import { ReviewCard } from '../cards/ReviewCard';
@@ -42,7 +43,7 @@ export const Transcript = memo(function Transcript() {
   const failed = useStore((s) => !!s.live.find((c) => c.id === s.session.id)?.failed);
   const stalled = useStore((s) => !!s.live.find((c) => c.id === s.session.id)?.stalled);
   const sessionId = useStore((s) => s.session.sessionId);
-  return <TranscriptView key={chat} sessionId={sessionId} events={events} earlier={earlier} cwd={cwd} running={running} bill={billing(provider)} failed={failed} stalled={stalled} label={providerLabel(provider)} />;
+  return <TranscriptView key={chat} loaded={!!chat} sessionId={sessionId} events={events} earlier={earlier} cwd={cwd} running={running} bill={billing(provider)} failed={failed} stalled={stalled} label={providerLabel(provider)} />;
 });
 
 function EndLine({ text, label, onPress }: { text: string; label: string; onPress: () => void }) {
@@ -51,7 +52,7 @@ function EndLine({ text, label, onPress }: { text: string; label: string; onPres
 }
 
 // The finished top-level reply a node lies in.
-function TranscriptView({ sessionId, events, earlier, cwd, running, bill, failed, stalled, label }: { sessionId: string | null; events: ChatEvent[]; earlier: number; cwd: string; running: boolean; bill: string; failed: boolean; stalled: boolean; label: string }) {
+function TranscriptView({ loaded, sessionId, events, earlier, cwd, running, bill, failed, stalled, label }: { loaded: boolean; sessionId: string | null; events: ChatEvent[]; earlier: number; cwd: string; running: boolean; bill: string; failed: boolean; stalled: boolean; label: string }) {
   const [build] = useState(createTranscriptBuilder);
   const items = useMemo(() => build(events), [build, events]);
   const last = events[events.length - 1];
@@ -146,7 +147,7 @@ function TranscriptView({ sessionId, events, earlier, cwd, running, bill, failed
     <div ref={box} className="tr" onScroll={onScroll}>
       <div ref={rows} className="tr-rows">
       <SubChatRows sessionId={sessionId} cwd={cwd} find={subFind} unstick={() => { scroll.stick.current = false; }} />
-      {items.length === 0 && <EmptyState size="sm" icon="comment-discussion" title="No messages yet" hint="Your prompts, the agent's steps and replies show up here" />}
+      {items.length === 0 && (loaded ? <EmptyState size="sm" icon="comment-discussion" title="No messages yet" hint="Your prompts, the agent's steps and replies show up here" /> : <Loading text="Loading the chat…" />)}
       {!staging && (start > 0 || earlier > 0) && <div className="tr-more" {...pressable(() => showEarlier())}>{loading ? <><Icon name="loading" small spin /> Loading earlier…</> : `Show earlier (${hiddenCount(earlier, list.length, shown)} hidden)`}</div>}
       {list.slice(from).map((r, i) => {
         const id = r.kind === 'item' ? r.it.id : `work:${r.id}`;
