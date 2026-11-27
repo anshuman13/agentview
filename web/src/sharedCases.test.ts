@@ -17,6 +17,7 @@ import { blockedRule, planFeedback, planParagraphs } from './chat/cards/pendingL
 import { needsEarlier } from './chat/transcript/window';
 import { binLeft, buildFolders, chatPlace, since } from './sessions/folders';
 import { findingFixPrompt, findingsFixPrompt } from '../../shared/reviewPrompt';
+import { linesQuote } from '../../shared/linesQuote';
 import { setupPrompt, type SetupKind } from '../../shared/setupPrompt';
 import { appendRule } from '../../shared/steering';
 import { isSpecPath, specProgress, specPrompt, specSlug, specTasks, startTaskPrompt, withoutOpenTasks, type SpecTask } from '../../shared/specTasks';
@@ -580,6 +581,10 @@ describe('cases shared with the Android app', () => {
 
   for (const c of cases<{ name: string; meeting: Record<string, unknown>; action: Record<string, unknown>; expected: string }>('linear-issue')) {
     it(`linearIssue: ${c.name}`, () => expect(linearIssue(c.action as unknown as ItemRow, c.meeting as unknown as Meeting)).toBe(c.expected));
+  }
+
+  for (const c of cases<{ name: string; path: string; start: number; end: number; text: string; expected: string }>('lines-quote')) {
+    it(`linesQuote: ${c.name}`, () => expect(linesQuote(c.path, c.start, c.end, c.text)).toBe(c.expected));
   }
 
   for (const c of cases<{ name: string; tools: string; id: string; expected: string }>('toggle-connector')) {

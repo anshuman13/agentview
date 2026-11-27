@@ -2,11 +2,17 @@ package no.pradhan.agentview.nativeapp.workspace
 
 import no.pradhan.agentview.nativeapp.ui.DiffLine
 import androidx.activity.compose.BackHandler
+import no.pradhan.agentview.nativeapp.ui.Type
+import no.pradhan.agentview.nativeapp.ui.IconBtn
+import androidx.compose.material3.Text
+import androidx.compose.ui.Alignment
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -186,7 +192,7 @@ fun FileScreen(hub: Hub, path: String, onBack: () -> Unit, diffFirst: Boolean = 
                     DocAskSheet(hub, path, docEdit)
                 }
                 diff -> DiffLinesView(remember(file, changes) { fileDiff(file.original, file.content).let { if (changes) changesOnly(it) else it } }, langOf(path), wrap)
-                else -> CodeView(file.content, langOf(path), wrap, line)
+                else -> CodeView(file.content, langOf(path), wrap, line, onQuote = { a, b, t -> hub.draftPrompt(linesQuote(path, a, b, t)) })
             }
         }
     }
@@ -213,8 +219,9 @@ private fun SpecTasks(hub: Hub, path: String, tasks: List<SpecTask>) {
 private const val HIGHLIGHT_LIMIT = 400_000
 private const val FLASH_MS = 1600L
 
+// A long press picks a line and taps then stretch the pick to other lines; the bar puts them into the chat's composer.
 @Composable
-fun CodeView(text: String, lang: Lang, wrap: Boolean, line: Int? = null) {
+fun CodeView(text: String, lang: Lang, wrap: Boolean, line: Int? = null, onQuote: ((start: Int, end: Int, text: String) -> Unit)? = null) {
     val lines = remember(text) { text.split('\n') }
     val spans by androidx.compose.runtime.produceState<List<List<SynSpan>>?>(null, text, lang) {
         value = if (text.length > HIGHLIGHT_LIMIT) null else withContext(Dispatchers.Default) { highlight(text, lang) }
@@ -224,10 +231,27 @@ fun CodeView(text: String, lang: Lang, wrap: Boolean, line: Int? = null) {
     val list = rememberLazyListState(initialFirstVisibleItemIndex = target ?: 0)
     var flash by remember(line) { mutableStateOf(target) }
     LaunchedEffect(line) { delay(FLASH_MS); flash = null }
-    LazyColumn(Modifier.fillMaxSize().padding(vertical = Tokens.sp4), list) {
-        itemsIndexed(lines, key = { i, _ -> i }, contentType = { _, _ -> "line" }) { i, l ->
-            Box(Modifier.background(if (i == flash) av.accentSoft else Color.Transparent)) {
-                CodeLine("${i + 1}", spans?.getOrNull(i)?.let { highlighted(l, it) } ?: AnnotatedString(l), wrap = wrap, scroll = scroll)
+    val haptic = LocalHapticFeedback.current
+    var anchor by remember(text) { mutableStateOf<Int?>(null) }
+    var pick by remember(text) { mutableStateOf<IntRange?>(null) }
+    val clear = { anchor = null; pick = null }
+    BackHandler(pick != null, clear)
+    Column(Modifier.fillMaxSize()) {
+        LazyColumn(Modifier.weight(1f).padding(vertical = Tokens.sp4), list) {
+            itemsIndexed(lines, key = { i, _ -> i }, contentType = { _, _ -> "line" }) { i, l ->
+                val picked = pick?.contains(i) == true
+                Box(Modifier.background(if (picked || i == flash) av.accentSoft else Color.Transparent)) {
+                    CodeLine("${i + 1}", spans?.getOrNull(i)?.let { highlighted(l, it) } ?: AnnotatedString(l), wrap = wrap, scroll = scroll,
+                        onLongClick = onQuote?.let { { haptic.performHapticFeedback(HapticFeedbackType.LongPress); anchor = i; pick = i..i } },
+                        onClick = { anchor?.let { a -> pick = minOf(a, i)..maxOf(a, i) } })
+                }
+            }
+        }
+        pick?.let { p ->
+            Row(Modifier.fillMaxWidth().background(av.groupCard).padding(horizontal = Tokens.sp4, vertical = Tokens.sp4), verticalAlignment = Alignment.CenterVertically) {
+                IconBtn("close", "Clear the pick", clear)
+                Text(if (p.first == p.last) "Line ${p.first + 1}" else "Lines ${p.first + 1}-${p.last + 1}", Modifier.weight(1f), color = av.fg, style = Type.callout)
+                Button("Add to chat", { onQuote?.invoke(p.first + 1, p.last + 1, lines.subList(p.first, p.last + 1).joinToString("\n")); clear() }, variant = ButtonVariant.Filled, size = ButtonSize.Sm, icon = "comment")
             }
         }
     }

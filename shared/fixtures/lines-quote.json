@@ -1,0 +1,5 @@
+[
+  {"name": "one line", "path": "src/a.ts", "start": 4, "end": 4, "text": "const a = 1;", "expected": "`src/a.ts:4`\n> const a = 1;"},
+  {"name": "a range keeps indents and quotes blank lines", "path": "src/a.ts", "start": 10, "end": 12, "text": "if (x) {\n\n  go();  ", "expected": "`src/a.ts:10-12`\n> if (x) {\n>\n>   go();"},
+  {"name": "drops a trailing newline", "path": "README.md", "start": 1, "end": 2, "text": "# Title\nText\n", "expected": "`README.md:1-2`\n> # Title\n> Text"}
+]

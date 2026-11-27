@@ -166,3 +166,10 @@ fun startTaskPrompt(t: SpecTask, path: String) = "Do task ${t.n} in $path: ${t.t
 
 fun specPrompt(request: String) = "Write a spec for the request below in .claude/specs/<slug>.md with three sections: Requirements (numbered, each with testable acceptance criteria), Design, and Tasks (`- [ ]` lines, each one small step). Do not change any code; stop for review when the spec is written. When the tasks are done later, tick each box right after finishing it (one edit per task) and mark the one you are on with \" (in progress)\".\n\nRequest: $request"
 
+
+// shared/linesQuote.ts: the composer text for lines picked in a file, `path:start-end` and the lines as a quote.
+fun linesQuote(path: String, start: Int, end: Int, text: String): String {
+    val where = if (start == end) "$start" else "$start-$end"
+    val lines = text.trimEnd('\n').split('\n').map { if (it.isBlank()) ">" else "> ${it.trimEnd()}" }
+    return "`$path:$where`\n" + lines.joinToString("\n")
+}

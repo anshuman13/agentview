@@ -151,6 +151,7 @@ import no.pradhan.agentview.nativeapp.net.protocolJson
 import no.pradhan.agentview.nativeapp.sessions.items
 import no.pradhan.agentview.nativeapp.ui.agoShort
 import no.pradhan.agentview.nativeapp.workspace.fileDiff
+import no.pradhan.agentview.nativeapp.workspace.linesQuote
 import no.pradhan.agentview.nativeapp.workspace.revertBlock
 import no.pradhan.agentview.nativeapp.workspace.splitDiff
 import no.pradhan.agentview.nativeapp.codex.wiki.claimActions
@@ -1303,6 +1304,10 @@ class SharedCasesTest {
             val a = Row("items", "a", "work", f = c.getValue("action").jsonObject)
             assertEquals(c.str("name"), c.str("expected"), linearIssue(a, m))
         }
+    }
+
+    @Test fun linesQuoteCases() {
+        for (c in cases("lines-quote")) assertEquals(c.str("name"), c.str("expected"), linesQuote(c.str("path"), c.getValue("start").jsonPrimitive.int, c.getValue("end").jsonPrimitive.int, c.str("text")))
     }
 
     @Test fun toggleConnectorCases() {

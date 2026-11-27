@@ -129,10 +129,10 @@ fun highlighted(line: String, spans: List<SynSpan>): AnnotatedString {
 
 // One line of code or diff: a gutter with the line number or mark, then the text on its diff tint.
 @Composable
-fun CodeLine(number: String, text: AnnotatedString, mark: Char = ' ', wrap: Boolean, scroll: ScrollState, gutter: Dp = Tokens.sp24, onLongClick: (() -> Unit)? = null) {
+fun CodeLine(number: String, text: AnnotatedString, mark: Char = ' ', wrap: Boolean, scroll: ScrollState, gutter: Dp = Tokens.sp24, onLongClick: (() -> Unit)? = null, onClick: (() -> Unit)? = null) {
     val c = av
     val bg = when (mark) { '+' -> c.diffAddSoft; '-' -> c.diffDelSoft; '@' -> c.hover; else -> Color.Transparent }
-    Row(Modifier.fillMaxWidth().background(bg).then(if (onLongClick != null) Modifier.combinedClickable(onClick = {}, onLongClick = onLongClick) else Modifier).then(if (wrap) Modifier else Modifier.horizontalScroll(scroll))) {
+    Row(Modifier.fillMaxWidth().background(bg).then(if (onLongClick != null) Modifier.combinedClickable(onClick = onClick ?: {}, onLongClick = onLongClick) else Modifier).then(if (wrap) Modifier else Modifier.horizontalScroll(scroll))) {
         Text(number, Modifier.widthIn(min = gutter).padding(start = Tokens.sp4, end = Tokens.sp4), style = Mono, color = c.fgMuted, maxLines = 1)
         Text(text, style = Mono, color = if (mark == '@') c.fgMuted else c.fg, softWrap = wrap)
     }

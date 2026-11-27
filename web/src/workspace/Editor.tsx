@@ -10,6 +10,8 @@ import { touch } from '../app/touch/touch';
 import { isDark, useThemeName } from '../app/theme';
 import { Confirm, type ConfirmRequest } from '../ui/Confirm';
 import { Menu, MenuItem } from '../ui/Menu';
+import { Button } from '../ui/Button';
+import { linesQuote } from '../../../shared/linesQuote';
 import { blockAt, blockAtOld, revertBlock } from './revertBlock';
 
 async function lang(path: string): Promise<Extension> {
@@ -29,11 +31,28 @@ type EditorProps = { file: FileData; diff: boolean; split?: boolean; wrap: boole
 
 const PRESS_MS = 500;
 
-// Puts the line into the composer as `path:line`: code, so a reply can point at it.
-function quoteLine(path: string, line: number, text: string) {
+function toComposer(text: string) {
   showChat();
-  window.dispatchEvent(new CustomEvent('agentview:insert', { detail: { text: `\`${path}:${line}\`: ${text.trim()}` } }));
+  window.dispatchEvent(new CustomEvent('agentview:insert', { detail: { text } }));
   window.dispatchEvent(new CustomEvent('agentview:focus'));
+}
+
+// Puts the line into the composer as `path:line`: code, so a reply can point at it.
+const quoteLine = (path: string, line: number, text: string) => toComposer(`\`${path}:${line}\`: ${text.trim()}`);
+
+type Pick = { x: number; y: number; text: string };
+
+// The whole lines a selection in the file covers, as the composer quote; null when nothing is selected.
+function pickOf(view: EditorView, path: string): Pick | null {
+  const { from, to, head } = view.state.selection.main;
+  if (from === to) return null;
+  const doc = view.state.doc;
+  const first = doc.lineAt(from);
+  let last = doc.lineAt(to);
+  if (to === last.from && last.number > first.number) last = doc.line(last.number - 1);
+  const at = view.coordsAtPos(head);
+  if (!at) return null;
+  return { x: at.left, y: at.bottom + 4, text: linesQuote(path, first.number, last.number, doc.sliceString(first.from, last.to)) };
 }
 
 export function Editor({ file, diff, split = false, wrap, changesOnly, line, viewRef, edit = false, onDirty, onSave }: EditorProps) {
@@ -47,6 +66,7 @@ export function Editor({ file, diff, split = false, wrap, changesOnly, line, vie
   const merge = useRef<MergeView | null>(null);
   const dark = isDark(useThemeName());
 
+  const [pick, setPick] = useState<Pick | null>(null);
   const [menu, setMenu] = useState<{ x: number; y: number; block: number; quote: () => void } | null>(null);
   const [ask, setAsk] = useState<ConfirmRequest | null>(null);
   const menuBox = useRef<HTMLSpanElement>(null);
@@ -74,6 +94,20 @@ export function Editor({ file, diff, split = false, wrap, changesOnly, line, vie
     if (press.current) clearTimeout(press.current.timer);
     press.current = null;
   };
+  // Selected lines of the file (not the last commit's side of the split view) offer Add to chat.
+  const readPick = (target: EventTarget) => {
+    const view = viewRef.current;
+    const old = (target as Element).closest?.('.cm-merge-a');
+    // After CodeMirror's own mouseup has settled the selection.
+    setTimeout(() => setPick(view && !edit && !old && view === viewRef.current ? pickOf(view, file.path) : null));
+  };
+  const addPick = () => {
+    if (!pick) return;
+    toComposer(pick.text);
+    const view = viewRef.current;
+    if (view) view.dispatch({ selection: { anchor: view.state.selection.main.head } });
+    setPick(null);
+  };
   const onPointerDown = (e: PointerEvent<HTMLDivElement>) => {
     if (!diff || e.button !== 0) return;
     release();
@@ -96,6 +130,8 @@ export function Editor({ file, diff, split = false, wrap, changesOnly, line, vie
     let cancelled = false;
     let view: EditorView | null = null;
     let scroller: HTMLElement | null = null;
+    const drop = () => setPick(null);
+    setPick(null);
     lang(file.path).then((language) => {
       if (cancelled) return;
       const collapse = changesOnly ? { margin: 3, minSize: 4 } : undefined;
@@ -129,10 +165,12 @@ export function Editor({ file, diff, split = false, wrap, changesOnly, line, vie
         view.dispatch({ selection: { anchor: head } });
       }
       viewRef.current = view;
+      scroller.addEventListener('scroll', drop, { passive: true });
     });
     return () => {
       cancelled = true;
       if (!view) return;
+      scroller?.removeEventListener('scroll', drop);
       scroll.current = { path: file.path, top: scroller?.scrollTop ?? 0, head: view.state.selection.main.head };
       viewRef.current = null;
       if (merge.current) merge.current.destroy();
@@ -143,7 +181,12 @@ export function Editor({ file, diff, split = false, wrap, changesOnly, line, vie
 
   return (
     <>
-      <div className="cd-editor" ref={host} onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={release} onPointerCancel={release} onContextMenu={onContextMenu} />
+      <div className="cd-editor" ref={host} onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={(e) => { release(); readPick(e.target); }} onPointerCancel={release} onKeyUp={(e) => readPick(e.target)} onContextMenu={onContextMenu} />
+      {pick && !menu && (
+        <span className="cd-addchat" style={{ left: pick.x, top: pick.y }} onMouseDown={(e) => e.preventDefault()}>
+          <Button size="sm" variant="filled" icon="comment" onClick={addPick}>Add to chat</Button>
+        </span>
+      )}
       {menu && (
         <span className="cd-linemenu" ref={menuBox} style={{ left: menu.x, top: menu.y }}>
           <Menu trigger={menuBox} onClose={() => setMenu(null)}>
