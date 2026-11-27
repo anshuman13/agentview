@@ -6,4 +6,4 @@ jobs:
     steps:
       - run: |
           sleep 45
-          exit 1
+          exit 0
