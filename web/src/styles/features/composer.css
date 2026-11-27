@@ -119,3 +119,7 @@
 }
 .cp-quick { display: flex; flex-wrap: wrap; gap: var(--sp-3); padding: 0 0 var(--sp-4); }
 .cp-quick .chip { height: 30px; padding: 0 var(--sp-5); border: var(--hairline); border-radius: var(--radius-pill); background: transparent; color: var(--fg); font-size: var(--fs-sm); }
+.cp-bg { display: flex; flex-direction: column; padding: 0 0 var(--sp-3); }
+.cp-bg-row { display: flex; align-items: center; gap: var(--sp-3); min-height: 30px; padding: 0 var(--sp-2) 0 var(--sp-4); color: var(--fg-muted); font-size: var(--fs-sm); }
+.cp-bg-label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--fg); }
+.cp-bg-time { font-variant-numeric: tabular-nums; }

@@ -1014,6 +1014,19 @@ describe('restart resume', () => {
     expect(busy(s)).toBe(false);
   });
 
+  it('lists a background shell in the session and marks its step stopped when stopped', () => {
+    const { s, handle, result } = fakeSession();
+    handle({ type: 'assistant', parent_tool_use_id: null, message: { content: [{ type: 'tool_use', id: 'tu1', name: 'Bash', input: { command: 'sleep 60', run_in_background: true } }] } });
+    handle({ type: 'system', subtype: 'task_started', task_id: 't1', tool_use_id: 'tu1', task_type: 'local_bash', description: 'Sleep a minute', is_backgrounded: true });
+    result('r1');
+    expect(s.state.session.shells).toMatchObject([{ toolUseId: 'tu1', label: 'Sleep a minute' }]);
+    handle({ type: 'system', subtype: 'task_updated', task_id: 't1', patch: { status: 'killed' } });
+    handle({ type: 'system', subtype: 'task_notification', task_id: 't1', tool_use_id: 'tu1', status: 'stopped', summary: 'Sleep a minute' });
+    expect(s.state.session.shells).toEqual([]);
+    expect(s.state.session.running).toBe(false);
+    expect(s.state.events.slice(-2)).toMatchObject([{ kind: 'tool_result', toolUseId: 'tu1', stopped: true }, { kind: 'system', text: 'Background task stopped · Sleep a minute' }]);
+  });
+
   it('resumeStopped adds one user event with the run id, and an untouched chat has none', () => {
     const { s } = fakeSession();
     const users = () => s.state.events.filter((e) => e.kind === 'user');

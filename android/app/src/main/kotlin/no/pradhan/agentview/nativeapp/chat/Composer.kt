@@ -72,6 +72,9 @@ import no.pradhan.agentview.nativeapp.sessions.chatPlace
 import no.pradhan.agentview.nativeapp.app.refreshWorkspace
 import no.pradhan.agentview.nativeapp.app.submit
 import no.pradhan.agentview.nativeapp.ui.AvIcon
+import no.pradhan.agentview.nativeapp.ui.rememberNow
+import no.pradhan.agentview.nativeapp.ops.elapsed
+import no.pradhan.agentview.nativeapp.app.stopTask
 import no.pradhan.agentview.nativeapp.ui.Chip
 import no.pradhan.agentview.nativeapp.ui.IconBtn
 import no.pradhan.agentview.nativeapp.ui.Tokens
@@ -126,6 +129,7 @@ fun Composer(hub: Hub, chatId: String, sessionId: String?, session: SessionInfo?
             val r = acceptSuggestion(s.text.text, trigger!!.start, s.text.selection.end, sg.insert)
             s.set(TextFieldValue(r.first, TextRange(r.second)))
         } else if (ghost.isNotEmpty()) GhostRow(s.text.text, ghost) { val next = s.text.text + ghost; s.set(TextFieldValue(next, TextRange(next.length))) }
+        BackgroundShells(hub)
         StaleNote(hub)
         val asked by hub.store.state.select { st -> quickReplies(st.events) }
         if (asked.isNotEmpty() && !running && !waiting && s.full.isEmpty()) FlowRow(Modifier.padding(horizontal = Tokens.sp2), horizontalArrangement = Arrangement.spacedBy(Tokens.sp3)) {
@@ -147,6 +151,24 @@ fun Composer(hub: Hub, chatId: String, sessionId: String?, session: SessionInfo?
         }
     }
     ComposerSheets(hub, s, uploading, session, sheet, attach) { sheet = it }
+}
+
+// Shell commands the agent left running in the background, with how long each has run and a Stop.
+@Composable
+private fun BackgroundShells(hub: Hub) {
+    val shells by hub.store.state.select { it.session?.shells.orEmpty() }
+    if (shells.isEmpty()) return
+    val now by rememberNow(true)
+    Column(Modifier.fillMaxWidth().semantics { contentDescription = "Background tasks" }) {
+        shells.forEach { t ->
+            Row(Modifier.fillMaxWidth().padding(start = Tokens.sp4), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Tokens.sp3)) {
+                AvIcon("terminal", tint = av.fgMuted)
+                Text(t.label, Modifier.weight(1f), style = Type.footnote, color = av.fg, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(elapsed(now - t.startedAt), style = Type.footnote, color = av.fgMuted)
+                IconBtn("debug-stop", "Stop ${t.label}", { hub.stopTask(t.toolUseId) }, enabled = !hub.readOnly, iconSize = Tokens.icon)
+            }
+        }
+    }
 }
 
 // "No update for Ns" once the event stream has been quiet for 30 s; its own composable so the 5 s tick recomposes only it.

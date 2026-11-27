@@ -14,7 +14,7 @@ export type AskOptions = {
 
 export type Cron = { schedule: string; prompt: string; recurring: boolean };
 
-export type RunningTask = { toolUseId: string; tool: string; description: string };
+export type RunningTask = { toolUseId: string; tool: string; description: string; shell?: boolean; startedAt?: number };
 
 export type History = { events: ChatEvent[]; context: number | null; cache: CacheInfo | null };
 

@@ -132,7 +132,11 @@ export type SessionInfo = {
   instructionFiles?: string[];
   // The shell line that continues the chat in the provider's own CLI; null when it has none.
   resumeCommand?: string | null;
+  // Shell commands the agent left running in the background.
+  shells?: BackgroundShell[];
 };
+
+export type BackgroundShell = { toolUseId: string; label: string; startedAt: number };
 
 export type SessionUpdate = Omit<SessionInfo, 'commands' | 'mcp'> & Partial<Pick<SessionInfo, 'commands' | 'mcp'>>;
 

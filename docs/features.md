@@ -209,6 +209,10 @@ cost so far. The status bar usage tooltip adds a Spend block with today's and th
   with your message
 - A message is one request to the Mac and lands or fails visibly; it returns to the box after three failed tries
 - On the web the chat's state sits at the right of the chat header ("Idle · 2m ago", "Waiting for you", the live status); the bar under the transcript shows only while a turn runs or a step list exists
+- Shell commands Claude left running in the background (Bash with run_in_background) are listed above the composer
+  on web and Android, each with its label, elapsed time and a Stop (`session.shells`, from the CLI's `local_bash`
+  task events). A stopped one marks its step Stopped and adds "Background task stopped · label" to the transcript,
+  without starting a turn
 - The composer shows "No update for Ns" when nothing has arrived from the server for 30 s (the phone shows it above
   the field). The link reopens by itself after 50 s of silence, and a message that cannot be delivered goes back into
   the box with a notice

@@ -13,6 +13,7 @@ import { AttachmentsBar } from './AttachmentsBar';
 import { ComposerFoot, SendButton } from './ComposerFoot';
 import { ComposerStats } from './ComposerStats';
 import { SharedConfirm, useSharedIntake } from './SharedText';
+import { BackgroundShells } from './BackgroundShells';
 import { useAutocomplete } from './useAutocomplete';
 import { useAutoHeight } from './useAutoHeight';
 import { useBarHidden } from './useBarHidden';
@@ -108,6 +109,7 @@ export const Composer = memo(function Composer() {
   return (
     <div ref={root} className="cp" data-mode={mode}>
       {shared !== null && <SharedConfirm shared={shared} setShared={setShared} setText={setText} />}
+      <BackgroundShells />
       {asked && !running && !waiting && !typed && (
         <div className="cp-quick" role="group" aria-label="Quick replies">
           {asked.split('\n').map((t) => <Chip key={t} size="sm" icon={QUICK_REPLIES.includes(t) ? undefined : 'reply'} onClick={() => reply(t)}>{t}</Chip>)}

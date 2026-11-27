@@ -232,7 +232,12 @@ data class SessionInfo(
     val capabilities: Capabilities = Capabilities(),
     val instructionFiles: List<String> = emptyList(),
     val resumeCommand: String? = null,
+    val shells: List<BackgroundShell> = emptyList(),
 )
+
+// shared/protocol.ts BackgroundShell: a shell command the agent left running in the background.
+@Serializable
+data class BackgroundShell(val toolUseId: String, val label: String = "", val startedAt: Long = 0)
 
 @Serializable
 data class UsageWindow(val pct: Double = 0.0)
