@@ -80,7 +80,7 @@ fun SeriesPage(hub: Hub, st: CodexState, key: String, now: Long, actions: TaskAc
         if (members.isEmpty()) { item { EmptyState("No meetings", icon = "calendar", small = false) }; return@LazyColumn }
         item {
             Column(Modifier.padding(start = Tokens.listPad, end = Tokens.listPad, top = Tokens.sp8, bottom = Tokens.sp8), verticalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
-                LRow(verticalAlignment = Alignment.CenterVertically) {
+                LRow(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
                     Text(members[0].title ?: "Meeting", Modifier.weight(1f), style = SerifTitle)
                     if (next != null) Button("Open next", { onMeeting(next) }, variant = ButtonVariant.Filled, size = ButtonSize.Sm)
                     MoreButton { close ->
