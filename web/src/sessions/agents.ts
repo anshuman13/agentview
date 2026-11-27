@@ -1,5 +1,5 @@
 import type { AgentEvent, AgentStatus, ChatEvent } from '../../../shared/protocol';
-import { buildTranscript, denied, firstLine, stepLabel, type Item, type ToolResult, type ToolUse } from '../chat/transcript/steps';
+import { createTranscriptBuilder, denied, firstLine, stepLabel, type Item, type ToolResult, type ToolUse } from '../chat/transcript/steps';
 
 export type Agent = {
   id: string;
@@ -71,7 +71,7 @@ export function agentSummary(it: Extract<Item, { kind: 'agent' }>): string {
   return cleanLine(result?.text ?? '').slice(0, 200) || 'No report';
 }
 
-export function buildAgents(events: ChatEvent[]): Agent[] {
+export function buildAgents(events: ChatEvent[], build = createTranscriptBuilder()): Agent[] {
   const info = new Map<string, AgentEvent>();
   const lastAt = new Map<string, number>();
   for (const e of events) {
@@ -86,7 +86,7 @@ export function buildAgents(events: ChatEvent[]): Agent[] {
       walk(it.steps);
     }
   };
-  walk(buildTranscript(events));
+  walk(build(events));
   return out;
 }
 
@@ -96,8 +96,9 @@ export function agentCounts(agents: Agent[]) {
 }
 
 let cache: { events: ChatEvent[]; agents: Agent[] } | null = null;
+const build = createTranscriptBuilder();
 export function agentsOf(events: ChatEvent[]) {
-  if (cache?.events !== events) cache = { events, agents: buildAgents(events) };
+  if (cache?.events !== events) cache = { events, agents: buildAgents(events, build) };
   return cache.agents;
 }
 
