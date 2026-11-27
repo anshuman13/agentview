@@ -17,6 +17,7 @@ export type HostRequest =
   | { op: 'ask'; cwd: string; prompt: string; from?: string; fresh?: boolean }
   | { op: 'mcp_add'; id: string; name: string }
   | { op: 'mcp_login'; id: string; name: string }
+  | { op: 'rewind_preview'; id: string; prompt: string }
   | { op: 'alarm_result'; id: string; ok: boolean; notified?: boolean; weekday?: string; error?: string }
   | { op: 'viewers'; counts: Record<string, number>; last: string }
   | { op: 'desktop'; at: number }

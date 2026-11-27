@@ -259,6 +259,9 @@ export const newReplies = (items: Item[], lastSeenId: string) => items.slice(ite
 
 export type Rewind = { id: string; prompt: string };
 
+// The count line under a rewind's file list (Android Steps.kt rewindTotal).
+export const rewindTotal = (n: number) => (n ? `${n} ${n === 1 ? 'file' : 'files'} changed` : 'No file changes');
+
 // The last reply of each prompt that changed files, with the prompt a rewind goes back to.
 export function rewindReplies(items: Item[]) {
   const out = new Map<string, Rewind>();

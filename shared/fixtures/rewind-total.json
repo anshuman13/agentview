@@ -1,0 +1,5 @@
+[
+  { "name": "none", "n": 0, "expected": "No file changes" },
+  { "name": "one", "n": 1, "expected": "1 file changed" },
+  { "name": "several", "n": 3, "expected": "3 files changed" }
+]

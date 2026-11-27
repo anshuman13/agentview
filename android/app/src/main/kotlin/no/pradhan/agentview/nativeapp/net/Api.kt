@@ -137,6 +137,9 @@ class Api(private val origin: () -> String, private val http: OkHttpClient = sha
     suspend fun earlier(chat: String, before: String, limit: Int = ROW_WINDOW): Pair<List<ChatEvent>, Int> =
         parseEarlier(call(url("/api/chat/events?chat=${enc(chat)}&before=${enc(before)}&limit=$limit")).decodeToString())
 
+    suspend fun rewindPreview(chat: String, id: String): RewindPreview =
+        protocolJson.decodeFromString(RewindPreview.serializer(), call(url("/api/rewind/preview?chat=${enc(chat)}&id=${enc(id)}")).decodeToString())
+
     suspend fun spawnedBuilds(session: String) = list("/api/chat/spawned?session=${enc(session)}", SpawnedBuild.serializer())
     suspend fun subChats(session: String) = list("/api/chat/subchats?session=${enc(session)}", SubChat.serializer())
     suspend fun subChatEvents(session: String, before: String = "", limit: Int = 150): Pair<List<ChatEvent>, Int> =

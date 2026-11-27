@@ -2,7 +2,7 @@ import { api, getState, notice } from '../app/store';
 import { apiUrl, fetchJson, wsUrl } from '../app/api';
 import type { MemoryFile } from './cards/memoryLogic';
 import type { SubChat } from './transcript/subChatsLogic';
-import type { ChatEvent, SpawnedBuild } from '../../../shared/protocol';
+import type { ChatEvent, RewindPreview, SpawnedBuild } from '../../../shared/protocol';
 import { appendRule, removeRule } from '../../../shared/steering';
 import { createTerm, listTerms } from '../workspace/termApi';
 import { fileRequest } from '../workspace/fileApi';
@@ -71,6 +71,9 @@ export async function addRepoRule(file: string, text: string, chat?: string) {
     if (left !== null) await writeRepoFile(file, left, chat);
   };
 }
+
+// What a file rewind to before this prompt would change, without changing anything.
+export const fetchRewindPreview = (id: string) => fetchJson<RewindPreview>(api(`/api/rewind/preview?id=${encodeURIComponent(id)}`));
 
 export const fetchSavedSessions = () => fetch(api('/api/sessions')).then((r) => r.json());
 

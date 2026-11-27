@@ -342,8 +342,9 @@ export class ClaudeDriver implements AgentDriver {
     this.send(target === 'local' ? '/code-review' : `/code-review ${target}`, id);
   }
 
-  async rewind(id: string) {
-    return this.open().rewindFiles(this.rewinds.uuidOf(id));
+  async rewind(id: string, dryRun = false) {
+    const q = this.open();
+    return dryRun ? q.rewindFiles(this.rewinds.uuidOf(id), { dryRun }) : q.rewindFiles(this.rewinds.uuidOf(id));
   }
 
   // The SDK takes cancelQueued at runtime but its types leave the option out.

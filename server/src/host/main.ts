@@ -116,6 +116,8 @@ async function handle(req: HostRequest): Promise<unknown> {
       return addMcp(req.id, req.name);
     case 'mcp_login':
       return get(req.id).mcp.login(req.name);
+    case 'rewind_preview':
+      return get(req.id).rewindPreview(req.prompt);
     case 'desktop':
       hub.desktopAt = req.at;
       return;

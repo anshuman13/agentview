@@ -43,6 +43,11 @@
 .dialog-title { color: var(--fg); font-size: var(--fs-xl); font-weight: 500; margin-bottom: var(--sp-2); }
 .dialog-detail { color: var(--fg-muted); overflow-wrap: anywhere; white-space: pre-line; }
 .dialog-warning { color: var(--fg-muted); font-size: var(--fs-sm); margin-top: var(--sp-3); }
+.rewind-files { margin-top: var(--sp-4); max-height: 180px; overflow-y: auto; font-family: var(--mono); font-size: var(--fs-sm); }
+.rewind-file { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rewind-total { margin-top: var(--sp-2); color: var(--fg-muted); font-family: var(--font); }
+.rewind-total .add { color: var(--diff-add); }
+.rewind-total .del { color: var(--diff-del); }
 .dialog-input { height: var(--size-lg); margin-top: var(--sp-5); padding: 0 var(--sp-4); font-family: var(--mono); font-size: var(--fs-sm); }
 .dialog-actions { grid-column: 1 / -1; display: flex; justify-content: flex-end; gap: var(--sp-4); margin-top: var(--sp-8); }
 .dialog-actions button { min-width: 76px; }

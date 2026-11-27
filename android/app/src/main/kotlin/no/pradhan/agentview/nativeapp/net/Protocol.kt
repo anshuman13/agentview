@@ -155,6 +155,10 @@ data class SubChatCommit(val hash: String = "", val subject: String = "")
 @Serializable
 data class SubChat(val sessionId: String, val title: String = "", val startedAt: Long = 0, val round: Round? = null, val commit: SubChatCommit? = null)
 
+// shared/protocol.ts RewindPreview: what a file rewind to before a prompt would change.
+@Serializable
+data class RewindPreview(val files: List<String> = emptyList(), val insertions: Int = 0, val deletions: Int = 0, val error: String? = null)
+
 // shared/protocol.ts SpawnedBuild: one build a chat started, as /api/chat/spawned returns it.
 @Serializable
 data class SpawnedBuild(val chatId: String? = null, val sessionId: String = "", val title: String = "", val state: String = "spec", val done: Int = 0, val total: Int = 0, val round: String? = null)

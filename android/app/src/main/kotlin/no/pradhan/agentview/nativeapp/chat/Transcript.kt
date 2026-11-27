@@ -47,6 +47,13 @@ import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.AnnotatedString
+import no.pradhan.agentview.nativeapp.net.RewindPreview
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
@@ -72,6 +79,7 @@ import no.pradhan.agentview.nativeapp.ui.EmptyState
 import no.pradhan.agentview.nativeapp.ui.Loading
 import no.pradhan.agentview.nativeapp.ui.Markdown
 import no.pradhan.agentview.nativeapp.ui.Tokens
+import no.pradhan.agentview.nativeapp.ui.Mono
 import no.pradhan.agentview.nativeapp.ui.Type
 import no.pradhan.agentview.nativeapp.ui.av
 import no.pradhan.agentview.nativeapp.ui.select
@@ -251,7 +259,7 @@ internal fun ItemRow(hub: Hub, it: Item, chat: String, cwd: String, settled: Boo
         is Item.User -> UserRow(hub, it, chat, readOnly)
         is Item.Assistant -> {
             Markdown(it.text, Modifier.fillMaxWidth(), it.streaming, reading = true, fresh = fresh)
-            if (!it.streaming && (answer || rewind != null)) ReplyActions(hub, if (answer) it.text.trim() else null, rewind)
+            if (!it.streaming && (answer || rewind != null)) ReplyActions(hub, chat, if (answer) it.text.trim() else null, rewind)
         }
         is Item.System -> Text(it.text, style = Type.footnote, color = if (it.error) av.err else av.fgMuted)
         is Item.Step -> when (it.use.name) {
@@ -274,16 +282,39 @@ fun Modifier.leftBar(color: androidx.compose.ui.graphics.Color, width: Dp = Toke
 
 // Copy (the Markdown source) and Rewind files under the turn's last reply (web Rewind.tsx).
 @Composable
-private fun ReplyActions(hub: Hub, copy: String?, rewind: Item.User?) {
+private fun ReplyActions(hub: Hub, chat: String, copy: String?, rewind: Item.User?) {
     val clip = LocalClipboardManager.current
+    val scope = rememberCoroutineScope()
     var ask by remember { mutableStateOf(false) }
+    var preview by remember { mutableStateOf<RewindPreview?>(null) }
     if (ask && rewind != null) ConfirmDialog(
-        "Rewind files?",
-        "Puts every file ${providerLabel(hub.store.state.value.session?.provider)} changed back to how it was before \"${rewind.text.lineSequence().first().take(80)}\". Edits from later turns are undone too; the conversation stays.",
-        "Rewind", { ask = false; hub.rewind(rewind.id) }, onDismiss = { ask = false },
+        "Rewind to this message?",
+        "Puts every file ${providerLabel(hub.store.state.value.session?.provider)} changed back to how it was before \"${rewind.text.lineSequence().first().take(80)}\" and puts that prompt back in the composer. Edits from later turns are undone too; the conversation stays.",
+        "Rewind", { ask = false; hub.rewind(rewind.id); hub.useAgain(chat, rewind.text) }, onDismiss = { ask = false },
+        extra = preview?.let { p -> { RewindFiles(p) } },
     )
     Row(Modifier.offset(x = -Tokens.sp4)) {
         if (copy != null) IconBtn("copy", "Copy", { clip.setText(AnnotatedString(copy)); hub.notice.value = "Reply copied" }, iconSize = Tokens.icon)
-        if (rewind != null) IconBtn("discard", "Rewind files", { ask = true }, iconSize = Tokens.icon)
+        if (rewind != null) IconBtn("discard", "Rewind files", {
+            scope.launch {
+                preview = runCatching { hub.api.rewindPreview(chat, rewind.id) }.getOrNull()
+                ask = true
+            }
+        }, iconSize = Tokens.icon)
+    }
+}
+
+// The files a rewind will put back and the +/- total (web Rewind.tsx RewindFiles).
+@Composable
+private fun RewindFiles(p: RewindPreview) {
+    if (p.error != null) return Text(p.error, style = Type.footnote, color = av.fgMuted)
+    Column(Modifier.heightIn(max = 180.dp).verticalScroll(rememberScrollState())) {
+        p.files.forEach { Text(it, style = Mono, color = av.fg, maxLines = 1, overflow = TextOverflow.Ellipsis) }
+        Text(buildAnnotatedString {
+            append(rewindTotal(p.files.size) + " ")
+            withStyle(SpanStyle(color = av.diffAdd)) { append("+${p.insertions}") }
+            append(" ")
+            withStyle(SpanStyle(color = av.diffDel)) { append("\u2212${p.deletions}") }
+        }, style = Type.footnote, color = av.fgMuted, modifier = Modifier.padding(top = Tokens.sp2))
     }
 }

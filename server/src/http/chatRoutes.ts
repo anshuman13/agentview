@@ -57,6 +57,7 @@ export function chatSessionRoutes(d: RouteDeps): Record<string, Entry<ChatCtx>> 
       const limit = parseInt(url.searchParams.get('limit') ?? '', 10);
       return d.host.req({ op: 'state', id: chat.id, ...(!Number.isNaN(limit) && { limit }) });
     }),
+    'ANY /api/rewind/preview': entry(({ url, chat }) => d.host.req({ op: 'rewind_preview', id: chat.id, prompt: url.searchParams.get('id') ?? '' })),
     'ANY /api/attention': entry(({ url, chat }) => (url.searchParams.has('fresh') ? refreshAttention(d.attentionSources([chat.cwd])) : attention())),
     'ANY /api/memory': entry(({ chat }) => provider(chat.provider ?? 'claude').memory(chat.cwd)),
     'POST /api/memory/save': entry(async ({ body, chat }) => {

@@ -53,7 +53,7 @@ export interface AgentDriver {
   setEffort(level: Effort): Promise<void>;
   setPermissionMode(mode: string): Promise<void>;
   allow(rule: string): Promise<boolean>;
-  rewind(promptId: string): Promise<{ canRewind: boolean; error?: string; filesChanged?: string[] }>;
+  rewind(promptId: string, dryRun?: boolean): Promise<{ canRewind: boolean; error?: string; filesChanged?: string[]; insertions?: number; deletions?: number }>;
   stopTask(toolUseId: string): Promise<boolean>;
   mcpStatus(): Promise<McpServer[] | null>;
   refreshUsage?(): Promise<void>;

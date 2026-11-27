@@ -293,6 +293,9 @@ fun dayOfRows(items: List<Item>, days: Map<String, String>): Map<String, String>
     return out
 }
 
+// The count line under a rewind's file list (web steps.ts rewindTotal).
+fun rewindTotal(n: Int) = if (n == 0) "No file changes" else "$n ${if (n == 1) "file" else "files"} changed"
+
 // The last reply of each prompt that changed files, with the prompt a rewind goes back to (web steps.ts rewindReplies).
 fun rewindReplies(items: List<Item>): Map<String, Item.User> {
     val out = HashMap<String, Item.User>()

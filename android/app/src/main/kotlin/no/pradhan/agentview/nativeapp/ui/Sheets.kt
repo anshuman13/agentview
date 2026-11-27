@@ -235,13 +235,13 @@ fun rememberShowSnack(state: SnackbarHostState): suspend (String, String?, Long)
 
 // Confirm and text dialogs (web Confirm): raised card, plain actions, the destructive one in red.
 @Composable
-fun ConfirmDialog(title: String, detail: String, action: String, onConfirm: () -> Unit, danger: Boolean = true, onDismiss: () -> Unit) {
+fun ConfirmDialog(title: String, detail: String, action: String, onConfirm: () -> Unit, danger: Boolean = true, extra: (@Composable () -> Unit)? = null, onDismiss: () -> Unit) {
     AlertDialog(
         onDismissRequest = onDismiss,
         containerColor = av.raised,
         shape = RoundedCornerShape(Tokens.shapeLg),
         title = { DisableSelection { Text(title, style = Type.headline, color = av.fg) } },
-        text = { DisableSelection { Text(detail, style = Type.body, color = av.fgMuted) } },
+        text = { DisableSelection { Column(verticalArrangement = Arrangement.spacedBy(Tokens.sp4)) { Text(detail, style = Type.body, color = av.fgMuted); extra?.invoke() } } },
         confirmButton = { DisableSelection { Button(action, { onConfirm(); onDismiss() }, variant = if (danger) ButtonVariant.Danger else ButtonVariant.Filled) } },
         dismissButton = { DisableSelection { Button("Cancel", onDismiss, variant = ButtonVariant.Plain) } },
     )

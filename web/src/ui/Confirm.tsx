@@ -1,10 +1,11 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Icon } from './Icon';
 import { useReturnFocus } from './util';
 
 export type ConfirmRequest = {
   title: string;
   detail: string;
+  body?: ReactNode;
   warning?: string;
   action: string;
   icon?: string;
@@ -15,7 +16,7 @@ export type ConfirmRequest = {
   run: (value: string) => Promise<unknown>;
 };
 
-export function Confirm({ title, detail, warning, action, icon, cancel, neutral, input, extra, run, onClose: done }: ConfirmRequest & { onClose: () => void }) {
+export function Confirm({ title, detail, body, warning, action, icon, cancel, neutral, input, extra, run, onClose: done }: ConfirmRequest & { onClose: () => void }) {
   const [leaving, setLeaving] = useState(false);
   const onClose = () => {
     if (leaving) return;
@@ -45,6 +46,7 @@ export function Confirm({ title, detail, warning, action, icon, cancel, neutral,
         <div className="dialog-body">
           <div className="dialog-title">{title}</div>
           <div className="dialog-detail">{detail}</div>
+          {body}
           {input && (
             <input
               ref={field}

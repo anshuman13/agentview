@@ -872,13 +872,23 @@ describe('rewind files', () => {
     result('r1');
     await s.rewind('ev1');
     expect(rewindFiles).toHaveBeenCalledWith('u1');
-    expect(s.state.events.at(-1)).toMatchObject({ kind: 'system', text: 'Rewound 1 file to before that prompt' });
+    expect(s.state.events.at(-1)).toMatchObject({ kind: 'system', text: 'Rewound files to here · 1 file' });
     expect(s.state.recentFiles).toEqual(['a.ts']);
     await s.rewind('hist-uuid:3');
     expect(rewindFiles).toHaveBeenLastCalledWith('hist-uuid');
     rewindFiles.mockResolvedValueOnce({ canRewind: false, error: 'no checkpoint', filesChanged: [] });
     await s.rewind('ev1');
     expect(s.state.events.at(-1)).toMatchObject({ kind: 'system', text: 'Rewind failed: no checkpoint' });
+  });
+
+  it('previews a rewind with paths relative to the chat folder', async () => {
+    const { s } = fakeSession();
+    const rewindFiles = vi.fn(async () => ({ canRewind: true, filesChanged: ['/tmp/project/a.ts'], insertions: 4, deletions: 1 }));
+    Object.assign(s.driver, { q: { interrupt: vi.fn(), rewindFiles } });
+    expect(await s.rewindPreview('hist-uuid:3')).toEqual({ files: ['a.ts'], insertions: 4, deletions: 1 });
+    expect(rewindFiles).toHaveBeenCalledWith('hist-uuid', { dryRun: true });
+    rewindFiles.mockResolvedValueOnce({ canRewind: false, error: 'no checkpoint' } as never);
+    expect(await s.rewindPreview('hist-uuid:3')).toEqual({ error: 'no checkpoint' });
   });
 });
 

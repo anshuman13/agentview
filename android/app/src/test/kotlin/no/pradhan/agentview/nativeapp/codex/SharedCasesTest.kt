@@ -74,6 +74,7 @@ import no.pradhan.agentview.nativeapp.chat.turnEnd
 import no.pradhan.agentview.nativeapp.chat.rememberPrompt
 import no.pradhan.agentview.nativeapp.chat.turnAnswers
 import no.pradhan.agentview.nativeapp.chat.rewindReplies
+import no.pradhan.agentview.nativeapp.chat.rewindTotal
 import no.pradhan.agentview.nativeapp.chat.proposalState
 import no.pradhan.agentview.nativeapp.chat.usedClaimState
 import no.pradhan.agentview.nativeapp.chat.shortModel
@@ -681,6 +682,10 @@ class SharedCasesTest {
             val events = c.getValue("events").jsonArray.map { it.decode<ChatEvent>() }
             assertEquals(c.str("name"), c.getValue("expected").jsonObject.mapValues { it.value.jsonPrimitive.content }, rewindReplies(buildTranscript(events)).mapValues { it.value.id })
         }
+    }
+
+    @Test fun rewindTotalCases() {
+        for (c in cases("rewind-total")) assertEquals(c.str("name"), c.str("expected"), rewindTotal(c.getValue("n").jsonPrimitive.int))
     }
 
     @Test fun chatFind() {

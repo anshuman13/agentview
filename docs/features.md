@@ -357,7 +357,9 @@ cost so far. The status bar usage tooltip adds a Spend block with today's and th
   a Work account, to pick the chat up in the Claude CLI (the server builds the line, `session.resumeCommand`). Stop the chat first so two processes do not write to it. The phone Tools sheet has the same Continue in terminal, copying to the clipboard
 - A prompt that changed files has a Rewind files button under the turn's last reply, beside Copy, on web and phone, while the
   agent is idle. It puts the files back to how they were before that prompt (later turns' edits go too); the conversation itself
-  stays. Its confirm names the chat's provider and the prompt's first line
+  stays. Its confirm ("Rewind to this message?") names the chat's provider and the prompt's first line and lists the files it
+  will change with a +/- total, from a dry run (`/api/rewind/preview`; the SDK gives totals only, not per-file counts). After a
+  rewind the prompt goes back in the composer and the transcript gets a muted "Rewound files to here · N files" line
 
 ## Review findings
 

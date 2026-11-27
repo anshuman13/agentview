@@ -32,7 +32,7 @@ import { attachMark } from '../../shared/attachMark';
 import { chatSessionOf } from '../../shared/chatLink';
 import { latestTodos, todoCount, todoCurrent, todoProgress, type TodoItem } from '../../shared/todos';
 import { mergeTail, trimHeld } from './app/runtime/pageEvents';
-import { alarmCard, buildTranscript, dayDividers, duration, newMarker, newReplies, openAtNew, rewindReplies, shipStep, stepLabel, stepTone, turnAnswers, type Item } from './chat/transcript/steps';
+import { alarmCard, buildTranscript, dayDividers, duration, newMarker, newReplies, openAtNew, rewindReplies, rewindTotal, shipStep, stepLabel, stepTone, turnAnswers, type Item } from './chat/transcript/steps';
 import { filePath } from './chat/transcript/md';
 import { buildCard, buildRows, type BuildCardInput } from './chat/transcript/buildCardLogic';
 import { foldTurns, proposalState, rememberedOf, usedClaimState, workTitle } from './chat/transcript/workFold';
@@ -725,6 +725,10 @@ describe('cases shared with the Android app', () => {
 
   for (const c of cases<{ name: string; events: ChatEvent[]; expected: Record<string, string> }>('rewind-replies')) {
     it(`rewindReplies: ${c.name}`, () => expect(Object.fromEntries([...rewindReplies(buildTranscript(c.events))].map(([reply, r]) => [reply, r.id]))).toEqual(c.expected));
+  }
+
+  for (const c of cases<{ name: string; n: number; expected: string }>('rewind-total')) {
+    it(`rewindTotal: ${c.name}`, () => expect(rewindTotal(c.n)).toBe(c.expected));
   }
 
   for (const c of cases<{ name: string; server: Record<string, number>; marks: SeenMark[]; startedAt: number; expected: Record<string, number> }>('merge-seen')) {

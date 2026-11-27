@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import path from 'node:path';
-import type { Account, Provider, ChatEvent, RunOp, ServerMessage, ServerState, SessionInfo, SubVia } from '../../../shared/protocol.js';
+import type { Account, Provider, ChatEvent, RewindPreview, RunOp, ServerMessage, ServerState, SessionInfo, SubVia } from '../../../shared/protocol.js';
 import type { AgentDriver, AgentHost, AskOptions, Cron, DriverFactory, History, TurnResult } from '../agent/types.js';
 import { resumePrompt, type Stopped } from './resume.js';
 import { Approvals } from './approvals.js';
@@ -326,8 +326,15 @@ export class AgentSession implements AgentHost {
     const r = await this.driver.rewind(id);
     if (!r.canRewind) return this.system(`Rewind failed: ${r.error ?? 'no checkpoint for that prompt'}`);
     const files = r.filesChanged ?? [];
-    this.system(`Rewound ${files.length} ${files.length === 1 ? 'file' : 'files'} to before that prompt`);
+    this.system(`Rewound files to here · ${files.length} ${files.length === 1 ? 'file' : 'files'}`);
     for (const f of files) this.noteFile(path.relative(this.cwd, f), 'tool');
+  }
+
+  // What a rewind to before this prompt would change, for the confirm.
+  async rewindPreview(id: string): Promise<RewindPreview> {
+    const r = await this.driver.rewind(id, true);
+    if (!r.canRewind) return { error: r.error ?? 'No checkpoint for that prompt' };
+    return { files: (r.filesChanged ?? []).map((f) => path.relative(this.cwd, f)), insertions: r.insertions ?? 0, deletions: r.deletions ?? 0 };
   }
 
   interrupt() {
