@@ -2,6 +2,7 @@ plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.plugin.compose")
     id("org.jetbrains.kotlin.plugin.serialization")
+    id("io.github.takahirom.roborazzi")
 }
 
 android {
@@ -30,6 +31,8 @@ android {
     androidResources { localeFilters += setOf("en", "nb", "nn", "no") }
 
     lint { checkReleaseBuilds = false }
+
+    testOptions { unitTests.isIncludeAndroidResources = true }
 
     packaging {
         resources.excludes += setOf("META-INF/**/LICENSE*", "META-INF/*.version", "META-INF/native-image/**", "**/*.kotlin_builtins", "DebugProbesKt.bin")
@@ -66,6 +69,12 @@ dependencies {
 
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.11.0")
+    testImplementation(bom)
+    testImplementation("androidx.compose.ui:ui-test-junit4")
+    debugImplementation("androidx.compose.ui:ui-test-manifest")
+    testImplementation("org.robolectric:robolectric:4.18.1")
+    testImplementation("io.github.takahirom.roborazzi:roborazzi:1.79.0")
+    testImplementation("io.github.takahirom.roborazzi:roborazzi-compose:1.79.0")
 }
 
 android.sourceSets.getByName("test").kotlin.srcDir("../buildSrc/src/main/kotlin")
