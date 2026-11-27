@@ -90,6 +90,11 @@
 .tr-detail pre { max-height: 320px; font-family: var(--mono); font-size: var(--fs-xs); white-space: pre-wrap; overflow-wrap: anywhere; color: var(--fg); }
 .tr-detail pre.err { color: var(--err); }
 .tr-detail .pd-diff { padding: var(--sp-2) 0; }
+.tr-out { position: relative; display: flex; flex-direction: column; }
+.tr-out-copy { position: absolute; top: var(--sp-2); right: var(--sp-2); background: var(--raised); opacity: 0; }
+.tr-out-copy:focus-visible { opacity: 1; }
+@media (hover: hover) { .tr-out:hover .tr-out-copy { opacity: 1; } }
+@media (hover: none) { .tr-out-copy { opacity: 1; } }
 .tr-report { max-height: 50vh; max-height: 50dvh; font-size: var(--fs-sm); }
 
 .tr-diffs { display: flex; flex-direction: column; gap: var(--sp-3); padding: var(--sp-4) var(--sp-5) var(--sp-5) var(--sp-7); }

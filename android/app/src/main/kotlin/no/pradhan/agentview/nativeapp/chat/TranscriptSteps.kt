@@ -46,6 +46,7 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInParent
+import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
@@ -64,6 +65,7 @@ import no.pradhan.agentview.nativeapp.ops.agentSummary
 import no.pradhan.agentview.nativeapp.ui.AvIcon
 import no.pradhan.agentview.nativeapp.ui.Badge
 import no.pradhan.agentview.nativeapp.ui.Button
+import no.pradhan.agentview.nativeapp.ui.LocalNotice
 import no.pradhan.agentview.nativeapp.ui.ButtonSize
 import no.pradhan.agentview.nativeapp.ui.ButtonVariant
 import no.pradhan.agentview.nativeapp.ui.BadgeTone
@@ -178,20 +180,23 @@ private fun ToolDetail(use: ChatEvent, result: ChatEvent?) {
     val input = use.input.s("command").ifEmpty { pretty.encodeToString(kotlinx.serialization.json.JsonObject.serializer(), use.input) }
     Column(Modifier.fillMaxWidth().padding(start = Tokens.leadWidth, top = Tokens.sp1, bottom = Tokens.sp4), verticalArrangement = Arrangement.spacedBy(Tokens.sp3)) {
         Pre(input, wrap = false)
-        if (result != null) Pre(result.text.ifEmpty { "(no output)" }, error = result.isError && !isDenied(result))
+        if (result != null) Pre(result.text.ifEmpty { "(no output)" }, error = result.isError && !isDenied(result), copy = result.text.isNotEmpty())
     }
 }
 
 @Composable
-private fun Pre(text: String, wrap: Boolean = true, error: Boolean = false) {
-    Box(Modifier.heightIn(max = Tokens.scrollTall).well(av).verticalScroll(rememberScrollState())) {
+private fun Pre(text: String, wrap: Boolean = true, error: Boolean = false, copy: Boolean = false) {
+    val clip = LocalClipboardManager.current
+    val notice = LocalNotice.current
+    Box(Modifier.heightIn(max = Tokens.scrollTall).well(av)) {
         Text(
             text,
-            Modifier.then(if (wrap) Modifier else Modifier.horizontalScroll(rememberScrollState())).padding(Tokens.sp6),
+            Modifier.verticalScroll(rememberScrollState()).then(if (wrap) Modifier else Modifier.horizontalScroll(rememberScrollState())).padding(Tokens.sp6),
             style = Mono,
             softWrap = wrap,
             color = if (error) av.err else av.fg,
         )
+        if (copy) IconBtn("copy", "Copy output", { clip.setText(androidx.compose.ui.text.AnnotatedString(text)); notice?.invoke("Output copied") }, Modifier.align(Alignment.TopEnd), iconSize = Tokens.iconSm, tint = av.fgMuted)
     }
 }
 

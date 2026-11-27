@@ -9,6 +9,8 @@ import { Diff } from '../cards/Pending';
 import { editPairs } from '../../../../shared/edits';
 import { LinkAction, TranscriptBox } from './Box';
 import { Badge } from '../../ui/Badge';
+import { IconButton } from '../../ui/Button';
+import { copyText } from '../../codex/view';
 import { agentSummary } from '../../sessions/agents';
 import { denied, duration, exploreLabel, firstLine, relPath, stepLabel, stepTone, type Item, type StepItem, type ToolResult, type ToolUse } from './steps';
 import { clickOnKey, plural } from '../../ui/util';
@@ -46,13 +48,18 @@ export function Step({ use, result, cwd, settled }: { use: ToolUse; result?: Too
   );
 }
 
-function Detail({ use, result }: { use: ToolUse; result?: ToolResult }) {
+export function Detail({ use, result }: { use: ToolUse; result?: ToolResult }) {
   const input = typeof use.input.command === 'string' ? use.input.command : JSON.stringify(use.input, null, 2);
   const pairs = editPairs(use.name, use.input);
   return (
     <div className="tr-detail" onClick={(e) => e.stopPropagation()}>
       {pairs ? pairs.map(([a, b], n) => <Diff key={n} a={a} b={b} />) : <pre>{input}</pre>}
-      {result && <pre className={result.isError && !denied(result) ? 'err' : ''}>{result.text || '(no output)'}</pre>}
+      {result && (
+        <div className="tr-out">
+          <pre className={result.isError && !denied(result) ? 'err' : ''}>{result.text || '(no output)'}</pre>
+          {result.text && <IconButton icon="copy" label="Copy output" size="sm" className="tr-out-copy" onClick={() => copyText(result.text, 'Output copied')} />}
+        </div>
+      )}
     </div>
   );
 }
