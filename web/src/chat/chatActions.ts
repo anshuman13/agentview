@@ -60,10 +60,6 @@ export function copyReply(text: string) {
   copyText(text, 'Reply copied');
 }
 
-export function copyPrompt(text: string) {
-  copyText(text, 'Prompt copied');
-}
-
 export function copyResumeCommand(command: string) {
   copyText(command, 'Copied. Stop this chat before resuming it in a terminal');
 }

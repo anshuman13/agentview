@@ -116,7 +116,7 @@ function useTermTabs(chat: string, open: boolean, onToggle: () => void) {
     setFocus((f) => f + 1);
   };
 
-  // Run in terminal types into a tab; show that one, loading the list first when the tab is new.
+  // A ! command types into a tab; show that one, loading the list first when the tab is new.
   useEffect(() => {
     const show = async (e: Event) => {
       const id = (e as CustomEvent<string>).detail;

@@ -308,14 +308,10 @@ cost so far. The status bar usage tooltip adds a Spend block with today's and th
   You or Claude and the age, and a tap opens that chat, like Slack's message search. The web sidebar Sessions search
   shows the same Messages list under the repos
 - Hovering a sent prompt in the web transcript shows when it was sent ("Sent 5m", "Sent 14:20", "Sent Nov 3 14:20"),
-  then Use again, which puts that prompt in the composer to edit and send again (like editing a Slack message), and
-  Copy, which copies the prompt text ("Prompt copied"). On the phone a long press on a prompt opens the same menu, with
-  the Sent time first as a disabled line. Queued and stopping prompts have none of these (a queued one has Send now).
+  then Use again, which puts that prompt in the composer to edit and send again (like editing a Slack message). On the
+  phone a long press on a prompt opens a menu with Use again (not in read-only mode). Queued and stopping prompts have none of these (a queued one has Send now).
 - On the phone, Use again on a sent prompt focuses the composer with the cursor at the end and the keyboard up, as every insert does on web.
-- A fenced bash, sh, shell, zsh or console block of one line in a chat reply shows Run in terminal beside Copy (web on
-  hover, Android an icon button, not in read-only mode). It types the command, without a leading "$ ", into the chat's
-  last terminal (or a new one) and opens the terminal without pressing Enter (`shellLine`, checked by
-  `shared/fixtures/shell-line.json`). Markdown outside a chat shows only Copy. A code block with a language names it in
+- A code block with a language names it in
   muted text at its top left, and Copy shows the "Code copied" snack (web and Android), also in a Markdown file in the
   web file view.
 - Scrolled up in a web chat that is running or has new rows, a Jump to latest button shows, with the count of finished

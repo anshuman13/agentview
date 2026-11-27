@@ -45,7 +45,7 @@ export function useSubmit(i: Input) {
     sendAfter.current = null;
     if (i.shell) {
       const cmd = t.slice(1).trim();
-      if (cmd) runInTerminal(cmd, true).catch(() => notice('Terminal unavailable'));
+      if (cmd) runInTerminal(cmd).catch(() => notice('Terminal unavailable'));
     } else {
       sendPrompt(t, stop, voice);
     }

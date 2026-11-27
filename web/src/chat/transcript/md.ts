@@ -1,6 +1,5 @@
 import { Marked, type Token } from 'marked';
 import { escapeHtml } from '../../ui/util';
-import { shellLine } from '../../../../shared/composerText';
 
 export type { Token };
 
@@ -34,9 +33,7 @@ const markdown = (files: boolean) => new Marked({
   renderer: {
     html: ({ text }) => escapeHtml(text),
     code({ text, lang }) {
-      const run = shellLine(lang, text);
-      const acts = `${run ? `<button class="md-run" data-run="${escapeHtml(run)}">Run in terminal</button>` : ''}<button class="md-copy" data-copy="">Copy</button>`;
-      return `<div class="md-code"><div class="md-acts">${acts}</div>${lang ? `<span class="md-lang">${escapeHtml(lang)}</span>` : ''}<pre><code${lang ? ` data-lang="${escapeHtml(lang)}"` : ''}>${escapeHtml(text)}</code></pre></div>`;
+      return `<div class="md-code"><div class="md-acts"><button class="md-copy" data-copy="">Copy</button></div>${lang ? `<span class="md-lang">${escapeHtml(lang)}</span>` : ''}<pre><code${lang ? ` data-lang="${escapeHtml(lang)}"` : ''}>${escapeHtml(text)}</code></pre></div>`;
     },
     codespan({ text }) {
       const f = files && filePath(text.replace(/&amp;/g, '&'));

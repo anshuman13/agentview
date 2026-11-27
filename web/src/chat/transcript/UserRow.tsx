@@ -3,7 +3,7 @@ import { cancelUnsent, queuedFor, useStore } from '../../app/store';
 import { Icon } from '../../ui/Icon';
 import { Button, IconButton, ShowToggle } from '../../ui/Button';
 import { readBox, saveBox } from './boxOpen';
-import { copyPrompt, insertText, sendNow } from '../chatActions';
+import { insertText, sendNow } from '../chatActions';
 import { imageUrl } from '../chatApi';
 import { userParts } from '../composer/composerLogic';
 import type { Item } from './steps';
@@ -68,7 +68,7 @@ export function UserRow({ it, label, readOnly }: { it: Extract<Item, { kind: 'us
       <UserText id={it.id} text={it.text} />
       {it.stopping && <span className="tr-stop"><Icon name="loading" small spin />{`Stopping ${label} to send this`}</span>}
       {it.queued && <span className="tr-stop"><Icon name="clock" small />{`Waiting for ${label}'s next step`}<Button variant="plain" size="sm" className="tl-send-now" title={`Stop ${label}'s current step and send this now`} onClick={() => sendNow(it.id)}>Send now</Button></span>}
-      {!it.stopping && !it.queued && !readOnly && <span className="tr-acts"><IconButton icon="reply" label="Use again" onClick={() => insertText(it.text)} /><IconButton icon="copy" label="Copy" onClick={() => copyPrompt(it.text)} /></span>}
+      {!it.stopping && !it.queued && !readOnly && <span className="tr-acts"><IconButton icon="reply" label="Use again" onClick={() => insertText(it.text)} /></span>}
     </div>
   );
 }

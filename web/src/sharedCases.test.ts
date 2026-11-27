@@ -41,7 +41,7 @@ import { leftOutPreferences, type Preference } from '../../shared/preferences';
 import { countChat } from './app/shell/counts';
 import { can } from './chat/capabilitiesLogic';
 import { addUse, buildHistory, draftKey, failedLine, ghostFor, handoffText, joinMarks, markChip, remember, splitMarks, turnEnd, userParts, withUses, type Use } from './chat/composer/composerLogic';
-import { composerPlaceholder, shellLine, type PlaceholderDevice, type PlaceholderState } from '../../shared/composerText';
+import { composerPlaceholder, type PlaceholderDevice, type PlaceholderState } from '../../shared/composerText';
 import { agentChipCount, buildHead, headerState, nowMeta, runLine, stoppedText } from './sessions/runLogic';
 import { tryColumn } from './sessions/triesLogic';
 import { parseWhen, stripWhen } from './codex/data/tasks/when';
@@ -708,9 +708,6 @@ describe('cases shared with the Android app', () => {
     it(`composerPlaceholder: ${c.name}`, () => expect(composerPlaceholder(c.label, c.state, c.device, c.talk)).toBe(c.expected));
   }
 
-  for (const c of cases<{ name: string; lang: string | null; code: string; expected: string | null }>('shell-line')) {
-    it(`shellLine: ${c.name}`, () => expect(shellLine(c.lang, c.code)).toBe(c.expected));
-  }
 
   for (const c of cases<{ name: string; events: ChatEvent[]; running?: boolean; expected: string[] }>('turn-answers')) {
     it(`turnAnswers: ${c.name}`, () => expect([...turnAnswers(buildTranscript(c.events), c.running)]).toEqual(c.expected));

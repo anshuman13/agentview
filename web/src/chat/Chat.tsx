@@ -3,7 +3,6 @@ import type { Token } from './transcript/md';
 import { copyText } from '../codex/view';
 import { getState, setUi } from '../app/store';
 import { CopyPathMenu, type MenuPoint } from '../workspace/CopyPathItems';
-import { runInTerminal } from './chatApi';
 import { cachedHtml, mdKey, storeHtml } from './transcript/mdCache';
 import { fadeRanges, nextTails, wrapRanges, type Tail } from './transcript/streamFade';
 
@@ -28,8 +27,6 @@ function onCopy(e: MouseEvent<HTMLDivElement>) {
     e.preventDefault();
     return setUi({ openFile: link.dataset.open!, openLine: Number(link.dataset.line) || null, follow: false });
   }
-  const run = (e.target as HTMLElement).closest<HTMLElement>('[data-run]');
-  if (run) return void runInTerminal(run.dataset.run!, false);
   const btn = (e.target as HTMLElement).closest<HTMLElement>('[data-copy]');
   if (!btn) return;
   const code = btn.closest('.md-code')?.querySelector('code')?.textContent ?? '';

@@ -24,15 +24,15 @@ async function terminalId(chat: string): Promise<string | null> {
   }
 }
 
-// Types the command into the chat's last terminal (or a new one) and shows it; with enter false the user presses Enter.
-export async function runInTerminal(cmd: string, enter: boolean) {
+// Runs the command in the chat's last terminal (or a new one) and shows it.
+export async function runInTerminal(cmd: string) {
   const id = await terminalId(getState().session.id);
   if (!id) return notice('Terminal unavailable');
   window.dispatchEvent(new CustomEvent('agentview:terminal', { detail: id }));
   const ws = new WebSocket(wsUrl(`term=${encodeURIComponent(id)}`));
   ws.onerror = () => notice('Terminal unavailable');
   ws.onopen = () => {
-    ws.send(JSON.stringify({ t: 'i', d: enter ? `${cmd}\r` : cmd }));
+    ws.send(JSON.stringify({ t: 'i', d: `${cmd}\r` }));
     ws.close();
   };
 }

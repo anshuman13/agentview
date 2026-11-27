@@ -26,9 +26,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalHapticFeedback
-import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.style.TextOverflow
 import no.pradhan.agentview.nativeapp.app.Hub
 import no.pradhan.agentview.nativeapp.net.Queued
@@ -69,14 +67,12 @@ private fun BubbleFooter(label: String, action: String, onClick: () -> Unit) {
 @Composable
 internal fun UserRow(hub: Hub, it: Item.User, chat: String, readOnly: Boolean = false) {
     val label = providerLabel(hub.store.state.value.session?.provider)
-    val clip = LocalClipboardManager.current
     val haptic = LocalHapticFeedback.current
     var menu by remember { mutableStateOf(false) }
-    val menuable = !it.queued && !it.stopping
+    val menuable = !it.queued && !it.stopping && !hub.readOnly && !readOnly
     UserBubble(if (menuable) ({ haptic.performHapticFeedback(HapticFeedbackType.LongPress); menu = true }) else null) {
         Menu(menu, { menu = false }) {
-            if (!hub.readOnly && !readOnly) MenuItem("Use again", "reply", { menu = false; hub.useAgain(chat, it.text) })
-            MenuItem("Copy", "copy", { menu = false; clip.setText(AnnotatedString(it.text)); hub.notice.value = "Prompt copied" })
+            MenuItem("Use again", "reply", { menu = false; hub.useAgain(chat, it.text) })
         }
         Row(horizontalArrangement = Arrangement.spacedBy(Tokens.sp3)) {
             if (it.voice) AvIcon("mic", "Spoken", Tokens.iconSm, Modifier.padding(top = Tokens.sp1), tint = av.fgMuted)

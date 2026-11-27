@@ -61,7 +61,6 @@ import no.pradhan.agentview.nativeapp.chat.withUses
 import no.pradhan.agentview.nativeapp.chat.findInChat
 import no.pradhan.agentview.nativeapp.chat.agentChipCount
 import no.pradhan.agentview.nativeapp.chat.findStart
-import no.pradhan.agentview.nativeapp.ui.shellLine
 import no.pradhan.agentview.nativeapp.ui.FilePath
 import no.pradhan.agentview.nativeapp.ui.filePath
 import no.pradhan.agentview.nativeapp.sessions.SavedSession
@@ -674,12 +673,6 @@ class SharedCasesTest {
     @Test fun composerPlaceholder() {
         for (c in cases("composer-placeholder").filter { it.str("device") == "phone" }) {
             assertEquals(c.str("name"), c.str("expected"), composerPlaceholder(c.str("label"), c.str("state"), c["talk"]?.jsonPrimitive?.booleanOrNull ?: true))
-        }
-    }
-
-    @Test fun shellLine() {
-        for (c in cases("shell-line")) {
-            assertEquals(c.str("name"), c.getValue("expected").jsonPrimitive.contentOrNull, shellLine(c.getValue("lang").jsonPrimitive.contentOrNull, c.str("code")))
         }
     }
 
