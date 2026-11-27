@@ -32,7 +32,7 @@ import { attachMark } from '../../shared/attachMark';
 import { chatSessionOf } from '../../shared/chatLink';
 import { latestTodos, todoCount, todoCurrent, todoProgress, type TodoItem } from '../../shared/todos';
 import { mergeTail, trimHeld } from './app/runtime/pageEvents';
-import { alarmCard, buildTranscript, dayDividers, duration, newMarker, newReplies, openAtNew, rewindReplies, rewindTotal, shipStep, stepLabel, stepTone, turnAnswers, type Item } from './chat/transcript/steps';
+import { alarmCard, buildTranscript, dayDividers, duration, newMarker, newReplies, openAtNew, rewindReplies, planStep, rewindTotal, shipStep, stepLabel, stepTone, turnAnswers, type Item } from './chat/transcript/steps';
 import { filePath } from './chat/transcript/md';
 import { buildCard, buildRows, type BuildCardInput } from './chat/transcript/buildCardLogic';
 import { foldTurns, proposalState, rememberedOf, usedClaimState, workTitle } from './chat/transcript/workFold';
@@ -185,6 +185,13 @@ describe('cases shared with the Android app', () => {
     it(`shipStep: ${c.name}`, () => {
       const l = shipStep(c.command, c.result === undefined ? undefined : { text: c.result, isError: !!c.isError });
       expect(l && [l.verb, l.object, l.url ?? null]).toEqual(c.verb === null ? null : [c.verb, c.object, c.url ?? null]);
+    });
+  }
+
+  for (const c of cases<{ name: string; plan: string; result?: string; isError?: boolean; verb: string; object: string; note: string | null }>('plan-step')) {
+    it(`planStep: ${c.name}`, () => {
+      const l = planStep(c.plan, c.result === undefined ? undefined : { isError: !!c.isError });
+      expect([l.verb, l.object, l.note ?? null]).toEqual([c.verb, c.object, c.note]);
     });
   }
 

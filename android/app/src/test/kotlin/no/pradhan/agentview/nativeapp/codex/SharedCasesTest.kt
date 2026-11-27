@@ -45,6 +45,7 @@ import no.pradhan.agentview.nativeapp.chat.planFeedback
 import no.pradhan.agentview.nativeapp.chat.planParagraphs
 import no.pradhan.agentview.nativeapp.chat.newMarker
 import no.pradhan.agentview.nativeapp.chat.newReplies
+import no.pradhan.agentview.nativeapp.chat.planStep
 import no.pradhan.agentview.nativeapp.chat.shipStep
 import no.pradhan.agentview.nativeapp.chat.stepLabel
 import no.pradhan.agentview.nativeapp.chat.stepTone
@@ -338,6 +339,14 @@ class SharedCasesTest {
             val l = shipStep(c.str("command"), result)
             val expected = c.nullable("verb")?.let { listOf(it.jsonPrimitive.content, c.str("object"), c.nullable("url")?.jsonPrimitive?.content) }
             assertEquals(c.str("name"), expected, l?.let { listOf(it.verb, it.obj, it.url) })
+        }
+    }
+
+    @Test fun planStepCases() {
+        for (c in cases("plan-step")) {
+            val result = c.nullable("result")?.let { ChatEvent(id = "r", kind = "tool_result", text = it.jsonPrimitive.content, isError = c["isError"]?.jsonPrimitive?.boolean == true) }
+            val l = planStep(c.str("plan"), result)
+            assertEquals(c.str("name"), listOf(c.str("verb"), c.str("object"), c.nullable("note")?.jsonPrimitive?.content), listOf(l.verb, l.obj, l.note))
         }
     }
 

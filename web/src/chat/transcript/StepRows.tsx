@@ -30,15 +30,15 @@ const STEP_ICONS = { read: 'eye', edit: 'edit', run: 'terminal', web: 'globe', m
 
 export function Step({ use, result, cwd, settled }: { use: ToolUse; result?: ToolResult; cwd: string; settled?: boolean }) {
   const [open, setOpen] = useState(false);
-  const { verb, object, mono, cmd, url } = stepLabel(use.name, use.input, cwd, result);
-  const state = !result ? (settled ? 'idle' : 'pending') : denied(result) ? 'denied' : result.isError ? 'err' : 'ok';
+  const { verb, object, mono, cmd, url, note } = stepLabel(use.name, use.input, cwd, result);
+  const state = !result ? (settled ? 'idle' : 'pending') : note ? 'ok' : denied(result) ? 'denied' : result.isError ? 'err' : 'ok';
   const dur = result ? duration(result.at - use.at) : '';
   const tone = stepTone(use.name);
   return (
     <div className={`tr-step tr-act t-${tone} ${state} ${open ? 'open' : ''}`} onClick={() => setOpen((v) => !v)}>
       <span className="tr-mark">{state === 'pending' ? <Icon name="loading" small spin /> : <Icon name={STEP_ICONS[tone]} small />}</span>
       <span className="tr-text" title={object} role="button" tabIndex={0} aria-expanded={open} onKeyDown={clickOnKey}>{verb && <span className="tr-verb">{verb} </span>}{url ? <a className="tr-obj" href={url} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()}>{object}</a> : <span className={`tr-obj ${mono ? 'mono' : ''}`}>{object}</span>}</span>
-      <span className="tr-dur">{dur}</span>
+      {note ? <span className="tr-note">{note}</span> : <span className="tr-dur">{dur}</span>}
       <span className="tr-chev"><Icon name={open ? 'chevron-down' : 'chevron-right'} small /></span>
       {cmd && !open && <span className="tr-cmd" title={cmd}>$ {cmd.replace(/\s*\n\s*/g, ' ⏎ ')}</span>}
       {state === 'err' && !open && <span className="tr-err">{firstLine(result!.text) || 'Failed'}</span>}

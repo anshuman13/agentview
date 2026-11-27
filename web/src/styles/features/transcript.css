@@ -74,6 +74,7 @@ a.tr-obj { color: var(--link); text-decoration: none; }
 a.tr-obj:hover { text-decoration: underline; }
 .tr-step.err .tr-text, .tr-step.denied .tr-text { color: var(--err); }
 .tr-step.denied .tr-mark { color: var(--err); }
+.tr-note { color: var(--fg-faint); white-space: nowrap; }
 .tr-obj.mono { font-family: var(--mono); font-size: var(--fs-xs); }
 .tr-cmd {
   grid-column: 2 / -1; margin-top: -3px; padding-bottom: var(--sp-1); line-height: 17px;

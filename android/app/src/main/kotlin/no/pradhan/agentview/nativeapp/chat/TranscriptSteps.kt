@@ -140,6 +140,7 @@ internal fun StepRow(it: Item.Step, cwd: String, settled: Boolean) {
     val uri = androidx.compose.ui.platform.LocalUriHandler.current
     val state = when {
         result == null -> if (settled) "idle" else "pending"
+        label.note != null -> "ok"
         isDenied(result) -> "denied"
         result.isError -> "err"
         else -> "ok"
@@ -161,7 +162,8 @@ internal fun StepRow(it: Item.Step, cwd: String, settled: Boolean) {
                 },
                 Modifier.weight(1f).then(if (label.url != null) Modifier.clickable { runCatching { uri.openUri(label.url) } } else Modifier), style = Type.subheadline, color = av.fgMuted, maxLines = 1, overflow = TextOverflow.Ellipsis,
             )
-            if (dur.isNotEmpty()) Text(dur, style = Type.footnote, color = av.fgMuted, modifier = Modifier.padding(start = Tokens.sp3))
+            if (label.note != null) Text(label.note, style = Type.subheadline, color = av.fgMuted, maxLines = 1, modifier = Modifier.padding(start = Tokens.sp3))
+            else if (dur.isNotEmpty()) Text(dur, style = Type.footnote, color = av.fgMuted, modifier = Modifier.padding(start = Tokens.sp3))
             AvIcon(if (open) "chevron-down" else "chevron-right", null, Tokens.iconSm, Modifier.padding(start = Tokens.sp2), tint = av.fgFaint)
         }
         if (!open) {

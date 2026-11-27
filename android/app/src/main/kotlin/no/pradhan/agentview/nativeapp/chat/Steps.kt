@@ -33,7 +33,7 @@ fun cmdPreview(cmd: String): String {
     return "$ " + if (flat.length > CMD_PREVIEW) flat.take(CMD_PREVIEW).trimEnd() + "\u2026" else flat
 }
 
-data class Label(val verb: String, val obj: String, val mono: Boolean = false, val cmd: String? = null, val url: String? = null)
+data class Label(val verb: String, val obj: String, val mono: Boolean = false, val cmd: String? = null, val url: String? = null, val note: String? = null)
 
 enum class Tone { Read, Edit, Run, Web, Mcp, Agent, Other }
 
@@ -105,6 +105,13 @@ fun shipStep(command: String, result: ChatEvent? = null): Label? {
     return Label("Pushed", if (branch.isNotEmpty() && branch != "HEAD") branch else "the branch")
 }
 
+// web steps.ts planStep: a proposed plan by its first line, with Approved or Not approved once answered.
+fun planStep(plan: String, result: ChatEvent?): Label {
+    val title = plan.lines().map { it.replace(Regex("^\\s*#+\\s*"), "").replace("**", "").trim() }.firstOrNull { it.isNotEmpty() } ?: ""
+    val note = result?.let { if (it.isError) "Not approved" else "Approved" }
+    return if (title.isNotEmpty()) Label("Proposed plan", "\u201c$title\u201d", note = note) else Label("Proposed", "a plan", note = note)
+}
+
 fun stepLabel(name: String, input: JsonObject, cwd: String = "", result: ChatEvent? = null): Label {
     fun rel(k: String) = relPath(input.s(k), cwd)
     val inDir = if (input.s("path").isNotEmpty() && rel("path") != ".") rel("path") else ""
@@ -128,7 +135,7 @@ fun stepLabel(name: String, input: JsonObject, cwd: String = "", result: ChatEve
         "Advisor" -> return Label("Consulted", "the advisor")
         ALARM_TOOL -> return Label("Set", "an alarm")
         BUILD_TOOL -> return Label("Started", "a build")
-        "ExitPlanMode" -> return Label("Proposed", "a plan")
+        "ExitPlanMode" -> return planStep(input.s("plan"), result)
         "EnterPlanMode" -> return Label("Entered", "plan mode")
     }
     if (name.startsWith("mcp__")) {

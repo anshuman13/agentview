@@ -1,0 +1,7 @@
+[
+  {"name": "heading becomes the title, rejected", "plan": "# Add divide(a, b) to calc.py\n\n1. Add the function", "result": "User denied this action in the AgentView UI.", "isError": true, "verb": "Proposed plan", "object": "\u201cAdd divide(a, b) to calc.py\u201d", "note": "Not approved"},
+  {"name": "approved", "plan": "## **Fix login**\nSteps", "result": "User has approved your plan.", "verb": "Proposed plan", "object": "\u201cFix login\u201d", "note": "Approved"},
+  {"name": "rejected with feedback", "plan": "\n\nPlain first line\nmore", "result": "Change step 2", "isError": true, "verb": "Proposed plan", "object": "\u201cPlain first line\u201d", "note": "Not approved"},
+  {"name": "waiting for an answer", "plan": "Ship it", "verb": "Proposed plan", "object": "\u201cShip it\u201d", "note": null},
+  {"name": "no plan text", "plan": "", "verb": "Proposed", "object": "a plan", "note": null}
+]

@@ -19,7 +19,7 @@ export type Item =
   | { kind: 'blocked'; id: string; ev: Extract<ChatEvent, { kind: 'blocked' }> }
   | { kind: 'review'; id: string; ev: Extract<ChatEvent, { kind: 'review' }> };
 
-type Label = { verb: string; object: string; mono?: boolean; cmd?: string; url?: string };
+type Label = { verb: string; object: string; mono?: boolean; cmd?: string; url?: string; note?: string };
 
 const AGENT_TOOLS = new Set(['Agent', 'Task']);
 
@@ -60,6 +60,13 @@ export function shipStep(command: string, result?: { text: string; isError: bool
   return { verb: 'Pushed', object: branch && branch !== 'HEAD' ? branch : 'the branch' };
 }
 
+// A proposed plan by its first line, with Approved or Not approved once answered. Android Steps.kt planStep says the same.
+export function planStep(plan: string, result?: { isError: boolean }): Omit<Label, 'cmd'> {
+  const title = plan.split('\n').map((l) => l.replace(/^\s*#+\s*/, '').replace(/\*\*/g, '').trim()).find(Boolean) ?? '';
+  const note = result ? (result.isError ? 'Not approved' : 'Approved') : undefined;
+  return title ? { verb: 'Proposed plan', object: `\u201c${title}\u201d`, note } : { verb: 'Proposed', object: 'a plan', note };
+}
+
 export function stepLabel(name: string, input: Record<string, unknown>, cwd = '', result?: { text: string; isError: boolean }): Label {
   const s = (k: string) => (typeof input[k] === 'string' ? (input[k] as string) : '');
   const rel = (k: string) => relPath(s(k), cwd);
@@ -85,7 +92,7 @@ export function stepLabel(name: string, input: Record<string, unknown>, cwd = ''
     case ALARM_TOOL: return { verb: 'Set', object: 'an alarm' };
     case BUILD_TOOL: return { verb: 'Started', object: 'a build' };
     case 'Advisor': return { verb: 'Consulted', object: 'the advisor' };
-    case 'ExitPlanMode': return { verb: 'Proposed', object: 'a plan' };
+    case 'ExitPlanMode': return planStep(s('plan'), result);
     case 'EnterPlanMode': return { verb: 'Entered', object: 'plan mode' };
   }
   if (name.startsWith('mcp__')) {
