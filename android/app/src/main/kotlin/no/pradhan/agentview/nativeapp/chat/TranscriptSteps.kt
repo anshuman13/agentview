@@ -70,6 +70,7 @@ import no.pradhan.agentview.nativeapp.ui.BadgeTone
 import no.pradhan.agentview.nativeapp.ui.Chevron
 import no.pradhan.agentview.nativeapp.ui.IconBtn
 import no.pradhan.agentview.nativeapp.ui.ListRow
+import no.pradhan.agentview.nativeapp.ui.keepScrollInside
 import no.pradhan.agentview.nativeapp.ui.Menu
 import no.pradhan.agentview.nativeapp.workspace.CopyPathItems
 import no.pradhan.agentview.nativeapp.ui.Mono
@@ -243,7 +244,7 @@ internal fun DocCard(hub: Hub, it: Item.File, cwd: String) {
 @Composable
 private fun FileSheet(hub: Hub, rel: String, title: String, onDismiss: () -> Unit) {
     no.pradhan.agentview.nativeapp.ui.Sheet(onDismiss, title, padded = false) {
-        Box(Modifier.height(sheetHeight())) { no.pradhan.agentview.nativeapp.workspace.FileScreen(hub, rel, onDismiss, diffFirst = false) }
+        Box(Modifier.height(sheetHeight()).keepScrollInside()) { no.pradhan.agentview.nativeapp.workspace.FileScreen(hub, rel, onDismiss, diffFirst = false) }
     }
 }
 

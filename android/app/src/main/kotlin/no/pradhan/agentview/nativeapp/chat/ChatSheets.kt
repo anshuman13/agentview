@@ -32,6 +32,7 @@ import no.pradhan.agentview.nativeapp.app.rememberFromChat
 import no.pradhan.agentview.nativeapp.app.rename
 import no.pradhan.agentview.nativeapp.app.stopTask
 import no.pradhan.agentview.nativeapp.net.ChatRun
+import no.pradhan.agentview.nativeapp.ui.keepScrollInside
 import no.pradhan.agentview.nativeapp.ui.IconBtn
 import no.pradhan.agentview.nativeapp.ops.AgentList
 import no.pradhan.agentview.nativeapp.ops.UnseenAgentList
@@ -102,7 +103,7 @@ internal fun ChatSheets(hub: Hub, live: LiveChat, session: SessionInfo?, agents:
     if (panels.hooks) HooksSheet(hub, session?.hooks.orEmpty()) { panels.hooks = false }
     panels.file?.let { f ->
         val close = { panels.file = null }
-        Sheet(close, "File", padded = false) { Box(Modifier.height(sheetHeight())) { FileScreen(hub, f.path, close, line = f.line) } }
+        Sheet(close, "File", padded = false) { Box(Modifier.height(sheetHeight()).keepScrollInside()) { FileScreen(hub, f.path, close, line = f.line) } }
     }
     if (panels.remind) Sheet(onDismiss = { panels.remind = false }, title = "Remind me", padded = false, full = false) {
         val choices = remember { remindChoices(System.currentTimeMillis()) }

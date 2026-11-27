@@ -116,6 +116,14 @@ private fun SheetBody(onDismiss: () -> Unit, title: String, padded: Boolean, ful
     }
 }
 
+// For a sheet that hosts its own scrolling list (a file): drags and flings inside never move the sheet; the handle and title still do.
+fun Modifier.keepScrollInside(): Modifier = nestedScroll(KeepScrollInside)
+
+private object KeepScrollInside : NestedScrollConnection {
+    override fun onPostScroll(consumed: Offset, available: Offset, source: NestedScrollSource) = available
+    override suspend fun onPostFling(consumed: Velocity, available: Velocity) = available
+}
+
 // The content's leftover fling stops here: a fling that runs the content out of room would otherwise fling the sheet shut.
 // A drag past the top still moves the sheet, and its release velocity passes so the sheet settles open or closed.
 private class DragOnlyToSheet : NestedScrollConnection {
