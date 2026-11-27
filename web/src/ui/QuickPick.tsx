@@ -6,8 +6,9 @@ import { listKeys, useReturnFocus } from './util';
 
 type PickItem = { value: string; label: string; detail?: string; disabled?: boolean };
 
-export function QuickPick({ title, items, current, anchor, extra, onPick, onClose }: {
+export function QuickPick({ title, note, items, current, anchor, extra, onPick, onClose }: {
   title: string;
+  note?: string;
   extra?: (q: string) => PickItem[];
   anchor?: DOMRect;
   items: PickItem[];
@@ -47,6 +48,7 @@ export function QuickPick({ title, items, current, anchor, extra, onPick, onClos
           onChange={(e) => { setQ(e.target.value); setIdx(0); }}
           onKeyDown={listKeys({ count: results.length, idx, setIdx, onEnter: () => results[idx] && !results[idx].disabled && onPick(results[idx].value), onEscape: onClose })}
         />
+        {note && <p className="muted small pick-note">{note}</p>}
         <ul id={id} role="listbox" aria-label={title}>
           {results.map((i, n) => (
             <li key={i.value} id={`${id}-${n}`} role="option" aria-selected={n === idx} aria-disabled={i.disabled} className={`${n === idx ? 'active' : ''}${i.disabled ? ' muted' : ''}`} onClick={() => !i.disabled && onPick(i.value)}>

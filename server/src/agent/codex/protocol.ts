@@ -1,6 +1,6 @@
 // The parts of the `codex app-server` protocol the driver uses, from `codex app-server generate-ts`.
 export type ReasoningOption = { reasoningEffort: string; description: string };
-export type CodexModel = { id: string; displayName: string; description: string; hidden: boolean; isDefault: boolean; supportedReasoningEfforts: ReasoningOption[] };
+export type CodexModel = { id: string; displayName: string; description: string; hidden: boolean; isDefault: boolean; supportedReasoningEfforts: ReasoningOption[]; defaultReasoningEffort?: string };
 
 export type AskForApproval = 'untrusted' | 'on-request' | 'never';
 export type SandboxMode = 'read-only' | 'workspace-write' | 'danger-full-access';

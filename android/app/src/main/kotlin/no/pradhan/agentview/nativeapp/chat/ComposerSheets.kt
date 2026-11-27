@@ -61,7 +61,7 @@ internal fun ComposerSheets(hub: Hub, s: ComposerState, uploading: Int, session:
         Picker.Context -> ContextSheet(s, session, onSheet)
         Picker.Connectors -> ConnectorsSheet(hub, session, onSheet)
         Picker.Settings -> ChatSettingsSheet(hub, session, onSheet)
-        Picker.Effort -> PickerSheet("Select effort", effortsFor(session?.models.orEmpty(), session?.model).map { Choice(it, EFFORT_LABEL[it] ?: it) }, session?.effort, { hub.setEffort(it) }) { onSheet(null) }
+        Picker.Effort -> PickerSheet("Select effort", effortChoices(session?.models.orEmpty(), session?.model), session?.effort, { hub.setEffort(it) }, EFFORT_NOTE) { onSheet(null) }
         Picker.Account -> PickerSheet("Select Claude account", (session?.accounts?.ifEmpty { null } ?: listOf(session?.account ?: "main")).map { Choice(it, ACCOUNT_LABEL[it] ?: it, listOfNotNull(ACCOUNT_NOTE[it], usageText(session?.usage).ifEmpty { null }?.takeIf { _ -> it == (session?.account ?: "main") }).joinToString(" · ")) }, session?.account ?: "main", { hub.setAccount(it) }) { onSheet(null) }
         null -> {}
     }
@@ -159,8 +159,9 @@ private fun ChatSettingsSheet(hub: Hub, session: SessionInfo?, onSheet: (Picker?
 }
 
 @Composable
-private fun PickerSheet(title: String, items: List<Choice>, current: String?, onPick: (String) -> Unit, onDismiss: () -> Unit) {
+private fun PickerSheet(title: String, items: List<Choice>, current: String?, onPick: (String) -> Unit, note: String? = null, onDismiss: () -> Unit) {
     Sheet(onDismiss, title, padded = false, full = false) {
+        note?.let { Text(it, style = Type.meta, color = av.fgMuted, modifier = Modifier.padding(horizontal = Tokens.listPad, vertical = Tokens.sp4)) }
         Group {
             items.forEachIndexed { i, c ->
                 if (i > 0) Hairline()

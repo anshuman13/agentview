@@ -8,6 +8,7 @@ import no.pradhan.agentview.nativeapp.sessions.SavedSession
 import no.pradhan.agentview.nativeapp.workspace.appendPrompt
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class ComposerLogicTest {
@@ -84,6 +85,12 @@ class ComposerLogicTest {
         val models = listOf(ModelInfo("a", efforts = listOf("low", "high", "minimal")), ModelInfo("b"))
         assertEquals(listOf("low", "high"), effortsFor(models, "a"))
         assertEquals(EFFORT_LEVELS, effortsFor(models, "b"))
+    }
+
+    @Test fun effortChoicesTagTheModelDefault() {
+        val models = listOf(ModelInfo("a", efforts = listOf("low", "medium"), defaultEffort = "medium"), ModelInfo("b"))
+        assertEquals(listOf("" to "Low", "Recommended" to "Medium"), effortChoices(models, "a").map { it.detail to it.label })
+        assertTrue(effortChoices(models, "b").all { it.detail.isEmpty() })
     }
 
     @Test fun planStartsInDefaultWhereTheProviderHasNone() {

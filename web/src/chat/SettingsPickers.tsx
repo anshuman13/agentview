@@ -7,9 +7,9 @@ import { Row } from '../ui/Row';
 import { Section } from '../ui/Section';
 import { Sheet } from '../ui/Sheet';
 import { useNarrow } from '../app/shell/useNarrow';
-import { ACCOUNT_LABEL, ACCOUNT_NOTE, EFFORT_LABEL } from '../../../shared/protocol';
+import { ACCOUNT_LABEL, ACCOUNT_NOTE, EFFORT_NOTE } from '../../../shared/protocol';
 import { modelRow, modeSteps, newestModels } from '../../../shared/providers';
-import { effortsFor } from './capabilitiesLogic';
+import { effortChoices } from './capabilitiesLogic';
 import { useChatSettings, type Pick } from './ChatSettings';
 import { rememberModel } from '../app/newChat';
 
@@ -31,6 +31,7 @@ export function ChoicePick({ back, ...props }: ComponentProps<typeof QuickPick> 
   return (
     <Sheet label={props.title} onClose={back}>
       <Section label={props.title} />
+      {props.note && <p className="muted small pick-note">{props.note}</p>}
       <SheetRows items={props.items} current={props.current} onPick={props.onPick} />
     </Sheet>
   );
@@ -71,8 +72,9 @@ export function EffortPick({ pick, close, back }: Props) {
       back={back}
       anchor={pick.at}
       title="Select effort"
+      note={EFFORT_NOTE}
       current={effort}
-      items={effortsFor(models, model).map((e) => ({ value: e, label: EFFORT_LABEL[e] }))}
+      items={effortChoices(models, model)}
       onPick={(v) => { setEffort(v); close(); }}
       onClose={close}
     />

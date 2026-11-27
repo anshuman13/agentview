@@ -38,6 +38,9 @@ fun usageHigh(u: PlanUsage?) = maxOf(u?.week?.pct ?: 0.0, u?.fiveHour?.pct ?: 0.
 
 val EFFORT_LABEL = mapOf("low" to "Low", "medium" to "Medium", "high" to "High", "xhigh" to "Extra high", "max" to "Max")
 
+// shared/protocol.ts EFFORT_NOTE
+const val EFFORT_NOTE = "Higher effort means more thorough answers, but takes longer and uses your limits faster."
+
 val MODE_HINTS = mapOf(
     "auto" to "Auto mode asks only for risky actions",
     "default" to "Default mode asks before edits and commands",

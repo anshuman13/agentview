@@ -116,7 +116,7 @@ export class CodexDriver implements AgentDriver {
     try {
       const { data } = await rpc.request<{ data: CodexModel[] }>('model/list', {});
       this.models = data.filter((m) => !m.hidden);
-      this.host.setSession({ models: this.models.map((m) => ({ value: m.id, displayName: m.displayName, description: m.description, efforts: m.supportedReasoningEfforts.map((e) => e.reasoningEffort) })) });
+      this.host.setSession({ models: this.models.map((m) => ({ value: m.id, displayName: m.displayName, description: m.description, efforts: m.supportedReasoningEfforts.map((e) => e.reasoningEffort), defaultEffort: m.defaultReasoningEffort })) });
     } catch (err) {
       process.stderr.write(`codex model/list failed: ${errText(err)}\n`);
     }

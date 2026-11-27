@@ -113,7 +113,7 @@ export type SessionInfo = {
   // Changed files are reviewed after each turn.
   review?: boolean;
   apiKeySource: string | null;
-  models: Array<{ value: string; displayName: string; description?: string; efforts?: string[] }>;
+  models: Array<{ value: string; displayName: string; description?: string; efforts?: string[]; defaultEffort?: string }>;
   commands: Array<{ name: string; description: string }>;
   cache: CacheInfo | null;
   context: number | null;
@@ -238,6 +238,8 @@ export const EFFORT_LEVELS = ['low', 'medium', 'high', 'xhigh', 'max'] as const;
 export type Effort = (typeof EFFORT_LEVELS)[number];
 
 export const EFFORT_LABEL: Record<Effort, string> = { low: 'Low', medium: 'Medium', high: 'High', xhigh: 'Extra high', max: 'Max' };
+
+export const EFFORT_NOTE = 'Higher effort means more thorough answers, but takes longer and uses your limits faster.';
 
 export const ROW_WINDOW = 150;
 
