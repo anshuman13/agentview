@@ -90,8 +90,7 @@ parser, off the chat's startup path. Views that render chat markdown wait for it
 first. The Codex feed and the sidebar views load when the browser is idle, so opening one never waits on Suspense's 300 ms
 fallback hold. The build does not merge small chunks: merging pulled code into unrelated views.
 
-Web UI tests come in two kinds. Clicks and flows render components in happy-dom under `bun test`, fed by the fixtures in
-`web/e2e/fixtures/` through the store's `handle` and a fake `fetch` (`web/src/chat/chatFlows.test.tsx`). What needs a real
+Web UI logic is unit tested under `bun test`; there are no click-flow tests. What needs a real
 browser, layout, clipping and overlap at 1280x800 and 390x844 in light and dark, is the Playwright suite in `web/e2e/`:
 `bun run e2e` starts the stub server (`web/e2e/stub.ts`, :7788, standing in for the API server and the hub) and Vite on
 :5199 proxying `/api` to it, then runs headless system Chrome on one page per viewport. Nothing reaches :7777 or the hub.
