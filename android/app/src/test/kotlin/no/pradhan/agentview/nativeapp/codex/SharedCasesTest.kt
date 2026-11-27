@@ -43,6 +43,7 @@ import no.pradhan.agentview.nativeapp.chat.Use
 import no.pradhan.agentview.nativeapp.chat.openAtNew
 import no.pradhan.agentview.nativeapp.chat.duration
 import no.pradhan.agentview.nativeapp.chat.dayDividers
+import no.pradhan.agentview.nativeapp.chat.needsEarlier
 import no.pradhan.agentview.nativeapp.chat.blockedRule
 import no.pradhan.agentview.nativeapp.chat.planFeedback
 import no.pradhan.agentview.nativeapp.chat.planParagraphs
@@ -371,6 +372,13 @@ class SharedCasesTest {
             assertEquals(c.str("name"), c.str("expected"), planFeedback(strings(c.getValue("paragraphs")), notes))
         }
         for (c in f.getValue("blocked").jsonArray.map { it.jsonObject }) assertEquals(c.str("rule"), c.str("expected"), blockedRule(c.str("rule")))
+    }
+
+    @Test fun needsEarlierCases() {
+        for (c in cases("needs-earlier")) {
+            fun n(k: String) = c.getValue(k).jsonPrimitive.int
+            assertEquals(c.str("name"), c.getValue("expected").jsonPrimitive.boolean, needsEarlier(n("replies"), n("earlier"), n("autoLoads")))
+        }
     }
 
     @Test fun stepDurations() {

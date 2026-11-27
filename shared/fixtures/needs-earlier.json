@@ -1,0 +1,7 @@
+[
+  {"name": "no replies and earlier history", "replies": 0, "earlier": 600, "autoLoads": 0, "expected": true},
+  {"name": "two replies after two loads", "replies": 2, "earlier": 600, "autoLoads": 2, "expected": true},
+  {"name": "enough replies", "replies": 3, "earlier": 600, "autoLoads": 0, "expected": false},
+  {"name": "nothing earlier", "replies": 0, "earlier": 0, "autoLoads": 0, "expected": false},
+  {"name": "loaded by itself three times", "replies": 0, "earlier": 600, "autoLoads": 3, "expected": false}
+]

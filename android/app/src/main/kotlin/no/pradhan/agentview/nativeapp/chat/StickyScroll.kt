@@ -94,7 +94,10 @@ internal fun FollowNewest(hub: Hub, view: ChatView, list: List<FoldRow>, listSta
 
 // Loads earlier messages while the chat shows too few replies, up to three pages, and not again at a hidden count that failed to load; returns whether a load is due.
 // Web chat/transcript/window.ts: a chat that opens on too few replies loads earlier pages by itself, a few times.
-internal fun needsEarlier(replies: Int, earlier: Int, autoLoads: Int) = replies < 3 && earlier > 0 && autoLoads < 3
+internal fun needsEarlier(replies: Int, earlier: Int, autoLoads: Int) = replies < EARLIER_REPLIES && earlier > 0 && autoLoads < EARLIER_AUTO_PAGES
+
+private const val EARLIER_REPLIES = 3
+private const val EARLIER_AUTO_PAGES = 3
 
 @Composable
 internal fun rememberEarlierDue(hub: Hub, chatId: String, replies: Int, loading: Boolean, earlier: Int, settled: Boolean): Boolean {

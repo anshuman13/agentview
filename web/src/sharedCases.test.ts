@@ -14,6 +14,7 @@ import type { Capabilities, ChatEvent, Finding, ChatRun, Effort, LiveChat, Provi
 import { START_MODES, billing, checkedModel, menuModes, modeSteps, modelRow, newestModels, providerLabel, providerMark, providerModes, settingsLabel, shortModel, startModeFor, startTexts, type Billing } from '../../shared/providers';
 import { recentInRepo } from './app/newChat';
 import { blockedRule, planFeedback, planParagraphs } from './chat/cards/pendingLogic';
+import { needsEarlier } from './chat/transcript/window';
 import { binLeft, buildFolders, chatPlace, since } from './sessions/folders';
 import { findingFixPrompt, findingsFixPrompt } from '../../shared/reviewPrompt';
 import { setupPrompt, type SetupKind } from '../../shared/setupPrompt';
@@ -198,6 +199,10 @@ describe('cases shared with the Android app', () => {
     for (const c of f.paragraphs) it(`planParagraphs: ${c.name}`, () => expect(planParagraphs(c.plan)).toEqual(c.expected));
     for (const c of f.feedback) it(`planFeedback: ${c.name}`, () => expect(planFeedback(c.paragraphs, c.notes)).toBe(c.expected));
     for (const c of f.blocked) it(`blockedRule: ${c.rule}`, () => expect(blockedRule(c.rule)).toBe(c.expected));
+  }
+
+  for (const c of cases<{ name: string; replies: number; earlier: number; autoLoads: number; expected: boolean }>('needs-earlier')) {
+    it(`needsEarlier: ${c.name}`, () => expect(needsEarlier(c.replies, c.earlier, c.autoLoads)).toBe(c.expected));
   }
 
   for (const c of cases<{ ms: number; expected: string }>('step-duration')) {
