@@ -163,5 +163,6 @@
 .bd-doc { padding: var(--sp-4) var(--list-pad); overflow-wrap: anywhere; }
 .gl-note.err { color: var(--err); }
 @media (min-width: 901px) { .as-sheet.gl-sheet { align-self: center; width: min(600px, 100%); } }
-.chat-build .ui-row { min-height: 40px; padding-left: calc(var(--list-pad) + var(--lead-w) + var(--sp-6)); }
+.chat-build { display: flex; }
+.chat-build .ui-row { flex: 1; min-width: 0; min-height: 40px; padding-left: calc(var(--list-pad) + var(--lead-w) + var(--sp-6)); }
 .chat-build .ui-row-title { font-size: var(--fs-sm); }
