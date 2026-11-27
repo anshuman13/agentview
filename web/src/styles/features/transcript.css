@@ -17,7 +17,7 @@
 .tr-rows { position: relative; }
 
 .tr-user {
-  position: relative; width: fit-content; max-width: 85%; margin-left: auto; padding: var(--sp-5) var(--sp-6); border-radius: var(--shape-lg);
+  position: relative; width: fit-content; max-width: 85%; margin-left: auto; padding: var(--sp-6) var(--sp-8); border-radius: var(--shape-lg);
   background: color-mix(in srgb, var(--fg) 5%, var(--bg)); color: var(--fg); font-size: var(--fs-lg); white-space: pre-wrap; overflow-wrap: anywhere;
 }
 .tr-mic { float: left; margin: 0.15em var(--sp-3) 0 0; color: var(--fg-muted); }
@@ -30,7 +30,7 @@
 .tr-user:hover .tr-acts,.tr-user .tr-acts:focus-within { visibility: visible; }
 .tr-user.unsent .tr-user-text { color: var(--fg-muted); }
 .tr-user:is(.stopping, .queued, .unsent) .tr-stop { position: static; justify-content: flex-end; margin-top: var(--sp-2); }
-.tr-user .tr-stop { position: absolute; right: var(--sp-5); top: var(--sp-5); display: flex; align-items: center; gap: var(--sp-3); color: var(--fg-faint); }
+.tr-user .tr-stop { position: absolute; right: var(--sp-8); top: var(--sp-6); display: flex; align-items: center; gap: var(--sp-3); color: var(--fg-faint); }
 .tr-assistant { padding: 0; }
 /* FADE_MS in streamFade.ts matches --motion-duration. */
 .tr-assistant .md-new { animation: md-new var(--motion-duration) var(--motion-ease-in) both; }
@@ -143,7 +143,6 @@
   .tr { padding: var(--sp-5) var(--sp-8) var(--sp-7); font-size: var(--fs-lg); }
   .tr-step { min-height: var(--touch-sm); line-height: var(--touch-sm); font-size: var(--fs-md); }
   .tr-mark { height: var(--touch-sm); }
-  .tr-user { padding: var(--sp-6) var(--sp-7); }
   .tr-detail pre, .tr-report { font-size: var(--fs-sm); max-height: 40vh; max-height: 40dvh; }
 }
 .work-head { display: flex; align-items: baseline; gap: var(--sp-4); padding: var(--sp-4) var(--sp-8); border-bottom: 1px solid var(--border); }
