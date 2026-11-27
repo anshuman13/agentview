@@ -1,0 +1,9 @@
+name: ref-test
+on: pull_request
+jobs:
+  ref-check:
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          sleep 45
+          exit 1
