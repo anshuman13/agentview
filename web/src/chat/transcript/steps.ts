@@ -292,3 +292,33 @@ export function exploreRuns(items: Item[], min = 3) {
 export function exploreLabel(steps: StepItem[]) {
   return exploreLabelOf(steps.map((s) => s.use.name));
 }
+
+export const fileMeta = (it: Extract<Item, { kind: 'file' }>, noun: string) => (it.uses[0].name === 'Write' ? `${noun} written` : `${noun} edited · +${it.count.add} -${it.count.del}`);
+
+// Row memo: true when a rebuilt item renders the same as the old one.
+export function sameItem(a: Item, b: Item): boolean {
+  if (a === b) return true;
+  if (a.kind !== b.kind || a.id !== b.id) return false;
+  switch (a.kind) {
+    case 'file': {
+      const o = b as typeof a;
+      return a.path === o.path && a.error === o.error && a.pending === o.pending && a.count.add === o.count.add && a.count.del === o.count.del && a.uses.length === o.uses.length && a.uses.every((u, i) => u === o.uses[i]);
+    }
+    case 'step': {
+      const o = b as typeof a;
+      return a.use === o.use && a.result === o.result;
+    }
+    case 'agent': {
+      const o = b as typeof a;
+      return a.use === o.use && a.result === o.result && a.running === o.running && a.progress === o.progress && a.steps.length === o.steps.length && a.steps.every((s, i) => sameItem(s, o.steps[i]));
+    }
+    case 'blocked':
+    case 'review':
+      return a.ev === (b as typeof a).ev;
+    default: {
+      const x = a as Record<string, unknown>, y = b as Record<string, unknown>;
+      const keys = Object.keys(x);
+      return keys.length === Object.keys(y).length && keys.every((k) => x[k] === y[k]);
+    }
+  }
+}

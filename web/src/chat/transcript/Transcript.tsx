@@ -15,7 +15,7 @@ import { FindBar, findPending, markHit, takeFind, type FindRequest } from './Fin
 import { showTurn, turnPending } from '../../sessions/openChat';
 import { RewindLink } from './Rewind';
 import { createFoldBuilder, type FoldRow } from './workFold';
-import { ALARM_TOOL, BUILD_TOOL, createTranscriptBuilder, exploreRuns, dayDividers, newMarker, newReplies, openAtNew, rewindReplies, turnAnswers, docCards, isDocFile, type Item, type Rewind } from './steps';
+import { ALARM_TOOL, BUILD_TOOL, createTranscriptBuilder, exploreRuns, dayDividers, newMarker, newReplies, openAtNew, rewindReplies, turnAnswers, docCards, isDocFile, fileMeta, sameItem, type Item, type Rewind } from './steps';
 import { pressable } from '../../ui/util';
 import { useCan } from '../useCan';
 import { copyReply } from '../chatActions';
@@ -28,7 +28,7 @@ import { useStickyScroll } from './useStickyScroll';
 import { useRowWindow, useSeenMark } from './useRowWindow';
 import { UnsentRows, UserRow } from './UserRow';
 import { Tasks } from './TaskLines';
-import { AgentRow, Explored, FileCard, Step, fileMeta } from './StepRows';
+import { AgentRow, Explored, FileCard, Step } from './StepRows';
 import { quoteText } from '../../../../shared/composerText';
 import { useSelectionAt } from '../../ui/useSelectionAt';
 import { freshReplies, knownIds } from './streamFade';
@@ -189,33 +189,6 @@ function TranscriptView({ sessionId, events, earlier, cwd, running, bill, failed
     )}
     </div>
   );
-}
-
-function sameItem(a: Item, b: Item): boolean {
-  if (a === b) return true;
-  if (a.kind !== b.kind || a.id !== b.id) return false;
-  switch (a.kind) {
-    case 'file': {
-      const o = b as typeof a;
-      return a.path === o.path && a.error === o.error && a.pending === o.pending && a.count.add === o.count.add && a.count.del === o.count.del && a.uses.length === o.uses.length && a.uses.every((u, i) => u === o.uses[i]);
-    }
-    case 'step': {
-      const o = b as typeof a;
-      return a.use === o.use && a.result === o.result;
-    }
-    case 'agent': {
-      const o = b as typeof a;
-      return a.use === o.use && a.result === o.result && a.running === o.running && a.progress === o.progress && a.steps.length === o.steps.length && a.steps.every((s, i) => sameItem(s, o.steps[i]));
-    }
-    case 'blocked':
-    case 'review':
-      return a.ev === (b as typeof a).ev;
-    default: {
-      const x = a as Record<string, unknown>, y = b as Record<string, unknown>;
-      const keys = Object.keys(x);
-      return keys.length === Object.keys(y).length && keys.every((k) => x[k] === y[k]);
-    }
-  }
 }
 
 export const Row = memo(RowImpl, (p, n) => p.cwd === n.cwd && p.settled === n.settled && p.card === n.card && p.answer === n.answer && p.rewind?.id === n.rewind?.id && p.readOnly === n.readOnly && sameItem(p.it, n.it));

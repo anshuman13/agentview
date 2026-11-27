@@ -52,7 +52,6 @@ function Detail({ use, result }: { use: ToolUse; result?: ToolResult }) {
   );
 }
 
-export const fileMeta = (it: Extract<Item, { kind: 'file' }>, noun: string) => (it.uses[0].name === 'Write' ? `${noun} written` : `${noun} edited · +${it.count.add} -${it.count.del}`);
 
 export function FileCard({ it, cwd }: { it: Extract<Item, { kind: 'file' }>; cwd: string }) {
   const rel = relPath(it.path, cwd);
