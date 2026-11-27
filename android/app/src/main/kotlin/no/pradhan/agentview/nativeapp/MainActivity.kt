@@ -21,6 +21,7 @@ import no.pradhan.agentview.nativeapp.app.App
 import no.pradhan.agentview.nativeapp.app.SharedItem
 import no.pradhan.agentview.nativeapp.app.parseDeepLink
 import no.pradhan.agentview.nativeapp.app.Hub
+import no.pradhan.agentview.nativeapp.app.loadFixture
 import no.pradhan.agentview.nativeapp.app.saveOrigin
 import no.pradhan.agentview.nativeapp.ui.AgentViewTheme
 
@@ -74,6 +75,7 @@ class MainActivity : ComponentActivity() {
         intent.getStringExtra("origin")?.takeIf { it.isNotBlank() && it.trim().trimEnd('/') != hub.origin.value }?.let(hub::saveOrigin)
         sharedFrom(intent)?.let { hub.shared.value = it }
         parseDeepLink(intent.dataString)?.let { hub.link.value = it }
+        intent.getStringExtra("fixture")?.let { hub.loadFixture(it, intent.getStringExtra("fixtureStream"), intent.getLongExtra("chunkMs", 100)) }
     }
 
     @Suppress("DEPRECATION")

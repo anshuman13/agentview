@@ -1,5 +1,6 @@
 package no.pradhan.agentview.nativeapp.app
 
+import no.pradhan.agentview.nativeapp.net.LiveChat
 import no.pradhan.agentview.nativeapp.net.Api
 import no.pradhan.agentview.nativeapp.net.ChatTitles
 import no.pradhan.agentview.nativeapp.net.Drafts
@@ -289,6 +290,9 @@ class Hub(internal val app: Application, private val saved: SavedStateHandle) : 
 
     internal val liveLoaded = MutableStateFlow(false)
 
+    // The chat a readonly check loaded from a file; kept in the live list the server sends.
+    @Volatile internal var fixtureChat: LiveChat? = null
+
     init {
         viewModelScope.launch(Dispatchers.Default) {
             val minute = foregroundNow.flatMapLatest { up -> if (up) flow { while (true) { emit(Unit); delay(60_000) } } else emptyFlow() }.onStart { emit(Unit) }
@@ -358,7 +362,7 @@ class Hub(internal val app: Application, private val saved: SavedStateHandle) : 
         if (m is ServerMessage.PhoneAlarm) setPhoneAlarm(m)
         if (m is ServerMessage.Findings) setFindings(m.review.target, m.review)
         if (m is ServerMessage.FileChanged) fileChanged.tryEmit(m.path)
-        store.handle(m)
+        store.handle(withFixture(m, fixtureChat))
         store.state.value.session?.let { s ->
             val group = modelGroup(s.provider, providers.value)
             val list = modelsOf(group)
