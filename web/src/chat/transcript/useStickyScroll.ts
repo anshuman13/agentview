@@ -58,8 +58,9 @@ export function useStickyScroll(items: Item[], last: ChatEvent | undefined, runn
       lastUser.current = mine;
       if (mine) { stick.current = true; pin.current = false; setStuck(true); }
     }
-    if (stick.current) { el.scrollTop = el.scrollHeight; setBehind(false); }
-    else setBehind(true);
+    if (stick.current) el.scrollTop = el.scrollHeight;
+    // Setting the same value from an effect still costs React a second commit per streamed chunk.
+    if (behind === stick.current) setBehind(!stick.current);
   }, [items.length, last, running]);
 
   // Rows grow after they render (Markdown loads late, images decode), so a chat that sticks to the bottom follows them.
