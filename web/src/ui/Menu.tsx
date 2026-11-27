@@ -1,7 +1,8 @@
-import { Children, useEffect, useRef, useSyncExternalStore, type ComponentPropsWithoutRef, type KeyboardEvent, type MouseEvent as ReactMouseEvent, type ReactNode, type RefObject } from 'react';
+import { Children, useEffect, useLayoutEffect, useRef, useSyncExternalStore, type ComponentPropsWithoutRef, type KeyboardEvent, type MouseEvent as ReactMouseEvent, type ReactNode, type RefObject } from 'react';
 import { createPortal } from 'react-dom';
 import { Icon } from './Icon';
 import { cx } from './util';
+import { leaveCopy } from './sheetLeave';
 
 const FOCUSABLE = 'button:not(:disabled), a[href], select:not(:disabled)';
 export const PHONE ='(max-width: 480px)';
@@ -37,6 +38,8 @@ export function Menu({ trigger, onClose, className, children }: {
 }) {
   const phone = usePhone();
   const box = useRef<HTMLDivElement>(null);
+  const backdrop = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => () => { if (backdrop.current) leaveCopy([backdrop.current, box.current]); }, []);
   const close = useRef(onClose);
   close.current = onClose;
   const typed = useRef({ text: '', timer: 0 });
@@ -109,7 +112,7 @@ export function Menu({ trigger, onClose, className, children }: {
     </div>
   );
   if (!phone) return menu;
-  return createPortal(<><div className="ui-menu-backdrop" />{menu}</>, document.body);
+  return createPortal(<><div ref={backdrop} className="ui-menu-backdrop" />{menu}</>, document.body);
 }
 
 type Item = {

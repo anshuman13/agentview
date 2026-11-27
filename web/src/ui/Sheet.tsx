@@ -1,16 +1,24 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { Back } from '../app/touch/back';
 import { useEscape, useReturnFocus } from './util';
 import { useSheetDrag } from './useSheetDrag';
+import { cancelLeaving, leaveCopy } from './sheetLeave';
 
 const stack: object[] = [];
 export const sheetOpen = () => stack.length > 0;
 
 // With `onBack`, Esc and the touch Back call it instead of closing the sheet; the scrim and drag still close.
 export function Sheet({ label, onClose, onBack, className, overlayClassName, active = true, noSwipe, children }: { label: string; onClose: () => void; onBack?: () => void; className?: string; overlayClassName?: string; active?: boolean; noSwipe?: boolean; children: ReactNode }) {
-  const sheet = useSheetDrag(true, onClose);
+  // A drag, scrim or Esc close has already slid the sheet out, so it leaves no copy.
+  const slid = useRef(false);
+  const sheet = useSheetDrag(true, () => { slid.current = true; onClose(); });
   const id = useRef({});
+  useLayoutEffect(() => {
+    cancelLeaving();
+    const overlay = sheet.overlay;
+    return () => { if (!slid.current) leaveCopy([overlay.current]); };
+  }, [sheet.overlay]);
   useEffect(() => {
     if (!active) return;
     const me = id.current;

@@ -21,3 +21,11 @@
 @keyframes as-sheet-up { from { transform: translateY(100%); } }
 .as-sheet input { border: 0; background: transparent; color: var(--fg); font: inherit; box-shadow: none; padding: 0; }
 .as-sheet input:focus { outline: none; box-shadow: none; }
+/* The copy a closed sheet leaves behind (ui/sheetLeave.ts): it slides down and the scrim fades, then it is removed. */
+:is(.as-sheet-overlay, .more-sheet-overlay, .ui-menu-backdrop).sheet-leaving, .as-sheet-overlay.sheet-leaving:has(> .as-sheet) { animation: as-sheet-fade-out var(--motion-duration) var(--motion-ease-out) forwards; }
+.sheet-leaving > .as-sheet, .ui-menu.sheet.sheet-leaving { z-index: var(--z-sheet); animation: as-sheet-down var(--motion-duration) var(--motion-ease-out) forwards; }
+.sheet-leaving > .more-sheet.as-sheet { animation: as-sheet-sink var(--motion-duration) var(--motion-ease-out) forwards; }
+@media (min-width: 901px) { .sheet-leaving > .as-sheet.as-dialog { animation: as-sheet-sink var(--motion-duration) var(--motion-ease-out) forwards; } }
+@keyframes as-sheet-fade-out { to { background-color: transparent; } }
+@keyframes as-sheet-down { to { transform: translateY(100%); } }
+@keyframes as-sheet-sink { to { transform: translateY(24px); opacity: 0; } }
