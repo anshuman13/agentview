@@ -138,6 +138,8 @@ export type SessionInfo = {
   turn?: TurnMeter | null;
   // What fills the context window, read when a client opens the context panel.
   contextUsage?: ContextUsage | null;
+  // Folders the agent may use besides the chat folder.
+  dirs?: string[];
 };
 
 // The context window by category: kind used is in the window, buffer the auto-compact reserve, free what is left.
@@ -151,7 +153,7 @@ export type BackgroundShell = { toolUseId: string; label: string; startedAt: num
 export type SessionUpdate = Omit<SessionInfo, 'commands' | 'mcp'> & Partial<Pick<SessionInfo, 'commands' | 'mcp'>>;
 
 // What the agent behind a chat supports.
-export type Capabilities = { rewind: boolean; mcp: boolean; mcpEdit: boolean; connectors: boolean; effort: boolean; stopTask: boolean; subagents: boolean; forkAt: boolean; contextUsage: boolean };
+export type Capabilities = { rewind: boolean; mcp: boolean; mcpEdit: boolean; connectors: boolean; effort: boolean; stopTask: boolean; subagents: boolean; forkAt: boolean; contextUsage: boolean; addDir: boolean };
 
 // What a file rewind to before a prompt would change, paths relative to the chat folder.
 export type RewindPreview = { files: string[]; insertions: number; deletions: number } | { error: string };
@@ -427,6 +429,7 @@ export type ClientMessage =
   | { type: 'set_account'; account: string }
   | { type: 'set_permission_mode'; mode: string }
   | { type: 'set_review'; on: boolean }
+  | { type: 'set_dirs'; dirs: string[] }
   | { type: 'review'; id: string; action: 'keep' | 'undo'; file?: string; hunk?: number }
   | { type: 'run'; run: string; op: RunOp }
   | { type: 'tries_send'; run: string; text: string }

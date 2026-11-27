@@ -210,7 +210,7 @@ data class ModelInfo(val value: String, val displayName: String = "", val descri
 
 // shared/protocol.ts Capabilities: what the chat's driver supports; a missing field counts as supported.
 @Serializable
-data class Capabilities(val rewind: Boolean = true, val mcp: Boolean = true, val mcpEdit: Boolean = true, val connectors: Boolean = true, val effort: Boolean = true, val stopTask: Boolean = true, val subagents: Boolean = true, val forkAt: Boolean = true, val contextUsage: Boolean = true)
+data class Capabilities(val rewind: Boolean = true, val mcp: Boolean = true, val mcpEdit: Boolean = true, val connectors: Boolean = true, val effort: Boolean = true, val stopTask: Boolean = true, val subagents: Boolean = true, val forkAt: Boolean = true, val contextUsage: Boolean = true, val addDir: Boolean = true)
 
 @Serializable
 data class CommandInfo(val name: String, val description: String = "")
@@ -244,6 +244,7 @@ data class SessionInfo(
     val shells: List<BackgroundShell> = emptyList(),
     val turn: TurnMeter? = null,
     val contextUsage: ContextUsage? = null,
+    val dirs: List<String> = emptyList(),
 )
 
 // shared/protocol.ts ContextUsage: the context window by category; kind is used, buffer or free.
@@ -419,6 +420,7 @@ fun contextUsageCmd() = cmd("context_usage")
 fun setAccountCmd(account: String) = cmd("set_account") { put("account", account) }
 fun setModeCmd(mode: String) = cmd("set_permission_mode") { put("mode", mode) }
 fun setReviewCmd(on: Boolean) = cmd("set_review") { put("on", on) }
+fun setDirsCmd(dirs: List<String>) = cmd("set_dirs") { put("dirs", JsonArray(dirs.map { JsonPrimitive(it) })) }
 fun reviewCmd(id: String, action: String, file: String? = null, hunk: Int? = null) = cmd("review") { put("id", id); put("action", action); if (file != null) put("file", file); if (hunk != null) put("hunk", hunk) }
 fun newSessionCmd(profile: String? = null, cwd: String? = null, model: String? = null, fork: String? = null, provider: String? = null, text: String? = null, upTo: String? = null) = cmd("new_session") { if (profile != null) put("profile", profile); if (upTo != null) put("upTo", upTo); if (cwd != null) put("cwd", cwd); if (model != null) put("model", model); if (fork != null) put("fork", fork); if (provider != null) put("provider", provider); if (text != null) put("text", text) }
 fun phoneAlarmResultCmd(id: String, ok: Boolean, notified: Boolean = false, weekday: String? = null, error: String? = null) = cmd("phone_alarm_result") {

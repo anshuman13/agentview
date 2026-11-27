@@ -9,6 +9,7 @@ import { useCan } from '../useCan';
 import { Voice, type useDictation } from './Voice';
 import { keyText } from '../../app/shell/keys';
 import { providerLabel, settingsLabel } from '../../../../shared/providers';
+import { FolderChips } from './AddFolder';
 
 export function useModeText() {
   const { effort, modelName, mode, review } = useChatSettings();
@@ -70,6 +71,7 @@ export function ComposerFoot({ uploading, typed, shell, setPick, attach, dictate
   return (
     <div className="cp-foot">
       <ModeChip setPick={setPick} />
+      <FolderChips />
       <span className="cp-spacer" />
       <AttachButton attach={attach} />
       {uploading > 0 && <span className="cp-hint"><Icon name="loading" small spin /> Uploading {plural(uploading, 'file')}…</span>}

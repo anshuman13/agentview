@@ -1,6 +1,17 @@
 import { ACCOUNT_LABEL, ACCOUNT_NOTE, EFFORT_LEVELS, type Account, type Effort } from '../../../shared/protocol.js';
 import { providerLabel, startModeFor } from '../../../shared/providers.js';
+import os from 'node:os';
+import path from 'node:path';
+import { statSync } from 'node:fs';
 import type { AgentSession } from './session.js';
+
+const isDir = (p: string) => {
+  try {
+    return statSync(p).isDirectory();
+  } catch {
+    return false;
+  }
+};
 
 export class SessionSettings {
   constructor(private s: AgentSession) {}
@@ -39,6 +50,21 @@ export class SessionSettings {
     await this.s.driver.setPermissionMode(mode);
     this.s.setSession({ permissionMode: mode });
     this.s.system(`Permission mode: ${mode}`);
+  }
+
+  setDirs(asked: string[]) {
+    const { driver, state } = this.s;
+    if (!driver.setDirs) return this.s.system(`${providerLabel(driver.provider)} chats cannot add a folder`, true);
+    if (state.session.running) return this.s.system(`Stop ${providerLabel(driver.provider)} before changing its folders`);
+    const dirs = [...new Set(asked.map((d) => path.resolve(d.trim().replace(/^~(?=\/|$)/, os.homedir()))))].filter((d) => d !== path.resolve(this.s.cwd));
+    const missing = dirs.find((d) => !isDir(d));
+    if (missing) return this.s.system(`${missing} is not a folder`, true);
+    const before = state.session.dirs ?? [];
+    driver.setDirs(dirs);
+    this.s.setSession({ dirs });
+    const added = dirs.filter((d) => !before.includes(d));
+    const removed = before.filter((d) => !dirs.includes(d));
+    this.s.system([...added.map((d) => `Added folder ${d}`), ...removed.map((d) => `Removed folder ${d}`)].join('. ') || 'Folders unchanged');
   }
 
   setReview(on: boolean) {

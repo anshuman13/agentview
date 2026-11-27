@@ -8,12 +8,15 @@ import { composerConnectors } from '../../../../shared/composerConnectors';
 import { useCan } from '../useCan';
 import type { Pick } from '../ChatSettings';
 import { useModeText } from './ComposerFoot';
+import { AddFolderPick } from './AddFolder';
 
 type AddMenuProps = { uploading: number; setPick: (p: Pick) => void; attach: (list: File[]) => Promise<void> };
 
 export function AddMenu({ uploading, setPick, attach }: AddMenuProps) {
   const [open, setOpen] = useState(false);
   const [view, setView] = useState<'main' | 'connectors'>('main');
+  const [folderAt, setFolderAt] = useState<DOMRect | null>(null);
+  const canDir = useCan('addDir');
   const mcp = useStore((s) => s.session.mcp);
   const canMcp = useCan('mcp');
   const canEdit = useCan('mcpEdit');
@@ -40,10 +43,12 @@ export function AddMenu({ uploading, setPick, attach }: AddMenuProps) {
       {open && view === 'main' && (
         <Menu trigger={trigger} onClose={() => setOpen(false)}>
           <MenuItem icon="file-add" onClick={() => { setOpen(false); picker.current?.click(); }}>Add files</MenuItem>
+          {canDir && <MenuItem icon="new-folder" onClick={() => { setOpen(false); setFolderAt(trigger.current!.getBoundingClientRect()); }}>Add folder</MenuItem>}
           <MenuItem icon="settings-gear" onClick={pickAt('menu')}>Model and mode · {modeText}</MenuItem>
           {canMcp && rows.length > 0 && <MenuItem icon="plug" onClick={() => setView('connectors')}>Connectors · {rows.filter((r) => r.on).length} on<span className="spacer" /><Icon name="chevron-right" small /></MenuItem>}
         </Menu>
       )}
+      {folderAt && <AddFolderPick at={folderAt} onClose={() => setFolderAt(null)} />}
       {open && view === 'connectors' && (
         <Menu key="connectors" trigger={trigger} onClose={() => setOpen(false)} className="cp-conns">
           <MenuItem icon="arrow-left" onClick={() => setView('main')}>Connectors</MenuItem>

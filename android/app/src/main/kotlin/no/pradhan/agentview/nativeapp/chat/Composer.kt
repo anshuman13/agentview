@@ -77,6 +77,7 @@ import no.pradhan.agentview.nativeapp.app.stopTask
 import no.pradhan.agentview.nativeapp.app.clearShells
 import androidx.compose.ui.draw.rotate
 import no.pradhan.agentview.nativeapp.ui.Chip
+import no.pradhan.agentview.nativeapp.app.setDirs
 import no.pradhan.agentview.nativeapp.ui.IconBtn
 import no.pradhan.agentview.nativeapp.ui.Button
 import no.pradhan.agentview.nativeapp.ui.ButtonSize
@@ -141,7 +142,9 @@ fun Composer(hub: Hub, chatId: String, sessionId: String?, session: SessionInfo?
             asked.forEach { t -> Chip(t, { s.set(TextFieldValue(t, TextRange(t.length))); s.submit(false, uploading) }, icon = if (t in QUICK_REPLIES) null else "reply") }
         }
         Column(Modifier.fillMaxWidth().clip(shape).background(c.raised).border(BorderStroke(Tokens.hairline, c.border), shape)) {
-            if (s.marks.isNotEmpty() || els.isNotEmpty()) FlowRow(Modifier.padding(start = Tokens.sp4, end = Tokens.sp4, top = Tokens.sp4), horizontalArrangement = Arrangement.spacedBy(Tokens.sp2)) {
+            val dirs = session?.dirs.orEmpty()
+            if (s.marks.isNotEmpty() || els.isNotEmpty() || dirs.isNotEmpty()) FlowRow(Modifier.padding(start = Tokens.sp4, end = Tokens.sp4, top = Tokens.sp4), horizontalArrangement = Arrangement.spacedBy(Tokens.sp2)) {
+                dirs.forEach { d -> Chip(dirName(d), if (running || hub.readOnly) null else { { hub.setDirs(dirs - d) } }, icon = "folder", trailingIcon = "close", trailingLabel = "Remove folder") }
                 ElementChips(hub, els)
                 s.marks.forEachIndexed { i, m -> Chip(markLabel(m), { s.replaceMarks(s.marks.filterIndexed { j, _ -> j != i }) }, icon = if (m.startsWith("[Image")) "file-media" else "file", trailingIcon = "close", trailingLabel = "Remove") }
             }

@@ -51,6 +51,9 @@ export interface AgentDriver {
   interrupt(cancelQueued?: boolean): Promise<void>;
   setModel(model: string): Promise<{ model: string }>;
   setEffort(level: Effort): Promise<void>;
+  // Folders the agent may use besides the chat folder; only drivers with the addDir capability have them.
+  readonly dirs?: string[];
+  setDirs?(dirs: string[]): void;
   setPermissionMode(mode: string): Promise<void>;
   allow(rule: string): Promise<boolean>;
   rewind(promptId: string, dryRun?: boolean): Promise<{ canRewind: boolean; error?: string; filesChanged?: string[]; insertions?: number; deletions?: number }>;

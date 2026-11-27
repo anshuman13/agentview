@@ -241,6 +241,21 @@ describe('AgentSession turns', () => {
     expect(setAccount).not.toHaveBeenCalled();
   });
 
+  it('adds a folder when idle and keeps it with the session', () => {
+    const { s } = fakeSession();
+    const setDirs = vi.fn();
+    Object.assign(s.driver, { setDirs });
+    s.setDirs(['/tmp', '/tmp/', '/tmp/project', '/no/such/dir']);
+    expect(s.state.events.at(-1)).toMatchObject({ kind: 'system', text: '/no/such/dir is not a folder' });
+    s.setDirs(['/tmp', '/tmp/', '/tmp/project']);
+    expect(setDirs).toHaveBeenCalledWith(['/tmp']);
+    expect(s.state.session.dirs).toEqual(['/tmp']);
+    s.sendPrompt('work');
+    s.setDirs([]);
+    expect(s.state.events.at(-1)).toMatchObject({ kind: 'system', text: 'Stop Claude before changing its folders' });
+    expect(s.state.session.dirs).toEqual(['/tmp']);
+  });
+
   it('recreates scheduled jobs and stops agents after an account switch restarts Claude', () => {
     const { s } = fakeSession();
     const send = vi.spyOn(s.driver, 'send');

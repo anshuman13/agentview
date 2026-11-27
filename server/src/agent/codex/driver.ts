@@ -28,7 +28,7 @@ export const codexDriver = (resume?: string, fork = false): DriverFactory => (ho
 export class CodexDriver implements AgentDriver {
   readonly provider: Provider = 'codex';
   readonly compactEndsTurn = true;
-  readonly capabilities: Capabilities = { rewind: false, mcp: true, mcpEdit: false, connectors: false, effort: true, stopTask: false, subagents: false, forkAt: false, contextUsage: false };
+  readonly capabilities: Capabilities = { rewind: false, mcp: true, mcpEdit: false, connectors: false, effort: true, stopTask: false, subagents: false, forkAt: false, contextUsage: false, addDir: false };
   readonly account: Account = 'main';
   readonly instructionFiles: string[];
 

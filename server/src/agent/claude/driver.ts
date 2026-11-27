@@ -25,6 +25,7 @@ import { historyFrom } from './transcript.js';
 import { OPENROUTER_PREFIX } from '../../../../shared/openrouter.js';
 import { recordCall } from '../../usage/calls.js';
 import { forkAt } from './forkAt.js';
+import { addedDirs, saveAddedDirs } from './addedDirs.js';
 
 
 const USAGE_EVERY = 10 * 60_000;
@@ -64,6 +65,7 @@ export class ClaudeDriver implements AgentDriver {
   private pinned: boolean;
   private openrouter: boolean;
   private unattended: boolean;
+  dirs: string[];
 
   constructor(private host: AgentHost, o: ClaudeOptions = {}) {
     this.resume = o.resume;
@@ -72,6 +74,7 @@ export class ClaudeDriver implements AgentDriver {
     this.pinned = o.pinned ?? false;
     this.openrouter = o.openrouter ?? false;
     this.unattended = o.unattended ?? false;
+    this.dirs = addedDirs(o.resume);
     this.live = new StreamText(host);
     this.toolHooks = new ToolHooks(host);
     this.tasks = new TaskTracker(host);
@@ -89,7 +92,7 @@ export class ClaudeDriver implements AgentDriver {
 
   // On OpenRouter the models, effort and the Opus advisor are not Anthropic's, so they are left out.
   get capabilities(): Capabilities {
-    return { rewind: true, mcp: true, mcpEdit: true, connectors: !this.openrouter, effort: !this.openrouter, stopTask: true, subagents: true, forkAt: true, contextUsage: true };
+    return { rewind: true, mcp: true, mcpEdit: true, connectors: !this.openrouter, effort: !this.openrouter, stopTask: true, subagents: true, forkAt: true, contextUsage: true, addDir: true };
   }
 
   get instructionFiles() {
@@ -211,6 +214,7 @@ export class ClaudeDriver implements AgentDriver {
     const unattended = this.unattended ? unattendedRules(this.cwd, unattendedLimits(loadSettings().unattended), Object.keys(ACCOUNT_LABEL).map((a) => configDir(a as Account))) : undefined;
     const options = agentOptions({
       cwd: this.cwd,
+      dirs: this.dirs,
       resume: this.resume,
       host: this.host,
       chat: () => this.state.session.sessionId,
@@ -301,6 +305,16 @@ export class ClaudeDriver implements AgentDriver {
     this.start();
     await this.q?.setModel(cliModel(model));
     return { model };
+  }
+
+  // The CLI takes its folders at launch, so an open one restarts and the next prompt resumes with them.
+  setDirs(dirs: string[]) {
+    this.dirs = dirs;
+    const id = this.state.session.sessionId ?? this.resume;
+    if (id) void saveAddedDirs(id, dirs);
+    if (!this.q) return;
+    this.restart();
+    this.host.restarted('Claude restarted to change its folders');
   }
 
   async setEffort(level: Effort) {
@@ -437,6 +451,7 @@ export class ClaudeDriver implements AgentDriver {
       host.system('Forked into a new chat');
     }
     const newId = this.watcher.active && msg.session_id !== this.state.session.sessionId;
+    if (this.dirs.length && msg.session_id !== this.state.session.sessionId) void saveAddedDirs(msg.session_id, this.dirs);
     const or = this.openrouter ? loadOpenRouter() : null;
     host.setSession({ sessionId: msg.session_id, model: or ? openRouterValue(or, msg.model) : msg.model, permissionMode: msg.permissionMode, apiKeySource: msg.apiKeySource, mcp: mcpFrom(msg.mcp_servers, msg.tools) });
     if (newId) this.watchHistory(true);

@@ -23,6 +23,7 @@ import no.pradhan.agentview.nativeapp.net.setEffortCmd
 import no.pradhan.agentview.nativeapp.net.setModeCmd
 import no.pradhan.agentview.nativeapp.net.setModelCmd
 import no.pradhan.agentview.nativeapp.net.setReviewCmd
+import no.pradhan.agentview.nativeapp.net.setDirsCmd
 import no.pradhan.agentview.nativeapp.net.retryCmd
 import no.pradhan.agentview.nativeapp.net.steerCmd
 import no.pradhan.agentview.nativeapp.net.stopTaskCmd
@@ -187,6 +188,8 @@ fun Hub.loadContextUsage() = post(contextUsageCmd(), store.wanted)
 fun Hub.setMode(mode: String) = post(setModeCmd(mode), store.wanted)
 
 fun Hub.setReview(on: Boolean) = post(setReviewCmd(on), store.wanted)
+
+fun Hub.setDirs(dirs: List<String>) = post(setDirsCmd(dirs), store.wanted)
 
 
 

@@ -35,6 +35,8 @@
 .cp-mode { flex: 0 1 auto; min-width: 0; }
 @media (pointer: fine) { .cp-foot .chip.chip-btn { font-size: var(--fs-footnote); } }
 .cp-mode > span { overflow: hidden; text-overflow: ellipsis; }
+.cp-dir { flex: 0 1 auto; min-width: 0; }
+.cp-dir > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .cp[data-mode='plan'] .cp-mode .codicon:first-child { color: var(--accent-text); }
 .cp-spacer { flex: 1; }
 .cp-send, .cp-stop, .cp-row .icon-btn.cp-talk {

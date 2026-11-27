@@ -88,6 +88,7 @@ export class AgentSession implements AgentHost {
     this.state.session.instructionFiles = this.driver.instructionFiles;
     this.state.session.account = this.driver.account;
     this.state.session.accounts = this.driver.accounts();
+    if (this.driver.dirs) this.state.session.dirs = this.driver.dirs;
     this.setResumeCommand();
   }
 
@@ -251,6 +252,10 @@ export class AgentSession implements AgentHost {
 
   setReview(on: boolean) {
     this.settings.setReview(on);
+  }
+
+  setDirs(dirs: string[]) {
+    return this.settings.setDirs(dirs);
   }
 
   canUseTool(toolName: string, input: Record<string, unknown>, opts: AskOptions) {

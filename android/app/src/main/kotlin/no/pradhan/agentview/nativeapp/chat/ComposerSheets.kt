@@ -32,6 +32,11 @@ import no.pradhan.agentview.nativeapp.app.setEffort
 import no.pradhan.agentview.nativeapp.app.setMode
 import no.pradhan.agentview.nativeapp.app.setModel
 import no.pradhan.agentview.nativeapp.app.setReview
+import no.pradhan.agentview.nativeapp.app.setDirs
+import no.pradhan.agentview.nativeapp.sessions.groupByRepo
+import no.pradhan.agentview.nativeapp.sessions.newChatChoices
+import no.pradhan.agentview.nativeapp.ui.select
+import androidx.compose.runtime.collectAsState
 import no.pradhan.agentview.nativeapp.app.submit
 import no.pradhan.agentview.nativeapp.app.command
 import no.pradhan.agentview.nativeapp.app.DeepLink
@@ -52,7 +57,7 @@ import no.pradhan.agentview.nativeapp.ui.av
 
 internal class Choice(val value: String, val label: String, val detail: String = "")
 
-internal enum class Picker { Add, Settings, Effort, Account, Context, Connectors }
+internal enum class Picker { Add, Settings, Effort, Account, Context, Connectors, Folders }
 
 @Composable
 internal fun ComposerSheets(hub: Hub, s: ComposerState, uploading: Int, session: SessionInfo?, sheet: Picker?, attach: Attach, onSheet: (Picker?) -> Unit) {
@@ -60,6 +65,7 @@ internal fun ComposerSheets(hub: Hub, s: ComposerState, uploading: Int, session:
         Picker.Add -> AddSheet(s, uploading, session, attach, onSheet)
         Picker.Context -> ContextSheet(s, session, onSheet)
         Picker.Connectors -> ConnectorsSheet(hub, session, onSheet)
+        Picker.Folders -> FoldersSheet(hub, session, onSheet)
         Picker.Settings -> ChatSettingsSheet(hub, session, onSheet)
         Picker.Effort -> PickerSheet("Select effort", effortChoices(session?.models.orEmpty(), session?.model), session?.effort, { hub.setEffort(it) }, EFFORT_NOTE) { onSheet(null) }
         Picker.Account -> PickerSheet("Select Claude account", (session?.accounts?.ifEmpty { null } ?: listOf(session?.account ?: "main")).map { Choice(it, ACCOUNT_LABEL[it] ?: it, listOfNotNull(ACCOUNT_NOTE[it], usageText(session?.usage).ifEmpty { null }?.takeIf { _ -> it == (session?.account ?: "main") }).joinToString(" · ")) }, session?.account ?: "main", { hub.setAccount(it) }) { onSheet(null) }
@@ -91,6 +97,10 @@ private fun AddSheet(s: ComposerState, uploading: Int, session: SessionInfo?, at
                 Hairline(lead = true)
                 ListRow("Connectors", "${conns.count { it.on }} on", leading = icon("plug"), onClick = { onSheet(Picker.Connectors) }, trailing = { Chevron() })
             }
+            if (session?.capabilities?.can("addDir") != false) {
+                Hairline(lead = true)
+                ListRow("Add folder", session?.dirs?.size?.takeIf { it > 0 }?.let { "$it added" }, leading = icon("folder"), onClick = { onSheet(Picker.Folders) }, trailing = { Chevron() })
+            }
         }
     }
 }
@@ -112,6 +122,37 @@ private fun ConnectorsSheet(hub: Hub, session: SessionInfo?, onSheet: (Picker?) 
         }
     }
 }
+
+// The folders Claude may use besides the chat folder (web AddFolder.tsx): the added ones to remove, then the repos to add.
+@Composable
+private fun FoldersSheet(hub: Hub, session: SessionInfo?, onSheet: (Picker?) -> Unit) {
+    val dirs = session?.dirs.orEmpty()
+    val chats by hub.store.state.select { it.live }
+    val ws by hub.workspace.collectAsState()
+    val choices = newChatChoices(groupByRepo(chats, ws), ws, session?.cwd).second.filter { it.key != null && it.key != session?.cwd && it.key !in dirs }
+    val icon = { name: String -> @Composable { AvIcon(name, null, Tokens.iconMd, tint = av.fgMuted) } }
+    val idle = session?.running != true && !hub.readOnly
+    Sheet({ onSheet(null) }, "Add folder", padded = false, full = false, onBack = { onSheet(Picker.Add) }) {
+        if (dirs.isNotEmpty()) {
+            SectionHeader("Added")
+            Group {
+                dirs.forEachIndexed { i, d ->
+                    if (i > 0) Hairline(lead = true)
+                    ListRow(dirName(d), d, leading = icon("folder"), onClick = if (idle) { { hub.setDirs(dirs - d) } } else null, trailing = { AvIcon("close", "Remove", Tokens.iconMd, tint = av.fgMuted) })
+                }
+            }
+        }
+        SectionHeader("Repos")
+        Group {
+            choices.forEachIndexed { i, r ->
+                if (i > 0) Hairline(lead = true)
+                ListRow(r.name, r.key, leading = icon("folder"), onClick = if (idle) { { hub.setDirs(dirs + r.key!!); onSheet(null) } } else null)
+            }
+        }
+    }
+}
+
+internal fun dirName(path: String) = path.trimEnd('/').substringAfterLast('/').ifEmpty { path }
 
 @Composable
 private fun ChatSettingsSheet(hub: Hub, session: SessionInfo?, onSheet: (Picker?) -> Unit) {

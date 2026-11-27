@@ -13,6 +13,7 @@ fun Capabilities.can(what: String) = when (what) {
     "subagents" -> subagents
     "forkAt" -> forkAt
     "contextUsage" -> contextUsage
+    "addDir" -> addDir
     else -> true
 }
 

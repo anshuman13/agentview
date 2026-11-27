@@ -27,6 +27,7 @@ function agentviewServer(o: { cwd: string; chat: () => string | null; host: Tool
 
 export function agentOptions(o: {
   cwd: string;
+  dirs?: string[];
   resume?: string;
   host: ToolCtx['host'];
   chat: () => string | null;
@@ -48,6 +49,7 @@ export function agentOptions(o: {
 }): Options {
   return {
     cwd: o.cwd,
+    ...(o.dirs?.length && { additionalDirectories: o.dirs }),
     resume: o.resume,
     forkSession: o.fork,
     effort: o.effort,
