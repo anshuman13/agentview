@@ -70,6 +70,8 @@
 .tr-box.denied .tr-err { color: var(--fg-faint); }
 .tr-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .tr-obj { color: var(--fg-muted); }
+a.tr-obj { color: var(--link); text-decoration: none; }
+a.tr-obj:hover { text-decoration: underline; }
 .tr-step.err .tr-text, .tr-step.denied .tr-text { color: var(--err); }
 .tr-step.denied .tr-mark { color: var(--err); }
 .tr-obj.mono { font-family: var(--mono); font-size: var(--fs-xs); }

@@ -1,0 +1,14 @@
+[
+  {"name": "push a new branch", "command": "git push -u origin claude-ref-test", "result": "branch 'claude-ref-test' set up to track 'origin/claude-ref-test'.", "verb": "Pushed", "object": "claude-ref-test"},
+  {"name": "push after a commit", "command": "git add -A && git commit -m 'x' && git push origin main", "verb": "Pushed", "object": "main"},
+  {"name": "push a refspec", "command": "git push --force-with-lease origin HEAD:refs/heads/fix-step", "verb": "Pushed", "object": "fix-step"},
+  {"name": "push without a branch", "command": "git push", "verb": "Pushed", "object": "the branch"},
+  {"name": "push HEAD", "command": "git push -u origin HEAD", "verb": "Pushed", "object": "the branch"},
+  {"name": "failed push keeps the plain label", "command": "git push origin main", "result": "rejected", "isError": true, "verb": null, "object": null},
+  {"name": "PR with its url", "command": "gh pr create --draft --title 'Add x' --body 'y'", "result": "Creating draft pull request\nhttps://github.com/anshuman13/agentview/pull/6\n", "verb": "Created", "object": "PR #6", "url": "https://github.com/anshuman13/agentview/pull/6"},
+  {"name": "push then PR names the PR", "command": "git push -u origin x && gh pr create --fill", "result": "https://github.com/o/r/pull/12", "verb": "Created", "object": "PR #12", "url": "https://github.com/o/r/pull/12"},
+  {"name": "PR still running", "command": "gh pr create --fill", "verb": "Created", "object": "a PR"},
+  {"name": "pr view is not a ship step", "command": "gh pr view 6", "verb": null, "object": null},
+  {"name": "git push in a message is not a push", "command": "git commit -m 'before git push'", "verb": null, "object": null},
+  {"name": "plain command", "command": "git status", "verb": null, "object": null}
+]

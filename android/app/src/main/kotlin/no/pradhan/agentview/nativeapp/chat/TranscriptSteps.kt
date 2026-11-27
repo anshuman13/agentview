@@ -135,8 +135,9 @@ internal fun ExploredRow(hub: Hub, id: String, steps: List<Item.Step>, cwd: Stri
 @Composable
 internal fun StepRow(it: Item.Step, cwd: String, settled: Boolean) {
     var open by rememberSaveable(it.id) { mutableStateOf(false) }
-    val label = stepLabel(it.use.name, it.use.input, cwd)
     val result = it.result
+    val label = stepLabel(it.use.name, it.use.input, cwd, result)
+    val uri = androidx.compose.ui.platform.LocalUriHandler.current
     val state = when {
         result == null -> if (settled) "idle" else "pending"
         isDenied(result) -> "denied"
@@ -156,9 +157,9 @@ internal fun StepRow(it: Item.Step, cwd: String, settled: Boolean) {
             Text(
                 androidx.compose.ui.text.buildAnnotatedString {
                     if (label.verb.isNotEmpty()) withStyleColor(text) { append(label.verb + " ") }
-                    withStyleColor(text, mono = label.mono) { append(label.obj) }
+                    withStyleColor(if (label.url != null) av.link else text, mono = label.mono) { append(label.obj) }
                 },
-                Modifier.weight(1f), style = Type.subheadline, color = av.fgMuted, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                Modifier.weight(1f).then(if (label.url != null) Modifier.clickable { runCatching { uri.openUri(label.url) } } else Modifier), style = Type.subheadline, color = av.fgMuted, maxLines = 1, overflow = TextOverflow.Ellipsis,
             )
             if (dur.isNotEmpty()) Text(dur, style = Type.footnote, color = av.fgMuted, modifier = Modifier.padding(start = Tokens.sp3))
             AvIcon(if (open) "chevron-down" else "chevron-right", null, Tokens.iconSm, Modifier.padding(start = Tokens.sp2), tint = av.fgFaint)

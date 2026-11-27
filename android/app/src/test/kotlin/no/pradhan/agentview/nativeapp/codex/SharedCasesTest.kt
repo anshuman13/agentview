@@ -48,6 +48,7 @@ import no.pradhan.agentview.nativeapp.chat.planFeedback
 import no.pradhan.agentview.nativeapp.chat.planParagraphs
 import no.pradhan.agentview.nativeapp.chat.newMarker
 import no.pradhan.agentview.nativeapp.chat.newReplies
+import no.pradhan.agentview.nativeapp.chat.shipStep
 import no.pradhan.agentview.nativeapp.chat.stepLabel
 import no.pradhan.agentview.nativeapp.chat.stepTone
 import no.pradhan.agentview.nativeapp.chat.attachMark
@@ -339,6 +340,15 @@ class SharedCasesTest {
             val l = stepLabel(c.str("tool"), c.getValue("input").jsonObject, c.str("cwd"))
             val expected = listOf(c.str("verb"), c.str("object"), c["mono"]?.jsonPrimitive?.boolean == true, c["cmd"]?.jsonPrimitive?.content, c.str("tone"))
             assertEquals(c.str("name"), expected, listOf(l.verb, l.obj, l.mono, l.cmd, stepTone(c.str("tool")).name.lowercase()))
+        }
+    }
+
+    @Test fun shipStepCases() {
+        for (c in cases("ship-step")) {
+            val result = c.nullable("result")?.let { ChatEvent(id = "r", kind = "tool_result", text = it.jsonPrimitive.content, isError = c["isError"]?.jsonPrimitive?.boolean == true) }
+            val l = shipStep(c.str("command"), result)
+            val expected = c.nullable("verb")?.let { listOf(it.jsonPrimitive.content, c.str("object"), c.nullable("url")?.jsonPrimitive?.content) }
+            assertEquals(c.str("name"), expected, l?.let { listOf(it.verb, it.obj, it.url) })
         }
     }
 

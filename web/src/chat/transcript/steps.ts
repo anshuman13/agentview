@@ -19,7 +19,7 @@ export type Item =
   | { kind: 'blocked'; id: string; ev: Extract<ChatEvent, { kind: 'blocked' }> }
   | { kind: 'review'; id: string; ev: Extract<ChatEvent, { kind: 'review' }> };
 
-type Label = { verb: string; object: string; mono?: boolean; cmd?: string };
+type Label = { verb: string; object: string; mono?: boolean; cmd?: string; url?: string };
 
 const AGENT_TOOLS = new Set(['Agent', 'Task']);
 
@@ -42,7 +42,25 @@ export function duration(ms: number) {
   return `${Math.round(ms / 3_600_000)}h`;
 }
 
-export function stepLabel(name: string, input: Record<string, unknown>, cwd = ''): Label {
+const PUSH = /(?:^|[;&|(\n])\s*git\s+push\b([^;&|\n]*)/;
+const PR_CREATE = /(?:^|[;&|(\n])\s*gh\s+pr\s+create\b/;
+const PR_URL = /https:\/\/github\.com\/[^\s/]+\/[^\s/]+\/pull\/(\d+)/;
+
+// A Bash call that pushes a branch or opens a PR, named by what it did: "Pushed main", "Created PR #6". Android Steps.kt shipStep says the same.
+export function shipStep(command: string, result?: { text: string; isError: boolean }): Omit<Label, 'cmd'> | null {
+  if (result?.isError) return null;
+  if (PR_CREATE.test(command)) {
+    const m = result && PR_URL.exec(result.text);
+    return m ? { verb: 'Created', object: `PR #${m[1]}`, url: m[0] } : { verb: 'Created', object: 'a PR' };
+  }
+  const push = PUSH.exec(command);
+  if (!push) return null;
+  const ref = push[1].trim().split(/\s+/).filter((a) => a && !a.startsWith('-'))[1] ?? '';
+  const branch = ref.slice(ref.lastIndexOf(':') + 1).replace(/^refs\/heads\//, '');
+  return { verb: 'Pushed', object: branch && branch !== 'HEAD' ? branch : 'the branch' };
+}
+
+export function stepLabel(name: string, input: Record<string, unknown>, cwd = '', result?: { text: string; isError: boolean }): Label {
   const s = (k: string) => (typeof input[k] === 'string' ? (input[k] as string) : '');
   const rel = (k: string) => relPath(s(k), cwd);
   const inDir = s('path') && rel('path') !== '.' ? rel('path') : '';
@@ -54,7 +72,8 @@ export function stepLabel(name: string, input: Record<string, unknown>, cwd = ''
     case 'Grep': return { verb: 'Searched', object: `"${s('pattern')}" in ${inDir || 'the project'}` };
     case 'Glob': return { verb: 'Listed', object: inDir ? `${inDir}/${s('pattern')}` : s('pattern') };
     case 'LS': return { verb: 'Listed', object: `${inDir || '.'}/` };
-    case 'Bash': return s('description') ? { verb: '', object: s('description'), cmd: s('command') } : { verb: 'Ran', object: firstLine(s('command')), mono: true };
+    case 'Bash': { const ship = shipStep(s('command'), result); if (ship) return { ...ship, cmd: s('command') };
+      return s('description') ? { verb: '', object: s('description'), cmd: s('command') } : { verb: 'Ran', object: firstLine(s('command')), mono: true }; }
     case 'WebFetch': return { verb: 'Fetched', object: s('url').replace(/^https?:\/\//, '').replace(/\/$/, '') };
     case 'WebSearch': return { verb: 'Searched the web for', object: `"${s('query')}"` };
     case 'Agent': case 'Task': return { verb: 'Delegated', object: s('description') };
@@ -266,7 +285,7 @@ export function awaitingReply(items: Item[], running: boolean) {
   return false;
 }
 
-const DOING: Record<string, string> = { Read: 'Reading', Edited: 'Editing', Wrote: 'Writing', Searched: 'Searching', Listed: 'Listing', Ran: 'Running', Fetched: 'Fetching', 'Searched the web for': 'Searching the web for', Delegated: 'Delegating', Called: 'Calling', Used: 'Using', 'Looked up': 'Looking up', Loaded: 'Loading' };
+const DOING: Record<string, string> = { Read: 'Reading', Edited: 'Editing', Wrote: 'Writing', Searched: 'Searching', Listed: 'Listing', Ran: 'Running', Fetched: 'Fetching', 'Searched the web for': 'Searching the web for', Delegated: 'Delegating', Called: 'Calling', Used: 'Using', 'Looked up': 'Looking up', Loaded: 'Loading', Pushed: 'Pushing', Created: 'Creating' };
 
 // The step a running turn is on, named as it happens ("Running npm test…"), or '' when none waits on a result. Android Steps.kt runningStep says the same.
 export function runningStep(items: Item[], cwd = '') {

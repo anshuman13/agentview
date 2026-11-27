@@ -32,7 +32,7 @@ import { attachMark } from '../../shared/attachMark';
 import { chatSessionOf } from '../../shared/chatLink';
 import { latestTodos, todoCount, todoCurrent, todoProgress, type TodoItem } from '../../shared/todos';
 import { mergeTail, trimHeld } from './app/runtime/pageEvents';
-import { alarmCard, buildTranscript, dayDividers, duration, newMarker, newReplies, openAtNew, rewindReplies, stepLabel, stepTone, turnAnswers, type Item } from './chat/transcript/steps';
+import { alarmCard, buildTranscript, dayDividers, duration, newMarker, newReplies, openAtNew, rewindReplies, shipStep, stepLabel, stepTone, turnAnswers, type Item } from './chat/transcript/steps';
 import { filePath } from './chat/transcript/md';
 import { buildCard, buildRows, type BuildCardInput } from './chat/transcript/buildCardLogic';
 import { unreadOrder, type UnreadChat } from './sessions/chatNav';
@@ -185,6 +185,13 @@ describe('cases shared with the Android app', () => {
     it(`stepLabel: ${c.name}`, () => {
       const l = stepLabel(c.tool, c.input, c.cwd);
       expect([l.verb, l.object, !!l.mono, l.cmd ?? null, stepTone(c.tool)]).toEqual([c.verb, c.object, !!c.mono, c.cmd ?? null, c.tone]);
+    });
+  }
+
+  for (const c of cases<{ name: string; command: string; result?: string; isError?: boolean; verb: string | null; object: string | null; url?: string }>('ship-step')) {
+    it(`shipStep: ${c.name}`, () => {
+      const l = shipStep(c.command, c.result === undefined ? undefined : { text: c.result, isError: !!c.isError });
+      expect(l && [l.verb, l.object, l.url ?? null]).toEqual(c.verb === null ? null : [c.verb, c.object, c.url ?? null]);
     });
   }
 

@@ -33,7 +33,7 @@ fun cmdPreview(cmd: String): String {
     return "$ " + if (flat.length > CMD_PREVIEW) flat.take(CMD_PREVIEW).trimEnd() + "\u2026" else flat
 }
 
-data class Label(val verb: String, val obj: String, val mono: Boolean = false, val cmd: String? = null)
+data class Label(val verb: String, val obj: String, val mono: Boolean = false, val cmd: String? = null, val url: String? = null)
 
 enum class Tone { Read, Edit, Run, Web, Mcp, Agent, Other }
 
@@ -88,7 +88,24 @@ fun alarmCard(use: ChatEvent, result: ChatEvent?, running: Boolean): AlarmCardTe
     }
 }
 
-fun stepLabel(name: String, input: JsonObject, cwd: String = ""): Label {
+private val PUSH = Regex("(?:^|[;&|(\\n])\\s*git\\s+push\\b([^;&|\\n]*)")
+private val PR_CREATE = Regex("(?:^|[;&|(\\n])\\s*gh\\s+pr\\s+create\\b")
+private val PR_URL = Regex("https://github\\.com/[^\\s/]+/[^\\s/]+/pull/(\\d+)")
+
+// web steps.ts shipStep: a Bash call that pushes a branch or opens a PR, named by what it did ("Pushed main", "Created PR #6").
+fun shipStep(command: String, result: ChatEvent? = null): Label? {
+    if (result?.isError == true) return null
+    if (PR_CREATE.containsMatchIn(command)) {
+        val m = result?.let { PR_URL.find(it.text) }
+        return if (m != null) Label("Created", "PR #${m.groupValues[1]}", url = m.value) else Label("Created", "a PR")
+    }
+    val push = PUSH.find(command) ?: return null
+    val ref = push.groupValues[1].trim().split(Regex("\\s+")).filter { it.isNotEmpty() && !it.startsWith("-") }.getOrElse(1) { "" }
+    val branch = ref.substring(ref.lastIndexOf(':') + 1).removePrefix("refs/heads/")
+    return Label("Pushed", if (branch.isNotEmpty() && branch != "HEAD") branch else "the branch")
+}
+
+fun stepLabel(name: String, input: JsonObject, cwd: String = "", result: ChatEvent? = null): Label {
     fun rel(k: String) = relPath(input.s(k), cwd)
     val inDir = if (input.s("path").isNotEmpty() && rel("path") != ".") rel("path") else ""
     when (name) {
@@ -99,7 +116,7 @@ fun stepLabel(name: String, input: JsonObject, cwd: String = ""): Label {
         "Grep" -> return Label("Searched", "\"${input.s("pattern")}\" in ${inDir.ifEmpty { "the project" }}")
         "Glob" -> return Label("Listed", if (inDir.isNotEmpty()) "$inDir/${input.s("pattern")}" else input.s("pattern"))
         "LS" -> return Label("Listed", "${inDir.ifEmpty { "." }}/")
-        "Bash" -> return if (input.s("description").isNotEmpty()) Label("", input.s("description"), cmd = input.s("command")) else Label("Ran", firstLine(input.s("command")), mono = true)
+        "Bash" -> return shipStep(input.s("command"), result)?.copy(cmd = input.s("command")) ?: if (input.s("description").isNotEmpty()) Label("", input.s("description"), cmd = input.s("command")) else Label("Ran", firstLine(input.s("command")), mono = true)
         "WebFetch" -> return Label("Fetched", input.s("url").replace(Regex("^https?://"), "").removeSuffix("/"))
         "WebSearch" -> return Label("Searched the web for", "\"${input.s("query")}\"")
         "Agent", "Task" -> return Label("Delegated", input.s("description"))
@@ -296,7 +313,7 @@ fun rewindReplies(items: List<Item>): Map<String, Item.User> {
 fun awaitingReply(items: List<Item>, running: Boolean): Boolean =
     running && items.lastOrNull { it !is Item.User || !it.queued } is Item.User
 
-private val DOING = mapOf("Read" to "Reading", "Edited" to "Editing", "Wrote" to "Writing", "Searched" to "Searching", "Listed" to "Listing", "Ran" to "Running", "Fetched" to "Fetching", "Searched the web for" to "Searching the web for", "Delegated" to "Delegating", "Called" to "Calling", "Used" to "Using", "Looked up" to "Looking up", "Loaded" to "Loading")
+private val DOING = mapOf("Read" to "Reading", "Edited" to "Editing", "Wrote" to "Writing", "Searched" to "Searching", "Listed" to "Listing", "Ran" to "Running", "Fetched" to "Fetching", "Searched the web for" to "Searching the web for", "Delegated" to "Delegating", "Called" to "Calling", "Used" to "Using", "Looked up" to "Looking up", "Loaded" to "Loading", "Pushed" to "Pushing", "Created" to "Creating")
 
 // The step a running turn is on, named as it happens ("Running npm test…"), or "" when none waits on a result (web steps.ts runningStep).
 fun runningStep(items: List<Item>, cwd: String = ""): String {
