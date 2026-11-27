@@ -371,10 +371,6 @@ export class AgentSession implements AgentHost {
     return this.prompts.steer(text, id);
   }
 
-  changePlan(next: string[]) {
-    this.turn.changePlan(next);
-  }
-
   startCompacting() {
     this.compaction.start();
   }

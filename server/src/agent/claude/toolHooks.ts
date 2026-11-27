@@ -14,7 +14,6 @@ const NO_STEPS = new Set([BIG_BRO]);
 // The callbacks the CLI makes around tool calls and when a turn stops.
 export class ToolHooks {
   private sinceStatus = 0;
-  private injected: string[] = [];
 
   constructor(private host: AgentHost) {}
 
@@ -53,29 +52,17 @@ export class ToolHooks {
 
   afterTool(input: HookInput): HookJSONOutput {
     if (input.agent_id || input.hook_event_name !== 'PostToolUse') return {};
-    const notes = this.injected.splice(0);
     if (input.tool_name.endsWith('__set_status')) this.sinceStatus = 0;
     else if (++this.sinceStatus >= STATUS_EVERY) {
       this.sinceStatus = 0;
-      notes.push(STATUS_REMINDER);
+      return { hookSpecificOutput: { hookEventName: 'PostToolUse', additionalContext: STATUS_REMINDER } };
     }
-    return notes.length ? { hookSpecificOutput: { hookEventName: 'PostToolUse', additionalContext: notes.join('\n\n') } } : {};
-  }
-
-  // Held until the next top-level tool call finishes, which hands it to Claude as context, or until the turn would end.
-  inject(text: string) {
-    this.injected.push(text);
-  }
-
-  clearInjected() {
-    const notes = this.injected.splice(0);
-    return notes.length ? notes.join('\n\n') : null;
+    return {};
   }
 
   async onStop(input: HookInput): Promise<HookJSONOutput> {
     if (input.hook_event_name !== 'Stop' || input.agent_id) return {};
     this.host.crons = input.session_crons ?? [];
-    const notes = this.injected.splice(0);
-    return notes.length ? { decision: 'block', reason: notes.join('\n\n') } : {};
+    return {};
   }
 }

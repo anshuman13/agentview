@@ -3,7 +3,7 @@ process.env.TZ = 'UTC';
 import { readFileSync } from 'node:fs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'bun:test';
 import { barHidden, barIdle, barState, type BarEvent } from '../../shared/bottomBar';
-import { reviewLabel, usageMenuLabel } from '../../shared/chatMenu';
+import { reviewLabel } from '../../shared/chatMenu';
 import { chatNotices, type ChatNotice } from '../../shared/notices';
 import { appCounts } from '../../shared/counts';
 import { TABLES } from '../../shared/tables';
@@ -765,7 +765,6 @@ describe('cases shared with the Android app', () => {
 
   const menu = JSON.parse(readFileSync(new URL('../../shared/fixtures/chat-menu.json', import.meta.url), 'utf8'));
   for (const c of menu.review) it(`reviewLabel: ${c.name}`, () => expect(reviewLabel(c.running, c.hasChanges)).toBe(c.expected));
-  for (const c of menu.usage) it(`usageMenuLabel: ${c.name}`, () => expect(usageMenuLabel(c.account, c.week, c.fiveHour)).toBe(c.expected));
 
   type NoticeCase = { name: string; before: Partial<LiveChat>; now: Partial<LiveChat>; muted: boolean; expected: unknown };
   const liveChat = (c: Partial<LiveChat>) => ({ id: 'a', title: 'Fix tests', cwd: '/Users/me/agentview/', running: false, pending: 0, status: '', lastActive: 0, ...c }) as LiveChat;

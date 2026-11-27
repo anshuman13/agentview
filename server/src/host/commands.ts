@@ -42,11 +42,6 @@ function steerCommand(chat: AgentSession, msg: Msg<'steer'>) {
   notSent(chat, chat.steer(msg.text, shortId(msg.id)));
 }
 
-function planCommand(chat: AgentSession, msg: Msg<'plan'>) {
-  if (!Array.isArray(msg.next)) return;
-  chat.changePlan(msg.next.filter((t) => typeof t === 'string' && t.trim()).map((t) => t.trim().slice(0, 120)).slice(0, 12));
-}
-
 function runHookCommand(chat: AgentSession, msg: Msg<'run_hook'>) {
   if (typeof msg.name === 'string') chat.hooks.run(msg.name);
 }
@@ -66,8 +61,6 @@ export function command(chat: AgentSession, msg: ClientMessage): Promise<unknown
       return sendNowCommand(chat, msg);
     case 'steer':
       return steerCommand(chat, msg);
-    case 'plan':
-      return planCommand(chat, msg);
     case 'answer':
       return void chat.approvals.answerQuestion(msg.id, msg.answers);
     case 'permission':

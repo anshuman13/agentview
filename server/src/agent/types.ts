@@ -45,10 +45,6 @@ export interface AgentDriver {
   readonly compactEndsTurn: boolean;
   // A /x the session does not own. False means the session sends the text as a prompt; true means the driver handled or refused it.
   command(name: string, args: string): boolean;
-  // Adds context to the running turn without a user event; false when no turn is running to take it.
-  inject(text: string): Promise<boolean>;
-  // Drops what inject held for a step that never came, and returns it; a stopped turn must not carry it into the next one.
-  clearInjected(): string | null;
   // Starts a code review of the working tree or a PR; the findings reach host.reportFindings.
   review(target: 'local' | number, id?: string): void;
   // cancelQueued also drops messages sent with 'next' that Claude has not read yet.

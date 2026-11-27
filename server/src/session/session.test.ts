@@ -321,21 +321,6 @@ describe('AgentSession turns', () => {
     expect(s.state.session.running).toBe(false);
   });
 
-  it('a plan change made during a turn goes out before a queued prompt', async () => {
-    const { s, result } = fakeSession();
-    const sent = () => s.state.events.filter((e) => e.kind === 'user' && !e.queued).map((e) => e.kind === 'user' && e.text);
-    const waiting = () => s.state.events.filter((e) => e.kind === 'user' && e.queued).map((e) => e.kind === 'user' && e.text);
-    s.sendPrompt('task');
-    await s.prompt('next');
-    s.changePlan(['a']);
-    result('r1');
-    expect(sent()).toEqual(['task', expect.stringContaining('1. a')]);
-    expect(waiting()).toEqual(['next']);
-    result('r2');
-    expect(sent()).toEqual(['task', expect.stringContaining('1. a'), 'next']);
-    expect(waiting()).toEqual([]);
-  });
-
   it('interrupt drops the queued prompts with a single init', async () => {
     const { s, interrupt, result } = fakeSession();
     const sent: ServerMessage[] = [];
@@ -448,46 +433,8 @@ describe('changed files', () => {
   });
 });
 
-describe('plan changes', () => {
+describe('tool hooks', () => {
   const hook = { hook_event_name: 'PostToolUse', session_id: 's', transcript_path: '', cwd: '', tool_name: 'Bash', tool_input: {}, tool_response: '', tool_use_id: 't' } as never;
-
-  it('delivers a plan change at the next tool call without interrupting', () => {
-    const { s, interrupt } = fakeSession();
-    s.sendPrompt('task');
-    s.changePlan(['curl /check', 'stop the server']);
-    expect(interrupt).not.toHaveBeenCalled();
-    s.pushEvent({ id: 't1', kind: 'tool_use', name: 'Bash', input: {}, at: 0 });
-    const out = (s.driver as ClaudeDriver).toolHooks.afterTool(hook) as { hookSpecificOutput?: { additionalContext?: string } };
-    expect(out.hookSpecificOutput?.additionalContext).toContain('1. curl /check\n2. stop the server');
-    expect((s.driver as ClaudeDriver).toolHooks.afterTool(hook)).toEqual({});
-  });
-
-  it('skips sub-agent tool calls', () => {
-    const { s } = fakeSession();
-    s.sendPrompt('task');
-    s.changePlan(['a']);
-    s.pushEvent({ id: 't1', kind: 'tool_use', name: 'Bash', input: {}, at: 0 });
-    expect((s.driver as ClaudeDriver).toolHooks.afterTool({ ...(hook as object), agent_id: 'sub' } as never)).toEqual({});
-    expect((s.driver as ClaudeDriver).toolHooks.afterTool(hook)).toMatchObject({ hookSpecificOutput: { additionalContext: expect.stringContaining('1. a') } });
-  });
-
-  it('sends a plan change as a prompt when the agent cannot take it mid-turn', async () => {
-    const { s } = fakeSession();
-    s.sendPrompt('task');
-    vi.spyOn(s.driver, 'inject').mockResolvedValue(false);
-    s.changePlan(['a']);
-    await Promise.resolve();
-    expect(s.state.events.filter((e) => e.kind === 'user').at(-1)).toMatchObject({ text: expect.stringContaining('1. a') });
-  });
-
-  it('sends an undelivered plan change as a prompt when the turn ends', () => {
-    const { s, result } = fakeSession();
-    s.sendPrompt('task');
-    s.changePlan(['a']);
-    result('r1');
-    expect(s.state.session.running).toBe(true);
-    expect(s.state.events.filter((e) => e.kind === 'user').at(-1)).toMatchObject({ text: expect.stringContaining('1. a') });
-  });
 
   it('reminds Claude to report progress after 8 tool calls without set_status', () => {
     const { s } = fakeSession();

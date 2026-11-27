@@ -338,15 +338,6 @@ export class ClaudeDriver implements AgentDriver {
     return false;
   }
 
-  async inject(text: string) {
-    this.toolHooks.inject(text);
-    return true;
-  }
-
-  clearInjected() {
-    return this.toolHooks.clearInjected();
-  }
-
   review(target: 'local' | number, id?: string) {
     this.send(target === 'local' ? '/code-review' : `/code-review ${target}`, id);
   }

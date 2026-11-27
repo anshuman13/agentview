@@ -213,7 +213,6 @@ private fun itemsFrom(events: List<ChatEvent>, results: Map<String, ChatEvent>, 
             e.kind == "system" -> items += Item.System(e.id, e.text, e.error)
             e.kind == "blocked" -> items += Item.Blocked(e.id, e)
             e.kind == "review" -> items += Item.Review(e.id, e)
-            e.kind == "plan" -> items += Item.System(e.id, if (e.next.isNotEmpty()) "You changed the next steps (${e.next.size})" else "You cleared the next steps")
             e.kind == "tool_use" && !e.name.endsWith("__set_status") -> {
                 val result = results[e.id]
                 val count = editCount(e.name, e.input)

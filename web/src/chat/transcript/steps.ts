@@ -146,7 +146,6 @@ function itemsFrom(events: ChatEvent[], results: Map<string, ToolResult>, childr
     else if (e.kind === 'system') items.push({ kind: 'system', id: e.id, text: e.text, ...(e.error && { error: true }) });
     else if (e.kind === 'blocked') items.push({ kind: 'blocked', id: e.id, ev: e });
     else if (e.kind === 'review') items.push({ kind: 'review', id: e.id, ev: e });
-    else if (e.kind === 'plan') items.push({ kind: 'system', id: e.id, text: e.next.length ? `You changed the next steps (${e.next.length})` : 'You cleared the next steps' });
     else if (e.kind === 'tool_use' && !e.name.endsWith('__set_status')) {
       const result = results.get(e.id);
       const count = editCount(e.name, e.input);
@@ -167,7 +166,7 @@ function itemsFrom(events: ChatEvent[], results: Map<string, ToolResult>, childr
   return items;
 }
 
-const TEXT_KINDS = new Set(['assistant', 'user', 'system', 'plan', 'blocked', 'review']);
+const TEXT_KINDS = new Set(['assistant', 'user', 'system', 'blocked', 'review']);
 const textOnly = (e: ChatEvent) => TEXT_KINDS.has(e.kind) && !('parent' in e && e.parent);
 
 // Where the trailing run of top-level text events starts.

@@ -1,4 +1,3 @@
-import { randomUUID } from 'node:crypto';
 import { costRise } from '../../../shared/cost.js';
 import { providerLabel } from '../../../shared/providers.js';
 import { clock } from '../../../shared/util.js';
@@ -7,11 +6,6 @@ import type { UserEvent } from './messageQueue.js';
 import type { AgentSession } from './session.js';
 
 const COMPACT = Symbol('compact');
-
-const planChangeText = (next: string[]) =>
-  next.length
-    ? `I changed your plan. The remaining steps are now:\n${next.map((s, i) => `${i + 1}. ${s}`).join('\n')}\nFollow this plan from here and update set_status to match.`
-    : 'I removed the remaining steps of your plan. Finish the current step, then stop and tell me where things stand.';
 
 export class Turn {
   count = 0;
@@ -38,14 +32,6 @@ export class Turn {
   drop(inputs: number) {
     this.count = Math.max(0, this.count - inputs);
     return this.count === 0;
-  }
-
-  changePlan(next: string[]) {
-    this.s.pushEvent({ id: randomUUID(), kind: 'plan', next, at: Date.now() });
-    const text = planChangeText(next);
-    // Mid-turn it reaches the agent at its next step or before the turn would end; an agent that cannot take it gets a prompt.
-    if (this.s.state.session.running) void this.s.driver.inject(text).then((taken) => taken || this.s.sendPrompt(text));
-    else this.s.sendPrompt(text);
   }
 
   started(why?: string) {
@@ -133,9 +119,6 @@ export class Turn {
   }
 
   private followUp() {
-    // A plan change that came after the agent's last step goes as the next prompt.
-    const plan = this.s.driver.clearInjected();
-    if (plan) return plan;
     // After a failed turn or a usage limit the hooks wait for the next good turn, which still sees the edits.
     const failed = Boolean(this.lastError || this.s.usage.reset);
     if (!failed && this.s.compaction.due(this.s.state.session.context ?? 0, this.s.state.session.contextWindow)) return COMPACT;
@@ -150,7 +133,6 @@ export class Turn {
     this.expectTurn = false;
     this.count = 0;
     s.setSession({ running: false, stopping: false, compacting: false });
-    s.driver.clearInjected();
     s.approvals.denyAll(`${providerLabel(s.driver.provider)} exited before this was answered.`);
     // Closing the chat also ends the CLI; a job run stays open so its review or a reopened chat can take it back.
     const job = s.closed ? undefined : s.runs.jobFor(s.id);

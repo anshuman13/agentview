@@ -34,7 +34,6 @@ export class Stopper {
   async interrupt() {
     const { driver, state, turn, waiting } = this.s;
     if (!driver.attached || !state.session.running || state.session.stopping) return;
-    driver.clearInjected();
     const idle = turn.drop(driver.dropInput());
     waiting.dropQueued();
     waiting.dropPending();

@@ -68,20 +68,16 @@ describe('buildTurns', () => {
     expect(turns[1].files).toEqual([]);
   });
 
-  it('tracks next steps from status and plan changes, cleared by a new prompt', () => {
-    const plan: ChatEvent = { id: `p${at()}`, kind: 'plan', next: ['curl /check'], at: n };
+  it('tracks next steps from status, cleared by a new prompt', () => {
     expect(buildTurns([user('go'), status({ text: 'a', next: ['b', 'c'] }), status({ text: 'b', next: ['c'] })]).next).toEqual(['c']);
     expect(buildTurns([user('go'), status({ text: 'a', next: ['b'] }), user('steer')]).next).toEqual([]);
-    expect(buildTurns([user('go'), status({ text: 'a', next: ['b'] }), plan]).next).toEqual(['curl /check']);
   });
 
-  it('ignores the status tool for the last tool and counts advisor and Fable consults', () => {
+  it('ignores the status tool for the last tool and keeps Fable hand-backs as notes', () => {
     const ask = tool('Agent', { subagent_type: 'big-bro' });
     const answer = result(ask, '[Subagent hand-back] The report follows:\n  Use a lock.\n  Then retry.\nagentId: a1');
     const b = buildTurns([user('go'), tool('Advisor'), tool('Advisor'), ask, answer, tool('Bash'), status({ text: 'x' })]);
     expect(b.lastTool?.name).toBe('Bash');
-    expect(b.advisor).toBe(2);
-    expect(b.fable).toBe(1);
     expect(b.turns[0].notes.at(-1)).toMatchObject({ kind: 'fable', text: 'Use a lock.\nThen retry.' });
   });
 

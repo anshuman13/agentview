@@ -1,26 +1,20 @@
 import { useRef, useState } from 'react';
 import { IconButton } from '../../ui/Button';
-import { Menu, MenuItem, MenuSeparator } from '../../ui/Menu';
-import { reviewLabel, usageMenuLabel } from '../../../../shared/chatMenu';
-import { command } from '../../ui/util';
+import { Menu, MenuItem } from '../../ui/Menu';
+import { reviewLabel } from '../../../../shared/chatMenu';
 
 type Props = {
   icon?: string;
-  waitingElsewhere: number;
-  usage: { account: string | null; week: number | null; fiveHour: number | null; onClick: () => void } | null | undefined;
-  macName: string | null | undefined;
-  extras: string;
   running: boolean;
   hasChanges: boolean;
   review: () => void;
   rename?: () => void;
 };
 
-export function ChatDetailsMenu({ icon = 'kebab-horizontal', waitingElsewhere, usage, macName, extras, running, hasChanges, review, rename }: Props) {
+export function ChatDetailsMenu({ icon = 'kebab-horizontal', running, hasChanges, review, rename }: Props) {
   const [more, setMore] = useState(false);
   const moreBtn = useRef<HTMLButtonElement>(null);
   const reviewOff = running || !hasChanges;
-  const usageLabel = usage && usageMenuLabel(usage.account, usage.week, usage.fiveHour);
   const choose = (fn: () => void) => () => { setMore(false); fn(); };
   return (
     <span className="tl-more">
@@ -29,11 +23,6 @@ export function ChatDetailsMenu({ icon = 'kebab-horizontal', waitingElsewhere, u
         <Menu trigger={moreBtn} onClose={() => setMore(false)}>
           <MenuItem icon="edit" disabled={!rename} onClick={rename && choose(rename)}>Rename</MenuItem>
           <MenuItem icon="source-control" disabled={reviewOff} title={reviewOff ? undefined : 'The agent reviews the working tree, findings show in the Changes view'} onClick={choose(review)}>{reviewLabel(running, hasChanges)}</MenuItem>
-          {waitingElsewhere > 0 && <MenuItem icon="inbox" onClick={choose(() => command('view:chats'))}>{waitingElsewhere} waiting</MenuItem>}
-          {usageLabel && <MenuItem icon="pulse" onClick={choose(usage.onClick)}>{usageLabel}</MenuItem>}
-          {(macName || extras) && <MenuSeparator />}
-          {macName && <MenuItem icon="vm" disabled>{macName}</MenuItem>}
-          {extras && <MenuItem disabled>{extras}</MenuItem>}
         </Menu>
       )}
     </span>

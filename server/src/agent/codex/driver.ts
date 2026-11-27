@@ -261,15 +261,6 @@ export class CodexDriver implements AgentDriver {
     }
   }
 
-  async inject(text: string) {
-    await this.ready?.catch(() => undefined);
-    return this.rpc ? this.steer(this.rpc, [{ type: 'text', text, text_elements: [] }]) : false;
-  }
-
-  clearInjected() {
-    return null;
-  }
-
   // An effort the model does not list is left out, so the model keeps its own default.
   private modelParams() {
     const { model, effort } = this.host.state.session;

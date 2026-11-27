@@ -39,7 +39,7 @@ function newTurn(id: string, prompt: string, phase = false): Turn {
   return { id, prompt, phase, files: [], commands: [], notes: [] };
 }
 
-type Snapshot = { turns: Turn[]; next: string[]; advisor: number; lastTool?: ToolUse; fable: number };
+type Snapshot = { turns: Turn[]; next: string[]; lastTool?: ToolUse };
 
 const cloneTurn = (t: Turn): Turn => ({ ...t, notes: [...t.notes] });
 
@@ -75,12 +75,11 @@ function turnsFrom(events: ChatEvent[], from = 0, split?: number, seed?: Snapsho
   const turnOf = new Map<string, Turn>();
   const fableCalls = new Set<string>();
   let next = seed?.next ?? [];
-  let advisor = seed?.advisor ?? 0;
   let lastTool = seed?.lastTool;
   let snap: Snapshot | undefined;
   const take = () => {
     const last = turns.at(-1);
-    snap = { turns: turns.map((t) => (t === last ? cloneTurn(t) : t)), next, advisor, lastTool, fable: fableCalls.size };
+    snap = { turns: turns.map((t) => (t === last ? cloneTurn(t) : t)), next, lastTool };
   };
   const current = () => turns.at(-1) ?? turns[turns.push(newTurn('start', '')) - 1];
 
@@ -105,7 +104,6 @@ function turnsFrom(events: ChatEvent[], from = 0, split?: number, seed?: Snapsho
       const text = stripRound(e.text).trim();
       if (text) turn.reply = { id: e.id, text, streaming: e.streaming, at: e.at };
     }
-    if (e.kind === 'plan') next = e.next;
     if (e.kind === 'system' && isNoteText(e.text)) turn.notes.push({ id: e.id, text: e.text, kind: /fail|limit|logged out/i.test(e.text) ? 'important' : 'done' });
     if (e.kind === 'tool_result' && fableCalls.has(e.toolUseId) && !e.isError) turn.notes.push({ id: e.id, text: handBack(e.text), kind: 'fable' });
     if (e.kind !== 'tool_use') continue;
@@ -115,13 +113,12 @@ function turnsFrom(events: ChatEvent[], from = 0, split?: number, seed?: Snapsho
     }
     lastTool = e;
     const result = results.get(e.id);
-    if (e.name === 'Advisor') advisor++;
     if (e.input.subagent_type === BIG_BRO) fableCalls.add(e.id);
     recordTool(turn, e, result);
   }
 
   const kept = turns.filter((t) => t.id !== 'start' || t.reply || t.files.length || t.commands.length || t.notes.length);
-  return { out: { turns: kept, next, lastTool, advisor, fable: (seed?.fable ?? 0) + fableCalls.size }, snap };
+  return { out: { turns: kept, next, lastTool }, snap };
 }
 
 export function createTurnsBuilder() {

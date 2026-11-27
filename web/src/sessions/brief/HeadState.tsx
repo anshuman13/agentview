@@ -1,8 +1,6 @@
 import { useRef, useState } from 'react';
 import { Menu } from '../../ui/Menu';
-import { send } from '../../app/store';
 import { Icon } from '../../ui/Icon';
-import { Button, IconButton } from '../../ui/Button';
 import { headerState } from '../runLogic';
 import type { LiveChat } from '../../../../shared/protocol';
 import type { ToolUse } from '../../chat/transcript/steps';
@@ -19,49 +17,11 @@ type Props = {
   next: string[];
 };
 
-function Step({ text, editing = false, onSave, onDrop }: { text: string; editing?: boolean; onSave: (v: string) => void; onDrop: () => void }) {
-  const [edit, setEdit] = useState(editing);
-  const [value, setValue] = useState(text);
-  if (edit) {
-    const done = () => { setEdit(false); if (value.trim() !== text) onSave(value.trim()); else if (!text) onDrop(); };
-    return (
-      <li className="step editing">
-        <input
-          autoFocus
-          value={value}
-          placeholder="Describe the step"
-          onChange={(e) => setValue(e.target.value)}
-          onBlur={done}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' && !e.nativeEvent.isComposing) done();
-            if (e.key === 'Escape') { setValue(text); setEdit(false); if (!text) onDrop(); }
-          }}
-        />
-        <IconButton icon="trash" label="Remove step" size="sm" onPointerDown={(e) => e.preventDefault()} onClick={() => { setEdit(false); onDrop(); }} />
-      </li>
-    );
-  }
-  return (
-    <li className="step" title="Tap to edit" onClick={() => setEdit(true)}>
-      <span className="text">{text}</span>
-    </li>
-  );
-}
-
-const setNext = (list: string[]) => send({ type: 'plan', next: list });
-
-function StepList({ done, next, adding, setAdding }: { done: Props['done']; next: string[]; adding: boolean; setAdding: (v: boolean) => void }) {
+function StepList({ done, next }: { done: Props['done']; next: string[] }) {
   return (
     <ul className="steps">
       {done.map((d) => <li key={d.id} className="step done"><Icon name="check" small /><span className="text">{d.text}</span></li>)}
-      {next.map((t, i) => (
-        <Step key={`${i}:${t}`} text={t} onSave={(v) => setNext(next.map((x, j) => (j === i ? v : x)).filter(Boolean))} onDrop={() => setNext(next.filter((_, j) => j !== i))} />
-      ))}
-      {adding ? (
-        <Step text="" editing onSave={(v) => { setAdding(false); if (v) setNext([...next, v]); }} onDrop={() => setAdding(false)} />
-      ) : (
-        <li className="step add"><Button variant="plain" size="sm" icon="add" onClick={() => setAdding(true)}>Add a step</Button></li>
-      )}
+      {next.map((t, i) => <li key={`${i}:${t}`} className="step"><span className="text">{t}</span></li>)}
     </ul>
   );
 }
@@ -78,7 +38,6 @@ const markIcon = (state: Props['state']) => <Icon name={state === 'waiting' ? 'b
 export function HeadState(p: Props) {
   const { state, lastReply, lastTool, done, next } = p;
   const [open, setOpen] = useState(false);
-  const [adding, setAdding] = useState(false);
   const btn = useRef<HTMLButtonElement>(null);
   const text = nowText(p);
   const count = done.length + next.length;
@@ -92,7 +51,7 @@ export function HeadState(p: Props) {
         <Icon name={open ? 'chevron-up' : 'chevron-down'} small />
       </button>
       {open && (
-        <Menu trigger={btn} onClose={() => { setOpen(false); setAdding(false); }} className="tl-pop">
+        <Menu trigger={btn} onClose={() => setOpen(false)} className="tl-pop">
           <div className={`tl-now ${state}`}>
             <span className="mark">{markIcon(state)}</span>
             <span className="text">
@@ -100,7 +59,7 @@ export function HeadState(p: Props) {
               {state === 'running' && lastTool?.kind === 'tool_use' && <span className="tool">{lastTool.summary}</span>}
             </span>
           </div>
-          <StepList done={done} next={next} adding={adding} setAdding={setAdding} />
+          <StepList done={done} next={next} />
         </Menu>
       )}
     </span>

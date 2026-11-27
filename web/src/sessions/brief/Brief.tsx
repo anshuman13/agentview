@@ -18,8 +18,6 @@ import { useNarrow } from '../../app/shell/useNarrow';
 import { command, plural, useTick } from '../../ui/util';
 import { newChat } from '../../app/newChat';
 import { askChat } from '../../chat/chatActions';
-import { useMacName } from '../../app/shell/macName';
-import { useUsage } from '../../app/shell/StatusItems';
 import { RenameInput } from '../RenameInput';
 import { renameChat, useWorkspace } from '../folders';
 import { showChat } from '../openChat';
@@ -37,7 +35,6 @@ export function Brief() {
   const events = useStore((s) => s.events);
   const status = useStore((s) => s.status);
   const running = useStore((s) => s.session.running);
-  const macName = useMacName();
   const stopping = useStore((s) => s.session.stopping);
   const cwd = useStore((s) => s.session.cwd);
   const sessionId = useStore((s) => s.session.id);
@@ -50,14 +47,11 @@ export function Brief() {
   const pending = useStore((s) => s.pending);
   const waiting = pending.length > 0;
   const [build] = useState(createTurnsBuilder);
-  const { turns, next, lastTool, advisor, fable } = useMemo(() => build(events), [build, events]);
-  const waitingElsewhere = useStore((s) => s.live.filter((c) => c.id !== s.session.id && c.pending > 0).length + s.attention.length);
-  const usage = useUsage();
+  const { turns, next, lastTool } = useMemo(() => build(events), [build, events]);
   // The review reads the working tree, which can hold edits older than the loaded events.
   const uncommitted = (useGit().status?.files.length ?? 0) > 0;
   const [agentSel, setAgentSel] = useState<string | null>(null);
   const [showAgents, setShowAgents] = useState(false);
-  const extras = [advisor > 0 && `advisor ${advisor}×`, fable > 0 && `Fable ${fable}×`].filter(Boolean).join(' · ');
   const lastReply = lastReplyOf(turns);
   const doneSteps = useMemo(() => (turns.at(-1)?.notes ?? []).filter((n) => n.kind === 'done' && n.id.endsWith(':done')), [turns]);
   const state = waiting ? 'waiting' : stopping ? 'stopping' : running ? 'running' : 'idle';
@@ -135,7 +129,7 @@ export function Brief() {
           </span>
           <span className="spacer" />
           {phone && <IconButton icon="edit" label="New chat" onClick={() => newChat({ cwd })} />}
-          <ChatDetailsMenu icon={phone ? 'kebab-vertical' : undefined} waitingElsewhere={waitingElsewhere} usage={usage} macName={macName} extras={extras} running={running} hasChanges={uncommitted || turns.some((t) => t.files.length > 0)} review={() => askChat(REVIEW_LOCAL)} rename={startRename} />
+          <ChatDetailsMenu icon={phone ? 'kebab-vertical' : undefined} running={running} hasChanges={uncommitted || turns.some((t) => t.files.length > 0)} review={() => askChat(REVIEW_LOCAL)} rename={startRename} />
         </div>
         {from && <button className="tl-from" onClick={() => showChat({ sessionId: from.sessionId })}>{from.text}</button>}
         <div className="tl-line">
