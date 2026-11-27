@@ -146,7 +146,7 @@ export function Brief() {
           <HeadState state={state} status={status} chat={live} pending={pending.length} lastReply={lastReply} lastTool={lastTool} done={doneSteps} next={next} cwd={cwd ?? ''} />
           {side && (phone || railClosed) && <button className="tl-agents" onClick={() => { if (phone) { setShowAgents(true); setAgentSel(null); } else setRailClosed(false); }}>{agentCount > 0 ? plural(agentCount, 'agent') : 'Run'}<Icon name="chevron-right" small /></button>}
         </div>
-        {head && <div className="tl-build" title={head}>{head}</div>}
+        {head && <div className="tl-build" title={buildHead(run, true) ?? head}>{head}</div>}
         <Transcript />
       </div>
       {waiting && <div className="brief-cards"><Pending /></div>}

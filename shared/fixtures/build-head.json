@@ -6,5 +6,8 @@
   { "name": "all done", "run": { "kind": "build", "phase": "task", "progress": "7 of 7", "task": "" }, "expected": "All 7 tasks done" },
   { "name": "no progress yet", "run": { "kind": "build", "phase": "task" }, "expected": "Starting" },
   { "name": "finding more work", "run": { "kind": "build", "phase": "more", "progress": "7 of 7" }, "expected": "Finding more work" },
+  { "name": "long task cut to its title", "run": { "kind": "build", "phase": "task", "progress": "82 of 87", "task": "Clean up the session list (user, 27 Nov): (1) a chat's subtitle" }, "expected": "Task 83 of 87 · Clean up the session list" },
+  { "name": "title ends at a colon", "run": { "kind": "build", "phase": "task", "progress": "1 of 3", "task": "Search in files: a server route (max 200 hits)" }, "expected": "Task 2 of 3 · Search in files" },
+  { "name": "full task kept", "full": true, "run": { "kind": "build", "phase": "task", "progress": "82 of 87", "task": "Clean up the session list (user, 27 Nov)" }, "expected": "Task 83 of 87 · Clean up the session list (user, 27 Nov)" },
   { "name": "writing the recap", "run": { "kind": "build", "phase": "recap" }, "expected": "Writing the recap" }
 ]

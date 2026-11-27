@@ -612,7 +612,7 @@ class SharedCasesTest {
     @Test fun buildHead() {
         for (c in cases("build-head")) {
             val run = JsonObject(mapOf("id" to toJson("r")) + c.getValue("run").jsonObject).decode<ChatRun>()
-            assertEquals(c.str("name"), c.nullable("expected")?.jsonPrimitive?.content, buildHead(run))
+            assertEquals(c.str("name"), c.nullable("expected")?.jsonPrimitive?.content, buildHead(run, c.nullable("full")?.jsonPrimitive?.boolean ?: false))
         }
     }
 

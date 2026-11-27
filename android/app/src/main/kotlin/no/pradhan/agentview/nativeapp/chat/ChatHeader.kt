@@ -102,8 +102,9 @@ internal fun ChatStatus(live: LiveChat, session: SessionInfo?, viewCost: Double,
 
 // The build chat's task line under the status (web Brief.tsx tl-build).
 @Composable
-internal fun BuildHead(text: String) {
-    Text(text, Modifier.fillMaxWidth().padding(start = Tokens.listPad, end = Tokens.sp2, bottom = Tokens.sp2), style = Type.footnote, color = av.fgMuted, maxLines = 1, overflow = TextOverflow.Ellipsis)
+internal fun BuildHead(text: String, full: String = text) {
+    var open by remember(full) { mutableStateOf(false) }
+    Text(if (open) full else text, Modifier.fillMaxWidth().clickable(enabled = full != text) { open = !open }.padding(start = Tokens.listPad, end = Tokens.sp2, bottom = Tokens.sp2), style = Type.footnote, color = av.fgMuted, maxLines = if (open) Int.MAX_VALUE else 1, overflow = TextOverflow.Ellipsis)
 }
 
 @Composable

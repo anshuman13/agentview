@@ -16,10 +16,17 @@ function initMessages() {
   return [
     { type: 'init', state: { ...chat, events: shift(chat.events, base) }, boot: 1 },
     { type: 'live', chats: live.map((c) => ({ ...c, lastActive: Date.now() })) },
-    { type: 'runs', runs: [] },
+    { type: 'runs', runs: [buildRun(base)] },
     { type: 'attention', items: [] },
   ];
 }
+
+// A running build on the open chat, so its header shows the task line.
+const buildRun = (at: number) => ({
+  id: 'r1', kind: 'build', sessionId: 's1', chatId: 'c1', title: 'Build', what: '', startedAt: at, endedAt: null, state: 'running', why: '',
+  round: 3, max: 9, nextAt: null, costUsd: 0, rounds: [], needsYou: false, phase: 'task', progress: '2 of 9',
+  task: 'Clean up the session list (user, 27 Nov 21:52, compare the list in the reference shots): (1) a chat subtitle shows a helper branch, (2) idle rows need a ring dot, (3) build rows show Running',
+});
 
 const frame = (m: unknown) => enc.encode(`data: ${JSON.stringify(m)}\n\n`);
 

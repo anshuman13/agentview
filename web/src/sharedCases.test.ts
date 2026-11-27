@@ -665,8 +665,8 @@ describe('cases shared with the Android app', () => {
     it(`runLine: ${c.name}`, () => expect(runLine(run({ ...c.run, tries: c.run.tries?.map((t) => ({ n: 0, chatId: '', sessionId: '', branch: '', ...t })) }))).toBe(c.expected));
   }
 
-  for (const c of cases<{ name: string; run: Partial<ChatRun>; expected: string | null }>('build-head')) {
-    it(`buildHead: ${c.name}`, () => expect(buildHead(run(c.run))).toBe(c.expected));
+  for (const c of cases<{ name: string; run: Partial<ChatRun>; full?: boolean; expected: string | null }>('build-head')) {
+    it(`buildHead: ${c.name}`, () => expect(buildHead(run(c.run), c.full)).toBe(c.expected));
   }
 
   for (const c of cases<{ name: string; task: Parameters<typeof taskChatPrompt>[0]; expected: string }>('task-chat-prompt')) {

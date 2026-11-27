@@ -116,7 +116,7 @@ fun ChatScreen(hub: Hub, onOpenAgent: (String) -> Unit, onOpenWork: (String) -> 
     Column(Modifier.fillMaxSize()) {
         ChatHeader(hub, live, session, view.cost, panels, left.isNotEmpty(), running, cwd, onChats) { review = 0 }
         ChatStatus(live, session, view.cost, remember(view.events) { lastReplyAt(view.events) }, if (view.agents.isNotEmpty() || live.agentList.isNotEmpty() || run != null) agentChipCount(view.agents.size, live.agentList.size) else null) { panels.agents = true }
-        run?.let { buildHead(it) }?.let { BuildHead(it) }
+        run?.let { r -> buildHead(r)?.let { BuildHead(it, buildHead(r, true) ?: it) } }
         Hairline()
         BuildBar(hub, session?.sessionId, view.events)
         if (panels.find) {

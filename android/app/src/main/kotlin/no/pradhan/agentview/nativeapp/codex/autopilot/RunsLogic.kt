@@ -47,7 +47,10 @@ fun buildLine(run: ChatRun): String {
 }
 
 // The build chat's header line: "Task 4 of 7 · <task> · until 06:00", or the step it is on; null for other runs (web runLogic.ts buildHead).
-fun buildHead(run: ChatRun): String? {
+// A spec task's short title: the text before its first "(" or ":" (web runLogic.ts taskTitle).
+fun taskTitle(task: String) = task.split('(', ':')[0].trim().ifEmpty { task }
+
+fun buildHead(run: ChatRun, full: Boolean = false): String? {
     if (run.kind != "build") return null
     val parts = run.progress.orEmpty().split(" of ").map { it.toIntOrNull() ?: 0 }
     val done = parts[0]
@@ -59,7 +62,7 @@ fun buildHead(run: ChatRun): String? {
         else -> when {
             total == 0 -> "Starting"
             done >= total -> "All $total tasks done"
-            else -> listOfNotNull("Task ${done + 1} of $total", run.task?.ifEmpty { null }).joinToString(" · ")
+            else -> listOfNotNull("Task ${done + 1} of $total", run.task?.ifEmpty { null }?.let { if (full) it else taskTitle(it) }).joinToString(" · ")
         }
     }
     return step + (run.until?.let { " · until ${clock(it)}" } ?: "")

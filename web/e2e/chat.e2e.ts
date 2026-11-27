@@ -48,6 +48,16 @@ for (const scheme of ['light', 'dark'] as const) {
   });
 }
 
+test('the build task line shows the short title and ends above the transcript', async () => {
+  const line = page.locator('.brief .tl-build');
+  await expect(line).toHaveText('Task 3 of 9 · Clean up the session list');
+  await expect(line).toHaveAttribute('title', /\(1\) a chat subtitle/);
+  const b = (await line.boundingBox())!;
+  const t = (await tr().boundingBox())!;
+  expect(b.y + b.height).toBeLessThanOrEqual(t.y + 1);
+  expect(await line.evaluate((n) => getComputedStyle(n).backgroundColor)).not.toBe('rgba(0, 0, 0, 0)');
+});
+
 test('the themes paint different backgrounds', async () => {
   const bg = () => page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--bg').trim());
   await page.emulateMedia({ colorScheme: 'dark' });

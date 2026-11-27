@@ -20,11 +20,15 @@ export function buildLine(run: Pick<ChatRun, 'progress' | 'until' | 'phase' | 'w
   return `Build · ${step}${run.until ? ` · until ${hhmm(run.until)}` : ''}`;
 }
 
-// The build chat's header line: "Task 4 of 7 · <task> · until 06:00", or the step it is on. Null for other runs.
-export function buildHead(run: Pick<ChatRun, 'kind' | 'phase' | 'progress' | 'task' | 'until'>) {
+// A spec task's short title: the text before its first "(" or ":".
+export const taskTitle = (task: string) => task.split(/[(:]/)[0].trim() || task;
+
+// The build chat's header line: "Task 4 of 7 · <task title> · until 06:00", or the step it is on; full keeps the whole task text. Null for other runs.
+export function buildHead(run: Pick<ChatRun, 'kind' | 'phase' | 'progress' | 'task' | 'until'>, full = false) {
   if (run.kind !== 'build') return null;
   const [done, total] = (run.progress ?? '').split(' of ').map(Number);
-  const task = !total ? 'Starting' : done >= total ? `All ${total} tasks done` : [`Task ${done + 1} of ${total}`, run.task].filter(Boolean).join(' · ');
+  const line = run.task && (full ? run.task : taskTitle(run.task));
+  const task = !total ? 'Starting' : done >= total ? `All ${total} tasks done` : [`Task ${done + 1} of ${total}`, line].filter(Boolean).join(' · ');
   const step = run.phase === 'spec' ? 'Writing the spec' : run.phase === 'recap' ? 'Writing the recap' : run.phase === 'more' ? 'Finding more work' : task;
   return `${step}${run.until ? ` · until ${hhmm(run.until)}` : ''}`;
 }
