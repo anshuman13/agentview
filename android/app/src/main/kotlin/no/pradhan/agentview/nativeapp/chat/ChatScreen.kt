@@ -1,121 +1,56 @@
 package no.pradhan.agentview.nativeapp.chat
 
-import no.pradhan.agentview.nativeapp.ui.UNTITLED
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.foundation.layout.wrapContentHeight
-import androidx.compose.ui.text.style.TextAlign
-import kotlinx.coroutines.launch
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.ui.platform.LocalClipboardManager
-import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.text.AnnotatedString
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.buildAnnotatedString
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.text.withStyle
-import no.pradhan.agentview.nativeapp.codex.autopilot.loopNow
-import no.pradhan.agentview.nativeapp.codex.autopilot.RunActions
-import no.pradhan.agentview.nativeapp.codex.autopilot.RunRows
-import no.pradhan.agentview.nativeapp.codex.jobs.money
-import no.pradhan.agentview.nativeapp.codex.autopilot.runLine
 import no.pradhan.agentview.nativeapp.codex.autopilot.ReviewCard
 import no.pradhan.agentview.nativeapp.codex.autopilot.activeRun
 import no.pradhan.agentview.nativeapp.app.Hub
-import no.pradhan.agentview.nativeapp.app.loadEarlier
-import no.pradhan.agentview.nativeapp.ops.Agent
 import no.pradhan.agentview.nativeapp.sessions.rowId
 import no.pradhan.agentview.nativeapp.sessions.rowsById
 import no.pradhan.agentview.nativeapp.net.LiveChat
-import no.pradhan.agentview.nativeapp.net.SessionInfo
-import no.pradhan.agentview.nativeapp.app.archive
-import no.pradhan.agentview.nativeapp.net.billing
 import no.pradhan.agentview.nativeapp.net.providerLabel
-import no.pradhan.agentview.nativeapp.app.closeChat
-import no.pradhan.agentview.nativeapp.app.forkChat
 import no.pradhan.agentview.nativeapp.app.gitStatus
 import no.pradhan.agentview.nativeapp.app.pulls
-import no.pradhan.agentview.nativeapp.app.remindChat
-import no.pradhan.agentview.nativeapp.app.rememberFromChat
-import no.pradhan.agentview.nativeapp.app.rename
 import no.pradhan.agentview.nativeapp.app.submit
-import no.pradhan.agentview.nativeapp.app.stopTask
-import no.pradhan.agentview.nativeapp.net.ChatRun
-import no.pradhan.agentview.nativeapp.ui.IconBtn
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.heightIn
-import no.pradhan.agentview.nativeapp.net.unbilledText
-import no.pradhan.agentview.nativeapp.ops.AgentList
-import no.pradhan.agentview.nativeapp.ops.UnseenAgentList
 import no.pradhan.agentview.nativeapp.ops.PullsScreen
-import no.pradhan.agentview.nativeapp.sessions.chatPlace
-import no.pradhan.agentview.nativeapp.sessions.groupByRepo
-import no.pradhan.agentview.nativeapp.sessions.newChatChoices
-import no.pradhan.agentview.nativeapp.sessions.renameTitle
-import no.pradhan.agentview.nativeapp.sessions.startedFrom
 import no.pradhan.agentview.nativeapp.ui.AvIcon
 import no.pradhan.agentview.nativeapp.ui.Button
 import no.pradhan.agentview.nativeapp.ui.ButtonVariant
-import no.pradhan.agentview.nativeapp.ui.Chevron
-import no.pradhan.agentview.nativeapp.ui.ConfirmDialog
 import no.pradhan.agentview.nativeapp.ui.EmptyState
-import no.pradhan.agentview.nativeapp.ui.Group
 import no.pradhan.agentview.nativeapp.ui.Hairline
 import no.pradhan.agentview.nativeapp.ui.ListRow
-import no.pradhan.agentview.nativeapp.ui.MenuItem
-import no.pradhan.agentview.nativeapp.ui.MenuSeparator
-import no.pradhan.agentview.nativeapp.ui.MoreButton
 import no.pradhan.agentview.nativeapp.ui.PageHeader
 import no.pradhan.agentview.nativeapp.ui.FilePath
 import no.pradhan.agentview.nativeapp.ui.LocalOpenFile
 import no.pradhan.agentview.nativeapp.ui.LocalRunCommand
 import no.pradhan.agentview.nativeapp.app.runInTerminal
-import no.pradhan.agentview.nativeapp.ui.Sheet
-import no.pradhan.agentview.nativeapp.workspace.FileScreen
 import no.pradhan.agentview.nativeapp.ui.StatusDot
-import no.pradhan.agentview.nativeapp.ui.TextDialog
 import no.pradhan.agentview.nativeapp.ui.Tokens
 import no.pradhan.agentview.nativeapp.ui.Type
-import no.pradhan.agentview.nativeapp.ui.WordClamp
 import no.pradhan.agentview.nativeapp.ui.av
-import no.pradhan.agentview.nativeapp.ui.rememberNow
 import no.pradhan.agentview.nativeapp.ui.select
 import no.pradhan.agentview.nativeapp.workspace.ChangesPager
-import no.pradhan.agentview.nativeapp.workspace.DevServersSheet
 import no.pradhan.agentview.nativeapp.ops.branchPr
 import no.pradhan.agentview.nativeapp.ops.checkDot
 import no.pradhan.agentview.nativeapp.ops.prStripMeta
 import no.pradhan.agentview.nativeapp.ui.rememberLoad
-import no.pradhan.agentview.nativeapp.ui.plural
-
-fun costLabel(cost: Double, billing: String = "usd") = unbilledText(billing) ?: if (cost > 0) money(cost) else ""
 
 class ChatPanels {
     var agents by mutableStateOf(false)
@@ -211,24 +146,6 @@ fun ChatScreen(hub: Hub, onOpenAgent: (String) -> Unit, onOpenWork: (String) -> 
     if (panels.prompts) PromptsSheet(hub, view.items, earlier) { panels.prompts = false }
 }
 
-// The chat menu's Prompts: each sent prompt with its time; a tap scrolls the transcript to it. Load earlier ends the list while older events are not loaded.
-@Composable
-private fun PromptsSheet(hub: Hub, items: List<Item>, earlier: Int, onDismiss: () -> Unit) {
-    val prompts = remember(items) { sentPrompts(items) }
-    val loading by hub.loadingEarlier.collectAsState()
-    val now = rememberNow(false)
-    Sheet(onDismiss, "Prompts", padded = false, count = prompts.size.toString()) {
-        if (prompts.isEmpty()) EmptyState("No prompts yet", "Prompts you send show here", icon = "comment-discussion")
-        else Group {
-            prompts.forEachIndexed { i, p ->
-                if (i > 0) Hairline()
-                ListRow(p.text, if (p.at == 0L) null else "Sent ${replyTime(p.at, now.value)}", onClick = { onDismiss(); hub.showTurn.value = p.id })
-            }
-        }
-        if (earlier > 0) Button(if (loading) "Loading…" else "Load earlier", { hub.loadEarlier() }, Modifier.padding(start = Tokens.listPad, top = Tokens.sp4), variant = ButtonVariant.Plain, enabled = !loading)
-    }
-}
-
 @Composable
 private fun rememberShownChat(hub: Hub, hasEvents: Boolean): LiveChat? {
     val shown by hub.store.state.select { st -> st.live.firstOrNull { it.id == st.shownId } }
@@ -237,179 +154,3 @@ private fun rememberShownChat(hub: Hub, hasEvents: Boolean): LiveChat? {
     val cached = shownId.isNotEmpty() && hasEvents
     return shown ?: if (cached && !connected) LiveChat(shownId, remember(shownId) { hub.savedTitle(shownId) }) else null
 }
-
-// Takes the fields it shows, not the ChatView, so a streamed token batch does not redraw the header.
-@Composable
-private fun ChatHeader(hub: Hub, live: LiveChat, session: SessionInfo?, cost: Double, hasReply: Boolean, panels: ChatPanels, canReview: Boolean, running: Boolean, cwd: String, onChats: (() -> Unit)?, onReview: () -> Unit) {
-    val ws by hub.workspace.collectAsState()
-    var newChat by remember { mutableStateOf(false) }
-    Row(Modifier.fillMaxWidth().height(Tokens.tabbarH).padding(horizontal = Tokens.sp2), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Tokens.sp2)) {
-        if (onChats != null) IconBtn("menu", "Chats", onChats, tint = av.fg) else Spacer(Modifier.width(Tokens.sp6))
-        Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-            Text(live.title.ifBlank { UNTITLED }, style = Type.headline.copy(fontWeight = FontWeight.Medium), color = av.fg, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Text(chatPlace(ws, cwd), style = Type.footnote, color = av.fgMuted, maxLines = 1, overflow = TextOverflow.Ellipsis)
-        }
-        IconBtn("edit", "New chat", { newChat = true }, tint = av.fg)
-        ChatMenu(hub, live, session, hasReply, panels, canReview, running, cwd, onReview)
-    }
-    val from = remember(ws.saved, live.sessionId, session?.sessionId) { startedFrom(ws.saved, live.sessionId ?: session?.sessionId) }
-    if (from != null) {
-        val scope = rememberCoroutineScope()
-        Text(from.text, style = Type.footnote, color = av.fgMuted, maxLines = 1, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center,
-            modifier = Modifier.fillMaxWidth().heightIn(min = Tokens.touchSm).clickable { scope.launch { hub.openSaved(from.sessionId) } }.wrapContentHeight().padding(horizontal = Tokens.listPad))
-    }
-    if (newChat) NewChatFromHeader(hub, cwd) { newChat = false }
-}
-
-// The New chat sheet the Sessions button opens, with this chat's repo first.
-@Composable
-private fun NewChatFromHeader(hub: Hub, cwd: String, onDismiss: () -> Unit) {
-    val chats by hub.store.state.select { it.live }
-    val ws by hub.workspace.collectAsState()
-    val (here, choices) = newChatChoices(groupByRepo(chats, ws), ws, cwd)
-    NewChatSheet(hub, null, choices, onDismiss = onDismiss, initial = here)
-}
-
-// One line under the title: what the chat is doing, and on the right the agents and run controls it opens.
-@Composable
-private fun ChatStatus(live: LiveChat, session: SessionInfo?, viewCost: Double, replyAt: Long?, agents: Int?, onAgents: () -> Unit) {
-    Row(Modifier.fillMaxWidth().padding(start = Tokens.listPad, end = Tokens.sp2, bottom = Tokens.sp2), verticalAlignment = Alignment.CenterVertically) {
-        Column(Modifier.weight(1f, fill = false)) { ChatSubtitle(live, session, viewCost, replyAt) }
-        if (agents != null) Row(Modifier.heightIn(min = Tokens.touchSm).clip(RoundedCornerShape(Tokens.radius)).clickable(onClick = onAgents).padding(start = Tokens.sp4, end = Tokens.sp4), verticalAlignment = Alignment.CenterVertically) {
-            Text(if (agents > 0) plural(agents, "agent") else "Run", style = Type.footnote, color = av.fgMuted, maxLines = 1)
-            AvIcon("chevron-right", null, Tokens.iconSm, tint = av.fgMuted)
-        }
-    }
-}
-
-@Composable
-private fun ChatSubtitle(live: LiveChat, session: SessionInfo?, viewCost: Double, replyAt: Long?) {
-    val status = statusLine(live, session)
-    val idleAt = replyAt.takeIf { status.text == "Idle" }
-    val now = rememberNow(idleAt != null)
-    val replied by remember(idleAt) { derivedStateOf { idleAt?.let { replyTime(it, now.value) } } }
-    val cost = live.cost ?: viewCost
-    val toneColor = when (status.tone) { ChatTone.Running -> av.agent; ChatTone.Needs -> av.warn; ChatTone.Failed -> av.err; ChatTone.Warn -> av.warn; ChatTone.Idle -> av.fgMuted }
-    val muted = av.fgMuted
-    val usage = session?.usage
-    val warn = av.warn
-    val line = remember(status, replied, cost, toneColor, muted, usage) {
-        buildAnnotatedString {
-            withStyle(SpanStyle(color = toneColor)) { append(status.text) }
-            replied?.let { withStyle(SpanStyle(color = muted)) { append(" · $it") } }
-            costLabel(cost, billing(live.provider)).takeIf { it.isNotEmpty() }?.let { withStyle(SpanStyle(color = muted)) { append(" · $it") } }
-            usageText(usage).takeIf { it.isNotEmpty() }?.let { withStyle(SpanStyle(color = if (usageHigh(usage)) warn else muted)) { append(" · $it") } }
-        }
-    }
-    WordClamp(line, Type.subheadline, muted, 1)
-}
-
-@Composable
-private fun ChatMenu(hub: Hub, live: LiveChat, session: SessionInfo?, hasReply: Boolean, panels: ChatPanels, canReview: Boolean, running: Boolean, cwd: String, onReview: () -> Unit) {
-    val context = androidx.compose.ui.platform.LocalContext.current
-    val clip = LocalClipboardManager.current
-    val sessionId = live.sessionId ?: session?.sessionId
-    var quoting by remember { mutableStateOf<String?>(null) }
-    quoting?.let { QuoteSheet(hub, live.id, it) { quoting = null } }
-    MoreButton { close ->
-        MenuItem(reviewLabel(false, canReview), "source-control", { close(); onReview() }, enabled = canReview)
-        MenuItem("Find in chat", "search", { close(); panels.find = true })
-        MenuItem("Prompts", "list-ordered", { close(); panels.prompts = true })
-        MenuItem("Rename", "edit", { close(); panels.dialog = "rename" }, enabled = sessionId != null)
-        MenuItem("Fork chat", "repo-forked", { close(); hub.forkChat(cwd, sessionId!!, session?.model, session?.provider) }, enabled = sessionId != null)
-        MenuItem("Remind me", "bell", { close(); panels.remind = true }, enabled = sessionId != null)
-        MenuItem("Remember…", "lightbulb", { close(); panels.dialog = "remember" })
-        MenuItem("Share chat", "share", {
-            close()
-            val send = android.content.Intent(android.content.Intent.ACTION_SEND).setType("text/plain").putExtra(android.content.Intent.EXTRA_TEXT, chatMarkdown(live.title, hub.store.state.value.events))
-            context.startActivity(android.content.Intent.createChooser(send, null))
-        }, enabled = hasReply)
-        MenuItem("Copy last reply", "copy", {
-            close()
-            lastReply(hub.store.state.value.events)?.let { clip.setText(AnnotatedString(it)); hub.notice.value = "Reply copied" }
-        }, enabled = hasReply)
-        if (!hub.readOnly) MenuItem("Quote last reply", "quote", { close(); quoting = lastReply(hub.store.state.value.events) }, enabled = hasReply)
-        MenuItem("Tools\u2026", "tools", { close(); panels.tools = true })
-        MenuItem("Close chat", "close", { close(); if (running || live.pending > 0) panels.dialog = "close" else hub.closeChat(live.id) })
-        MenuSeparator()
-        MenuItem("Archive", "archive", { close(); panels.dialog = "archive" }, danger = true, enabled = sessionId != null)
-    }
-}
-
-@Composable
-private fun ChatSheets(hub: Hub, live: LiveChat, session: SessionInfo?, agents: List<Agent>, images: List<String>, panels: ChatPanels, cwd: String, onOpenAgent: (String) -> Unit, run: ChatRun?) {
-    val clip = LocalClipboardManager.current
-    val sessionId = live.sessionId ?: session?.sessionId
-    val unseen = remember(live.agentList, agents) { unseenAgents(live.agentList, agents) }
-    val now = rememberNow(panels.agents && (unseen.isNotEmpty() || agents.any { it.status == "running" }))
-    val prompts by hub.savedPrompts.items.collectAsState()
-    if (panels.agents) Sheet(onDismiss = { panels.agents = false }, title = "Agents", padded = false, full = false, action = { AgentsActions(hub, run, agents) }) {
-        run?.let { r ->
-            val line = listOfNotNull(runLine(r), loopNow(r, live.now).next?.let { "next $it" }).joinToString(" · ")
-            Text(line, Modifier.fillMaxWidth().padding(start = Tokens.listPad, end = Tokens.listPad, bottom = Tokens.sp4), style = Type.footnote, color = av.fgMuted)
-            RunRows(hub, r, live)
-        }
-        AgentList(agents, { now.value }) { panels.agents = false; onOpenAgent(it) }
-        UnseenAgentList(unseen) { now.value }
-    }
-    if (panels.tools) Sheet(onDismiss = { panels.tools = false }, title = "Tools", padded = false, full = false) {
-        val hooks = session?.hooks.orEmpty()
-        val open = { panel: () -> Unit -> { panels.tools = false; panel() } }
-        Group {
-            ListRow("Saved prompts", plural(prompts.size, "prompt"), muted = prompts.isEmpty(), onClick = if (prompts.isEmpty()) null else open { panels.saved = true }, trailing = { Chevron() })
-            Hairline()
-            ListRow("Images", plural(images.size, "image"), muted = images.isEmpty(), onClick = if (images.isEmpty()) null else open { panels.images = true }, trailing = { Chevron() })
-            Hairline()
-            ListRow("Dev servers", "Dev servers on this Mac", onClick = open { panels.servers = true }, trailing = { Chevron() })
-            Hairline()
-            ListRow("TODOs", "TODO, FIXME and AI! comments in the repo", onClick = open { panels.todos = true }, trailing = { Chevron() })
-            Hairline()
-            ListRow("Memory", "Instruction and memory files", onClick = open { panels.memory = true }, trailing = { Chevron() })
-            Hairline()
-            ListRow("Hooks", if (hooks.isEmpty()) "None" else "${hooks.size}", onClick = open { panels.hooks = true }, trailing = { Chevron() })
-            session?.resumeCommand?.let { command ->
-                Hairline()
-                ListRow("Continue in terminal", "Copy the command that resumes this chat", onClick = open {
-                    clip.setText(AnnotatedString(command))
-                    hub.notice.value = "Copied. Stop this chat before resuming it in a terminal"
-                }, trailing = { Chevron() })
-            }
-        }
-    }
-    if (panels.saved) SavedPromptsSheet(hub, prompts, live.id) { panels.saved = false }
-    if (panels.images) ImagesSheet(hub, live.id, images, cwd) { panels.images = false }
-    if (panels.servers) DevServersSheet(hub) { panels.servers = false }
-    if (panels.todos) TodosSheet(hub, cwd) { panels.todos = false }
-    if (panels.memory) MemorySheet(hub, cwd, session?.instructionFiles.orEmpty()) { panels.memory = false }
-    if (panels.hooks) HooksSheet(hub, session?.hooks.orEmpty()) { panels.hooks = false }
-    panels.file?.let { f ->
-        val close = { panels.file = null }
-        Sheet(close, "File", padded = false) { Box(Modifier.height(sheetHeight())) { FileScreen(hub, f.path, close, line = f.line) } }
-    }
-    if (panels.remind) Sheet(onDismiss = { panels.remind = false }, title = "Remind me", padded = false, full = false) {
-        val choices = remember { remindChoices(System.currentTimeMillis()) }
-        Group { choices.forEachIndexed { i, (label, at) -> if (i > 0) Hairline(); ListRow(label, onClick = { hub.remindChat(live.title, sessionId!!, cwd, at); panels.remind = false }) } }
-    }
-    when (panels.dialog) {
-        "rename" -> RenameDialog(live.title, onSave = { hub.rename(sessionId!!, it) }, onDismiss = { panels.dialog = null })
-        "remember" -> TextDialog("Remember", "", "Save", { hub.rememberFromChat(it, live.title, cwd) }, { panels.dialog = null }, maxLength = 400, detail = "Saved to Memory for every later chat.")
-        "archive" -> ConfirmDialog("Archive this chat?", "${live.title}\n\nYou can restore it from the bin for 7 days.", "Archive", { hub.archive(sessionId!!) }) { panels.dialog = null }
-        "close" -> ConfirmDialog("Close this chat?", "${live.title}\n\nThe agent is still working on it and will stop. The transcript is kept.", "Close", { hub.closeChat(live.id) }) { panels.dialog = null }
-    }
-}
-
-@Composable
-fun RenameDialog(current: String, onSave: (String) -> Unit, onDismiss: () -> Unit) {
-    TextDialog("Rename chat", current, "Save", { t -> renameTitle(t, current)?.let(onSave) }, onDismiss, maxLength = 120)
-}
-
-// The Agents sheet's head: the run's controls, else stop every running agent.
-@Composable
-private fun AgentsActions(hub: Hub, run: ChatRun?, agents: List<Agent>) {
-    val running = agents.filter { it.status == "running" && it.group == null }
-    if (run != null) RunActions(hub, run)
-    else if (running.isNotEmpty()) IconBtn("debug-stop", "Stop all agents", { running.forEach { hub.stopTask(it.id) } }, enabled = !hub.readOnly)
-}
-
-@Composable
-internal fun sheetHeight() = LocalConfiguration.current.screenHeightDp.dp * 0.8f

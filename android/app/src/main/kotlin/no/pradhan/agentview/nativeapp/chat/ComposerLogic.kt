@@ -274,3 +274,11 @@ fun quickReplies(events: List<ChatEvent>): List<String> {
     }
     return emptyList()
 }
+
+internal fun placeholderState(waiting: Boolean, compacting: Boolean, running: Boolean, hasUses: Boolean) = when {
+    waiting -> "waiting"
+    compacting -> "compacting"
+    running -> "running"
+    hasUses -> "uses"
+    else -> "idle"
+}

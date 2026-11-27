@@ -4,11 +4,13 @@ import no.pradhan.agentview.nativeapp.codex.autopilot.nextRoundText
 import no.pradhan.agentview.nativeapp.codex.clock
 import no.pradhan.agentview.nativeapp.codex.dayLabel
 import no.pradhan.agentview.nativeapp.codex.dayStart
+import no.pradhan.agentview.nativeapp.codex.jobs.money
 import no.pradhan.agentview.nativeapp.net.ChatEvent
 import no.pradhan.agentview.nativeapp.net.LiveAgent
 import no.pradhan.agentview.nativeapp.net.LiveChat
 import no.pradhan.agentview.nativeapp.ops.Agent
 import no.pradhan.agentview.nativeapp.net.SessionInfo
+import no.pradhan.agentview.nativeapp.net.unbilledText
 import no.pradhan.agentview.nativeapp.ui.agoShort
 import no.pradhan.agentview.nativeapp.ui.plural
 
@@ -62,3 +64,5 @@ fun failedLine(events: List<ChatEvent>, label: String): String? {
 
 // What a running chat is doing: its status, or Working while it has none.
 fun runningText(live: LiveChat) = live.status.takeIf { it != "Idle" }.orEmpty().ifBlank { "Working" }
+
+fun costLabel(cost: Double, billing: String = "usd") = unbilledText(billing) ?: if (cost > 0) money(cost) else ""
