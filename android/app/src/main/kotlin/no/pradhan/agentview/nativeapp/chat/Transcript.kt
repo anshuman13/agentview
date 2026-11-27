@@ -79,26 +79,6 @@ import no.pradhan.agentview.nativeapp.workspace.isSketchPath
 import no.pradhan.agentview.nativeapp.workspace.sketchName
 import no.pradhan.agentview.nativeapp.ui.plural
 
-internal fun gapAbove(older: Item?, it: Item): Dp? {
-    if (older == null) return null
-    val act = { i: Item -> i is Item.Step || i is Item.Agent }
-    return when {
-        act(older) && act(it) -> null
-        (act(older) && it is Item.File) || (older is Item.File && act(it)) -> Tokens.sp1
-        older is Item.User -> Tokens.sp24
-        it is Item.User -> Tokens.sp12
-        else -> Tokens.sp4
-    }
-}
-
-internal fun gapAbove(older: FoldRow?, row: FoldRow): Dp? = when {
-    older == null -> null
-    older is FoldRow.Row && row is FoldRow.Row -> gapAbove(older.it, row.it)
-    (older as? FoldRow.Row)?.it is Item.User -> Tokens.sp24
-    (row as? FoldRow.Row)?.it is Item.User -> Tokens.sp12
-    else -> Tokens.sp4
-}
-
 internal fun Modifier.gap(d: Dp?) = if (d == null) this else padding(top = d)
 
 @Composable
