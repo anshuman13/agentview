@@ -274,10 +274,15 @@ export function runningStep(items: Item[], cwd = '') {
     const it = items[i];
     const use = it.kind === 'step' && !it.result ? it.use : it.kind === 'agent' && it.running ? it.use : it.kind === 'file' && it.pending ? it.uses[it.uses.length - 1] : null;
     if (!use || use.name.endsWith('__set_status')) continue;
-    const l = stepLabel(use.name, use.input, cwd);
-    return `${[DOING[l.verb] ?? l.verb, l.object].filter(Boolean).join(' ')}…`;
+    return doingLabel(use, cwd);
   }
   return '';
+}
+
+// A tool call named as it happens: "Searching "foo" in src…".
+export function doingLabel(use: ToolUse, cwd = '') {
+  const l = stepLabel(use.name, use.input, cwd);
+  return `${[DOING[l.verb] ?? l.verb, l.object].filter(Boolean).join(' ')}…`;
 }
 
 // The last reply of each finished turn, when nothing follows it in the turn: the answers that get a Copy action.

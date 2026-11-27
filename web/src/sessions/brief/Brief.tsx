@@ -133,7 +133,7 @@ export function Brief() {
         </div>
         {from && <button className="tl-from" onClick={() => showChat({ sessionId: from.sessionId })}>{from.text}</button>}
         <div className="tl-line">
-          <HeadState state={state} status={status} chat={live} pending={pending.length} lastReply={lastReply} lastTool={lastTool} done={doneSteps} next={next} />
+          <HeadState state={state} status={status} chat={live} pending={pending.length} lastReply={lastReply} lastTool={lastTool} done={doneSteps} next={next} cwd={cwd ?? ''} />
           {side && (phone || railClosed) && <button className="tl-agents" onClick={() => { if (phone) { setShowAgents(true); setAgentSel(null); } else setRailClosed(false); }}>{agentCount > 0 ? plural(agentCount, 'agent') : 'Run'}<Icon name="chevron-right" small /></button>}
         </div>
         {head && <div className="tl-build" title={head}>{head}</div>}

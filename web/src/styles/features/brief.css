@@ -34,8 +34,10 @@ button.rail-s { cursor: pointer; }
 :is(.brief-rail, .brief-sheet) .ag.stack .ag-detail :is(.ag-meta, .ag-progress) { padding-left: 0; }
 .brief-sheet .rail-h, .brief-sheet .rail-s { padding-left: 0; padding-right: 0; }
 .brief-sheet .ag.stack { margin: var(--sp-4) calc(-1 * var(--sp-6)) 0; }
-.tl-line { flex: none; display: flex; align-items: center; gap: var(--sp-3); min-width: 0; padding-bottom: var(--sp-3); margin-bottom: var(--sp-2); border-bottom: 1px solid var(--border); }
-.tl-line > .tl-more:has(> .tl-state) { flex: 0 1 auto; max-width: 100%; }
+.tl-line { position: relative; flex: none; display: flex; align-items: center; gap: var(--sp-3); min-width: 0; padding-bottom: var(--sp-3); margin-bottom: var(--sp-2); border-bottom: 1px solid var(--border); }
+.tl-line > .tl-more:has(> .tl-state) { position: static; flex: 0 1 auto; max-width: 100%; }
+/* The popover hangs from the status line, which spans the chat column, so it opens rightward and never leaves the column. */
+.tl-line .ui-menu.tl-pop:not(.sheet) { top: calc(100% - var(--sp-2)); left: 0; right: auto; width: min(420px, 100%); min-width: 0; }
 .tl-line .tl-state { max-width: 100%; padding: 0; }
 .tl-agents { flex: none; display: inline-flex; align-items: center; gap: var(--sp-1); padding: 0; border: 0; background: none; font: inherit; font-size: var(--type-subheadline-size); color: var(--fg-muted); cursor: pointer; }
 
@@ -83,7 +85,9 @@ button.rail-s { cursor: pointer; }
 .tl-now:is(.running, .stopping) .mark { color: var(--accent-text); }
 .tl-now.waiting :is(.mark, .text) { color: var(--warn); }
 .tl-now.idle .text { color: var(--fg-muted); }
-.tl-now .tool { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: var(--mono); font-size: var(--fs-xs); color: var(--fg-muted); }
+.tl-now .tool { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--fs-sm); color: var(--fg-muted); }
+.tl-pop :is(.tl-now .tool, .step .text) { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; white-space: normal; overflow-wrap: anywhere; }
+.tl-pop .step { padding: var(--sp-1) 0; }
 .steps { list-style: none; margin: 0; padding: 0 0 0 26px; }
 .tl-pop .tl-now { padding-top: 0; }
 .step { display: flex; align-items: center; gap: var(--sp-3); min-height: var(--size-row); font-size: var(--fs-sm); color: var(--fg-muted); }
@@ -104,6 +108,7 @@ button.rail-s { cursor: pointer; }
   .tl-name { flex-direction: column; align-items: stretch; gap: 0; line-height: 1.25; text-align: center; }
   .tl-name small { max-width: none; }
   .tl-line { justify-content: center; }
+  .tl-line .ui-menu.tl-pop:not(.sheet) { left: 50%; translate: -50% 0; }
   .tl-now { font-size: var(--fs-md); line-height: var(--line-md); }
   .step { min-height: var(--touch-sm); font-size: var(--fs-md); }
   .step input { height: var(--touch-sm); font-size: var(--fs-2xl); }
