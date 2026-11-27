@@ -15,7 +15,7 @@
 
 .cp-text { position: relative; }
 .cp-card textarea, .cp-mirror {
-  font: inherit; font-size: var(--fs-lg); line-height: var(--line-md); padding: var(--sp-5) var(--sp-6) var(--sp-1);
+  font: inherit; font-size: var(--fs-xl); line-height: var(--line-lg); padding: var(--sp-5) var(--sp-6) var(--sp-1);
   white-space: pre-wrap; overflow-wrap: break-word;
 }
 .cp-card.shell :is(textarea, .cp-mirror) { font-family: var(--mono); font-size: var(--fs-md); }
@@ -38,6 +38,7 @@
 
 .cp-foot { display: flex; align-items: center; gap: var(--sp-2); padding: var(--sp-2) var(--sp-4) var(--sp-4); }
 .cp-mode { flex: 0 1 auto; min-width: 0; }
+@media (pointer: fine) { .cp-foot .chip.chip-btn { font-size: var(--fs-footnote); } }
 .cp-mode > span { overflow: hidden; text-overflow: ellipsis; }
 .cp[data-mode='plan'] .cp-mode .codicon:first-child { color: var(--accent-text); }
 .cp-spacer { flex: 1; }

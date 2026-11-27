@@ -12,6 +12,7 @@
 .side-switch .seg-count { margin-left: var(--sp-2); font-size: var(--fs-xs); color: var(--fg-muted); }
 
 .sessions .row { flex-wrap: nowrap; padding-left: var(--sp-4); }
+@media (pointer: fine) { .sessions .row { height: var(--size-2xl); font-size: var(--fs-lg); border-radius: var(--radius); } }
 .sessions .row.project { font-weight: 600; color: var(--fg); }
 .sessions .row.project .name { flex: 0 1 auto; overflow: hidden; text-overflow: ellipsis; }
 .sessions .row.project.here .name { color: var(--accent-text); }

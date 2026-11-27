@@ -502,5 +502,5 @@ object Type {
     val meta = TextStyle(fontFamily = AppFont, fontSize = 14.sp, lineHeight = 20.sp, fontWeight = FontWeight(400))
     val display = TextStyle(fontFamily = AppFont, fontSize = 28.sp, lineHeight = 36.sp, fontWeight = FontWeight(700))
     val label = TextStyle(fontFamily = AppFont, fontSize = 12.sp, lineHeight = 16.sp, fontWeight = FontWeight(500))
-    val reading = TextStyle(fontFamily = ReadingFont, fontSize = 18.sp, lineHeight = 28.sp, fontWeight = FontWeight(400))
+    val reading = TextStyle(fontFamily = AppFont, fontSize = 16.sp, lineHeight = 24.sp, fontWeight = FontWeight(400))
 }

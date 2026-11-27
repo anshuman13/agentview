@@ -80,7 +80,7 @@ class TokenGenTest {
         assertTrue(out.contains("    val listPad = 8.dp"))
         assertTrue(out.contains("    val pageMax = 760.dp"))
         assertTrue(out.contains("    val body = TextStyle(fontFamily = AppFont, fontSize = 16.sp, lineHeight = 24.sp, fontWeight = FontWeight(400))"))
-        assertTrue(out.contains("    val reading = TextStyle(fontFamily = ReadingFont, fontSize = 18.sp, lineHeight = 28.sp, fontWeight = FontWeight(400))"))
+        assertTrue(out.contains("    val reading = TextStyle(fontFamily = AppFont, fontSize = 16.sp, lineHeight = 24.sp, fontWeight = FontWeight(400))"))
     }
 
     @Test fun nativeColorsOverrideBaseTokensAndFollowVar() {

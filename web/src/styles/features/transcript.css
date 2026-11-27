@@ -18,7 +18,7 @@
 
 .tr-user {
   position: relative; width: fit-content; max-width: 85%; margin-left: auto; padding: var(--sp-6) var(--sp-8); border-radius: var(--shape-lg);
-  background: color-mix(in srgb, var(--fg) 5%, var(--bg)); color: var(--fg); font-size: var(--fs-lg); white-space: pre-wrap; overflow-wrap: anywhere;
+  background: color-mix(in srgb, var(--fg) 5%, var(--bg)); color: var(--fg); font-size: var(--type-reading-size); line-height: var(--type-reading-line); white-space: pre-wrap; overflow-wrap: anywhere;
 }
 .tr-mic { float: left; margin: 0.15em var(--sp-3) 0 0; color: var(--fg-muted); }
 .tr-user-text.folded { display: -webkit-box; -webkit-line-clamp: 6; -webkit-box-orient: vertical; overflow: hidden; }
@@ -38,7 +38,7 @@
 .tr-assistant .tr-acts { display: flex; gap: var(--sp-1); margin-top: var(--sp-2); margin-left: calc(-1 * var(--sp-3)); color: var(--fg-muted); }
 .tr-rows > .tr-acts { display: flex; margin-top: var(--sp-2); padding-left: var(--sp-5); font-size: var(--fs-xs); }
 @media (min-width: 901px) { .tr-rows { max-width: 90ch; margin-inline: auto; } }
-.tr-assistant .md { color: var(--fg); font-family: var(--font-serif); font-size: var(--type-reading-size); font-weight: var(--type-reading-weight); line-height: var(--type-reading-line); }
+.tr-assistant .md { color: var(--fg); font-family: var(--font); font-size: var(--type-reading-size); font-weight: var(--type-reading-weight); line-height: var(--type-reading-line); }
 .tr-assistant .md :is(h1, h2, h3, h4) { font-size: 1em; font-weight: 700; }
 .tr-assistant .md h1 { font-size: 1.25em; }
 .tr-assistant .md h2 { font-size: 1.12em; }

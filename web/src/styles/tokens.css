@@ -359,9 +359,9 @@
   --type-display-size: var(--fs-title1);
   --type-display-weight: 700;
   --type-display-line: var(--lh-tight);
-  --type-reading-size: 17px;
+  --type-reading-size: 15px;
   --type-reading-weight: 400;
-  --type-reading-line: 27px;
+  --type-reading-line: 21px;
   --type-label-size: var(--fs-sm);
   --type-label-weight: 500;
   --type-label-line: var(--lh-tight);
@@ -399,8 +399,8 @@
     --type-footnote-size: var(--fs-footnote);
     --type-caption-size: var(--fs-caption);
     --type-label-size: var(--fs-footnote);
-    --type-reading-size: 18px;
-    --type-reading-line: 28px;
+    --type-reading-size: 16px;
+    --type-reading-line: 24px;
   }
   input:not([type='checkbox'], [type='radio'], [type='range'], [type='file']), textarea, select { font-size: 16px !important; }
 }
