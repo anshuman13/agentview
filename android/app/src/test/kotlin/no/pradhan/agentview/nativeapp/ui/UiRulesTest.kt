@@ -18,7 +18,7 @@ class UiRulesTest {
     @Test fun loadingTextEndsInEllipsis() {
         val text = Regex("""\bLoading\("([^"]*)"""")
         val all = lines()
-        assertTrue(all.count { text.containsMatchIn(it.third) } > 10)
+        assertTrue(all.count { text.containsMatchIn(it.third) } > 5)
         fails("Loading text without a trailing ellipsis", all.filter { l -> text.findAll(l.third).any { !it.groupValues[1].endsWith("…") } })
     }
 

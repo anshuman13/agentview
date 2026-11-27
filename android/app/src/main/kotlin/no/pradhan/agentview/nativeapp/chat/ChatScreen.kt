@@ -55,7 +55,6 @@ import no.pradhan.agentview.nativeapp.ui.rememberLoad
 
 class ChatPanels {
     var agents by mutableStateOf(false)
-    var servers by mutableStateOf(false)
     var memory by mutableStateOf(false)
     var tools by mutableStateOf(false)
     var find by mutableStateOf(false)

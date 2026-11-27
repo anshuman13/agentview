@@ -67,8 +67,6 @@ try {
 }
 setInterval(() => void netbirdStatus(), TTL).unref();
 
-export const netbirdIp = () => status?.netbirdIp?.split('/')[0];
-
 const loopback = (a: string) => a === '127.0.0.1' || a === '::1';
 
 export const allowedPeer = (addr = '') => {

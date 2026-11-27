@@ -11,11 +11,10 @@ let seq = 0;
 
 export const listTerminals = (chat: string) => [...terms.values()].filter((t) => t.chat === chat).map(({ id, name }) => ({ id, name }));
 
-// run, when given, is typed into the new shell, and the terminal takes name.
-export function createTerminal(chat: string, cwd: string, run?: { name: string; command: string }) {
+export function createTerminal(chat: string, cwd: string) {
   const shell = process.env.SHELL || '/bin/zsh';
   const used = new Set(listTerminals(chat).map((t) => t.name));
-  const base = run?.name ?? path.basename(shell);
+  const base = path.basename(shell);
   const label = (n: number) => (n === 1 ? base : `${base} ${n}`);
   let n = 1;
   while (used.has(label(n))) n++;
@@ -38,7 +37,6 @@ export function createTerminal(chat: string, cwd: string, run?: { name: string; 
     terms.delete(t.id);
     t.socks.forEach((ws) => ws.close(TERM_GONE));
   });
-  if (run) t.proc.terminal?.write(`${run.command}\n`);
   terms.set(t.id, t);
   return { id: t.id, name: t.name };
 }

@@ -11,7 +11,6 @@ import { dismissFinding, getFindings } from '../session/findings.js';
 import { deployRoute } from '../integrations/deploy.js';
 import { deployUrl } from '../settings.js';
 import { gitRoute } from '../workspace/git.js';
-import { devScript } from '../workspace/devScript.js';
 import type { ClientMessage } from '../../../shared/protocol.js';
 import { readBody, failed } from '../json.js';
 import { isPhone } from '../presence.js';
@@ -87,12 +86,7 @@ export function chatSessionRoutes(d: RouteDeps): Record<string, Entry<ChatCtx>> 
 
 export function chatFileRoutes(): Record<string, Entry<ChatCtx>> {
   return {
-    'POST /api/terms': entry(async ({ url, chat }) => {
-      if (!url.searchParams.has('dev')) return createTerminal(chat.id, chat.cwd);
-      const dev = await devScript(chat.cwd);
-      return dev ? createTerminal(chat.id, chat.cwd, { name: dev.script, command: dev.command }) : failed(404, 'No dev script in package.json');
-    }),
-    'ANY /api/devscript': entry(({ chat }) => devScript(chat.cwd)),
+    'POST /api/terms': entry(({ chat }) => createTerminal(chat.id, chat.cwd)),
     'DELETE /api/terms': entry(({ url }) => closeTerminal(url.searchParams.get('id') ?? '')),
     'ANY /api/terms': entry(({ chat }) => listTerminals(chat.id)),
     'POST /api/sketches/rename': entry(({ url, chat }) => renameSketch(chat.cwd, url.searchParams.get('name') ?? '', url.searchParams.get('to') ?? '')),

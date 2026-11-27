@@ -45,7 +45,6 @@ import no.pradhan.agentview.nativeapp.ui.Tokens
 import no.pradhan.agentview.nativeapp.ui.Type
 import no.pradhan.agentview.nativeapp.ui.av
 import no.pradhan.agentview.nativeapp.ui.rememberNow
-import no.pradhan.agentview.nativeapp.workspace.DevServersSheet
 
 @Composable
 internal fun ChatSheets(hub: Hub, live: LiveChat, session: SessionInfo?, agents: List<Agent>, panels: ChatPanels, cwd: String, onOpenAgent: (String) -> Unit, run: ChatRun?) {
@@ -65,8 +64,6 @@ internal fun ChatSheets(hub: Hub, live: LiveChat, session: SessionInfo?, agents:
     if (panels.tools) Sheet(onDismiss = { panels.tools = false }, title = "Tools", padded = false, full = false) {
         val open = { panel: () -> Unit -> { panels.tools = false; panel() } }
         Group {
-            ListRow("Dev servers", "Dev servers on this Mac", onClick = open { panels.servers = true }, trailing = { Chevron() })
-            Hairline()
             ListRow("Memory", "Instruction and memory files", onClick = open { panels.memory = true }, trailing = { Chevron() })
             session?.resumeCommand?.let { command ->
                 Hairline()
@@ -77,7 +74,6 @@ internal fun ChatSheets(hub: Hub, live: LiveChat, session: SessionInfo?, agents:
             }
         }
     }
-    if (panels.servers) DevServersSheet(hub) { panels.servers = false }
     if (panels.memory) MemorySheet(hub, cwd, session?.instructionFiles.orEmpty()) { panels.memory = false }
     panels.file?.let { f ->
         val close = { panels.file = null }

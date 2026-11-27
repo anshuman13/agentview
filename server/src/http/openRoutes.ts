@@ -28,7 +28,6 @@ import { specTasks } from '../../../shared/specTasks.js';
 import { STOPPED_BY_YOU } from '../session/runs.js';
 import { clearFeatureUse, featureUseDays, recordRoute } from '../featureUse.js';
 import { loadSettings, publicSettings, saveSettings } from '../settings.js';
-import { listPorts, openPort } from './preview.js';
 import { createFolder, createWorktree, isWorkspaceRepo, listRepos, listWorktrees, removeRunWorktree, removeWorktree } from '../workspace/worktrees.js';
 import { branchSlug, makeWorktree } from '../workspace/tries.js';
 import { savePaste } from './body.js';
@@ -193,8 +192,6 @@ export function workspaceRoutes(d: RouteDeps): Record<string, Entry<Ctx>> {
     }, true),
     'ANY /api/worktrees': entry(() => listWorktrees(liveCwds())),
     'ANY /api/repos': entry(() => listRepos()),
-    'ANY /api/ports': entry(() => listPorts()),
-    'ANY /api/ports/open': entry(({ req, url }) => openPort(Number(url.searchParams.get('port')), req.headers.get('host') ?? undefined)),
   };
 }
 
