@@ -58,7 +58,7 @@ export type ChatEvent =
   | { id: string; kind: 'tool_use'; name: string; input: Record<string, unknown>; summary: string; at: number; parent?: string; agent?: string }
   | { id: string; kind: 'tool_result'; toolUseId: string; text: string; isError: boolean; at: number; parent?: string; stopped?: boolean }
   | { id: string; kind: 'result'; text: string; costUsd: number; isError: boolean; at: number; model?: string | null }
-  | { id: string; kind: 'system'; text: string; at: number; error?: boolean; reset?: number }
+  | { id: string; kind: 'system'; text: string; at: number; error?: boolean; reset?: number; from?: string }
   | { id: string; kind: 'status'; text: string; at: number; done?: string; next?: string[] }
   | { id: string; kind: 'review'; files: ReviewFile[]; result?: string; at: number }
   | { id: string; kind: 'blocked'; rule: string; reason: string; allowed: boolean; at: number }
@@ -145,7 +145,7 @@ export type BackgroundShell = { toolUseId: string; label: string; startedAt: num
 export type SessionUpdate = Omit<SessionInfo, 'commands' | 'mcp'> & Partial<Pick<SessionInfo, 'commands' | 'mcp'>>;
 
 // What the agent behind a chat supports.
-export type Capabilities = { rewind: boolean; mcp: boolean; mcpEdit: boolean; connectors: boolean; effort: boolean; stopTask: boolean; subagents: boolean };
+export type Capabilities = { rewind: boolean; mcp: boolean; mcpEdit: boolean; connectors: boolean; effort: boolean; stopTask: boolean; subagents: boolean; forkAt: boolean };
 
 // What a file rewind to before a prompt would change, paths relative to the chat folder.
 export type RewindPreview = { files: string[]; insertions: number; deletions: number } | { error: string };
@@ -428,7 +428,7 @@ export type ClientMessage =
   | { type: 'retry' }
   | { type: 'close'; id: string }
   | { type: 'open_session'; sessionId: string }
-  | { type: 'new_session'; cwd?: string; fork?: string; profile?: 'work' | 'personal'; model?: string; provider?: Provider; text?: string }
+  | { type: 'new_session'; cwd?: string; fork?: string; upTo?: string; profile?: 'work' | 'personal'; model?: string; provider?: Provider; text?: string }
   | { type: 'mcp_status' }
   | { type: 'phone_alarm_result'; id: string; ok: boolean; notified?: boolean; weekday?: string; error?: string }
   | { type: 'usage' }

@@ -33,6 +33,9 @@ export function sideChat() {
   setTimeout(stop, 30_000);
 }
 
+// Fork from here: a new chat holding this one up to and with the reply; the server opens it.
+export const forkReply = (replyId: string) => send({ type: 'new_session', upTo: replyId });
+
 // Fork chat: a new chat in the same folder and model that starts by summarising this one.
 export function forkChat() {
   const { id, sessionId, model, provider } = getState().session;

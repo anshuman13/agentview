@@ -12,7 +12,7 @@ export const MEMORY_FILE = /\/projects\/[^/]+\/memory\/[^/]+\.md$/;
 export type Item =
   | { kind: 'user'; id: string; text: string; at: number; stopping?: boolean; queued?: boolean; voice?: boolean }
   | { kind: 'assistant'; id: string; text: string; streaming: boolean }
-  | { kind: 'system'; id: string; text: string; error?: boolean }
+  | { kind: 'system'; id: string; text: string; error?: boolean; from?: string }
   | { kind: 'step'; id: string; use: ToolUse; result?: ToolResult }
   | { kind: 'file'; id: string; path: string; count: EditCount; uses: ToolUse[]; error?: string; denied?: boolean; pending?: boolean }
   | { kind: 'agent'; id: string; use: ToolUse; result?: ToolResult; running: boolean; progress: string | null; steps: Item[] }
@@ -169,7 +169,7 @@ function itemsFrom(events: ChatEvent[], results: Map<string, ToolResult>, childr
   for (const e of events) {
     if (e.kind === 'user') items.push({ kind: 'user', id: e.id, text: e.text, at: e.at, stopping: e.stopping, queued: e.queued, voice: e.voice });
     else if (e.kind === 'assistant') { const text = stripRound(e.text); if (text.trim()) items.push({ kind: 'assistant', id: e.id, text, streaming: e.streaming }); }
-    else if (e.kind === 'system') items.push({ kind: 'system', id: e.id, text: e.text, ...(e.error && { error: true }) });
+    else if (e.kind === 'system') items.push({ kind: 'system', id: e.id, text: e.text, ...(e.error && { error: true }), ...(e.from && { from: e.from }) });
     else if (e.kind === 'blocked') items.push({ kind: 'blocked', id: e.id, ev: e });
     else if (e.kind === 'review') items.push({ kind: 'review', id: e.id, ev: e });
     else if (e.kind === 'tool_use' && !e.name.endsWith('__set_status')) {

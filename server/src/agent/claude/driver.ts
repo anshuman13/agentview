@@ -24,6 +24,7 @@ import { StreamText } from './stream.js';
 import { historyFrom } from './transcript.js';
 import { OPENROUTER_PREFIX } from '../../../../shared/openrouter.js';
 import { recordCall } from '../../usage/calls.js';
+import { forkAt } from './forkAt.js';
 
 
 const USAGE_EVERY = 10 * 60_000;
@@ -88,7 +89,7 @@ export class ClaudeDriver implements AgentDriver {
 
   // On OpenRouter the models, effort and the Opus advisor are not Anthropic's, so they are left out.
   get capabilities(): Capabilities {
-    return { rewind: true, mcp: true, mcpEdit: true, connectors: !this.openrouter, effort: !this.openrouter, stopTask: true, subagents: true };
+    return { rewind: true, mcp: true, mcpEdit: true, connectors: !this.openrouter, effort: !this.openrouter, stopTask: true, subagents: true, forkAt: true };
   }
 
   get instructionFiles() {
@@ -340,6 +341,10 @@ export class ClaudeDriver implements AgentDriver {
 
   review(target: 'local' | number, id?: string) {
     this.send(target === 'local' ? '/code-review' : `/code-review ${target}`, id);
+  }
+
+  forkAt(sessionId: string, reply: { id: string; text: string }, title?: string) {
+    return forkAt(sessionId, this.cwd, reply, title);
   }
 
   async rewind(id: string, dryRun = false) {

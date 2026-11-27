@@ -54,6 +54,8 @@ export interface AgentDriver {
   setPermissionMode(mode: string): Promise<void>;
   allow(rule: string): Promise<boolean>;
   rewind(promptId: string, dryRun?: boolean): Promise<{ canRewind: boolean; error?: string; filesChanged?: string[]; insertions?: number; deletions?: number }>;
+  // Copies the session up to and with a reply into a new session; returns its id.
+  forkAt(sessionId: string, reply: { id: string; text: string }, title?: string): Promise<string>;
   stopTask(toolUseId: string): Promise<boolean>;
   mcpStatus(): Promise<McpServer[] | null>;
   refreshUsage?(): Promise<void>;

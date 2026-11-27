@@ -242,6 +242,10 @@ cost so far. The status bar usage tooltip adds a Spend block with today's and th
 - "Fork chat" (the palette's Chat: Fork Chat) starts a new chat in the same folder and model
   whose first prompt asks Claude to read the old chat (through `@chat:`) and summarise it in at most 15 lines, so the work
   continues from a short brief instead of the full context
+- Fork from here (the fork icon under a turn's reply, web and phone, Claude chats only) opens a new chat titled
+  "<title> (fork)" that is an exact copy of the conversation up to and with that reply (the SDK's forkSession; a streamed
+  reply is found by its text). It ends with a muted "Forked from <title>" line that opens the parent; the parent is left
+  as it is. The line is live only and is gone once the fork is reopened
 - In the phone review pager, tapping a changed line opens the comment sheet, which also has Revert this change: the file
   is saved with that one block of changed lines put back to the last commit
 - Turns are separated by space only, with a divider only where the day changes

@@ -28,7 +28,7 @@ export const codexDriver = (resume?: string, fork = false): DriverFactory => (ho
 export class CodexDriver implements AgentDriver {
   readonly provider: Provider = 'codex';
   readonly compactEndsTurn = true;
-  readonly capabilities: Capabilities = { rewind: false, mcp: true, mcpEdit: false, connectors: false, effort: true, stopTask: false, subagents: false };
+  readonly capabilities: Capabilities = { rewind: false, mcp: true, mcpEdit: false, connectors: false, effort: true, stopTask: false, subagents: false, forkAt: false };
   readonly account: Account = 'main';
   readonly instructionFiles: string[];
 
@@ -315,6 +315,10 @@ export class CodexDriver implements AgentDriver {
 
   async rewind() {
     return { canRewind: false, error: 'Codex chats cannot rewind files' };
+  }
+
+  async forkAt(): Promise<string> {
+    throw new Error('Codex chats cannot fork from a reply');
   }
 
   async stopTask() {

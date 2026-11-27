@@ -7,7 +7,7 @@ export type HostRequest =
   | { op: 'events_before'; id: string; before: string; limit?: number }
   | { op: 'cmd'; id: string; msg: ClientMessage }
   | { op: 'open'; sessionId: string }
-  | { op: 'new'; cwd: string; from: string; fork?: string; model?: string; provider?: Provider; text?: string }
+  | { op: 'new'; cwd: string; from: string; fork?: string; upTo?: string; model?: string; provider?: Provider; text?: string }
   | { op: 'job'; cwd: string; title: string; prompt: string; jobId: string; branch: string; repo: string; paseo: boolean; account?: Account }
   | { op: 'run_end'; id: string; why: string; pr?: string }
   | { op: 'run_drop'; id: string; why: string }

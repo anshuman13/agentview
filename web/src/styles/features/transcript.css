@@ -47,6 +47,8 @@
 .tr-assistant .md code { font-size: 0.82em; }
 .tr-system { font-size: var(--fs-sm); color: var(--fg-muted); }
 .tr-system.err { color: var(--err); }
+.tr-system.link { display: block; padding: 0; border: 0; background: none; font: inherit; font-size: var(--fs-sm); text-align: left; cursor: pointer; }
+.tr-system.link:hover { color: var(--fg); text-decoration: underline; }
 .tr-failed { display: flex; align-items: center; gap: var(--sp-4); font-size: var(--fs-sm); color: var(--err); }
 .tr-failed-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 

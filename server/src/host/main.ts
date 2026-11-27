@@ -10,7 +10,7 @@ import { applyInitialModel } from './initialModel.js';
 import { alarmResult } from './phoneAlarm.js';
 import { command } from './commands.js';
 import { connection } from './connection.js';
-import { closeByUser, createChat, dropJobRun, endRun, jobChat, newChat, openSaved, prompt, reviseRun } from './chats.js';
+import { closeByUser, createChat, dropJobRun, endRun, forkFrom, jobChat, newChat, openSaved, prompt, reviseRun } from './chats.js';
 import { liveList, broadcastLive, runs } from './listing.js';
 import { sweepIdle, restart } from './lifecycle.js';
 import { startMorningDigest } from '../integrations/morningDigest.js';
@@ -134,7 +134,8 @@ async function handle(req: HostRequest): Promise<unknown> {
 }
 
 async function newInFolder(req: Extract<HostRequest, { op: 'new' }>) {
-  const chat = await newChat(req.cwd, live.get(req.from)?.chat, req.fork, req.provider);
+  const from = live.get(req.from)?.chat;
+  const chat = req.upTo && from ? await forkFrom(from, req.upTo) : await newChat(req.cwd, from, req.fork, req.provider);
   applyInitialModel(chat, req.model);
   if (req.text) void chat.prompt(req.text);
   return chat.id;

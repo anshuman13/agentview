@@ -156,6 +156,14 @@ export async function newChat(cwd: string, from: AgentSession | undefined, fork?
   return fork ? createChat(dir, fork, from?.title ?? '', true) : createChat(dir, undefined, '', false, choice);
 }
 
+// Fork from here: a new chat holding the conversation up to and with one reply, with a line that opens the parent.
+export async function forkFrom(from: AgentSession, replyId: string) {
+  const sessionId = await from.forkAt(replyId);
+  const chat = await createChat(from.cwd, sessionId, from.title ? `${from.title} (fork)` : '');
+  chat.system(`Forked from ${from.title || 'this chat'}`, false, undefined, from.state.session.sessionId ?? undefined);
+  return chat;
+}
+
 export async function prompt(cwd: string, text: string, from?: string, fresh = false, choice: Provider = 'claude', model?: string) {
   const reuse = fresh ? undefined : [...live.values()].map((l) => l.chat).filter((c) => c.cwd === cwd && c.driver.provider === choice && !c.state.session.running && !c.state.pending.length).sort((a, b) => lastActive(b) - lastActive(a))[0];
   const chat = reuse ?? (from ? await newChat(cwd, get(from), undefined, choice) : await createChat(cwd, undefined, '', false, choice));

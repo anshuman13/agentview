@@ -890,6 +890,18 @@ describe('rewind files', () => {
     rewindFiles.mockResolvedValueOnce({ canRewind: false, error: 'no checkpoint' } as never);
     expect(await s.rewindPreview('hist-uuid:3')).toEqual({ error: 'no checkpoint' });
   });
+
+  it('forks up to a reply with the chat title', async () => {
+    const { s } = fakeSession();
+    const forkAt = vi.fn(async () => 'new-session');
+    Object.assign(s.driver, { forkAt });
+    s.state.session.sessionId = 'sid';
+    s.title = 'Plan';
+    s.state.events.push({ id: 'r1', kind: 'assistant', text: 'Done', streaming: false, at: 1 });
+    expect(await s.forkAt('r1')).toBe('new-session');
+    expect(forkAt).toHaveBeenCalledWith('sid', expect.objectContaining({ id: 'r1', text: 'Done' }), 'Plan (fork)');
+    expect(() => s.forkAt('missing')).toThrow('That reply is not in this chat');
+  });
 });
 
 describe('pull request link', () => {

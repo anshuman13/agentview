@@ -139,8 +139,8 @@ export class AgentSession implements AgentHost {
     return this.prompts.sendNow(id);
   }
 
-  system(text: string, error?: boolean, reset?: number) {
-    this.pushEvent({ id: randomUUID(), kind: 'system', text, at: Date.now(), ...(error && { error }), ...(reset && { reset }) });
+  system(text: string, error?: boolean, reset?: number, from?: string) {
+    this.pushEvent({ id: randomUUID(), kind: 'system', text, at: Date.now(), ...(error && { error }), ...(reset && { reset }), ...(from && { from }) });
   }
 
   setStatus(text: string, { done, next }: { done?: string; next?: string[] } = {}) {
@@ -335,6 +335,14 @@ export class AgentSession implements AgentHost {
     const r = await this.driver.rewind(id, true);
     if (!r.canRewind) return { error: r.error ?? 'No checkpoint for that prompt' };
     return { files: (r.filesChanged ?? []).map((f) => path.relative(this.cwd, f)), insertions: r.insertions ?? 0, deletions: r.deletions ?? 0 };
+  }
+
+  // A new session holding this chat up to and with one reply.
+  forkAt(replyId: string) {
+    const { sessionId } = this.state.session;
+    const reply = this.state.events.find((e) => e.id === replyId);
+    if (!sessionId || reply?.kind !== 'assistant') throw new Error('That reply is not in this chat');
+    return this.driver.forkAt(sessionId, reply, this.title ? `${this.title} (fork)` : undefined);
   }
 
   interrupt() {

@@ -1,5 +1,5 @@
 import { Fragment, memo, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { setAtLatest, useStore } from '../../app/store';
+import { send, setAtLatest, useStore } from '../../app/store';
 import { Icon } from '../../ui/Icon';
 import { Button, IconButton } from '../../ui/Button';
 import { EmptyState } from '../../ui/Panel';
@@ -21,7 +21,7 @@ import { ALARM_TOOL, BUILD_TOOL, createTranscriptBuilder, exploreRuns, dayDivide
 import { pressable, useTick } from '../../ui/util';
 import { turnMeter } from '../../sessions/agents';
 import { useCan } from '../useCan';
-import { copyReply, resume, retry } from '../chatActions';
+import { copyReply, forkReply, resume, retry } from '../chatActions';
 import { failedLine } from '../composer/composerLogic';
 import { billing, providerLabel } from '../../../../shared/providers';
 import { isSketchPath } from '../../../../shared/sketches';
@@ -68,6 +68,7 @@ function TranscriptView({ loaded, sessionId, events, earlier, cwd, running, bill
   const scroll = useStickyScroll(items, last, running);
   const { box, rows, stuck, behind, onScroll, jump } = scroll;
   const canRewind = useCan('rewind');
+  const canFork = useCan('forkAt');
   const rewinds = useMemo(() => rewindReplies(items), [items]);
   const answers = useMemo(() => turnAnswers(items, running), [items, running]);
   const replyCount = useMemo(() => items.filter((it) => it.kind === 'assistant').length, [items]);
@@ -139,7 +140,7 @@ function TranscriptView({ loaded, sessionId, events, earlier, cwd, running, bill
     if (!first && folded.has(it.id)) return null;
     const run = runs.get(it.id);
     if (run) return <Explored key={it.id} id={it.id} run={run} cwd={cwd} />;
-    return <Row key={it.id} it={it} cwd={cwd} settled={!running} card={cards.has(it.id)} answer={answers.has(it.id)} rewind={canRewind && !running ? rewinds.get(it.id) : undefined} fresh={fresh.has(it.id)} />;
+    return <Row key={it.id} it={it} cwd={cwd} settled={!running} card={cards.has(it.id)} answer={answers.has(it.id)} fork={canFork && !running && answers.has(it.id)} rewind={canRewind && !running ? rewinds.get(it.id) : undefined} fresh={fresh.has(it.id)} />;
   };
 
   return (
@@ -175,16 +176,17 @@ function TranscriptView({ loaded, sessionId, events, earlier, cwd, running, bill
   );
 }
 
-export const Row = memo(RowImpl, (p, n) => p.cwd === n.cwd && p.settled === n.settled && p.card === n.card && p.answer === n.answer && p.rewind?.id === n.rewind?.id && p.readOnly === n.readOnly && sameItem(p.it, n.it));
+export const Row = memo(RowImpl, (p, n) => p.cwd === n.cwd && p.settled === n.settled && p.card === n.card && p.answer === n.answer && p.fork === n.fork && p.rewind?.id === n.rewind?.id && p.readOnly === n.readOnly && sameItem(p.it, n.it));
 
-function RowImpl({ it, cwd, settled, card, answer, rewind, readOnly, fresh }: { it: Item; cwd: string; settled?: boolean; card?: boolean; answer?: boolean; rewind?: Rewind; readOnly?: boolean; fresh?: boolean }) {
+function RowImpl({ it, cwd, settled, card, answer, fork, rewind, readOnly, fresh }: { it: Item; cwd: string; settled?: boolean; card?: boolean; answer?: boolean; fork?: boolean; rewind?: Rewind; readOnly?: boolean; fresh?: boolean }) {
   const label = useStore((s) => providerLabel(s.session.provider));
   switch (it.kind) {
     case 'user':
       return <UserRow it={it} label={label} readOnly={readOnly} />;
     case 'assistant':
-      return <div id={`turn-${it.id}`} className={`tr-assistant ${it.streaming ? 'streaming' : ''}`}><Markdown text={it.text} id={it.streaming ? undefined : it.id} fade={it.streaming} fresh={fresh} />{!it.streaming && (answer || rewind) && <div className="tr-acts">{answer && <IconButton icon="copy" label="Copy" onClick={() => copyReply(it.text.trim())} />}{rewind && <RewindLink rewind={rewind} />}</div>}</div>;
+      return <div id={`turn-${it.id}`} className={`tr-assistant ${it.streaming ? 'streaming' : ''}`}><Markdown text={it.text} id={it.streaming ? undefined : it.id} fade={it.streaming} fresh={fresh} />{!it.streaming && (answer || rewind) && <div className="tr-acts">{answer && <IconButton icon="copy" label="Copy" onClick={() => copyReply(it.text.trim())} />}{fork && <IconButton icon="repo-forked" label="Fork from here" title="Starts a new chat from this point. This one stays as it is." onClick={() => forkReply(it.id)} />}{rewind && <RewindLink rewind={rewind} />}</div>}</div>;
     case 'system':
+      if (it.from) return <button type="button" className="tr-system link" onClick={() => send({ type: 'open_session', sessionId: it.from! })}>{it.text}</button>;
       return <div className={`tr-system${it.error ? ' err' : ''}`}>{it.text}</div>;
     case 'step':
       if (it.use.name === ALARM_TOOL) return <AlarmCard use={it.use} result={it.result} running={!settled} />;

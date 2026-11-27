@@ -63,6 +63,7 @@ import kotlinx.coroutines.withTimeoutOrNull
 import no.pradhan.agentview.nativeapp.app.Hub
 import no.pradhan.agentview.nativeapp.net.Queued
 import no.pradhan.agentview.nativeapp.net.billing
+import no.pradhan.agentview.nativeapp.app.forkReply
 import no.pradhan.agentview.nativeapp.app.loadEarlier
 import no.pradhan.agentview.nativeapp.net.providerLabel
 import no.pradhan.agentview.nativeapp.app.retryTurn
@@ -97,6 +98,7 @@ fun Transcript(hub: Hub, view: ChatView, earlier: Int, settled: Boolean, chatId:
     val rows = view.rows
     val noEvents by hub.store.state.select { it.events.isEmpty() }
     val canRewind by hub.store.state.select { it.session?.capabilities?.rewind ?: true }
+    val canFork by hub.store.state.select { it.session?.capabilities?.forkAt ?: true }
     val bill by hub.store.state.select { billing(it.session?.provider) }
     val list = remember(view.items, view.folds) { view.foldRows.filter { it is FoldRow.Row || (it is FoldRow.Fold && (it.steps.isNotEmpty() || it.work.tools > 0 || it.thought.isNotEmpty())) } }
     val folded = remember(view.runs) { view.runs.values.flatMap { r -> r.drop(1).map { it.id } }.toSet() }
@@ -157,7 +159,7 @@ fun Transcript(hub: Hub, view: ChatView, earlier: Int, settled: Boolean, chatId:
                     if (!retried) Button("Retry", { retried = true; hub.retryTurn(chatId) }, size = ButtonSize.Sm)
                 }
             }
-            transcriptRows(hub, view, list, bill, newKey, folded, chatId, cwd, running, canRewind, fresh, onOpenAgent, onOpenWork)
+            transcriptRows(hub, view, list, bill, newKey, folded, chatId, cwd, running, canRewind, canFork, fresh, onOpenAgent, onOpenWork)
             if (earlier > 0) item(key = "earlier") {
                 Box(Modifier.fillMaxWidth().heightIn(min = Tokens.touch).clickable(enabled = !loading) { hub.loadEarlier() }, contentAlignment = Alignment.Center) {
                     Text(if (loading) "Loading earlier…" else "Show earlier ($earlier hidden)", style = Type.callout, color = av.accentText)
@@ -178,7 +180,7 @@ fun Transcript(hub: Hub, view: ChatView, earlier: Int, settled: Boolean, chatId:
     }
 }
 
-private fun LazyListScope.transcriptRows(hub: Hub, view: ChatView, list: List<FoldRow>, bill: String, newKey: String?, folded: Set<String>, chatId: String, cwd: String, running: Boolean, canRewind: Boolean, fresh: FreshReplies, onOpenAgent: (String) -> Unit, onOpenWork: (String) -> Unit) {
+private fun LazyListScope.transcriptRows(hub: Hub, view: ChatView, list: List<FoldRow>, bill: String, newKey: String?, folded: Set<String>, chatId: String, cwd: String, running: Boolean, canRewind: Boolean, canFork: Boolean, fresh: FreshReplies, onOpenAgent: (String) -> Unit, onOpenWork: (String) -> Unit) {
     // Fields that keep their identity while a reply streams, so the rows do not capture the view, which does not.
     val days = view.days
     val runs = view.runs
@@ -200,7 +202,7 @@ private fun LazyListScope.transcriptRows(hub: Hub, view: ChatView, list: List<Fo
                         run != null -> ExploredRow(hub, it.id, run, cwd, !running)
                         else -> {
                             val born = remember(it.id) { fresh.take(it.id) }
-                            ItemRow(hub, it, chatId, cwd, !running, onOpenAgent, if (!running && canRewind) rewinds[it.id] else null, card = it.id in docCards, answer = it.id in answers && (!running || it.id != openAnswer), fresh = born)
+                            ItemRow(hub, it, chatId, cwd, !running, onOpenAgent, if (!running && canRewind) rewinds[it.id] else null, card = it.id in docCards, answer = it.id in answers && (!running || it.id != openAnswer), fork = canFork && !running && it.id in answers, fresh = born)
                         }
                     }
                 }
@@ -254,14 +256,18 @@ private fun JumpButton(replies: Int, modifier: Modifier, onClick: () -> Unit) {
 }
 
 @Composable
-internal fun ItemRow(hub: Hub, it: Item, chat: String, cwd: String, settled: Boolean, onOpenAgent: (String) -> Unit, rewind: Item.User? = null, card: Boolean = false, answer: Boolean = false, readOnly: Boolean = false, fresh: Boolean = false) {
+internal fun ItemRow(hub: Hub, it: Item, chat: String, cwd: String, settled: Boolean, onOpenAgent: (String) -> Unit, rewind: Item.User? = null, card: Boolean = false, answer: Boolean = false, readOnly: Boolean = false, fresh: Boolean = false, fork: Boolean = false) {
     when (it) {
         is Item.User -> UserRow(hub, it, chat, readOnly)
         is Item.Assistant -> {
             Markdown(it.text, Modifier.fillMaxWidth(), it.streaming, reading = true, fresh = fresh)
-            if (!it.streaming && (answer || rewind != null)) ReplyActions(hub, chat, if (answer) it.text.trim() else null, rewind)
+            if (!it.streaming && (answer || rewind != null)) ReplyActions(hub, chat, if (answer) it.text.trim() else null, rewind, if (fork) it.id else null)
         }
-        is Item.System -> Text(it.text, style = Type.footnote, color = if (it.error) av.err else av.fgMuted)
+        is Item.System -> {
+            val scope = rememberCoroutineScope()
+            val from = it.from
+            Text(it.text, if (from == null) Modifier else Modifier.clickable { scope.launch { hub.openSaved(from) } }, style = Type.footnote, color = if (it.error) av.err else av.fgMuted)
+        }
         is Item.Step -> when (it.use.name) {
             ALARM_TOOL -> AlarmCard(it, !settled)
             BUILD_TOOL -> BuildCard(hub, it)
@@ -280,9 +286,9 @@ internal fun ItemRow(hub: Hub, it: Item, chat: String, cwd: String, settled: Boo
 fun Modifier.leftBar(color: androidx.compose.ui.graphics.Color, width: Dp = Tokens.sp1): Modifier =
     drawBehind { drawRect(color, size = androidx.compose.ui.geometry.Size(width.toPx(), size.height)) }
 
-// Copy (the Markdown source) and Rewind files under the turn's last reply (web Rewind.tsx).
+// Copy (the Markdown source), Fork from here and Rewind files under the turn's last reply (web Rewind.tsx).
 @Composable
-private fun ReplyActions(hub: Hub, chat: String, copy: String?, rewind: Item.User?) {
+private fun ReplyActions(hub: Hub, chat: String, copy: String?, rewind: Item.User?, fork: String?) {
     val clip = LocalClipboardManager.current
     val scope = rememberCoroutineScope()
     var ask by remember { mutableStateOf(false) }
@@ -295,6 +301,7 @@ private fun ReplyActions(hub: Hub, chat: String, copy: String?, rewind: Item.Use
     )
     Row(Modifier.offset(x = -Tokens.sp4)) {
         if (copy != null) IconBtn("copy", "Copy", { clip.setText(AnnotatedString(copy)); hub.notice.value = "Reply copied" }, iconSize = Tokens.icon)
+        if (fork != null) IconBtn("repo-forked", "Fork from here", { hub.forkReply(fork) }, iconSize = Tokens.icon)
         if (rewind != null) IconBtn("discard", "Rewind files", {
             scope.launch {
                 preview = runCatching { hub.api.rewindPreview(chat, rewind.id) }.getOrNull()

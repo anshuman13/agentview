@@ -11,6 +11,7 @@ fun Capabilities.can(what: String) = when (what) {
     "effort" -> effort
     "stopTask" -> stopTask
     "subagents" -> subagents
+    "forkAt" -> forkAt
     else -> true
 }
 

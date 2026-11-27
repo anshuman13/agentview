@@ -84,6 +84,15 @@ fun Hub.newChat(cwd: String? = null, model: String? = null, fork: String? = null
     }
 }
 
+// Fork from here: a new chat holding this one up to and with the reply (web chatActions.ts forkReply).
+fun Hub.forkReply(replyId: String) {
+    if (readOnly) { notice.value = READ_ONLY_SENT; return }
+    viewModelScope.launch {
+        val id = switchTo(newSessionCmd(upTo = replyId))
+        if (id == null) notice.value = "The fork did not open" else link.value = DeepLink(chat = id)
+    }
+}
+
 fun Hub.command(body: String) = post(body, store.wanted)
 
 // A command a page sends on its own, skipped without a notice in a read-only check.
