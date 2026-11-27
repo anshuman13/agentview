@@ -290,6 +290,10 @@ fun rewindReplies(items: List<Item>): Map<String, Item.User> {
     return out
 }
 
+// True while a turn runs and nothing has come back since the last sent prompt: the reply start shows the working mark.
+fun awaitingReply(items: List<Item>, running: Boolean): Boolean =
+    running && items.lastOrNull { it !is Item.User || !it.queued } is Item.User
+
 // The last reply of each finished turn, when nothing follows it in the turn: the answers that get a Copy action.
 // A prompt, a loop or goal round or a system line ends a turn, and the running turn gets none yet.
 fun turnAnswers(items: List<Item>, running: Boolean = false): Set<String> {

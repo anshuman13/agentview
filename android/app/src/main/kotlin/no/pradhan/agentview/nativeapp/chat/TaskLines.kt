@@ -114,7 +114,7 @@ internal fun TaskLines(hub: Hub, fold: FoldRow.Fold, cwd: String, live: Boolean,
 
 // Two accent dots pulsing in turn, the Claude apps' mark for a running step; still when animations are off.
 @Composable
-private fun WorkDots() {
+internal fun WorkDots() {
     val resolver = LocalContext.current.contentResolver
     val moving = remember(resolver) { Settings.Global.getFloat(resolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f) > 0f }
     val t = rememberInfiniteTransition(label = "work")

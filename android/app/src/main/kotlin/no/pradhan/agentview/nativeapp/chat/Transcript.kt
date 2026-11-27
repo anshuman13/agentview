@@ -115,13 +115,15 @@ fun Transcript(hub: Hub, view: ChatView, earlier: Int, settled: Boolean, chatId:
     val earlierDue = rememberEarlierDue(hub, chatId, view.replyCount, loading, earlier, settled)
     val open = remember(items, newId, newKey) { if (openAtNew(items, newId) != null) newKey else null }
     val pin = remember(chatId) { mutableStateOf(false) }
-    FollowNewest(hub, view, list, listState, stick, pin, atBottom, chatId, open, queued.size + if (failed != null) 1 else 0)
+    val waiting = remember(items, running) { awaitingReply(items, running) }
+    val lead = queued.size + (if (failed != null) 1 else 0) + (if (waiting) 1 else 0)
+    FollowNewest(hub, view, list, listState, stick, pin, atBottom, chatId, open, lead)
     val margin = with(LocalDensity.current) { Tokens.touch.roundToPx() }
     LaunchedEffect(subChats.hit) {
         if (subChats.hit == null) return@LaunchedEffect
         stick.value = false
         pin.value = false
-        val index = queued.size + (if (failed != null) 1 else 0) + list.size + (if (earlier > 0) 1 else 0)
+        val index = lead + list.size + (if (earlier > 0) 1 else 0)
         listState.scrollToItem(index)
         val y = withTimeoutOrNull(2000) { snapshotFlow { subChats.hitY }.first { it != null } }
         subChats.hit = null
@@ -140,6 +142,7 @@ fun Transcript(hub: Hub, view: ChatView, earlier: Int, settled: Boolean, chatId:
             lazyItems(queued.asReversed(), key = { "out-${it.id}" }) { q ->
                 Box(Modifier.padding(bottom = Tokens.sp4)) { QueuedRow(hub, q) }
             }
+            if (waiting) item(key = "working") { Box(Modifier.gap(Tokens.sp24).semantics { contentDescription = "Working" }) { WorkDots() } }
             if (failed != null) item(key = "failed") {
                 var retried by remember(chatId, failed) { mutableStateOf(false) }
                 Row(Modifier.padding(top = Tokens.sp4), horizontalArrangement = Arrangement.spacedBy(Tokens.sp5), verticalAlignment = Alignment.CenterVertically) {

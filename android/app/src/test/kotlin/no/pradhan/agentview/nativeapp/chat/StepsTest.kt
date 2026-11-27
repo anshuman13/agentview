@@ -153,4 +153,15 @@ class StepsTest {
         assertEquals(listOf("a", "b", "c"), runs.getValue("a").map { it.id })
         assertEquals("2 files, 1 search", exploreLabel(runs.getValue("a")))
     }
+
+    @Test
+    fun awaitingReplyHoldsUntilSomethingFollowsTheSentPrompt() {
+        val user = Item.User("u", "hi", 0, false, false)
+        val text = Item.Assistant("a", "ok", true)
+        assertTrue(awaitingReply(listOf(user), true))
+        assertFalse(awaitingReply(listOf(user), false))
+        assertFalse(awaitingReply(listOf(user, text), true))
+        assertFalse(awaitingReply(listOf(user, text, Item.User("q", "next", 0, false, true)), true))
+        assertFalse(awaitingReply(emptyList(), true))
+    }
 }
