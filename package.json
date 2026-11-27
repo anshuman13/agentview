@@ -10,6 +10,7 @@
     "start": "bun run --cwd server start",
     "up": "./start.sh",
     "test": "bun test --parallel ./server ./shared ./web",
+    "e2e": "bun run --cwd web e2e",
     "app": "bun run --cwd app dev",
     "native": "./android/build.sh"
   },
