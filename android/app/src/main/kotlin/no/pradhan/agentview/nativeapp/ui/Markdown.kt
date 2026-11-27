@@ -6,6 +6,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -30,6 +31,14 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.LinkAnnotation
@@ -148,6 +157,7 @@ fun CodeBlock(text: String, lang: String = "", modifier: Modifier = Modifier) {
     val clip = LocalClipboardManager.current
     val notice = LocalNotice.current
     val shape = RoundedCornerShape(Tokens.shapeLg)
+    val scroll = rememberScrollState()
     Column(modifier.fillMaxWidth().clip(shape).border(BorderStroke(Tokens.hairline, av.border), shape)) {
         Row(Modifier.fillMaxWidth().padding(start = Tokens.sp6, end = Tokens.sp2), verticalAlignment = Alignment.CenterVertically) {
             Text(lang, style = Type.caption, color = av.fgMuted, modifier = Modifier.weight(1f))
@@ -158,10 +168,24 @@ fun CodeBlock(text: String, lang: String = "", modifier: Modifier = Modifier) {
             style = Mono,
             color = av.fg,
             softWrap = false,
-            modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(Tokens.sp6),
+            modifier = Modifier.fillMaxWidth().edgeFade(scroll).horizontalScroll(scroll).padding(Tokens.sp6),
         )
     }
 }
+
+// Fades the side a horizontal scroller can still move toward, so a cut-off line reads as continuing.
+private fun Modifier.edgeFade(state: ScrollState): Modifier =
+    graphicsLayer(compositingStrategy = CompositingStrategy.Offscreen).drawWithContent {
+        drawContent()
+        val w = Tokens.sp12.toPx()
+        if (state.value > 0) {
+            drawRect(Brush.horizontalGradient(listOf(Color.Transparent, Color.Black), endX = w), size = Size(w, size.height), blendMode = BlendMode.DstIn)
+        }
+        if (state.value < state.maxValue) {
+            val x = size.width - w
+            drawRect(Brush.horizontalGradient(listOf(Color.Black, Color.Transparent), startX = x, endX = size.width), topLeft = Offset(x, 0f), size = Size(w, size.height), blendMode = BlendMode.DstIn)
+        }
+    }
 
 @Composable
 private fun TableView(t: MdBlock.Table) {
