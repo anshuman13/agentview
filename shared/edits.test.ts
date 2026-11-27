@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'bun:test';
-import { editPairs, replyLine, roundOf } from './edits';
+import { readFileSync } from 'node:fs';
+import { editMarks, editPairs, replyLine, roundOf, type EditCount } from './edits';
 import type { ChatEvent } from './protocol';
 
 describe('roundOf', () => {
@@ -34,4 +35,9 @@ describe('editPairs', () => {
     expect(editPairs('MultiEdit', { edits: [{ old_string: 'a', new_string: 'b' }, { new_string: 'c' }] })).toEqual([['a', 'b'], ['', 'c']]);
     expect(editPairs('Bash', { command: 'ls' })).toBeNull();
   });
+describe('editMarks', () => {
+});
+
+  const cases = JSON.parse(readFileSync(new URL('./fixtures/edit-marks.json', import.meta.url), 'utf8')) as { name: string; count: EditCount; expected: { add: string; del: string } }[];
+  for (const c of cases) it(c.name, () => expect(editMarks(c.count)).toEqual(c.expected));
 });

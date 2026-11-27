@@ -162,6 +162,7 @@
 .tr-alarm-status { display: flex; align-items: center; gap: var(--sp-3); font-size: var(--type-meta-size); line-height: var(--type-meta-line); color: var(--meta-fg); }
 .tr-alarm-status.error { color: var(--err); }
 .tr-steps-head > span + .tr-tools::before { content: '\00b7'; margin-right: var(--sp-3); }
+.tr-steps-head .tr-count { font-size: inherit; }
 .tr-subs { display: flex; flex-direction: column; gap: var(--sp-3); }
 .tr-sub-feed { display: flex; flex-direction: column; gap: var(--sp-5); padding: var(--sp-4) var(--sp-6) var(--sp-6); }
 .tr-buildbar { flex: none; border-bottom: 1px solid var(--border); }

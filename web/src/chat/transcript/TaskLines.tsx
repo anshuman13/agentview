@@ -6,6 +6,7 @@ import { MemoryPick } from '../cards/Memory';
 import { proposalState, usedClaimState, type Claim, type FoldRow, type Proposal } from './workFold';
 import { openWork } from '../chatActions';
 import { runningStep } from './steps';
+import { EditMarks } from './StepRows';
 import { useAssistantTable } from '../../codex/data';
 import { setView } from '../../codex/view';
 import { MEMORY } from '../../codex/wiki/shared';
@@ -35,6 +36,7 @@ export const Tasks = memo(function Tasks({ row: { id, hidden, steps: all, now, t
         {proposed.length > 0 && <Chip size="sm" on={proposing} className="tr-claims-chip" aria-expanded={proposing} onClick={() => setProposing((v) => !v)}>{`Proposed ${plural(proposed.length, 'claim')}`}</Chip>}
         {remembered.length > 0 && <Chip size="sm" className="tr-claims-chip" onClick={() => setMemory(true)}>{`Remembered ${plural(remembered.length, 'memory', 'memories')}`}</Chip>}
         {tools > 0 && <button type="button" className="tr-tools" title="Open this turn's tool calls in a tab" onClick={() => openWork(id)}>{doing ? <>{spin}<span className="tr-doing">{doing}</span></> : `Used ${plural(tools, 'tool')}`}<Icon name="chevron-right" small /></button>}
+        {tools > 0 && <EditMarks count={work} />}
       </div>
       {thinking && <div className="tr-thought">{thinking}</div>}
       {reading && <UsedClaims claims={claims} />}

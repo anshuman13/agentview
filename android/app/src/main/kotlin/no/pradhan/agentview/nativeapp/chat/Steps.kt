@@ -156,6 +156,9 @@ fun editCount(name: String, input: JsonObject): Pair<Int, Int>? = when (name) {
     else -> null
 }
 
+// shared/edits.ts editMarks: the added and removed counts as "+12" and "\u22123", each empty when 0.
+fun editMarks(add: Int, del: Int) = (if (add > 0) "+$add" else "") to (if (del > 0) "\u2212$del" else "")
+
 // A result carries the running total of its session, which starts over after /clear (web shared/cost.ts costRise).
 fun costRise(costUsd: Double, last: Double) = if (costUsd >= last) costUsd - last else costUsd
 

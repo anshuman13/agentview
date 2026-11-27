@@ -83,6 +83,7 @@ internal fun TaskLines(hub: Hub, fold: FoldRow.Fold, cwd: String, live: Boolean,
                 } else Text("Used ${plural(fold.work.tools, "tool")}", style = Type.footnote, color = av.fgMuted, maxLines = 1, softWrap = false)
                 AvIcon("chevron-right", null, Tokens.sp5, tint = av.fgMuted)
             }
+            if (fold.work.tools > 0) EditMarks(fold.work.add, fold.work.del)
         }
         if (thinking.isNotEmpty()) Text(thinking, style = Type.footnote, color = av.fgMuted, fontStyle = FontStyle.Italic, maxLines = 1, overflow = TextOverflow.Ellipsis)
         @Composable fun Task(icon: @Composable () -> Unit, text: String, color: androidx.compose.ui.graphics.Color) =

@@ -12,6 +12,7 @@ import { Badge } from '../../ui/Badge';
 import { agentSummary } from '../../sessions/agents';
 import { denied, duration, exploreLabel, firstLine, relPath, stepLabel, stepTone, type Item, type StepItem, type ToolResult, type ToolUse } from './steps';
 import { clickOnKey, plural } from '../../ui/util';
+import { editMarks, type EditCount } from '../../../../shared/edits';
 import { useCan } from '../useCan';
 import { Row } from './Transcript';
 
@@ -57,6 +58,13 @@ function Detail({ use, result }: { use: ToolUse; result?: ToolResult }) {
 }
 
 
+// "+12 −3" in the diff colours, each part left out when 0.
+export function EditMarks({ count }: { count: EditCount }) {
+  const { add, del } = editMarks(count);
+  if (!add && !del) return null;
+  return <span className="tr-count">{add && <span className="add">{add}</span>}{add && del && ' '}{del && <span className="del">{del}</span>}</span>;
+}
+
 export function FileCard({ it, cwd }: { it: Extract<Item, { kind: 'file' }>; cwd: string }) {
   const rel = relPath(it.path, cwd);
   const cut = rel.lastIndexOf('/');
@@ -68,7 +76,7 @@ export function FileCard({ it, cwd }: { it: Extract<Item, { kind: 'file' }>; cwd
       className={it.denied ? 'denied' : it.error ? 'err' : undefined}
       icon={<FileIcon name={name} />}
       title={name}
-      meta={it.error ? <span className="tr-err">{it.error}</span> : <>{cut >= 0 && <span className="tr-dir">{rel.slice(0, cut + 1)} </span>}<span className="tr-count"><span className="add">+{it.count.add}</span> <span className="del">-{it.count.del}</span></span></>}
+      meta={it.error ? <span className="tr-err">{it.error}</span> : <>{cut >= 0 && <span className="tr-dir">{rel.slice(0, cut + 1)} </span>}<EditMarks count={it.count} /></>}
       action={<LinkAction label="Open" onClick={open} />}
       onOpen={it.error ? open : undefined}
       menu={<CopyPathItems path={it.path} cwd={cwd} />}

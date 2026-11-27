@@ -27,6 +27,8 @@ export function editPairs(name: string, input: Record<string, unknown>): [string
   if (name === 'MultiEdit') return (Array.isArray(input.edits) ? (input.edits as Record<string, unknown>[]) : []).map((e) => [s(e?.old_string), s(e?.new_string)]);
   return null;
 }
+// The added and removed counts as Claude Code shows them, "+12" and "−3", each empty when 0. Android Steps.kt editMarks says the same.
+export const editMarks = (c: EditCount) => ({ add: c.add > 0 ? `+${c.add}` : '', del: c.del > 0 ? `−${c.del}` : '' });
 
 function failedTools(events: ChatEvent[]) {
   const failed = new Set<string>();

@@ -300,6 +300,14 @@ class SharedCasesTest {
         }
     }
 
+    @Test fun editMarks() {
+        for (c in cases("edit-marks")) {
+            val n = c.getValue("count").jsonObject
+            val want = c.getValue("expected").jsonObject.let { it.str("add") to it.str("del") }
+            assertEquals(c.str("name"), want, no.pradhan.agentview.nativeapp.chat.editMarks(n.getValue("add").jsonPrimitive.int, n.getValue("del").jsonPrimitive.int))
+        }
+    }
+
     @Test fun exploreRuns() {
         for (c in cases("explore-runs")) {
             val rows = c.getValue("rows").jsonArray.map { it.jsonObject }
@@ -406,6 +414,7 @@ class SharedCasesTest {
                 val want = expected.jsonArray.map { turn -> turn.jsonArray.map { p -> p.jsonObject.let { Claim(it.str("id"), it.str("text"), it.str("where")) } } }
                 assertEquals(c.str("name"), want, rows.filterIsInstance<FoldRow.Fold>().map { it.claims })
             }
+            c["edits"]?.let { expected -> assertEquals(c.str("name"), expected.jsonArray.map { it.jsonObject.let { e -> e.getValue("add").jsonPrimitive.int to e.getValue("del").jsonPrimitive.int } }, rows.filterIsInstance<FoldRow.Fold>().map { it.work.add to it.work.del }) }
         }
     }
 

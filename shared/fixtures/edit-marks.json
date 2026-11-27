@@ -1,0 +1,6 @@
+[
+  { "name": "both counts", "count": { "add": 12, "del": 3 }, "expected": { "add": "+12", "del": "−3" } },
+  { "name": "only added lines", "count": { "add": 4, "del": 0 }, "expected": { "add": "+4", "del": "" } },
+  { "name": "only removed lines", "count": { "add": 0, "del": 2 }, "expected": { "add": "", "del": "−2" } },
+  { "name": "nothing changed", "count": { "add": 0, "del": 0 }, "expected": { "add": "", "del": "" } }
+]

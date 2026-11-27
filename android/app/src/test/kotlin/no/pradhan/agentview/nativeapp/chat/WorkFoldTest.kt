@@ -100,7 +100,7 @@ class WorkFoldTest {
         val refused = tool("Bash")
         val events = listOf(user(), bad, result(bad, true, "boom"), agent, e1, result(e1), e2, result(e2), refused, result(refused, true, "The user doesn't want to proceed"), say("ok"), done(0.3), user(), say("hi"), done(0.5))
         val first = fold(events).filterIsInstance<FoldRow.Fold>().first()
-        assertEquals(Work(5, 2, 1, 1, events.first { it.kind == "result" }.at - events[0].at, 0.0), first.work)
+        assertEquals(Work(5, 2, 1, 1, events.first { it.kind == "result" }.at - events[0].at, 0.0, add = 2, del = 2), first.work)
     }
 
     @Test

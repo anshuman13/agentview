@@ -248,6 +248,17 @@ private fun FileSheet(hub: Hub, rel: String, title: String, onDismiss: () -> Uni
     }
 }
 
+// "+12 \u22123" in the diff colours, each part left out when 0.
+@Composable
+internal fun EditMarks(add: Int, del: Int) {
+    val (a, d) = editMarks(add, del)
+    if (a.isEmpty() && d.isEmpty()) return
+    Row(horizontalArrangement = Arrangement.spacedBy(Tokens.sp2)) {
+        if (a.isNotEmpty()) Text(a, style = Type.footnote, color = av.diffAdd)
+        if (d.isNotEmpty()) Text(d, style = Type.footnote, color = av.diffDel)
+    }
+}
+
 @Composable
 internal fun FileCard(hub: Hub, it: Item.File, cwd: String) {
     var sheet by rememberSaveable(it.id) { mutableStateOf(false) }
@@ -260,10 +271,7 @@ internal fun FileCard(hub: Hub, it: Item.File, cwd: String) {
             onLongClick = { copying = true },
             state = {
                 if (it.error != null) WordClamp(androidx.compose.ui.text.AnnotatedString(it.error), Type.footnote, if (it.denied) av.fgMuted else av.err, 1, modifier = Modifier.widthIn(max = Tokens.fileError))
-                else Row(horizontalArrangement = Arrangement.spacedBy(Tokens.sp2)) {
-                    Text("+${it.add}", style = Type.footnote, color = av.diffAdd)
-                    Text("-${it.del}", style = Type.footnote, color = av.diffDel)
-                }
+                else EditMarks(it.add, it.del)
             },
             action = { LinkAction("Open") { sheet = true } },
             onOpen = if (it.error != null) ({ sheet = true }) else null,

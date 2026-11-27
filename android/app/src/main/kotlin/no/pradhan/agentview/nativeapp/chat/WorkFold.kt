@@ -10,7 +10,7 @@ import no.pradhan.agentview.nativeapp.ui.plural
 import no.pradhan.agentview.nativeapp.workspace.isSketchPath
 
 // Web chat/transcript/workFold.ts: each turn's work folded into one row above its last reply.
-data class Work(val tools: Int, val files: Int, val agents: Int, val failed: Int, val ms: Long, val cost: Double, val note: String = "")
+data class Work(val tools: Int, val files: Int, val agents: Int, val failed: Int, val ms: Long, val cost: Double, val note: String = "", val add: Int = 0, val del: Int = 0)
 
 // What a fold without tool work holds: the one note's first line, else their count.
 private fun noteOf(it: Item) = when (it) {
@@ -163,11 +163,15 @@ private fun workOf(items: List<Item>, span: Span): Work {
     var tools = 0
     var agents = 0
     var failed = 0
+    var add = 0
+    var del = 0
     val paths = HashSet<String>()
     for (it in items) when (it) {
         is Item.Step -> { tools++; if (it.result?.isError == true && !isDenied(it.result)) failed++ }
         is Item.File -> {
             tools += it.uses.size
+            add += it.add
+            del += it.del
             if (it.error != null) { if (!it.denied) failed++ } else paths.add(it.path)
         }
         is Item.Agent -> {
@@ -177,7 +181,7 @@ private fun workOf(items: List<Item>, span: Span): Work {
         }
         else -> {}
     }
-    return Work(tools, paths.size, agents, failed, if (span.end > span.at) span.end - span.at else 0L, span.cost, if (tools == 0) notes(items) else "")
+    return Work(tools, paths.size, agents, failed, if (span.end > span.at) span.end - span.at else 0L, span.cost, if (tools == 0) notes(items) else "", add, del)
 }
 
 // Splits the rows into turns, one per prompt, and moves the work of each into one fold placed above its last reply, or at its end while there is no reply.

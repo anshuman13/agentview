@@ -5,7 +5,7 @@ import { isSketchPath } from '../../../../shared/sketches';
 import { money, plural } from '../../ui/util';
 import { ALARM_TOOL, BUILD_TOOL, denied, docCards, duration, firstLine, MEMORY_FILE, type Item } from './steps';
 
-export type Work = { tools: number; files: number; agents: number; failed: number; ms: number; cost: number; note?: string };
+export type Work = { tools: number; files: number; agents: number; failed: number; ms: number; cost: number; add: number; del: number; note?: string };
 
 // What a fold without tool work holds: the one note's first line, else their count.
 const noteOf = (it: Item) => ('text' in it ? firstLine(it.text) : '');
@@ -130,12 +130,14 @@ function spans(events: ChatEvent[], last: number | null) {
 }
 
 function workOf(items: Item[], span: Span): Work {
-  const work: Work = { tools: 0, files: 0, agents: 0, failed: 0, ms: span.end > span.at ? span.end - span.at : 0, cost: span.cost };
+  const work: Work = { tools: 0, files: 0, agents: 0, failed: 0, ms: span.end > span.at ? span.end - span.at : 0, cost: span.cost, add: 0, del: 0 };
   const paths = new Set<string>();
   for (const it of items) {
     if (it.kind === 'step') { work.tools++; if (it.result?.isError && !denied(it.result)) work.failed++; }
     else if (it.kind === 'file') {
       work.tools += it.uses.length;
+      work.add += it.count.add;
+      work.del += it.count.del;
       if (it.error) { if (!it.denied) work.failed++; } else paths.add(it.path);
     } else if (it.kind === 'agent') {
       work.tools++;
