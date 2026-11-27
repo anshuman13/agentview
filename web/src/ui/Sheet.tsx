@@ -5,6 +5,7 @@ import { useEscape, useReturnFocus } from './util';
 import { useSheetDrag } from './useSheetDrag';
 
 const stack: object[] = [];
+export const sheetOpen = () => stack.length > 0;
 
 // With `onBack`, Esc and the touch Back call it instead of closing the sheet; the scrim and drag still close.
 export function Sheet({ label, onClose, onBack, className, overlayClassName, active = true, noSwipe, children }: { label: string; onClose: () => void; onBack?: () => void; className?: string; overlayClassName?: string; active?: boolean; noSwipe?: boolean; children: ReactNode }) {

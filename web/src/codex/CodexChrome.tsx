@@ -4,6 +4,8 @@ import { AssistantNav } from './nav';
 import { Icon } from '../ui/Icon';
 import { Button } from '../ui/Button';
 import { Back } from '../app/touch/back';
+import { sheetOpen } from '../ui/Sheet';
+import { useEscape, useReturnFocus } from '../ui/util';
 
 export function LockedCodex({ root, snap, store }: { root: RefObject<HTMLDivElement | null>; snap: Pick<Snapshot, 'phase' | 'message'>; store: AssistantStore }) {
   return (
@@ -17,6 +19,8 @@ export function LockedCodex({ root, snap, store }: { root: RefObject<HTMLDivElem
 }
 
 export function ListsDrawer({ leaving, leave, close }: { leaving: boolean; leave: () => void; close: () => void }) {
+  useReturnFocus();
+  useEscape(() => { if (!sheetOpen()) leave(); });
   return (
     <div className={`as-drawer-overlay ${leaving ? 'leaving' : ''}`} onClick={leave} onAnimationEnd={(e) => leaving && e.target === e.currentTarget && close()}>
       <Back close={leave} />
