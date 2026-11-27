@@ -3,7 +3,7 @@ import { useStore } from '../../app/store';
 import { Section } from '../../ui/Section';
 import { Sheet } from '../../ui/Sheet';
 import { chatImages } from '../composer/composerLogic';
-import { UserImage } from '../transcript/Transcript';
+import { UserImage } from '../transcript/UserRow';
 import { relPath } from '../transcript/steps';
 
 // Every image the chat read, wrote or was sent, newest first, each with its path (android ImagesUi.kt ImagesSheet).

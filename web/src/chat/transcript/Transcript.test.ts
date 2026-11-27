@@ -1,7 +1,7 @@
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'bun:test';
-import { Explored } from './Transcript';
+import { Explored } from './StepRows';
 import { buildTranscript, createTranscriptBuilder, duration, exploreLabel, exploreRuns, stepLabel, stepTone, newMarker, newReplies, dayDividers } from './steps';
 import { replyLine, sumEdits } from '../../../../shared/edits';
 import { buildTurns } from './turns';
