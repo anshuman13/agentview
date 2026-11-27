@@ -86,6 +86,7 @@ import { SUMMARY_TEMPLATES, templateFor, type SummaryTemplate } from './codex/da
 import { heldOrder } from '../../shared/util';
 import { loadErrorText } from '../../shared/loadError';
 import { syncedAt } from '../../shared/syncText';
+import { elementChip, elementPrompt, withElements, type PickedElement } from '../../shared/elementPick';
 
 const cases = <T>(file: string): T[] => JSON.parse(readFileSync(new URL(`../../shared/fixtures/${file}.json`, import.meta.url), 'utf8'));
 
@@ -592,6 +593,14 @@ describe('cases shared with the Android app', () => {
 
   for (const c of cases<{ name: string; path: string; start: number; end: number; text: string; expected: string }>('lines-quote')) {
     it(`linesQuote: ${c.name}`, () => expect(linesQuote(c.path, c.start, c.end, c.text)).toBe(c.expected));
+  }
+
+  for (const c of cases<{ name: string; el: PickedElement; chip: string; prompt: string }>('element-prompt')) {
+    it(`elementPrompt: ${c.name}`, () => {
+      expect(elementChip(c.el)).toBe(c.chip);
+      expect(elementPrompt(c.el)).toBe(c.prompt);
+      expect(withElements(' fix this ', [c.el])).toBe(`fix this\n\n${c.prompt}`);
+    });
   }
 
   for (const c of cases<{ name: string; saved: string | null; repo: string | null; expected: string | null }>('chat-branch')) {

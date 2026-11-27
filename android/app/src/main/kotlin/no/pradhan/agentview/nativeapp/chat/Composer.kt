@@ -123,7 +123,8 @@ fun Composer(hub: Hub, chatId: String, sessionId: String?, session: SessionInfo?
     DisposableEffect(chatId) { onDispose { hub.shell.composing.value = false } }
     val c = av
     val canTalk = SpeechRecognizer.isRecognitionAvailable(LocalContext.current)
-    val shape = RoundedCornerShape(if (multiline || s.marks.isNotEmpty()) Tokens.shapeLg else Tokens.radiusPill)
+    val els by hub.elements.collectAsState()
+    val shape = RoundedCornerShape(if (multiline || s.marks.isNotEmpty() || els.isNotEmpty()) Tokens.shapeLg else Tokens.radiusPill)
     Column(Modifier.fillMaxWidth().background(c.bg).padding(start = Tokens.listPad, end = Tokens.listPad, top = Tokens.sp4, bottom = Tokens.sp2), verticalArrangement = Arrangement.spacedBy(Tokens.sp2)) {
         if (suggestions.isNotEmpty()) SuggestionList(suggestions) { sg ->
             val r = acceptSuggestion(s.text.text, trigger!!.start, s.text.selection.end, sg.insert)
@@ -136,7 +137,8 @@ fun Composer(hub: Hub, chatId: String, sessionId: String?, session: SessionInfo?
             asked.forEach { t -> Chip(t, { s.set(TextFieldValue(t, TextRange(t.length))); s.submit(false, uploading) }, icon = if (t in QUICK_REPLIES) null else "reply") }
         }
         Column(Modifier.fillMaxWidth().clip(shape).background(c.raised).border(BorderStroke(Tokens.hairline, c.border), shape)) {
-            if (s.marks.isNotEmpty()) FlowRow(Modifier.padding(start = Tokens.sp4, end = Tokens.sp4, top = Tokens.sp4), horizontalArrangement = Arrangement.spacedBy(Tokens.sp2)) {
+            if (s.marks.isNotEmpty() || els.isNotEmpty()) FlowRow(Modifier.padding(start = Tokens.sp4, end = Tokens.sp4, top = Tokens.sp4), horizontalArrangement = Arrangement.spacedBy(Tokens.sp2)) {
+                ElementChips(hub, els)
                 s.marks.forEachIndexed { i, m -> Chip(markLabel(m), { s.replaceMarks(s.marks.filterIndexed { j, _ -> j != i }) }, icon = if (m.startsWith("[Image")) "file-media" else "file", trailingIcon = "close", trailingLabel = "Remove") }
             }
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Bottom) {
@@ -271,7 +273,8 @@ private fun ComposerInput(s: ComposerState, placeholder: String, modifier: Modif
 private fun ComposerActions(hub: Hub, s: ComposerState, running: Boolean, uploading: Int, dictation: Dictation, canTalk: Boolean) {
     val c = av
     val text = s.text
-    val typed = s.full.isNotBlank()
+    val els by hub.elements.collectAsState()
+    val typed = s.full.isNotBlank() || els.isNotEmpty()
     var talking by remember { mutableStateOf(false) }
     var dictating by remember { mutableStateOf(false) }
     val haptic = LocalHapticFeedback.current

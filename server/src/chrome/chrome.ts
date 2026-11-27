@@ -3,6 +3,7 @@ import { call, connect, connected, events, sendState, setup, stopRetrying, type 
 import { chromeRunning, endpoint, launchProfile, openMac, ownProfile } from './launch.js';
 import { forgetViewer, frame, hooks, resetFrames, viewers, viewport } from './frames.js';
 import { forgetTouch, pageInput, viewerSize } from './input.js';
+import { inspect } from './inspect.js';
 import { pick, selectTab, showWatched } from './pick.js';
 import { dropEmulation, emulate, forgetSize, resize, snapshot, stopWatching } from './screencast.js';
 import { sendTabs, tabs, track, trustOrigin, view } from './tabs.js';
@@ -86,6 +87,7 @@ async function input(m: any, ws: Peer) {
   }
   const s = view.watching?.session;
   if (!s) return;
+  if (['pick', 'pickHover', 'pickAt'].includes(m.t)) return inspect(m, ws, s);
   if (['mouse', 'key', 'text', 'touch'].includes(m.t) && m.type !== 'mouseMoved') await showWatched();
   return pageInput(m, ws, s);
 }

@@ -68,5 +68,5 @@ export function useFrameInput(send: Send, img: RefObject<HTMLImageElement | null
     if (text) send({ t: 'text', text });
   };
 
-  return { onDown, onMove, onUp, onCancel, onWheel, onKey, onText };
+  return { pos, onDown, onMove, onUp, onCancel, onWheel, onKey, onText };
 }

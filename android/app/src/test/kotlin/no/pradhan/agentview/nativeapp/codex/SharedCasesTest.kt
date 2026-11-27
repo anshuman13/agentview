@@ -158,6 +158,10 @@ import no.pradhan.agentview.nativeapp.sessions.items
 import no.pradhan.agentview.nativeapp.ui.agoShort
 import no.pradhan.agentview.nativeapp.workspace.fileDiff
 import no.pradhan.agentview.nativeapp.workspace.linesQuote
+import no.pradhan.agentview.nativeapp.workspace.PickedElement
+import no.pradhan.agentview.nativeapp.workspace.elementChip
+import no.pradhan.agentview.nativeapp.workspace.elementPrompt
+import no.pradhan.agentview.nativeapp.workspace.withElements
 import no.pradhan.agentview.nativeapp.workspace.revertBlock
 import no.pradhan.agentview.nativeapp.workspace.splitDiff
 import no.pradhan.agentview.nativeapp.codex.wiki.claimActions
@@ -1326,6 +1330,17 @@ class SharedCasesTest {
 
     @Test fun linesQuoteCases() {
         for (c in cases("lines-quote")) assertEquals(c.str("name"), c.str("expected"), linesQuote(c.str("path"), c.getValue("start").jsonPrimitive.int, c.getValue("end").jsonPrimitive.int, c.str("text")))
+    }
+
+    @Test fun elementPromptCases() {
+        for (c in cases("element-prompt")) {
+            val e = c.getValue("el").jsonObject
+            fun f(k: String) = e.getValue(k).jsonPrimitive.content
+            val el = PickedElement(f("url"), f("tag"), f("selector"), f("text"), f("html"))
+            assertEquals(c.str("name"), c.str("chip"), elementChip(el))
+            assertEquals(c.str("name"), c.str("prompt"), elementPrompt(el))
+            assertEquals(c.str("name"), "fix this\n\n" + c.str("prompt"), withElements(" fix this ", listOf(el)))
+        }
     }
 
     @Test fun chatBranchCases() {

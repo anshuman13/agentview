@@ -8,9 +8,9 @@ import { useFrameInput } from './useFrameInput';
 
 type Send = (m: object) => unknown;
 
-type BarProps = { send: Send; tabs: Tab[]; tab: Tab | undefined; pinned: string | null; phone: boolean; setPhone: (v: boolean) => void; focusKeyboard: () => void; goFull: () => void };
+type BarProps = { picking: boolean; setPicking: (v: boolean) => void; send: Send; tabs: Tab[]; tab: Tab | undefined; pinned: string | null; phone: boolean; setPhone: (v: boolean) => void; focusKeyboard: () => void; goFull: () => void };
 
-function BrowserBar({ send, tabs, tab, pinned, phone, setPhone, focusKeyboard, goFull }: BarProps) {
+function BrowserBar({ picking, setPicking, send, tabs, tab, pinned, phone, setPhone, focusKeyboard, goFull }: BarProps) {
   const [url, setUrl] = useState('');
   const [editing, setEditing] = useState(false);
   useEffect(() => {
@@ -42,6 +42,7 @@ function BrowserBar({ send, tabs, tab, pinned, phone, setPhone, focusKeyboard, g
         <option value="">Follow Claude</option>
         {tabs.map((t) => <option key={t.id} value={t.id}>{t.title || t.url}</option>)}
       </select>
+      <IconButton icon="inspect" label="Pick an element" on={picking} aria-pressed={picking} title={picking ? 'Click an element to add it to the prompt. Esc ends picking' : 'Pick an element on the page and add it to the prompt'} onClick={() => setPicking(!picking)} />
       {tab && <IconButton icon="close" label="Close tab" title="Close this tab in Chrome" onClick={() => send({ t: 'close', id: tab.id })} />}
       <IconButton
         icon="device-mobile"
@@ -66,6 +67,30 @@ export function BrowserPane({ onEmpty }: { onEmpty?: () => void }) {
   const [phone, setPhone] = useState(() => readFlag('browser-phone', false));
   const { send, vp, state, tabs, current, pinned, hasFrame } = useChromeSocket({ img, kbd, host }, phone, onEmpty);
   const input = useFrameInput(send, img, kbd, vp);
+  const [picking, setPicking] = useState(false);
+  const on = state.state === 'on';
+
+  // Pick mode: the pointer outlines the element under it in Chrome, a click or tap adds it to the prompt, Esc ends it.
+  useEffect(() => {
+    if (!picking || !on) return;
+    send({ t: 'pick', on: true });
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      e.preventDefault();
+      setPicking(false);
+    };
+    window.addEventListener('keydown', onKey, true);
+    return () => {
+      window.removeEventListener('keydown', onKey, true);
+      send({ t: 'pick', on: false });
+    };
+  }, [picking, on, current]);
+  const frameEvents = picking
+    ? {
+        onPointerDown: (e: React.PointerEvent) => { e.preventDefault(); send({ t: 'pickAt', ...input.pos(e) }); },
+        onPointerMove: (e: React.PointerEvent) => e.pointerType === 'mouse' && send({ t: 'pickHover', ...input.pos(e) }),
+      }
+    : { onPointerDown: input.onDown, onPointerMove: input.onMove, onPointerUp: input.onUp, onPointerCancel: input.onCancel };
 
   useEffect(() => {
     document.body.classList.toggle('browser-full', full);
@@ -77,6 +102,8 @@ export function BrowserPane({ onEmpty }: { onEmpty?: () => void }) {
   return (
     <div className="browser-pane">
       <BrowserBar
+        picking={picking}
+        setPicking={setPicking}
         send={send}
         tabs={tabs}
         tab={tabs.find((t) => t.id === current)}
@@ -90,14 +117,11 @@ export function BrowserPane({ onEmpty }: { onEmpty?: () => void }) {
         {full && <IconButton icon="screen-normal" label="Exit full screen" className="browser-exit" onClick={() => setFull(false)} />}
         <img
           ref={img}
-          className="chrome-frame"
+          className={`chrome-frame${picking ? ' picking' : ''}`}
           alt=""
           hidden={!hasFrame}
           draggable={false}
-          onPointerDown={input.onDown}
-          onPointerMove={input.onMove}
-          onPointerUp={input.onUp}
-          onPointerCancel={input.onCancel}
+          {...frameEvents}
           onWheel={input.onWheel}
           onContextMenu={(e) => e.preventDefault()}
         />

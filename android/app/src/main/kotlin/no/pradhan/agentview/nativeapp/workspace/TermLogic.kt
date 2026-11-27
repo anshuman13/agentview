@@ -165,7 +165,22 @@ sealed interface ChromeMsg {
     data class Tabs(val tabs: List<ChromeTab>, val current: String?) : ChromeMsg
     data class Frame(val data: String, val w: Int, val h: Int) : ChromeMsg
     data class Editable(val on: Boolean) : ChromeMsg
+    data class Picked(val el: PickedElement) : ChromeMsg
 }
+
+// shared/elementPick.ts: an element picked in the browser, its chip label and the prompt text it adds.
+data class PickedElement(val url: String, val tag: String, val selector: String, val text: String, val html: String, val shot: String = "")
+
+private fun cutTo(s: String, n: Int) = if (s.length > n) s.take(n) + "…" else s
+
+fun elementChip(el: PickedElement) = "<${el.tag} /> ${cutTo(el.text, 40)}".trim()
+
+fun elementPrompt(el: PickedElement): String {
+    val lines = listOfNotNull("Element on ${el.url}", "Selector: `${el.selector}`", "Tag: <${el.tag}>", el.text.takeIf { it.isNotEmpty() }?.let { "Text: ${cutTo(it, 200)}" })
+    return lines.joinToString("\n") + "\nHTML:\n```html\n${cutTo(el.html, 1000)}\n```"
+}
+
+fun withElements(text: String, els: List<PickedElement>) = (listOf(text.trim()) + els.map(::elementPrompt)).filter { it.isNotEmpty() }.joinToString("\n\n")
 
 // The hidden field under the Browser frame holds one space, so a Backspace on it still shows up as a change.
 const val KBD_SEED = " "
@@ -189,6 +204,7 @@ fun parseChrome(text: String): ChromeMsg? = runCatching {
         )
         "frame" -> str("data")?.let { ChromeMsg.Frame(it, (o["w"] as? kotlinx.serialization.json.JsonPrimitive)?.content?.toDoubleOrNull()?.toInt() ?: 0, (o["h"] as? kotlinx.serialization.json.JsonPrimitive)?.content?.toDoubleOrNull()?.toInt() ?: 0) }
         "editable" -> ChromeMsg.Editable((o["on"] as? kotlinx.serialization.json.JsonPrimitive)?.content == "true")
+        "picked" -> (o["el"] as? kotlinx.serialization.json.JsonObject)?.let { e -> ChromeMsg.Picked(PickedElement(str("url", e) ?: "", str("tag", e) ?: "", str("selector", e) ?: "", str("text", e) ?: "", str("html", e) ?: "", str("shot", e) ?: "")) }
         else -> null
     }
 }.getOrNull()

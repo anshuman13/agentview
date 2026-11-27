@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type RefObject } from 'react';
 import { wsUrl } from '../app/api';
+import { showChat } from '../ui/util';
 
 export type Tab = { id: string; title: string; url: string };
 export type ChromeState = { state: 'off' | 'connecting' | 'on'; reason: string; retry?: boolean; own?: boolean };
@@ -41,6 +42,10 @@ export function useChromeSocket({ img, kbd, host }: Refs, phone: boolean, onEmpt
       hadTabs.current = m.tabs.length > 0;
       setCurrent(m.current);
       setPinned(m.pinned);
+    }
+    if (m.t === 'picked') {
+      showChat();
+      window.dispatchEvent(new CustomEvent('agentview:element', { detail: m.el }));
     }
     if (m.t === 'editable' && !m.on && document.activeElement === kbd.current) kbd.current?.blur();
     if (m.t === 'frame' && img.current) {

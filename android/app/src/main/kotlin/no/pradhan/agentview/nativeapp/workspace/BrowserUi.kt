@@ -78,6 +78,7 @@ fun BrowserScreen(hub: Hub, onBack: () -> Unit) {
                 is ChromeMsg.Tabs -> main.post { tabs = m }
                 is ChromeMsg.Frame -> runCatching { Base64.decode(m.data, Base64.DEFAULT).let { BitmapFactory.decodeByteArray(it, 0, it.size) } }.getOrNull()?.asImageBitmap()?.let { main.post { frame = it; page = IntSize(m.w, m.h) } }
                 is ChromeMsg.Editable -> main.post { editable = m.on }
+                is ChromeMsg.Picked -> main.post { hub.elements.value = hub.elements.value + m.el; hub.notice.value = "Added ${elementChip(m.el)} to the prompt" }
                 null -> Unit
             }
         }, onDrop = { state = ChromeMsg.State("off", "server", false); frame = null })
@@ -90,6 +91,13 @@ fun BrowserScreen(hub: Hub, onBack: () -> Unit) {
         if (hub.writes.allowed()) socket.send(o.toString())
     }
     val tab = tabs.tabs.firstOrNull { it.id == tabs.current }
+    // Pick mode (web BrowserPane): Chrome outlines the element under a tap, which adds it to the prompt as a chip.
+    var picking by remember { mutableStateOf(false) }
+    val pickOn = picking && state.state == "on"
+    DisposableEffect(pickOn, tabs.current) {
+        if (pickOn) sendJson(buildJsonObject { put("t", "pick"); put("on", true) })
+        onDispose { if (pickOn) sendJson(buildJsonObject { put("t", "pick"); put("on", false) }) }
+    }
     val kbdFocus = remember { FocusRequester() }
     val keyboard = LocalSoftwareKeyboardController.current
     var kbd by remember { mutableStateOf(TextFieldValue(KBD_SEED, TextRange(KBD_SEED.length))) }
@@ -99,6 +107,7 @@ fun BrowserScreen(hub: Hub, onBack: () -> Unit) {
 
     Column(Modifier.fillMaxSize()) {
         PageHeader("Browser", onBack, subtitle = tab?.let { { androidx.compose.material3.Text(it.title.ifEmpty { it.url }, maxLines = 1) } }) {
+            if (state.state == "on" && !hub.readOnly) IconBtn("inspect", if (picking) "Stop picking" else "Pick an element", { picking = !picking }, on = picking)
             if (state.state == "on") MoreButton { close ->
                 MenuItem("Back", "arrow-left", { close(); send("back") })
                 MenuItem("Reload", "refresh", { close(); send("reload") })
@@ -112,7 +121,7 @@ fun BrowserScreen(hub: Hub, onBack: () -> Unit) {
                         val f = frame
                         item {
                             if (f != null) Box {
-                                Image(f, tab?.title, Modifier.fillMaxWidth().pointerInput(page) {
+                                Image(f, tab?.title, Modifier.fillMaxWidth().pointerInput(page, pickOn) {
                                     // A tap clicks the page and a drag scrolls it, in the page's own coordinates.
                                     fun touch(type: String, p: Offset) = sendJson(buildJsonObject {
                                         put("t", "touch"); put("type", type)
@@ -121,6 +130,10 @@ fun BrowserScreen(hub: Hub, onBack: () -> Unit) {
                                     awaitEachGesture {
                                         val down = awaitFirstDown()
                                         down.consume()
+                                        if (pickOn) {
+                                            sendJson(buildJsonObject { put("t", "pickAt"); put("x", down.position.x / size.width * page.width); put("y", down.position.y / size.height * page.height) })
+                                            return@awaitEachGesture
+                                        }
                                         touch("touchStart", down.position)
                                         while (true) {
                                             val c = awaitPointerEvent().changes.firstOrNull { it.id == down.id } ?: break

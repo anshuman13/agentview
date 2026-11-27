@@ -156,6 +156,8 @@ class Hub(internal val app: Application, private val saved: SavedStateHandle) : 
     val connected: StateFlow<Boolean> = _connected
 
     val notice = MutableStateFlow<String?>(null)
+    // Elements picked in the Browser screen, shown as chips in the composer and added to the next prompt (web agentview:element).
+    val elements = MutableStateFlow<List<no.pradhan.agentview.nativeapp.workspace.PickedElement>>(emptyList())
 
     val link = MutableStateFlow<DeepLink?>(null)
     val sketchSlug = MutableStateFlow<String?>(null)

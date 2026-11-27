@@ -8,6 +8,7 @@ import androidx.compose.ui.text.input.TextFieldValue
 import no.pradhan.agentview.nativeapp.app.Hub
 import no.pradhan.agentview.nativeapp.app.runInTerminal
 import no.pradhan.agentview.nativeapp.app.submit
+import no.pradhan.agentview.nativeapp.workspace.withElements
 
 internal class ComposerState(val hub: Hub, val chatId: String) {
     private val draft = splitMarks(hub.draft(chatId))
@@ -49,10 +50,12 @@ internal class ComposerState(val hub: Hub, val chatId: String) {
     }
 
     fun submit(steer: Boolean, uploading: Int, voice: Boolean = false) {
-        val t = full
+        val els = hub.elements.value
+        val t = if (els.isEmpty() || shellCommand(full) != null) full else withElements(full, els)
         if (t.isBlank() || uploading > 0) return
         shellCommand(t)?.let { if (hub.runInTerminal(it)) clear(); return }
         clear()
+        hub.elements.value = emptyList()
         hub.submit(t, steer, t, voice) { restore(t) }
     }
 }
