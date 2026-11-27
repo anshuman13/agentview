@@ -48,7 +48,7 @@ export function Voice({ onText, onSubmit, onListen, autoStart }: { onText: (text
   const start = () => {
     stopped.current = false;
     const r = new SR();
-    r.lang = navigator.language;
+    r.lang = 'en-IN';
     r.continuous = true;
     r.interimResults = true;
     let done = 0;

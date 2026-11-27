@@ -104,8 +104,11 @@ internal fun Bundle?.best() = this?.getStringArrayList(SpeechRecognizer.RESULTS_
 
 // continuous on Android 13+ asks for a segmented session: each pause closes a segment and the session runs until stopListening
 // (or SESSION_MS). A recognizer that does not support it ends at the first pause with onResults, as before.
+internal const val VOICE_LANGUAGE = "en-IN"
+
 internal fun dictationIntent(continuous: Boolean = false) = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
     .putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+    .putExtra(RecognizerIntent.EXTRA_LANGUAGE, VOICE_LANGUAGE)
     .putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
     .apply {
         if (continuous && Build.VERSION.SDK_INT >= 33) {
