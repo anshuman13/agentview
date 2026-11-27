@@ -34,6 +34,7 @@ data class PullRequest(
     val mine: Boolean = false,
     val reviewRequested: Boolean = false,
     val autoMerge: PrAutoMerge? = null,
+    val archiveChat: Boolean = false,
 )
 
 // Armed and not stopped by a failed merge.
@@ -95,6 +96,8 @@ fun ghProblem(error: String): GhProblem? = when {
 
 fun reviewBody(event: String, text: String) = buildJsonObject { put("event", event); put("body", text) }.toString()
 fun mergeBody(method: String) = buildJsonObject { put("method", method) }.toString()
+fun archiveBody(on: Boolean) = buildJsonObject { put("on", on) }.toString()
+
 fun autoMergeBody(on: Boolean, method: String) = buildJsonObject { put("on", on); put("method", method) }.toString()
 fun fixBody(check: PrCheck) = buildJsonObject { put("name", check.name); put("url", check.url) }.toString()
 

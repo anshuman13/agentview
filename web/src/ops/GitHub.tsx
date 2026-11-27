@@ -255,6 +255,12 @@ function Detail({ pr, onBack }: { pr: PullRequest; onBack: () => void }) {
             meta={!armed ? 'Off' : armed.error ? `Merge failed · ${armed.error}` : armed.note}
             trailing={<Button size="sm" variant="plain" disabled={!!busy} onClick={toggleAutoMerge}>{on ? 'Turn off' : 'Turn on'}</Button>}
           />
+          <Row
+            plain
+            title="Archive chat when merged or closed"
+            meta={pr.archiveChat ? 'Moves its chats to the bin' : 'Off'}
+            trailing={<Button size="sm" variant="plain" disabled={!!busy} onClick={() => act('archive', 'archive', { on: !pr.archiveChat })}>{pr.archiveChat ? 'Turn off' : 'Turn on'}</Button>}
+          />
         </div>
         {busy && <div className="muted small gh-pad" role="status"><Icon name="loading" small spin /> Running {busy.replace('_', ' ')}…</div>}
         {error && <div className="gh-error" role="alert"><Icon name="error" small /> {error}</div>}

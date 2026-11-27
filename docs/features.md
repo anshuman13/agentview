@@ -404,6 +404,11 @@ and confirm. The server (`integrations/automerge.ts`, entries in `~/.agentview/a
 failed or is pending and at least one check passed. A new commit or a re-run is picked up by the next poll. The row shows
 why it waits, a merge posts "Merged in <repo>", and a failed merge posts "Auto-merge failed" and stops until you turn it on again.
 
+Archive chat when merged or closed is a second per-PR switch beside it (web Row, phone More menu, like Claude.app's
+"Auto-archive on merge or close"). The server (`integrations/archiveOnClose.ts`, entries in `~/.agentview/pr-archive.json`)
+remembers the open chats whose PR it is when you turn it on and at each 60 s poll, and once the PR merges or closes moves
+them to the bin, skipping pinned chats and chats that are running or wait on you, then drops the entry.
+
 ## Context
 
 The meter shows the tokens in context and turns red past 200k, or past 80% of the model's context window when the agent

@@ -11,7 +11,9 @@ import { errText } from '../../shared/util.js';
 import { ntfyTopic, post } from './integrations/notify.js';
 import { CODEX_WORK } from './workspace/files.js';
 import { createAutoMerge } from './integrations/automerge.js';
-import { forgetPrs, gh, onPrsChanged, useAutoMerge } from './integrations/github.js';
+import { forgetPrs, gh, onPrsChanged, repoKey, useArchiveOnClose, useAutoMerge } from './integrations/github.js';
+import { createArchiveOnClose } from './integrations/archiveOnClose.js';
+import { listPins, removeChat } from './agent/claude/pins.js';
 import { onAttention, startAttention } from './integrations/attention.js';
 import { startSummaries } from './agent/claude/summaries.js';
 import { startAutoArchive } from './agent/claude/autoArchive.js';
@@ -139,16 +141,24 @@ const fixChat = (item: AttentionItem) => host.req<string>({ op: 'ask', cwd: item
 startAttention(attentionSources, fixChat);
 startBackupPull();
 startSampler();
-startAutoArchive(
-  () => new Set([...live.chats.values()].filter((c) => (c.running || c.pending > 0) && c.sessionId).map((c) => c.sessionId!)),
-  async (sessionId) => { const id = bySession(sessionId); if (id) await closeByUser(id); },
-);
+const busySessions = () => new Set([...live.chats.values()].filter((c) => (c.running || c.pending > 0) && c.sessionId).map((c) => c.sessionId!));
+const closeSession = async (sessionId: string) => { const id = bySession(sessionId); if (id) await closeByUser(id); };
+startAutoArchive(busySessions, closeSession);
 startSubChatScan();
 startSummaries(() =>new Set([...live.chats.values()].filter((c) => c.running && c.sessionId).map((c) => c.sessionId!)));
 onPrsChanged((cwd) => host.notify({ op: 'prs_changed', cwd }));
 const autoMerge = createAutoMerge({ gh, post, file: path.join(os.homedir(), '.agentview/automerge.json'), changed: forgetPrs, shipped: ({ cwd, ...pr }) => hubShipped({ ...pr, profile: profileOf(cwd) }).catch((err) => console.error('hub shipped:', errText(err))) });
 useAutoMerge(autoMerge);
 autoMerge.start();
+const archiveOnClose = createArchiveOnClose({
+  gh,
+  file: path.join(os.homedir(), '.agentview/pr-archive.json'),
+  linked: (cwd, number) => [...live.chats.values()].filter((c) => c.pr === number && c.sessionId && repoKey(c.cwd) === repoKey(cwd)).map((c) => c.sessionId!),
+  keep: async () => new Set([...busySessions(), ...(await listPins())]),
+  archive: async (sessionId) => { await closeSession(sessionId); await removeChat(sessionId, false, true); },
+});
+useArchiveOnClose(archiveOnClose);
+archiveOnClose.start();
 
 const { dispatch } = createRoutes({
   host,

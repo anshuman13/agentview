@@ -1,5 +1,6 @@
 import { NotFound, parseObject } from '../json.js';
 import type { AutoMerge } from './automerge.js';
+import type { ArchiveOnClose } from './archiveOnClose.js';
 import type { CheckState, PullRequest, PullRequestDetail } from '../../../shared/protocol.js';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
@@ -125,6 +126,8 @@ export function listPrs(cwd: string, fresh = false): Promise<PullRequest[]> {
 
 let auto: AutoMerge | undefined;
 export const useAutoMerge = (a: AutoMerge) => void (auto = a);
+let archiver: ArchiveOnClose | undefined;
+export const useArchiveOnClose = (a: ArchiveOnClose) => void (archiver = a);
 export const forgetPrs = changedHere;
 
 const polled = new Map<string, number>();
@@ -240,8 +243,9 @@ export async function github(cwd: string, method: string, url: URL, readBody: ()
     const prs = await listPrs(cwd, url.searchParams.has('fresh'));
     // Only the PR view reads details, so only its list loads them ahead.
     for (const p of prs.filter((p) => p.reviewRequested).slice(0, PREFETCH)) detail(cwd, p).catch(() => {});
-    const armed = await auto?.state(cwd);
-    return armed?.size ? prs.map((p) => (armed.has(p.number) ? { ...p, autoMerge: armed.get(p.number) } : p)) : prs;
+    const [armed, archive] = await Promise.all([auto?.state(cwd), archiver?.armed(cwd)]);
+    if (!armed?.size && !archive?.size) return prs;
+    return prs.map((p) => ({ ...p, ...(armed?.has(p.number) && { autoMerge: armed.get(p.number) }), ...(archive?.has(p.number) && { archiveChat: true }) }));
   }
   if (what !== 'pr' || !/^\d+$/.test(n ?? '')) throw new NotFound(`Unknown GitHub route ${pathname}`);
   if (method === 'GET' && !action) {
@@ -262,6 +266,11 @@ export async function github(cwd: string, method: string, url: URL, readBody: ()
     if (!auto) throw new Error('Auto-merge is not running');
     if (!isMethod(body.method)) throw new Error('Method must be squash, merge or rebase');
     return auto.turn(cwd, Number(n), body.on === true, body.method);
+  }
+  if (action === 'archive') {
+    if (!archiver) throw new Error('Archive on merge is not running');
+    await archiver.turn(cwd, Number(n), body.on === true);
+    return { ok: true };
   }
   if (action === 'fix') return fixChat(cwd, n, body);
   if (action === 'checkout') return act(cwd, n, 'checkout');

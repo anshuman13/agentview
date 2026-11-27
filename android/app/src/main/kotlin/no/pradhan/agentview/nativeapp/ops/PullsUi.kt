@@ -196,6 +196,7 @@ private fun PullMenu(c: PullCtx, d: PullRequestDetail?, onBack: () -> Unit) {
                 c.ui.confirm = "Merge #${pr.number} (${label.lowercase()}) when its checks pass?" to { c.act("automerge", "automerge", autoMergeBody(true, m)) }
             }, enabled = c.ui.idle && !hub.readOnly)
         }
+        MenuItem("Archive chat when merged or closed", "archive", { close(); c.act("archive", "archive", archiveBody(!pr.archiveChat)) }, enabled = c.ui.idle && !hub.readOnly, checked = pr.archiveChat)
         MERGE_METHODS.forEach { (m, label) ->
             MenuItem(if (m == "merge") "Merge with a merge commit" else "Merge: $label", "git-merge", { close(); c.ui.confirm = "Merge #${pr.number} (${label.lowercase()})?" to { c.act("merge", "merge", mergeBody(m)) } }, enabled = c.ui.idle)
         }

@@ -1,5 +1,6 @@
 package no.pradhan.agentview.nativeapp.workspace
 
+import no.pradhan.agentview.nativeapp.ops.archiveBody
 import no.pradhan.agentview.nativeapp.ops.autoMergeBody
 import no.pradhan.agentview.nativeapp.ops.mcpNoMatchText
 import no.pradhan.agentview.nativeapp.ops.autoMergeMeta
@@ -158,6 +159,7 @@ class PagesLogicTest {
         assertEquals(listOf(true, false, false), armed.map { it.autoMergeOn })
         assertEquals(listOf("Waiting for checks", "Merge failed · boom"), armed.take(2).map { it.autoMerge!!.autoMergeMeta() })
         assertEquals("""{"on":true,"method":"squash"}""", autoMergeBody(true, "squash"))
+        assertEquals("""{"on":false}""", archiveBody(false))
         assertNull(reviewLabel("WHATEVER"))
         assertEquals(DotState.Ok, checkDot(prs[0].checks))
         val diff = "diff --git a/x.kt b/x.kt\nindex 1..2\n--- a/x.kt\n+++ b/x.kt\n@@ -1 +1 @@\n-a\n+b\ndiff --git a/y.md b/y.md\n@@ -0,0 +1 @@\n+hi\n"

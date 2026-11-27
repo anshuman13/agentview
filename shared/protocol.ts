@@ -475,6 +475,8 @@ export type PullRequest = {
   mine: boolean;
   reviewRequested: boolean;
   autoMerge?: { note: string; error?: string };
+  // The chats linked to this PR move to the bin when it merges or closes.
+  archiveChat?: boolean;
 };
 
 export type PullRequestDetail = {
