@@ -7,7 +7,6 @@ import { plural } from '../../ui/util';
 import { useChatSettings, type Pick } from '../ChatSettings';
 import { useCan } from '../useCan';
 import { Voice, type useDictation } from './Voice';
-import type { Use } from './composerLogic';
 import { keyText } from '../../app/shell/keys';
 import { providerLabel, settingsLabel } from '../../../../shared/providers';
 
@@ -65,20 +64,13 @@ export function SendButton({ typed, shell, submit }: { typed: boolean; shell: bo
   );
 }
 
-type FootProps = { uses: Use[]; uploading: number; typed: boolean; shell: boolean; setPick: (p: Pick) => void; attach: (list: File[]) => Promise<void>; dictate: ReturnType<typeof useDictation>; submit: (stop?: boolean) => void };
+type FootProps = { uploading: number; typed: boolean; shell: boolean; setPick: (p: Pick) => void; attach: (list: File[]) => Promise<void>; dictate: ReturnType<typeof useDictation>; submit: (stop?: boolean) => void };
 
-export function ComposerFoot({ uses, uploading, typed, shell, setPick, attach, dictate, submit }: FootProps) {
-  const canMcp = useCan('mcp');
-  const connected = useStore((s) => s.session.mcp).some((m) => m.status === 'connected');
-  const hasServers = canMcp && connected;
-  const label = useStore((s) => providerLabel(s.session.provider));
+export function ComposerFoot({ uploading, typed, shell, setPick, attach, dictate, submit }: FootProps) {
   return (
     <div className="cp-foot">
       <ModeChip setPick={setPick} />
       <span className="cp-spacer" />
-      {hasServers && (
-        <IconButton className="mcp" icon="plug" label="Use an MCP server" title={`Ask ${label} to use an MCP server or tool`} small on={uses.length > 0} onClick={(e) => setPick({ kind: 'mcp', at: e.currentTarget.getBoundingClientRect() })} />
-      )}
       <AttachButton attach={attach} />
       {uploading > 0 && <span className="cp-hint"><Icon name="loading" small spin /> Uploading {plural(uploading, 'file')}…</span>}
       <Voice onText={dictate} />

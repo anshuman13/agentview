@@ -7,7 +7,7 @@ import { AccountPick, EffortPick, ModePick, ModelPick } from './SettingsPickers'
 
 const MODE_ICON: Record<string, string> = { default: 'shield', acceptEdits: 'edit', plan: 'eye', readOnly: 'eye', auto: 'zap', dontAsk: 'circle-slash' };
 
-export type Pick = { kind: 'menu' | 'model' | 'effort' | 'account' | 'mode' | 'mcp' | 'mcpTools' | 'memory'; at: DOMRect; server?: string };
+export type Pick = { kind: 'menu' | 'model' | 'effort' | 'account' | 'mode' | 'memory'; at: DOMRect };
 
 export function useChatSettings() {
   const mode = useStore((s) => s.session.permissionMode) ?? 'default';
@@ -25,7 +25,7 @@ export function useChatSettings() {
   return { mode, modes, model, models, effort, review, modelName, effortName, modeInfo, menu };
 }
 
-// The chat settings menu and the pickers it opens; the saved prompt and MCP pickers stay with the composer.
+// The chat settings menu and the pickers it opens.
 export function ChatSettings({ pick, setPick }: { pick: Pick | null; setPick: (p: Pick | null) => void }) {
   const cwd = useStore((s) => s.session.cwd);
   if (!pick) return null;

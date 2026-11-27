@@ -40,7 +40,7 @@ import { memoryMark, type MemoryFile, type MemoryMark } from './chat/cards/memor
 import { leftOutPreferences, type Preference } from '../../shared/preferences';
 import { countChat } from './app/shell/counts';
 import { can } from './chat/capabilitiesLogic';
-import { addUse, buildHistory, draftKey, failedLine, ghostFor, handoffText, joinMarks, markChip, remember, splitMarks, turnEnd, userParts, withUses, type Use } from './chat/composer/composerLogic';
+import { buildHistory, draftKey, failedLine, ghostFor, handoffText, joinMarks, markChip, remember, splitMarks, turnEnd, userParts } from './chat/composer/composerLogic';
 import { composerPlaceholder, type PlaceholderDevice, type PlaceholderState } from '../../shared/composerText';
 import { agentChipCount, buildHead, headerState, nowMeta, runLine, stoppedText } from './sessions/runLogic';
 import { tryColumn } from './sessions/triesLogic';
@@ -696,9 +696,6 @@ describe('cases shared with the Android app', () => {
     it(`remember: ${c.name}`, () => expect(remember(c.text, c.stored)).toEqual(c.expected));
   }
 
-  for (const c of cases<{ name: string; text: string; picks: Use[]; expected: string }>('with-uses')) {
-    it(`withUses: ${c.name}`, () => expect(withUses(c.text, c.picks.reduce<Use[]>(addUse, []))).toBe(c.expected));
-  }
 
   for (const c of cases<{ name: string; text: string; events: ChatEvent[]; saved: string[]; expected: string }>('ghost-for')) {
     it(`ghostFor: ${c.name}`, () => expect(ghostFor(c.text, buildHistory(c.events, c.saved))).toBe(c.expected));

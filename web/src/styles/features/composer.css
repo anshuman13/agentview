@@ -7,11 +7,6 @@
 }
 .cp-card:focus-within { border-color: var(--cp-ring); }
 
-.cp-uses { display: flex; flex-wrap: wrap; gap: var(--sp-2); padding: var(--sp-4) var(--sp-4) 0; }
-.cp-use { max-width: 100%; }
-.cp-use > span { overflow: hidden; text-overflow: ellipsis; }
-.cp-use .mono { font-family: var(--mono); font-size: var(--fs-xs); }
-.cp-use .mono::before { content: '· '; }
 
 .cp-text { position: relative; }
 .cp-card textarea, .cp-mirror {
@@ -48,8 +43,7 @@
 }
 @media (hover: hover) { :is(.cp-send, .cp-stop, .cp-row .icon-btn.cp-talk):hover:not(:disabled) { background: var(--fg-strong); color: var(--bg); } }
 .cp-send:disabled, .cp-stop:disabled { background: var(--hover); color: var(--fg-faint); cursor: default; }
-.cp-foot .icon-btn:is(.voice, .attach, .mcp) { width: var(--size-xl); height: var(--size-xl); border-radius: var(--radius-round); }
-.cp-foot .icon-btn.mcp.on { color: var(--fg); }
+.cp-foot .icon-btn:is(.voice, .attach) { width: var(--size-xl); height: var(--size-xl); border-radius: var(--radius-round); }
 
 .cp-under { display: flex; flex-wrap: wrap; gap: var(--sp-1) var(--sp-6); padding: 0 var(--sp-2); font-size: var(--fs-xs); line-height: var(--line-xs); color: var(--fg-muted); }
 .cp-hint { flex: none; white-space: nowrap; }
@@ -90,7 +84,7 @@
 @media (max-width: 900px) {
   .cp-card textarea, .cp-mirror { font-size: var(--fs-2xl); line-height: var(--line-lg); }
   .cp-card.shell :is(textarea, .cp-mirror) { font-size: var(--fs-xl); }
-  .cp-send, .cp-stop, .cp-row .icon-btn.cp-talk, .cp-foot .icon-btn:is(.voice, .mcp) { width: var(--touch); height: var(--touch); }
+  .cp-send, .cp-stop, .cp-row .icon-btn.cp-talk, .cp-foot .icon-btn.voice { width: var(--touch); height: var(--touch); }
   .cp-foot { gap: var(--sp-1); padding: var(--sp-1) var(--sp-3) var(--sp-3); }
   .cp-pop li { height: var(--touch); }
   .cp-pop { max-height: min(300px, 45vh); max-height: min(300px, 45dvh); }

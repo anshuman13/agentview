@@ -1,6 +1,5 @@
 import { parseWhen, stripWhen } from '../../codex/data/tasks/engine';
 import { match } from '../../workspace/FileSwitcher';
-import { toolId } from '../../ops/mcpHelpers';
 import { firstLine } from '../../ui/util';
 import { compactAt, type ChatEvent, type SavedSession } from '../../../../shared/protocol';
 import { isBlock } from '../../../../shared/util';
@@ -11,7 +10,6 @@ type Trigger = { kind: 'command' | 'file'; start: number; query: string } | { ki
 
 type Ranked<T> = { item: T; hits: number[]; score: number };
 
-export type Use = { server: string; tool?: string };
 
 export const MAX_ROWS = 8;
 const MAX_STORED = 50;
@@ -88,20 +86,6 @@ export type UserPart = { text: string } | { image: string };
 export function userParts(text: string): UserPart[] {
   const parts = text.split(/(\[Image: [^\]]+\])/).map((s, i): UserPart => (i % 2 ? { image: markChip(s).path } : { text: s.trim() }));
   return parts.filter((p) => !('text' in p) || p.text);
-}
-
-export function addUse(uses: Use[], u: Use): Use[] {
-  const keep = (x: Use) => x.server !== u.server || (!!u.tool && !!x.tool && x.tool !== u.tool);
-  return [...uses.filter(keep), u];
-}
-
-export const useLabel = (u: Use) => (u.tool ? toolId(u.server, u.tool) : u.server);
-
-export function withUses(text: string, uses: Use[]) {
-  if (!uses.length || text.startsWith('/')) return text;
-  const names = uses.map((u) => (u.tool ? `the ${toolId(u.server, u.tool)} tool` : `the ${u.server} MCP server`));
-  const list = names.length > 1 ? `${names.slice(0, -1).join(', ')} and ${names.at(-1)}` : names[0];
-  return `${text}\n\nUse ${list} for this.`;
 }
 
 export function buildHistory(events: ChatEvent[], stored: string[]) {

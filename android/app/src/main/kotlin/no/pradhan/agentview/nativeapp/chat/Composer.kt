@@ -102,7 +102,6 @@ fun Composer(hub: Hub, chatId: String, sessionId: String?, session: SessionInfo?
     var bar by remember(chatId) { mutableStateOf(barState(BarState(), if (s.full.isEmpty()) BarEvent.TextEmpty else BarEvent.TextFilled)) }
     val imeVisible = WindowInsets.isImeVisible
     LaunchedEffect(chatId) { hub.draftChanged.collect { if (it == chatId) s.reload() } }
-    LaunchedEffect(chatId) { hub.pendingUse.collect { u -> if (u != null) { s.uses = addUse(s.uses, u); hub.pendingUse.value = null } } }
     val focus = remember { FocusRequester() }
     val keyboard = LocalSoftwareKeyboardController.current
     val window = LocalWindowInfo.current
@@ -133,9 +132,6 @@ fun Composer(hub: Hub, chatId: String, sessionId: String?, session: SessionInfo?
             asked.forEach { t -> Chip(t, { s.set(TextFieldValue(t, TextRange(t.length))); s.submit(false, uploading) }, icon = if (t in QUICK_REPLIES) null else "reply") }
         }
         Column(Modifier.fillMaxWidth().clip(shape).background(c.raised).border(BorderStroke(Tokens.hairline, c.border), shape)) {
-            if (s.uses.isNotEmpty()) FlowRow(Modifier.padding(start = Tokens.sp4, end = Tokens.sp4, top = Tokens.sp4), horizontalArrangement = Arrangement.spacedBy(Tokens.sp2)) {
-                s.uses.forEach { u -> Chip(useLabel(u), { s.uses = s.uses - u }, icon = "plug", trailingIcon = "close", trailingLabel = "Remove") }
-            }
             if (s.marks.isNotEmpty()) FlowRow(Modifier.padding(start = Tokens.sp4, end = Tokens.sp4, top = Tokens.sp4), horizontalArrangement = Arrangement.spacedBy(Tokens.sp2)) {
                 s.marks.forEachIndexed { i, m -> Chip(markLabel(m), { s.replaceMarks(s.marks.filterIndexed { j, _ -> j != i }) }, icon = if (m.startsWith("[Image")) "file-media" else "file", trailingIcon = "close", trailingLabel = "Remove") }
             }
@@ -143,7 +139,7 @@ fun Composer(hub: Hub, chatId: String, sessionId: String?, session: SessionInfo?
                 if (uploading > 0) Box(Modifier.size(Tokens.touch).semantics { contentDescription = "Uploading" }, contentAlignment = Alignment.Center) { CircularProgressIndicator(Modifier.size(Tokens.iconMd), color = c.accent, strokeWidth = Tokens.sp1) }
                 else IconBtn("add", "Add", { sheet = Picker.Add })
                 KeyboardImages(attach.image) { ComposerInput(
-                    s, composerPlaceholder(providerLabel(session?.provider), placeholderState(waiting, session?.compacting == true, running, s.uses.isNotEmpty()), canTalk),
+                    s, composerPlaceholder(providerLabel(session?.provider), placeholderState(waiting, session?.compacting == true, running), canTalk),
                     Modifier.weight(1f).focusRequester(focus).onFocusChanged { bar = barState(bar, if (it.isFocused) BarEvent.Focus else BarEvent.Blur) }, { multiline = it },
                 ) }
                 ComposerActions(hub, s, running, uploading, dictation, canTalk)

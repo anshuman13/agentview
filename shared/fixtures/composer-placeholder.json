@@ -8,9 +8,6 @@
   { "name": "running desktop", "label": "Claude", "state": "running", "device": "desktop", "expected": "Claude reads this at its next step · ⌘Enter stops and sends" },
   { "name": "running touch", "label": "Claude", "state": "running", "device": "touch", "expected": "Claude reads this next · hold Send to stop" },
   { "name": "running phone", "label": "Claude", "state": "running", "device": "phone", "expected": "Claude reads this at its next step" },
-  { "name": "uses desktop", "label": "Claude", "state": "uses", "device": "desktop", "expected": "What should Claude do with it?" },
-  { "name": "uses touch", "label": "Claude", "state": "uses", "device": "touch", "expected": "What should Claude do with it?" },
-  { "name": "uses phone", "label": "Codex", "state": "uses", "device": "phone", "expected": "What should Codex do with it?" },
   { "name": "idle desktop", "label": "Claude", "state": "idle", "device": "desktop", "expected": "Ask anything · / commands · @ files · @chat: chats" },
   { "name": "idle touch", "label": "Claude", "state": "idle", "device": "touch", "expected": "Ask anything · / commands · @ files · @chat: chats" },
   { "name": "idle phone", "label": "Claude", "state": "idle", "device": "phone", "expected": "Reply to Claude or hold to talk" },
@@ -18,7 +15,6 @@
   { "name": "waiting narrow", "label": "Claude", "state": "waiting", "device": "narrow", "expected": "Answer above or send to stop" },
   { "name": "compacting narrow", "label": "Claude", "state": "compacting", "device": "narrow", "expected": "Sends after compacting" },
   { "name": "running narrow", "label": "Codex", "state": "running", "device": "narrow", "expected": "Codex reads this next" },
-  { "name": "uses narrow", "label": "Claude", "state": "uses", "device": "narrow", "expected": "What should Claude do?" },
   { "name": "idle narrow", "label": "Claude", "state": "idle", "device": "narrow", "expected": "Reply to Claude or hold to talk" },
   { "name": "idle narrow no talk", "label": "Claude", "state": "idle", "device": "narrow", "talk": false, "expected": "Ask · / commands · @ files" },
   { "name": "idle narrow codex", "label": "Codex", "state": "idle", "device": "narrow", "expected": "Reply to Codex or hold to talk" }

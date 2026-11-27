@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'bun:test';
 import { stampedNotes } from '../../codex/data/meetings/meetings';
 import type { Meeting } from '../../codex/data/wiki/wiki';
-import { accept, addUse, append, chatQuery, currentMeeting, buildHistory, filesEdited, ghostFor, rankChats, rankCommands, rankFiles, nextMode, remember, sharedTask, triggerAt, turnEnd, withUses, draftLine, readDraft } from './composerLogic';
+import { accept, append, chatQuery, currentMeeting, buildHistory, filesEdited, ghostFor, rankChats, rankCommands, rankFiles, nextMode, remember, sharedTask, triggerAt, turnEnd, draftLine, readDraft } from './composerLogic';
 import { stubGlobal, unstubAllGlobals } from '../../../../testing';
 import type { ChatEvent, SavedSession } from '../../../../shared/protocol';
 
@@ -127,32 +127,6 @@ describe('turnEnd', () => {
   it('reads the last top-level reply of the current turn only', () => {
     expect(turnEnd([user('a'), say('old'), user('b'), say('new'), say('sub', 't1')], 'Codex')).toBe('Codex: new');
     expect(turnEnd([user('a'), say('old'), user('b')], 'Codex')).toBe('Codex finished');
-  });
-});
-
-describe('addUse', () => {
-  it('keeps one entry per server, narrowing to tools or widening back', () => {
-    const docs = { server: 'claude.ai Claude Docs' };
-    const read = { server: 'claude.ai Claude Docs', tool: 'read' };
-    const query = { server: 'claude.ai Claude Docs', tool: 'query' };
-    expect(addUse([], docs)).toEqual([docs]);
-    expect(addUse([docs], docs)).toEqual([docs]);
-    expect(addUse([docs], read)).toEqual([read]);
-    expect(addUse([read], query)).toEqual([read, query]);
-    expect(addUse([read, query], read)).toEqual([query, read]);
-    expect(addUse([read, query], docs)).toEqual([docs]);
-    expect(addUse([read], { server: 'chrome' })).toEqual([read, { server: 'chrome' }]);
-  });
-});
-
-describe('withUses', () => {
-  it('appends one line naming the servers and tools, except on slash commands', () => {
-    expect(withUses('summarise it', [])).toBe('summarise it');
-    expect(withUses('summarise it', [{ server: 'claude.ai Claude Docs' }])).toBe('summarise it\n\nUse the claude.ai Claude Docs MCP server for this.');
-    expect(withUses('go', [{ server: 'claude.ai Claude Docs', tool: 'read' }, { server: 'chrome' }, { server: 'chrome', tool: 'navigate' }])).toBe(
-      'go\n\nUse the mcp__claude_ai_Claude_Docs__read tool, the chrome MCP server and the mcp__chrome__navigate tool for this.',
-    );
-    expect(withUses('/compact', [{ server: 'chrome' }])).toBe('/compact');
   });
 });
 

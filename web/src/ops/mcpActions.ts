@@ -2,17 +2,14 @@ import { showSnack } from '../codex/view';
 import { showChat } from '../ui/util';
 import { loadErrorText } from '../../../shared/loadError';
 import { errText } from '../../../shared/util';
-import type { Call } from './mcpHelpers';
+import { useText, type Call } from './mcpHelpers';
 import { openUrl, pasteText } from './opsApi';
 
 export const insert = (text: string) => {
   showChat();
   window.dispatchEvent(new CustomEvent('agentview:insert', { detail: { text } }));
 };
-export const use = (server: string, tool?: string) => {
-  showChat();
-  window.dispatchEvent(new CustomEvent('agentview:use', { detail: { server, tool } }));
-};
+export const use = (server: string, tool?: string) => insert(useText(server, tool));
 
 export async function share(lead: string, text: string, file: string) {
   if (text.length <= 2000) return insert(`${lead}: ${text.slice(0, 300).trim()}${text.length > 300 ? '...' : ''} `);

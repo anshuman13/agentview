@@ -169,24 +169,10 @@ fun markLabel(mark: String): String {
     return "$kind ${path.substringAfterLast('/').ifEmpty { path }}"
 }
 
-// An MCP server, or one of its tools, the user asked the agent to use (web composerLogic.ts Use).
-data class Use(val server: String, val tool: String? = null)
-
 fun toolId(server: String, tool: String) = "mcp__${mcpSlug(server)}__$tool"
 
-// A tool replaces a server-wide pick of its server; a server-wide pick replaces that server's tools.
-fun addUse(uses: List<Use>, u: Use): List<Use> =
-    uses.filter { x -> x.server != u.server || (u.tool != null && x.tool != null && x.tool != u.tool) } + u
-
-fun useLabel(u: Use) = if (u.tool != null) toolId(u.server, u.tool) else u.server
-
-// The prompt with "Use the ... for this." appended; a /command stays as typed.
-fun withUses(text: String, uses: List<Use>): String {
-    if (uses.isEmpty() || text.startsWith("/")) return text
-    val names = uses.map { if (it.tool != null) "the ${toolId(it.server, it.tool)} tool" else "the ${it.server} MCP server" }
-    val list = if (names.size > 1) "${names.dropLast(1).joinToString(", ")} and ${names.last()}" else names[0]
-    return "$text\n\nUse $list for this."
-}
+// Add to chat on the MCP page: a line asking the agent to use the server or one of its tools (web mcpHelpers.ts useText).
+fun useText(server: String, tool: String? = null) = "Use ${if (tool != null) "the ${toolId(server, tool)} tool" else "the $server MCP server"} for this."
 
 // This chat's sent prompts newest first, then the saved ones newest first, without repeats (web buildHistory).
 fun buildHistory(events: List<ChatEvent>, stored: List<String>) =
@@ -198,12 +184,11 @@ fun ghostFor(text: String, history: List<String>): String {
     return history.firstNotNullOfOrNull { h -> splitMarks(h).body.takeIf { it.length > text.length && it.startsWith(text) } }?.substring(text.length) ?: ""
 }
 
-// shared/composerText.ts composerPlaceholder for the phone; state is waiting, compacting, running, uses or idle.
+// shared/composerText.ts composerPlaceholder for the phone; state is waiting, compacting, running or idle.
 fun composerPlaceholder(label: String, state: String, talk: Boolean = true) = when (state) {
     "waiting" -> "Answer above, or message $label to stop and send"
     "compacting" -> "Sends when compacting is done"
     "running" -> "$label reads this at its next step"
-    "uses" -> "What should $label do with it?"
     else -> if (talk) "Reply to $label or hold to talk" else "Ask anything · / commands · @ files · @chat: chats"
 }
 
@@ -272,10 +257,9 @@ fun quickReplies(events: List<ChatEvent>): List<String> {
     return emptyList()
 }
 
-internal fun placeholderState(waiting: Boolean, compacting: Boolean, running: Boolean, hasUses: Boolean) = when {
+internal fun placeholderState(waiting: Boolean, compacting: Boolean, running: Boolean) = when {
     waiting -> "waiting"
     compacting -> "compacting"
     running -> "running"
-    hasUses -> "uses"
     else -> "idle"
 }

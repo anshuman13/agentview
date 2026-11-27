@@ -26,6 +26,9 @@ export const scopeInfo = (id: string) => SCOPES.find((s) => s[0] === id) ?? [id,
 export const slug = (server: string) => server.replace(/[^A-Za-z0-9_-]/g, '_');
 export const toolId = (server: string, tool: string) => `mcp__${slug(server)}__${tool}`;
 
+// Add to chat on the MCP page: a line asking the agent to use the server or one of its tools (android McpUi.kt says the same).
+export const useText = (server: string, tool?: string) => `Use ${tool ? `the ${toolId(server, tool)} tool` : `the ${server} MCP server`} for this.`;
+
 export const toggleConnector = (tools: string, id: string) => {
   const list = [...new Set(tools.split(',').map((t) => t.trim()).filter(Boolean))];
   return (list.includes(id) ? list.filter((t) => t !== id) : [...list, id]).join(', ');

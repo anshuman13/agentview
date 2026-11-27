@@ -29,11 +29,10 @@ import no.pradhan.agentview.nativeapp.ui.SectionHeader
 import no.pradhan.agentview.nativeapp.ui.Sheet
 import no.pradhan.agentview.nativeapp.ui.Tokens
 import no.pradhan.agentview.nativeapp.ui.av
-import no.pradhan.agentview.nativeapp.ui.plural
 
 internal class Choice(val value: String, val label: String, val detail: String = "")
 
-internal enum class Picker { Add, Settings, Effort, Account, Mcp, McpTools }
+internal enum class Picker { Add, Settings, Effort, Account }
 
 @Composable
 internal fun ComposerSheets(hub: Hub, s: ComposerState, uploading: Int, session: SessionInfo?, sheet: Picker?, attach: Attach, onSheet: (Picker?) -> Unit) {
@@ -42,32 +41,9 @@ internal fun ComposerSheets(hub: Hub, s: ComposerState, uploading: Int, session:
         Picker.Settings -> ChatSettingsSheet(hub, session, onSheet)
         Picker.Effort -> PickerSheet("Select effort", effortsFor(session?.models.orEmpty(), session?.model).map { Choice(it, EFFORT_LABEL[it] ?: it) }, session?.effort, { hub.setEffort(it) }) { onSheet(null) }
         Picker.Account -> PickerSheet("Select Claude account", (session?.accounts?.ifEmpty { null } ?: listOf(session?.account ?: "main")).map { Choice(it, ACCOUNT_LABEL[it] ?: it, listOfNotNull(ACCOUNT_NOTE[it], usageText(session?.usage).ifEmpty { null }?.takeIf { _ -> it == (session?.account ?: "main") }).joinToString(" · ")) }, session?.account ?: "main", { hub.setAccount(it) }) { onSheet(null) }
-        Picker.Mcp -> Sheet({ onSheet(null) }, "Use an MCP server", padded = false, full = false) {
-            Group {
-                connectedServers(session).forEachIndexed { i, m ->
-                    if (i > 0) Hairline()
-                    ListRow(m.name, plural(m.tools?.size ?: 0, "tool"), onClick = { s.useServer = m.name; onSheet(Picker.McpTools) }, trailing = { Chevron() })
-                }
-            }
-        }
-        Picker.McpTools -> {
-            val server = s.useServer.orEmpty()
-            val pick = { use: Use -> s.uses = addUse(s.uses, use); onSheet(null) }
-            Sheet({ onSheet(null) }, "Tool from $server", padded = false, full = false) {
-                Group {
-                    ListRow("Any tool", "The agent picks", onClick = { pick(Use(server)) })
-                    connectedServers(session).firstOrNull { it.name == server }?.tools.orEmpty().forEach { t ->
-                        Hairline()
-                        ListRow(t.name, t.description.ifBlank { null }, onClick = { pick(Use(server, t.name)) })
-                    }
-                }
-            }
-        }
         null -> {}
     }
 }
-
-private fun connectedServers(session: SessionInfo?) = session?.mcp.orEmpty().filter { it.status == "connected" }
 
 @Composable
 private fun AddSheet(s: ComposerState, uploading: Int, session: SessionInfo?, attach: Attach, onSheet: (Picker?) -> Unit) {
@@ -82,10 +58,6 @@ private fun AddSheet(s: ComposerState, uploading: Int, session: SessionInfo?, at
             ListRow("Take photo", leading = icon("device-camera"), onClick = { onSheet(null); attach.takePhoto() })
             Hairline(lead = true)
             ListRow("Choose file", leading = icon("file"), onClick = { onSheet(null); attach.chooseFile() })
-            if (session?.capabilities?.mcp == true && connectedServers(session).isNotEmpty()) {
-                Hairline(lead = true)
-                ListRow("Use an MCP server", leading = icon("plug"), onClick = { onSheet(Picker.Mcp) }, trailing = { Chevron() })
-            }
             Hairline(lead = true)
             ListRow("Chat settings", settings, leading = icon("settings-gear"), onClick = { onSheet(Picker.Settings) }, trailing = { Chevron() })
             if (pct != null && pct >= 50) {

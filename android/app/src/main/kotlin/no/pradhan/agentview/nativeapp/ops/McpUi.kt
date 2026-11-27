@@ -53,6 +53,7 @@ import kotlinx.coroutines.launch
 import no.pradhan.agentview.nativeapp.chat.ACCOUNT_LABEL
 import no.pradhan.agentview.nativeapp.chat.can
 import no.pradhan.agentview.nativeapp.chat.firstLine
+import no.pradhan.agentview.nativeapp.chat.useText
 import no.pradhan.agentview.nativeapp.codex.firstLine
 import no.pradhan.agentview.nativeapp.net.Capabilities
 import no.pradhan.agentview.nativeapp.app.Hub
@@ -62,8 +63,6 @@ import no.pradhan.agentview.nativeapp.app.mcpConnectors
 import no.pradhan.agentview.nativeapp.app.loginMcp
 import no.pradhan.agentview.nativeapp.app.mcpProbe
 import no.pradhan.agentview.nativeapp.app.openConnectors
-import no.pradhan.agentview.nativeapp.app.DeepLink
-import no.pradhan.agentview.nativeapp.chat.Use
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.ui.Alignment
@@ -351,7 +350,7 @@ private fun McpDetail(hub: Hub, r: McpRow, calls: Pair<Int, Int>?, groups: Map<S
     val canEdit = caps.can("mcpEdit")
     val canUse = mcpCanUse(r)
     val canManage = caps.can("connectors") && mcpCanManage(r) && !hub.readOnly
-    val use = { u: Use -> hub.pendingUse.value = u; hub.link.value = DeepLink(chat = hub.pageChat) }
+    val use = { tool: String? -> hub.draftPrompt(useText(r.name, tool)) }
     var q by rememberSaveable(r.name) { mutableStateOf("") }
     val link = openLink()
     val hidden = groups[mcpHideKey(r)] == "hidden"
@@ -373,7 +372,7 @@ private fun McpDetail(hub: Hub, r: McpRow, calls: Pair<Int, Int>?, groups: Map<S
             LazyColumn(Modifier.fillMaxSize()) {
                 if (canUse || canManage) item {
                     Row(Modifier.padding(start = Tokens.listPad, end = Tokens.listPad, top = Tokens.sp4), horizontalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
-                        if (canUse) Button("Add to chat", { use(Use(r.name)) }, size = ButtonSize.Sm, icon = "comment")
+                        if (canUse) Button("Add to chat", { use(null) }, size = ButtonSize.Sm, icon = "comment")
                         if (canManage) Button("Manage on claude.ai", { hub.openConnectors(r.account) {} }, size = ButtonSize.Sm, icon = "key")
                     }
                 }
@@ -405,7 +404,7 @@ private fun McpDetail(hub: Hub, r: McpRow, calls: Pair<Int, Int>?, groups: Map<S
                         Group {
                             list.forEachIndexed { i, t ->
                                 if (i > 0) Hairline()
-                                ListRow(t.title ?: t.name, firstLine(t.description).ifEmpty { null }, metaLines = 2, below = mcpToolInputs(t.inputSchema)?.let { ins -> { Text(ins, style = Type.footnote, color = av.fgMuted, maxLines = 1, overflow = TextOverflow.Ellipsis) } }, trailing = if (canUse) ({ IconBtn("comment", "Add ${t.name} to chat", { use(Use(r.name, t.name)) }) }) else null, onClick = { toolSheet = t })
+                                ListRow(t.title ?: t.name, firstLine(t.description).ifEmpty { null }, metaLines = 2, below = mcpToolInputs(t.inputSchema)?.let { ins -> { Text(ins, style = Type.footnote, color = av.fgMuted, maxLines = 1, overflow = TextOverflow.Ellipsis) } }, trailing = if (canUse) ({ IconBtn("comment", "Add ${t.name} to chat", { use(t.name) }) }) else null, onClick = { toolSheet = t })
                             }
                         }
                     }

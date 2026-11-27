@@ -39,7 +39,6 @@ import no.pradhan.agentview.nativeapp.chat.Item
 import no.pradhan.agentview.nativeapp.sessions.ChatState
 import no.pradhan.agentview.nativeapp.sessions.UnreadChat
 import no.pradhan.agentview.nativeapp.sessions.unreadOrder
-import no.pradhan.agentview.nativeapp.chat.Use
 import no.pradhan.agentview.nativeapp.chat.openAtNew
 import no.pradhan.agentview.nativeapp.chat.duration
 import no.pradhan.agentview.nativeapp.chat.dayDividers
@@ -51,13 +50,11 @@ import no.pradhan.agentview.nativeapp.chat.newMarker
 import no.pradhan.agentview.nativeapp.chat.newReplies
 import no.pradhan.agentview.nativeapp.chat.stepLabel
 import no.pradhan.agentview.nativeapp.chat.stepTone
-import no.pradhan.agentview.nativeapp.chat.addUse
 import no.pradhan.agentview.nativeapp.chat.attachMark
 import no.pradhan.agentview.nativeapp.chat.buildHistory
 import no.pradhan.agentview.nativeapp.chat.composerPlaceholder
 import no.pradhan.agentview.nativeapp.chat.settingsLabel
 import no.pradhan.agentview.nativeapp.chat.ghostFor
-import no.pradhan.agentview.nativeapp.chat.withUses
 import no.pradhan.agentview.nativeapp.chat.findInChat
 import no.pradhan.agentview.nativeapp.chat.agentChipCount
 import no.pradhan.agentview.nativeapp.chat.findStart
@@ -652,13 +649,6 @@ class SharedCasesTest {
         for (c in cases("prompt-history")) {
             val stored = c.getValue("stored").jsonArray.map { it.jsonPrimitive.content }
             assertEquals(c.str("name"), c.getValue("expected").jsonArray.map { it.jsonPrimitive.content }, rememberPrompt(c.str("text"), stored))
-        }
-    }
-
-    @Test fun withUses() {
-        for (c in cases("with-uses")) {
-            val picks = c.getValue("picks").jsonArray.map { Use(it.jsonObject.str("server"), it.jsonObject["tool"]?.jsonPrimitive?.content) }
-            assertEquals(c.str("name"), c.str("expected"), withUses(c.str("text"), picks.fold(emptyList()) { uses, u -> addUse(uses, u) }))
         }
     }
 

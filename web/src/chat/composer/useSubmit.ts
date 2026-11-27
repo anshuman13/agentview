@@ -1,7 +1,7 @@
 import { useEffect, useRef, type Dispatch, type SetStateAction } from 'react';
 import { api, notice, prompt, queueNext, steer, useStore } from '../../app/store';
 import { save } from '../../ui/util';
-import { remember, STORED_KEY, withUses, type Use } from './composerLogic';
+import { remember, STORED_KEY } from './composerLogic';
 import { runInTerminal } from '../chatApi';
 
 type Input = {
@@ -9,8 +9,6 @@ type Input = {
   setText: Dispatch<SetStateAction<string>>;
   shell: boolean;
   uploading: number;
-  uses: Use[];
-  setUses: (uses: Use[]) => void;
   sentHistory: string[];
   setSentHistory: (list: string[]) => void;
   clearHistoryStep: () => void;
@@ -31,11 +29,9 @@ export function useSubmit(i: Input) {
 
   const sendPrompt = (t: string, stop: boolean, voice: boolean) => {
     const lost = record(t);
-    const used = withUses(t, i.uses);
-    if (running && (stop || waiting)) steer(used, lost);
-    else if (running) queueNext(used, lost, voice);
-    else prompt(used, lost, voice);
-    if (used !== t) i.setUses([]);
+    if (running && (stop || waiting)) steer(t, lost);
+    else if (running) queueNext(t, lost, voice);
+    else prompt(t, lost, voice);
   };
 
   const submit = (stop = false, voice = false) => {
