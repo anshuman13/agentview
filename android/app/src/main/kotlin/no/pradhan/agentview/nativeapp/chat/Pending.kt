@@ -21,6 +21,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -40,6 +41,8 @@ import no.pradhan.agentview.nativeapp.app.allowBlocked
 import no.pradhan.agentview.nativeapp.app.answer
 import no.pradhan.agentview.nativeapp.app.permission
 import no.pradhan.agentview.nativeapp.app.submit
+import no.pradhan.agentview.nativeapp.app.post
+import no.pradhan.agentview.nativeapp.net.steerCmd
 import no.pradhan.agentview.nativeapp.ui.Button
 import no.pradhan.agentview.nativeapp.ui.ButtonSize
 import no.pradhan.agentview.nativeapp.ui.ButtonVariant
@@ -63,11 +66,19 @@ import no.pradhan.agentview.nativeapp.ui.lineDiff
 fun PendingList(pending: List<Pending>, mode: String, hub: Hub) {
     if (pending.isEmpty()) return
     Column(Modifier.heightIn(max = Tokens.scrollMax).verticalScroll(rememberScrollState()).padding(horizontal = Tokens.sp4, vertical = Tokens.sp2), verticalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
-        for (p in pending) when {
-            p is Pending.Question -> QuestionCard(p, hub)
-            p is Pending.Permission && p.toolName == "ExitPlanMode" -> PlanCard(p, mode, hub)
-            p is Pending.Permission -> PermissionCard(p, mode, hub)
-        }
+        for (p in pending) PendingCard(p, mode, hub)
+    }
+}
+
+// The chat a card answers for, when it is not the one on screen (the session list's answer sheet).
+val LocalCardChat = staticCompositionLocalOf<String?> { null }
+
+@Composable
+fun PendingCard(p: Pending, mode: String, hub: Hub) {
+    when {
+        p is Pending.Question -> QuestionCard(p, hub)
+        p is Pending.Permission && p.toolName == "ExitPlanMode" -> PlanCard(p, mode, hub)
+        p is Pending.Permission -> PermissionCard(p, mode, hub)
     }
 }
 
@@ -107,6 +118,7 @@ private fun PlanCard(p: Pending.Permission, mode: String, hub: Hub) {
     val paragraphs = remember(p.input) { planParagraphs(p.input.s("plan")) }
     var notes by remember(p.id) { mutableStateOf(emptyMap<Int, String>()) }
     var editing by remember(p.id) { mutableStateOf<Int?>(null) }
+    val chat = LocalCardChat.current
     Panel {
         Title(p.title)
         if (paragraphs.isNotEmpty()) Column(Modifier.heightIn(max = Tokens.scrollTall).well(av).verticalScroll(rememberScrollState()).padding(Tokens.sp5), verticalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
@@ -120,7 +132,11 @@ private fun PlanCard(p: Pending.Permission, mode: String, hub: Hub) {
         if (p.detail.isNotEmpty()) Desc(p.detail)
         Decision(p, mode, hub, "Approve", "Keep planning") {
             val text = planFeedback(paragraphs, notes)
-            if (text.isEmpty()) hub.permission(p.id, false) else hub.submit(text, true) {}
+            when {
+                text.isEmpty() -> hub.permission(p.id, false, chat = chat)
+                chat != null -> hub.post(steerCmd(text, java.util.UUID.randomUUID().toString()), chat)
+                else -> hub.submit(text, true) {}
+            }
         }
     }
     editing?.let { i ->
@@ -131,10 +147,11 @@ private fun PlanCard(p: Pending.Permission, mode: String, hub: Hub) {
 @Composable
 private fun Decision(p: Pending.Permission, mode: String, hub: Hub, yes: String, no: String, onNo: (() -> Unit)? = null) {
     val always = p.canAlwaysAllow && p.toolName != "ExitPlanMode"
+    val chat = LocalCardChat.current
     Column(verticalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
-        Primary(yes) { hub.permission(p.id, true) }
-        if (always) Secondary("Always allow") { hub.permission(p.id, true, true) }
-        Secondary(no) { if (onNo != null) onNo() else hub.permission(p.id, false) }
+        Primary(yes) { hub.permission(p.id, true, chat = chat) }
+        if (always) Secondary("Always allow") { hub.permission(p.id, true, true, chat) }
+        Secondary(no) { if (onNo != null) onNo() else hub.permission(p.id, false, chat = chat) }
     }
     Hint(mode)
 }
@@ -192,13 +209,14 @@ private fun QuestionCard(q: Pending.Question, hub: Hub) {
     var answers by remember(q.id) { mutableStateOf(emptyMap<String, String>()) }
     var picked by remember(q.id) { mutableStateOf(emptyList<String>()) }
     var other by remember(q.id) { mutableStateOf<String?>(null) }
+    val chat = LocalCardChat.current
     val qq = q.questions.getOrNull(step) ?: return
     val total = q.questions.size
     val multi = qq.multiSelect
     fun go(to: Int) { step = to; picked = emptyList(); other = null }
     fun answer(value: String) {
         val next = answers + (qq.question to value)
-        if (step + 1 >= total) hub.answer(q.id, next) else { answers = next; go(step + 1) }
+        if (step + 1 >= total) hub.answer(q.id, next, chat) else { answers = next; go(step + 1) }
     }
     fun pick(label: String) {
         if (!multi) answer(label) else picked = if (label in picked) picked - label else picked + label

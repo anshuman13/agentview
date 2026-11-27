@@ -33,6 +33,14 @@ import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.text.withLink
+import no.pradhan.agentview.nativeapp.ui.Sheet
+import androidx.compose.ui.text.LinkAnnotation
+import androidx.compose.ui.text.TextLinkStyles
+import androidx.compose.runtime.CompositionLocalProvider
+import no.pradhan.agentview.nativeapp.chat.LocalCardChat
+import no.pradhan.agentview.nativeapp.chat.PendingCard
+import no.pradhan.agentview.nativeapp.net.asked
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import no.pradhan.agentview.nativeapp.chat.FindRequest
@@ -165,9 +173,15 @@ class ChatRows(
         val builds = buildsState(live, s?.buildMembers)
         val state = chatState(c, s, seen, builds)
         val id = saved.rowId(c.sessionId)
+        // Claude.app's hover card on a waiting row, as a sheet: a tap on the ask line answers it without opening the chat.
+        val asked = c.asked?.takeIf { !hub.readOnly && c.id != shownId }
+        var asking by remember(c.id) { mutableStateOf(false) }
+        if (asking && asked != null) Sheet({ asking = false }, c.title.ifBlank { "Untitled" }, full = false) {
+            CompositionLocalProvider(LocalCardChat provides c.id) { PendingCard(asked, "", hub) }
+        }
         Column { ChatRow(
             title = c.title.ifBlank { "Untitled" },
-            meta = liveMeta(c, s, repo, branch, prFor(c)),
+            meta = liveMeta(c, s, repo, branch, prFor(c), if (asked != null) ({ asking = true }) else null),
             state = state,
             selected = c.id == shownId,
             actions = actions(id, s?.title?.ifBlank { null } ?: c.title, c, state),
@@ -179,7 +193,7 @@ class ChatRows(
     }
 
     @Composable
-    private fun liveMeta(c: LiveChat, s: SavedSession?, repo: String?, branch: String?, pr: PrChip?): AnnotatedString {
+    private fun liveMeta(c: LiveChat, s: SavedSession?, repo: String?, branch: String?, pr: PrChip?, onAsk: (() -> Unit)? = null): AnnotatedString {
         draftSnippet(hub.draft(c.id))?.let { return draftMeta(it) }
         val line = c.edits?.takeIf { !c.running && c.pending == 0 && (it.add > 0 || it.del > 0) }
         val when_ = when {
@@ -188,8 +202,14 @@ class ChatRows(
             c.running -> c.status.ifBlank { "Working" }
             else -> metaLine(since(maxOf(c.lastActive, s?.lastModified ?: 0)), askLine(c.run))
         }
+        val text = metaLine(repo, branch, s?.subs, c.model?.let(::shortModel), providerMark(c.provider), when_, pr?.text, c.todos?.let { "${it.done}/${it.total}" })
+        val ask = c.ask?.takeIf { onAsk != null && c.pending > 0 }?.let { text.indexOf(it) } ?: -1
         return buildAnnotatedString {
-            append(metaLine(repo, branch, s?.subs, c.model?.let(::shortModel), providerMark(c.provider), when_, pr?.text, c.todos?.let { "${it.done}/${it.total}" }))
+            if (ask < 0) append(text) else {
+                append(text.substring(0, ask))
+                withLink(LinkAnnotation.Clickable("ask", TextLinkStyles(SpanStyle(color = av.accent))) { onAsk?.invoke() }) { append(c.ask!!) }
+                append(text.substring(ask + c.ask!!.length))
+            }
             if (line != null) {
                 append(" · ")
                 withStyle(SpanStyle(color = av.ok)) { append("+${line.add}") }

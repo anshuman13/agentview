@@ -1,12 +1,14 @@
-import { useRef, useState } from 'react';
+import { useContext, useRef, useState } from 'react';
 import { answerQuestion } from '../chatActions';
 import { Button } from '../../ui/Button';
 import { Panel } from '../../ui/Panel';
 import type { PendingQuestion } from '../../../../shared/protocol';
 import { useCardKeys } from './useCardKeys';
+import { CardChat } from './cardChat';
 
 export function QuestionCard({ q, first }: { q: PendingQuestion; first: boolean }) {
   const ref = useRef<HTMLElement>(null);
+  const chat = useContext(CardChat);
   const [step, setStep] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [picked, setPicked] = useState<string[]>([]);
@@ -18,7 +20,7 @@ export function QuestionCard({ q, first }: { q: PendingQuestion; first: boolean 
   const go = (to: number) => { setStep(to); setPicked([]); setOther(null); };
   const answer = (value: string) => {
     const next = { ...answers, [qq.question]: value };
-    if (step + 1 >= total) return answerQuestion(q.id, next);
+    if (step + 1 >= total) return answerQuestion(q.id, next, chat);
     setAnswers(next);
     go(step + 1);
   };

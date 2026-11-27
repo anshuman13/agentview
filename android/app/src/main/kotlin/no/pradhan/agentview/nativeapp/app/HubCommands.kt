@@ -143,9 +143,9 @@ fun Hub.runControl(run: ChatRun, op: String) {
 fun Hub.triesKeep(run: ChatRun, n: Int) = post(triesKeepCmd(run.id, n), store.wanted)
 fun Hub.triesSend(run: ChatRun, text: String) = post(triesSendCmd(run.id, text), store.wanted)
 
-fun Hub.answer(id: String, answers: Map<String, String>) = post(answerCmd(id, answers), store.wanted)
+fun Hub.answer(id: String, answers: Map<String, String>, chat: String? = null) = post(answerCmd(id, answers), chat ?: store.wanted)
 
-fun Hub.permission(id: String, allow: Boolean, always: Boolean = false) = post(permissionCmd(id, allow, always), store.wanted)
+fun Hub.permission(id: String, allow: Boolean, always: Boolean = false, chat: String? = null) = post(permissionCmd(id, allow, always), chat ?: store.wanted)
 
 fun Hub.allowBlocked(id: String) = post(allowBlockedCmd(id), store.wanted)
 

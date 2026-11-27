@@ -81,14 +81,14 @@ export function askChat(text: string) {
 
 export const retry = () => send({ type: 'retry' });
 export const resume = () => send({ type: 'steer', text: 'continue' });
-export const steer = (text: string) => send({ type: 'steer', text });
+export const steer = (text: string, chat?: string) => send({ type: 'steer', text }, chat);
 export const sendNow = (id: string) => send({ type: 'send_now', id });
 export const interrupt = () => send({ type: 'interrupt' });
 export const compact = () => send({ type: 'prompt', text: '/compact' });
 export const stopTask = (toolUseId: string) => send({ type: 'stop_task', toolUseId });
 export const rewindFiles = (id: string) => send({ type: 'rewind', id });
-export const answerPermission = (id: string, allow: boolean, always?: boolean) => send({ type: 'permission', id, allow, always });
-export const answerQuestion = (id: string, answers: Record<string, string>) => send({ type: 'answer', id, answers });
+export const answerPermission = (id: string, allow: boolean, always?: boolean, chat?: string) => send({ type: 'permission', id, allow, always }, chat);
+export const answerQuestion = (id: string, answers: Record<string, string>, chat?: string) => send({ type: 'answer', id, answers }, chat);
 export const allowBlocked = (id: string) => send({ type: 'allow_blocked', id });
 export const reviewChange = (id: string, action: 'keep' | 'undo', file?: string, hunk?: number) => send({ type: 'review', id, action, file, hunk });
 export const setModel = (model: string) => send({ type: 'set_model', model });

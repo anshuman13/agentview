@@ -101,6 +101,7 @@ data class LiveChat(
     val running: Boolean = false,
     val pending: Int = 0,
     val ask: String? = null,
+    val request: JsonObject? = null,
     val status: String = "",
     val lastActive: Long = 0,
     val last: String? = null,
@@ -118,6 +119,9 @@ data class LiveChat(
     val agentList: List<LiveAgent> = emptyList(),
     val now: LiveNow? = null,
 )
+
+// The chat's first pending request, which the session list can answer without opening the chat.
+val LiveChat.asked: Pending? get() = request?.let(::parsePending)
 
 // shared/protocol.ts LiveAgent: a running subagent of a chat.
 @Serializable

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'bun:test';
 import type { PendingRequest } from '../../../shared/protocol.js';
 import type { AgentSession } from '../session/session.js';
-import { askLabel, summary } from './summary.js';
+import { askLabel, firstRequest, summary } from './summary.js';
 
 const chat = (text: string, title = '') => ({
   id: 'c1',
@@ -31,5 +31,16 @@ describe('askLabel', () => {
     expect(askLabel(permission('Bash'))).toBe('Permission: Bash');
     expect(askLabel(permission('ExitPlanMode'))).toBe('Plan approval');
     expect(askLabel(permission('mcp__agentview__data_write'))).toBe('Permission: data_write');
+  });
+});
+
+describe('firstRequest', () => {
+  it('cuts long input strings and keeps the rest', () => {
+    const r = { ...permission('Write'), input: { file_path: '/a', content: 'x'.repeat(5000), edits: [{ old_string: 'y'.repeat(4500) }] } };
+    const out = firstRequest(r) as Extract<PendingRequest, { kind: 'permission' }>;
+    expect(out.input.file_path).toBe('/a');
+    expect((out.input.content as string).length).toBe(4002);
+    expect(((out.input.edits as { old_string: string }[])[0].old_string).endsWith('…')).toBe(true);
+    expect(firstRequest(undefined)).toBeUndefined();
   });
 });

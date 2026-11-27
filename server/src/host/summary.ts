@@ -43,6 +43,15 @@ export function askLabel(r: PendingRequest | undefined) {
   return r.toolName === 'ExitPlanMode' ? 'Plan approval' : `Permission: ${r.toolName.split('__').pop()}`;
 }
 
+const CUT = 4000;
+const cut = (v: unknown): unknown => (typeof v === 'string' && v.length > CUT ? `${v.slice(0, CUT)}\n…` : Array.isArray(v) ? v.map(cut) : v && typeof v === 'object' ? Object.fromEntries(Object.entries(v).map(([k, x]) => [k, cut(x)])) : v);
+
+// The first pending request for the list's answer card, with long inputs cut so the live list stays small.
+export function firstRequest(r: PendingRequest | undefined): PendingRequest | undefined {
+  if (!r || r.kind === 'question') return r;
+  return { ...r, input: cut(r.input) as Record<string, unknown> };
+}
+
 type SummaryInputs = { stalled: boolean; run: Parameters<typeof runField>[0]; refresh: () => void };
 
 function prChecksField(cwd: string, pr: number, refresh: () => void) {
@@ -68,7 +77,7 @@ export function summary(chat: AgentSession, { stalled, run, refresh }: SummaryIn
     ...(agentList.length > 0 && { agentList }),
     ...nowField(scan.status),
     pending: s.pending.length,
-    ...(s.pending.length > 0 && { ask: askLabel(s.pending[0]) }),
+    ...(s.pending.length > 0 && { ask: askLabel(s.pending[0]), request: firstRequest(s.pending[0]) }),
     status: s.status,
     lastActive: lastActive(chat),
     mcpFailed: s.session.mcp.filter((m) => MCP_BAD.includes(m.status)).length,

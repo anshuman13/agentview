@@ -53,6 +53,14 @@ class ProtocolTest {
     }
 
     @Test
+    fun readsTheFirstPendingRequestOfALiveChat() {
+        val live = parseMessage("""{"type":"live","chats":[{"id":"a","pending":1,"ask":"Permission: Edit","request":{"id":"p","kind":"permission","toolName":"Edit","title":"Allow Claude to edit calc.py?","input":{"file_path":"/x/calc.py"},"canAlwaysAllow":true}},{"id":"b"}]}""") as ServerMessage.Live
+        val p = live.chats[0].asked as Pending.Permission
+        assertEquals("Edit", p.toolName)
+        assertEquals(null, live.chats[1].asked)
+    }
+
+    @Test
     fun appendAddsOnlyTheNewTail() {
         val ev = ChatEvent("e", "assistant", text = "hello", streaming = true)
         assertEquals("hello world", appendTo(ev, 5, " world")?.text)

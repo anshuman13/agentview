@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode, type RefObject } from 'react';
+import { useContext, useEffect, useMemo, useRef, useState, type ReactNode, type RefObject } from 'react';
 import { useStore } from '../../app/store';
 import { allowBlocked, answerPermission, steer } from '../chatActions';
 import { Button, ShowToggle } from '../../ui/Button';
@@ -8,11 +8,12 @@ import { pressable, useOnUnmount } from '../../ui/util';
 import { touch } from '../../app/touch/touch';
 import { Markdown } from '../Chat';
 import { str } from '../transcript/steps';
-import type { ChatEvent, PendingPermission } from '../../../../shared/protocol';
+import type { ChatEvent, PendingPermission, PendingRequest } from '../../../../shared/protocol';
 import { lineDiff } from '../../../../shared/lineDiff';
 import { blockedRule, MODE_HINTS, planFeedback, planParagraphs } from './pendingLogic';
 import { QuestionCard } from './QuestionCard';
 import { useCardKeys } from './useCardKeys';
+import { CardChat } from './cardChat';
 import { editPairs } from '../../../../shared/edits';
 
 export function Pending() {
@@ -30,14 +31,15 @@ export function Pending() {
   if (!pending.length) return null;
   return (
     <div className="pd-list" ref={list}>
-      {pending.map((p, n) => {
-        const first = n === 0;
-        if (p.kind === 'question') return <QuestionCard key={p.id} q={p} first={first} />;
-        if (p.toolName === 'ExitPlanMode') return <PlanCard key={p.id} p={p} mode={mode} first={first} />;
-        return <PermissionCard key={p.id} p={p} mode={mode} first={first} />;
-      })}
+      {pending.map((p, n) => <PendingCard key={p.id} p={p} mode={mode} first={n === 0} />)}
     </div>
   );
+}
+
+export function PendingCard({ p, mode, first }: { p: PendingRequest; mode: string; first: boolean }) {
+  if (p.kind === 'question') return <QuestionCard q={p} first={first} />;
+  if (p.toolName === 'ExitPlanMode') return <PlanCard p={p} mode={mode} first={first} />;
+  return <PermissionCard p={p} mode={mode} first={first} />;
 }
 
 const ICONS: Record<string, string> = {
@@ -67,10 +69,11 @@ function PlanCard({ p, mode, first }: CardProps) {
   const paragraphs = useMemo(() => planParagraphs(str(p.input.plan)), [p.input.plan]);
   const [notes, setNotes] = useState<Record<number, string>>({});
   const [editing, setEditing] = useState<number | null>(null);
+  const chat = useContext(CardChat);
   const keep = () => {
     const text = planFeedback(paragraphs, notes);
-    if (text) steer(text);
-    else answerPermission(p.id, false);
+    if (text) steer(text, chat);
+    else answerPermission(p.id, false, false, chat);
   };
   const save = (i: number, text: string) => {
     setNotes((n) => ({ ...n, [i]: text.trim() }));
@@ -114,7 +117,8 @@ function PlanCard({ p, mode, first }: CardProps) {
 function Decision({ p, mode, first, cardRef, yes, no, onNo }: CardProps & { cardRef: RefObject<HTMLElement | null>; yes: string; no: string; onNo?: () => void }) {
   const always = p.canAlwaysAllow && p.toolName !== 'ExitPlanMode';
   const keys = !p.confirmFirst;
-  const reply = (allow: boolean, all?: boolean) => answerPermission(p.id, allow, all);
+  const chat = useContext(CardChat);
+  const reply = (allow: boolean, all?: boolean) => answerPermission(p.id, allow, all, chat);
   const decline = onNo ?? (() => reply(false));
   useCardKeys(cardRef, first, (k) => {
     if (k === 'n') decline();

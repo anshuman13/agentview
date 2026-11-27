@@ -290,6 +290,8 @@ export type LiveChat = {
   pending: number;
   // What the first pending request asks: "Question", "Plan approval" or "Permission: Bash".
   ask?: string;
+  // That first request, so the session list can answer it without opening the chat.
+  request?: PendingRequest;
   status: string;
   lastActive: number;
   mcpFailed?: number;

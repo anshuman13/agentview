@@ -19,6 +19,7 @@ import { draftKey, draftLine, readDraft } from '../chat/composer/composerLogic';
 import { clock } from '../../../shared/util';
 import { useChatRun } from './useChatRun';
 import { BuildRows } from './BuildRows';
+import { AskHover } from './AskHover';
 
 type SetChats = (f: (l: SavedSession[]) => SavedSession[]) => void;
 type Pin = (on: boolean) => Promise<boolean>;
@@ -198,9 +199,10 @@ export function LiveRow({ c, saved, repo, branch, selected, pinned, actions, ask
       {line.edits && <> · <span className="chat-add">+{line.edits.add}</span> <span className="chat-del">-{line.edits.del}</span></>}
     </>
   );
+  const row = <ChatRow sessionId={saved?.sessionId ?? rootOf(c.sessionId) ?? undefined} title={c.title} cwd={c.cwd} lastModified={saved?.lastModified ?? c.lastActive} live={c} meta={main} state={chatState({ live: c, saved, builds }, seen)} selected={selected} pinned={pinned} actions={actions} onOpen={() => { if (!selected) send({ type: 'view', id: c.id }); }} onPin={onPin} onBeside={onBeside} onClose={() => closeChat(c, ask)} />;
   return (
     <>
-      <ChatRow sessionId={saved?.sessionId ?? rootOf(c.sessionId) ?? undefined} title={c.title} cwd={c.cwd} lastModified={saved?.lastModified ?? c.lastActive} live={c} meta={main} state={chatState({ live: c, saved, builds }, seen)} selected={selected} pinned={pinned} actions={actions} onOpen={() => { if (!selected) send({ type: 'view', id: c.id }); }} onPin={onPin} onBeside={onBeside} onClose={() => closeChat(c, ask)} />
+      {selected ? row : <AskHover c={c}>{row}</AskHover>}
       <BuildRows sessionId={saved?.sessionId} members={saved?.buildMembers} state={builds} />
     </>
   );
