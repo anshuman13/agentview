@@ -142,10 +142,10 @@ fun Composer(hub: Hub, chatId: String, sessionId: String?, session: SessionInfo?
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Bottom) {
                 if (uploading > 0) Box(Modifier.size(Tokens.touch).semantics { contentDescription = "Uploading" }, contentAlignment = Alignment.Center) { CircularProgressIndicator(Modifier.size(Tokens.iconMd), color = c.accent, strokeWidth = Tokens.sp1) }
                 else IconBtn("add", "Add", { sheet = Picker.Add })
-                ComposerInput(
+                KeyboardImages(attach.image) { ComposerInput(
                     s, composerPlaceholder(providerLabel(session?.provider), placeholderState(waiting, session?.compacting == true, running, s.uses.isNotEmpty()), canTalk),
                     Modifier.weight(1f).focusRequester(focus).onFocusChanged { bar = barState(bar, if (it.isFocused) BarEvent.Focus else BarEvent.Blur) }, { multiline = it },
-                )
+                ) }
                 ComposerActions(hub, s, running, uploading, dictation, canTalk)
             }
         }

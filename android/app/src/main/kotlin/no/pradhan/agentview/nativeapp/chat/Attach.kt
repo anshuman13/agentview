@@ -8,6 +8,9 @@ import android.graphics.BitmapFactory
 import android.graphics.Matrix
 import android.media.ExifInterface
 import android.net.Uri
+import android.os.Build
+import android.view.inputmethod.EditorInfo
+import android.view.inputmethod.InputConnection
 import android.provider.OpenableColumns
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.IntentSenderRequest
@@ -19,8 +22,13 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.ExperimentalComposeUiApi
+import androidx.compose.ui.platform.InterceptPlatformTextInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.PlatformTextInputMethodRequest
 import androidx.core.content.FileProvider
+import androidx.core.view.inputmethod.EditorInfoCompat
+import androidx.core.view.inputmethod.InputConnectionCompat
 import androidx.lifecycle.viewModelScope
 import com.google.mlkit.vision.documentscanner.GmsDocumentScannerOptions
 import com.google.mlkit.vision.documentscanner.GmsDocumentScanning
@@ -89,7 +97,29 @@ fun AttachButton(hub: Hub, onUploading: (Int) -> Unit, choose: Boolean = true, o
     }
 }
 
-class Attach(val takePhoto: () -> Unit, val choosePhoto: () -> Unit, val chooseFile: () -> Unit)
+class Attach(val takePhoto: () -> Unit, val choosePhoto: () -> Unit, val chooseFile: () -> Unit, val image: (Uri, String) -> Unit)
+
+// Tells the keyboard the field takes images, so Gboard stickers, GIFs and clipboard images arrive in onImage with their mime type.
+@OptIn(ExperimentalComposeUiApi::class)
+@Composable
+fun KeyboardImages(onImage: (Uri, String) -> Unit, content: @Composable () -> Unit) {
+    InterceptPlatformTextInput({ request, next ->
+        next.startInputMethod(object : PlatformTextInputMethodRequest {
+            override fun createInputConnection(outAttributes: EditorInfo): InputConnection {
+                val conn = request.createInputConnection(outAttributes)
+                EditorInfoCompat.setContentMimeTypes(outAttributes, arrayOf("image/*"))
+                return InputConnectionCompat.createWrapper(conn, outAttributes) { info, flags, _ ->
+                    val mime = info.description.getMimeType(0).takeIf { it.startsWith("image/") } ?: return@createWrapper false
+                    if (Build.VERSION.SDK_INT >= 25 && flags and InputConnectionCompat.INPUT_CONTENT_GRANT_READ_URI_PERMISSION != 0) {
+                        if (runCatching { info.requestPermission() }.isFailure) return@createWrapper false
+                    }
+                    onImage(info.contentUri, mime)
+                    true
+                }
+            }
+        })
+    }, content)
+}
 
 private tailrec fun Context.activity(): Activity? = this as? Activity ?: (this as? ContextWrapper)?.baseContext?.activity()
 
@@ -120,10 +150,9 @@ fun rememberAttach(
         }
     }
 
+    val image = { uri: Uri, mime: String -> upload("photo.${mime.substringAfter('/', "jpg").substringBefore('+')}", mime) { readUri(ctx, uri) } }
     val picker = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri: Uri? ->
-        if (uri == null) return@rememberLauncherForActivityResult
-        val mime = ctx.contentResolver.getType(uri) ?: "image/jpeg"
-        upload("photo.${mime.substringAfter('/', "jpg").substringBefore('+')}", mime) { readUri(ctx, uri) }
+        if (uri != null) image(uri, ctx.contentResolver.getType(uri) ?: "image/jpeg")
     }
     val camera = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { ok ->
         if (ok) upload("camera.jpg", "image/jpeg") { shrunkJpeg(shot) }
@@ -175,5 +204,5 @@ fun rememberAttach(
         upload(name ?: uri.lastPathSegment ?: "file", ctx.contentResolver.getType(uri) ?: "application/octet-stream") { readUri(ctx, uri) }
     }
 
-    return Attach(takePhoto, { picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) }, { document.launch(arrayOf("*/*")) })
+    return Attach(takePhoto, { picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) }, { document.launch(arrayOf("*/*")) }, image)
 }
