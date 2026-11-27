@@ -1,0 +1,15 @@
+{
+  "rows": [{"id": "u1", "kind": "user", "at": 10}, {"id": "a1", "kind": "assistant", "at": 20}, {"id": "u2", "kind": "user", "at": 30}, {"id": "s1", "kind": "step", "at": 35}, {"id": "a2", "kind": "assistant", "at": 40}, {"id": "a3", "kind": "assistant", "at": 60, "streaming": true}],
+  "marker": [
+    {"name": "first reply after the last visit", "seen": 25, "openedAt": 50, "expected": "s1"},
+    {"name": "a prompt is never the line", "seen": 5, "openedAt": 50, "expected": "a1"},
+    {"name": "never seen", "seen": 0, "openedAt": 50, "expected": null},
+    {"name": "nothing new before opening", "seen": 45, "openedAt": 50, "expected": null}
+  ],
+  "replies": [
+    {"name": "from the first prompt", "lastSeen": "u1", "expected": 2},
+    {"name": "after a reply, skipping the streaming one", "lastSeen": "a1", "expected": 1},
+    {"name": "at the last finished reply", "lastSeen": "a2", "expected": 0},
+    {"name": "unknown row", "lastSeen": "gone", "expected": 0}
+  ]
+}

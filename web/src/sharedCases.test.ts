@@ -29,7 +29,7 @@ import { attachMark } from '../../shared/attachMark';
 import { chatSessionOf } from '../../shared/chatLink';
 import { latestTodos, todoCount, todoCurrent, todoProgress, type TodoItem } from '../../shared/todos';
 import { mergeTail, trimHeld } from './app/runtime/pageEvents';
-import { alarmCard, buildTranscript, dayDividers, duration, openAtNew, rewindReplies, stepLabel, stepTone, turnAnswers, type Item } from './chat/transcript/steps';
+import { alarmCard, buildTranscript, dayDividers, duration, newMarker, newReplies, openAtNew, rewindReplies, stepLabel, stepTone, turnAnswers, type Item } from './chat/transcript/steps';
 import { filePath } from './chat/transcript/md';
 import { buildCard, type BuildCardInput } from './chat/transcript/buildCardLogic';
 import { unreadOrder, type UnreadChat } from './sessions/chatNav';
@@ -181,6 +181,14 @@ describe('cases shared with the Android app', () => {
 
   for (const c of cases<{ name: string; now: number; rows: { id: string; kind: string; at: number }[]; expected: Record<string, string> }>('day-dividers')) {
     it(`dayDividers: ${c.name}`, () => expect(Object.fromEntries(dayDividers(c.rows.map((r) => ({ ...r, text: '' })) as Item[], c.now))).toEqual(c.expected));
+  }
+
+  {
+    const f = JSON.parse(readFileSync(new URL('../../shared/fixtures/new-marker.json', import.meta.url), 'utf8')) as { rows: { id: string; kind: string; at: number; streaming?: boolean }[]; marker: { name: string; seen: number; openedAt: number; expected: string | null }[]; replies: { name: string; lastSeen: string; expected: number }[] };
+    const items = f.rows.map((r) => ({ ...r, text: '', streaming: !!r.streaming })) as unknown as Item[];
+    const ats = new Map(f.rows.map((r) => [r.id, r.at]));
+    for (const c of f.marker) it(`newMarker: ${c.name}`, () => expect(newMarker(items, ats, c.seen, c.openedAt)).toBe(c.expected));
+    for (const c of f.replies) it(`newReplies: ${c.name}`, () => expect(newReplies(items, c.lastSeen)).toBe(c.expected));
   }
 
   for (const c of cases<{ ms: number; expected: string }>('step-duration')) {

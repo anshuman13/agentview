@@ -43,6 +43,8 @@ import no.pradhan.agentview.nativeapp.chat.Use
 import no.pradhan.agentview.nativeapp.chat.openAtNew
 import no.pradhan.agentview.nativeapp.chat.duration
 import no.pradhan.agentview.nativeapp.chat.dayDividers
+import no.pradhan.agentview.nativeapp.chat.newMarker
+import no.pradhan.agentview.nativeapp.chat.newReplies
 import no.pradhan.agentview.nativeapp.chat.stepLabel
 import no.pradhan.agentview.nativeapp.chat.stepTone
 import no.pradhan.agentview.nativeapp.chat.addUse
@@ -334,6 +336,25 @@ class SharedCasesTest {
                 if (r.str("kind") == "user") Item.User(r.str("id"), "", r.getValue("at").jsonPrimitive.long, false, false) else Item.System(r.str("id"), "")
             }
             assertEquals(c.str("name"), c.getValue("expected").jsonObject.mapValues { it.value.jsonPrimitive.content }, dayDividers(items, c.getValue("now").jsonPrimitive.long))
+        }
+    }
+
+    @Test fun newMarkerCases() {
+        val f = Json.parseToJsonElement(File("../../shared/fixtures/new-marker.json").readText()).jsonObject
+        val rows = f.getValue("rows").jsonArray.map { it.jsonObject }
+        val items = rows.map { r ->
+            when (r.str("kind")) {
+                "user" -> Item.User(r.str("id"), "", r.getValue("at").jsonPrimitive.long, false, false)
+                "assistant" -> Item.Assistant(r.str("id"), "", r["streaming"]?.jsonPrimitive?.boolean == true)
+                else -> Item.System(r.str("id"), "")
+            }
+        }
+        val ats = rows.associate { it.str("id") to it.getValue("at").jsonPrimitive.long }
+        for (c in f.getValue("marker").jsonArray.map { it.jsonObject }) {
+            assertEquals(c.str("name"), c.getValue("expected").takeIf { it !is JsonNull }?.jsonPrimitive?.content, newMarker(items, ats, c.getValue("seen").jsonPrimitive.long, c.getValue("openedAt").jsonPrimitive.long))
+        }
+        for (c in f.getValue("replies").jsonArray.map { it.jsonObject }) {
+            assertEquals(c.str("name"), c.getValue("expected").jsonPrimitive.int, newReplies(items, c.str("lastSeen")))
         }
     }
 

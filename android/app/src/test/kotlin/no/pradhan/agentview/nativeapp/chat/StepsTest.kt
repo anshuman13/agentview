@@ -122,21 +122,6 @@ class StepsTest {
         assertNull(gapAbove(step, step))
     }
 
-    @Test fun newMarkerIsFirstReplyAfterLastVisit() {
-        val items = listOf(Item.User("u1", "a", 10, false, false), Item.Assistant("a1", "x", false), Item.User("u2", "b", 30, false, false), Item.Assistant("a2", "y", false), Item.Assistant("a3", "z", false))
-        val ats = mapOf("u1" to 10L, "a1" to 20L, "u2" to 30L, "a2" to 40L, "a3" to 60L)
-        assertEquals("a2", newMarker(items, ats, seen = 25, openedAt = 50))
-        assertNull(newMarker(items, ats, seen = 0, openedAt = 50))
-        assertNull(newMarker(items, ats, seen = 45, openedAt = 50))
-    }
-
-    @Test fun newRepliesCountsFinishedRepliesAfterTheLastRowSeen() {
-        val items = listOf(Item.User("u1", "a", 10, false, false), Item.Assistant("a1", "x", false), Item.Assistant("a2", "y", false), Item.Assistant("a3", "z", true))
-        assertEquals(2, newReplies(items, "u1"))
-        assertEquals(1, newReplies(items, "a1"))
-        assertEquals(0, newReplies(items, "gone"))
-    }
-
     @Test fun remindChoicesEndWithTomorrowMorning() {
         val zone = java.time.ZoneId.of("Europe/Oslo")
         val now = java.time.ZonedDateTime.of(2026, 11, 9, 23, 30, 0, 0, zone).toInstant().toEpochMilli()

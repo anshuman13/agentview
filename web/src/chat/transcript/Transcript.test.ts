@@ -2,7 +2,7 @@ import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'bun:test';
 import { Explored } from './StepRows';
-import { buildTranscript, createTranscriptBuilder, duration, exploreLabel, exploreRuns, stepLabel, stepTone, newMarker, newReplies } from './steps';
+import { buildTranscript, createTranscriptBuilder, duration, exploreLabel, exploreRuns, stepLabel, stepTone } from './steps';
 import { replyLine, sumEdits } from '../../../../shared/edits';
 import { buildTurns } from './turns';
 import { chatLine } from '../../sessions/folders';
@@ -200,29 +200,6 @@ describe('exploreRuns', () => {
     expect(runs.get(steps[0].id)!.map((s) => s.id)).toEqual(steps.map((s) => s.id));
     expect(exploreLabel(runs.get(steps[0].id)!)).toBe('2 files, 1 search');
   });
-});
-
-describe('newMarker', () => {
-  const items = [{ id: 'u', kind: 'user' }, { id: 'a', kind: 'assistant' }, { id: 'b', kind: 'assistant' }] as never[];
-  const ats = new Map([['u', 5], ['a', 10], ['b', 20]]);
-  it('marks the first reply after the last visit and before opening', () => {
-    expect(newMarker(items, ats, 12, 30)).toBe('b');
-    expect(newMarker(items, ats, 1, 30)).toBe('a');
-  });
-  it('has no line for a never-seen chat or nothing new', () => {
-    expect(newMarker(items, ats, 0, 30)).toBeNull();
-    expect(newMarker(items, ats, 25, 30)).toBeNull();
-  });
-});
-
-describe('newReplies', () => {
-  const items = [{ id: 'u', kind: 'user' }, { id: 'a', kind: 'assistant' }, { id: 's', kind: 'step' }, { id: 'b', kind: 'assistant' }, { id: 'c', kind: 'assistant', streaming: true }] as never[];
-  it('counts finished replies after the last row seen', () => {
-    expect(newReplies(items, 'u')).toBe(2);
-    expect(newReplies(items, 'a')).toBe(1);
-    expect(newReplies(items, 'b')).toBe(0);
-  });
-  it('counts none for an unknown row', () => expect(newReplies(items, 'gone')).toBe(0));
 });
 
 describe('collapsible boxes', () => {
