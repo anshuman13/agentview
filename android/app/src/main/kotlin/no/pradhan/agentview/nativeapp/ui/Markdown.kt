@@ -21,6 +21,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
@@ -94,7 +95,8 @@ fun Markdown(text: String, modifier: Modifier = Modifier, streaming: Boolean = f
             value = parsed.get(t) ?: withContext(Dispatchers.Default) { parseMarkdown(t) }.also { if (!still) parsed.put(t, it) }
         }
     }
-    blocks?.let { MdBlocks(it, modifier, reading) }
+    val fade = streaming && !motionOff()
+    blocks?.let { CompositionLocalProvider(LocalStreamFade provides fade) { MdBlocks(it, modifier, reading) } }
 }
 
 @Composable
@@ -108,9 +110,9 @@ private fun MdBlocks(blocks: List<MdBlock>, modifier: Modifier = Modifier, readi
 private fun MdBlockView(b: MdBlock, reading: Boolean) {
     val body = (if (reading) Type.reading else Type.body).copy(color = av.fg)
     when (b) {
-        is MdBlock.Para -> Text(inlineText(b.inlines), style = body)
+        is MdBlock.Para -> Text(fadedText(inlineText(b.inlines), body.color), style = body)
         is MdBlock.Heading -> Text(
-            inlineText(b.inlines),
+            fadedText(inlineText(b.inlines), body.color),
             style = if (reading) body.copy(fontWeight = FontWeight.Bold, fontSize = if (b.level <= 1) body.fontSize * 1.25f else body.fontSize)
                 else (if (b.level <= 1) Type.headline.copy(fontSize = Tokens.fsXl) else Type.headline).copy(color = av.fg),
             modifier = Modifier.padding(top = Tokens.sp4),
