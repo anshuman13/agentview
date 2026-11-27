@@ -41,6 +41,9 @@ import no.pradhan.agentview.nativeapp.sessions.UnreadChat
 import no.pradhan.agentview.nativeapp.sessions.unreadOrder
 import no.pradhan.agentview.nativeapp.chat.Use
 import no.pradhan.agentview.nativeapp.chat.openAtNew
+import no.pradhan.agentview.nativeapp.chat.duration
+import no.pradhan.agentview.nativeapp.chat.stepLabel
+import no.pradhan.agentview.nativeapp.chat.stepTone
 import no.pradhan.agentview.nativeapp.chat.addUse
 import no.pradhan.agentview.nativeapp.chat.attachMark
 import no.pradhan.agentview.nativeapp.chat.buildHistory
@@ -314,6 +317,18 @@ class SharedCasesTest {
             val newId = c.getValue("newId").takeIf { it !is JsonNull }?.jsonPrimitive?.content
             assertEquals(c.str("name"), c["expected"]?.takeIf { it !is JsonNull }?.jsonPrimitive?.content, openAtNew(items, newId))
         }
+    }
+
+    @Test fun stepLabels() {
+        for (c in cases("step-label")) {
+            val l = stepLabel(c.str("tool"), c.getValue("input").jsonObject, c.str("cwd"))
+            val expected = listOf(c.str("verb"), c.str("object"), c["mono"]?.jsonPrimitive?.boolean == true, c["cmd"]?.jsonPrimitive?.content, c.str("tone"))
+            assertEquals(c.str("name"), expected, listOf(l.verb, l.obj, l.mono, l.cmd, stepTone(c.str("tool")).name.lowercase()))
+        }
+    }
+
+    @Test fun stepDurations() {
+        for (c in cases("step-duration")) assertEquals(c.str("ms"), c.str("expected"), duration(c.getValue("ms").jsonPrimitive.long))
     }
 
     @Test fun workFold() {

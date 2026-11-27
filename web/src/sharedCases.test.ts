@@ -29,7 +29,7 @@ import { attachMark } from '../../shared/attachMark';
 import { chatSessionOf } from '../../shared/chatLink';
 import { latestTodos, todoCount, todoCurrent, todoProgress, type TodoItem } from '../../shared/todos';
 import { mergeTail, trimHeld } from './app/runtime/pageEvents';
-import { alarmCard, buildTranscript, openAtNew, rewindReplies, turnAnswers, type Item } from './chat/transcript/steps';
+import { alarmCard, buildTranscript, duration, openAtNew, rewindReplies, stepLabel, stepTone, turnAnswers, type Item } from './chat/transcript/steps';
 import { filePath } from './chat/transcript/md';
 import { buildCard, type BuildCardInput } from './chat/transcript/buildCardLogic';
 import { unreadOrder, type UnreadChat } from './sessions/chatNav';
@@ -170,6 +170,17 @@ describe('cases shared with the Android app', () => {
     it(`openAtNew: ${c.name}`, () => {
       expect(openAtNew(c.rows as unknown as Item[], c.newId)).toBe(c.expected);
     });
+  }
+
+  for (const c of cases<{ name: string; tool: string; input: Record<string, unknown>; cwd: string; verb: string; object: string; mono?: boolean; cmd?: string; tone: string }>('step-label')) {
+    it(`stepLabel: ${c.name}`, () => {
+      const l = stepLabel(c.tool, c.input, c.cwd);
+      expect([l.verb, l.object, !!l.mono, l.cmd ?? null, stepTone(c.tool)]).toEqual([c.verb, c.object, !!c.mono, c.cmd ?? null, c.tone]);
+    });
+  }
+
+  for (const c of cases<{ ms: number; expected: string }>('step-duration')) {
+    it(`duration: ${c.ms}`, () => expect(duration(c.ms)).toBe(c.expected));
   }
 
   for (const c of cases<{ name: string; held: string[]; heldEarlier: number; tail: string[]; earlier: number; expected: string[]; expectedEarlier: number }>('merge-tail')) {

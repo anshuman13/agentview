@@ -1,0 +1,13 @@
+[
+  {"ms": 0, "expected": ""},
+  {"ms": 999, "expected": ""},
+  {"ms": 1000, "expected": "1s"},
+  {"ms": 1499, "expected": "1s"},
+  {"ms": 1500, "expected": "2s"},
+  {"ms": 59000, "expected": "59s"},
+  {"ms": 60000, "expected": "1m"},
+  {"ms": 90000, "expected": "2m"},
+  {"ms": 3540000, "expected": "59m"},
+  {"ms": 3600000, "expected": "1h"},
+  {"ms": 9000000, "expected": "3h"}
+]
