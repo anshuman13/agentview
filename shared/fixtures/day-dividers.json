@@ -1,0 +1,5 @@
+[
+  {"name": "each prompt that starts a new day", "now": 1794225600000, "rows": [{"id": "a", "kind": "user", "at": 1767175200000}, {"id": "b", "kind": "user", "at": 1793696400000}, {"id": "s", "kind": "system", "at": 0}, {"id": "c", "kind": "user", "at": 1793728800000}, {"id": "d", "kind": "user", "at": 1794182340000}, {"id": "e", "kind": "user", "at": 1794182400000}], "expected": {"a": "31 December 2025", "b": "Tuesday 3 November", "d": "Yesterday", "e": "Today"}},
+  {"name": "a chat within today has none", "now": 1794225600000, "rows": [{"id": "x", "kind": "user", "at": 1794186000000}, {"id": "y", "kind": "user", "at": 1794222000000}], "expected": {}},
+  {"name": "a prompt with no time is skipped", "now": 1794225600000, "rows": [{"id": "x", "kind": "user", "at": 0}, {"id": "y", "kind": "user", "at": 1794135600000}], "expected": {"y": "Yesterday"}}
+]

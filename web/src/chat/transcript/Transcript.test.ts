@@ -2,7 +2,7 @@ import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'bun:test';
 import { Explored } from './StepRows';
-import { buildTranscript, createTranscriptBuilder, duration, exploreLabel, exploreRuns, stepLabel, stepTone, newMarker, newReplies, dayDividers } from './steps';
+import { buildTranscript, createTranscriptBuilder, duration, exploreLabel, exploreRuns, stepLabel, stepTone, newMarker, newReplies } from './steps';
 import { replyLine, sumEdits } from '../../../../shared/edits';
 import { buildTurns } from './turns';
 import { chatLine } from '../../sessions/folders';
@@ -223,16 +223,6 @@ describe('newReplies', () => {
     expect(newReplies(items, 'b')).toBe(0);
   });
   it('counts none for an unknown row', () => expect(newReplies(items, 'gone')).toBe(0));
-});
-
-describe('dayDividers', () => {
-  const now = new Date(2026, 10, 9, 12).getTime();
-  const user = (id: string, at: number) => ({ id, kind: 'user', text: '', at }) as never;
-  it('labels each prompt that starts a new day', () => {
-    const d = dayDividers([user('a', new Date(2026, 10, 3, 9).getTime()), user('b', new Date(2026, 10, 8, 9).getTime()), user('c', new Date(2026, 10, 8, 10).getTime()), user('d', now)], now);
-    expect([...d]).toEqual([['a', 'Tuesday 3 November'], ['b', 'Yesterday'], ['d', 'Today']]);
-  });
-  it('has none for a chat within today', () => expect(dayDividers([user('a', now)], now).size).toBe(0));
 });
 
 describe('collapsible boxes', () => {

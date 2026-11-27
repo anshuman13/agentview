@@ -29,7 +29,7 @@ import { attachMark } from '../../shared/attachMark';
 import { chatSessionOf } from '../../shared/chatLink';
 import { latestTodos, todoCount, todoCurrent, todoProgress, type TodoItem } from '../../shared/todos';
 import { mergeTail, trimHeld } from './app/runtime/pageEvents';
-import { alarmCard, buildTranscript, duration, openAtNew, rewindReplies, stepLabel, stepTone, turnAnswers, type Item } from './chat/transcript/steps';
+import { alarmCard, buildTranscript, dayDividers, duration, openAtNew, rewindReplies, stepLabel, stepTone, turnAnswers, type Item } from './chat/transcript/steps';
 import { filePath } from './chat/transcript/md';
 import { buildCard, type BuildCardInput } from './chat/transcript/buildCardLogic';
 import { unreadOrder, type UnreadChat } from './sessions/chatNav';
@@ -177,6 +177,10 @@ describe('cases shared with the Android app', () => {
       const l = stepLabel(c.tool, c.input, c.cwd);
       expect([l.verb, l.object, !!l.mono, l.cmd ?? null, stepTone(c.tool)]).toEqual([c.verb, c.object, !!c.mono, c.cmd ?? null, c.tone]);
     });
+  }
+
+  for (const c of cases<{ name: string; now: number; rows: { id: string; kind: string; at: number }[]; expected: Record<string, string> }>('day-dividers')) {
+    it(`dayDividers: ${c.name}`, () => expect(Object.fromEntries(dayDividers(c.rows.map((r) => ({ ...r, text: '' })) as Item[], c.now))).toEqual(c.expected));
   }
 
   for (const c of cases<{ ms: number; expected: string }>('step-duration')) {

@@ -255,7 +255,7 @@ fun dayDividers(items: List<Item>, now: Long, zone: java.time.ZoneId = codexZone
         if (day != prev && (prev != null || day != today)) out[it.id] = when {
             day == today -> "Today"
             day == today.minusDays(1) -> "Yesterday"
-            day.year == today.year -> java.time.format.DateTimeFormatter.ofPattern("EEEE, d MMMM", java.util.Locale.ENGLISH).format(day)
+            day.year == today.year -> java.time.format.DateTimeFormatter.ofPattern("EEEE d MMMM", java.util.Locale.ENGLISH).format(day)
             else -> java.time.format.DateTimeFormatter.ofPattern("d MMMM yyyy", java.util.Locale.ENGLISH).format(day)
         }
         prev = day

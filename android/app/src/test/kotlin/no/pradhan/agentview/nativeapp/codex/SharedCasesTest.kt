@@ -42,6 +42,7 @@ import no.pradhan.agentview.nativeapp.sessions.unreadOrder
 import no.pradhan.agentview.nativeapp.chat.Use
 import no.pradhan.agentview.nativeapp.chat.openAtNew
 import no.pradhan.agentview.nativeapp.chat.duration
+import no.pradhan.agentview.nativeapp.chat.dayDividers
 import no.pradhan.agentview.nativeapp.chat.stepLabel
 import no.pradhan.agentview.nativeapp.chat.stepTone
 import no.pradhan.agentview.nativeapp.chat.addUse
@@ -324,6 +325,15 @@ class SharedCasesTest {
             val l = stepLabel(c.str("tool"), c.getValue("input").jsonObject, c.str("cwd"))
             val expected = listOf(c.str("verb"), c.str("object"), c["mono"]?.jsonPrimitive?.boolean == true, c["cmd"]?.jsonPrimitive?.content, c.str("tone"))
             assertEquals(c.str("name"), expected, listOf(l.verb, l.obj, l.mono, l.cmd, stepTone(c.str("tool")).name.lowercase()))
+        }
+    }
+
+    @Test fun dayDividerCases() {
+        for (c in cases("day-dividers")) {
+            val items = c.getValue("rows").jsonArray.map { it.jsonObject }.map { r ->
+                if (r.str("kind") == "user") Item.User(r.str("id"), "", r.getValue("at").jsonPrimitive.long, false, false) else Item.System(r.str("id"), "")
+            }
+            assertEquals(c.str("name"), c.getValue("expected").jsonObject.mapValues { it.value.jsonPrimitive.content }, dayDividers(items, c.getValue("now").jsonPrimitive.long))
         }
     }
 

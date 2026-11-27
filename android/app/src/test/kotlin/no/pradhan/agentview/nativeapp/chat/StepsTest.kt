@@ -122,16 +122,6 @@ class StepsTest {
         assertNull(gapAbove(step, step))
     }
 
-    @Test fun dayDividersMarkEachNewDay() {
-        val zone = java.time.ZoneId.of("Europe/Oslo")
-        fun at(d: String) = java.time.LocalDateTime.parse(d).atZone(zone).toInstant().toEpochMilli()
-        fun user(id: String, d: String) = Item.User(id, "hi", at(d), false, false)
-        val now = at("2026-11-08T22:00")
-        val items = listOf(user("a", "2025-12-31T10:00"), user("b", "2026-11-06T09:00"), Item.System("s", "x"), user("c", "2026-11-06T18:00"), user("d", "2026-11-07T08:00"), user("e", "2026-11-08T07:00"))
-        assertEquals(mapOf("a" to "31 December 2025", "b" to "Friday, 6 November", "d" to "Yesterday", "e" to "Today"), dayDividers(items, now, zone))
-        assertEquals(emptyMap<String, String>(), dayDividers(listOf(user("x", "2026-11-08T09:00"), user("y", "2026-11-08T21:00")), now, zone))
-    }
-
     @Test fun newMarkerIsFirstReplyAfterLastVisit() {
         val items = listOf(Item.User("u1", "a", 10, false, false), Item.Assistant("a1", "x", false), Item.User("u2", "b", 30, false, false), Item.Assistant("a2", "y", false), Item.Assistant("a3", "z", false))
         val ats = mapOf("u1" to 10L, "a1" to 20L, "u2" to 30L, "a2" to 40L, "a3" to 60L)
