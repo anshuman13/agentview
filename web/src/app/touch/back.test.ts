@@ -21,8 +21,10 @@ const history = {
 stubGlobal('history', history);
 stubGlobal('window', { addEventListener: (_: string, f: () => void) => { pop = f; } });
 
-const { useBack } = await import('./back');
-const settle = () => new Promise((r) => setTimeout(r, 5));
+// A fresh copy: another test file in this process may have set up the shared one against its own window.
+const { useBack } = await import('./back.ts?fresh');
+// Two timer rounds: a go() fired late under load can still schedule the go() it causes after a single settle timer.
+const settle = () => new Promise((r) => setTimeout(() => setTimeout(r, 5), 5));
 
 describe('useBack', () => {
   it('steps back off a closed layer reached with Forward, so the next Back is not lost', async () => {

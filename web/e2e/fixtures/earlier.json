@@ -1,0 +1,7 @@
+{
+  "earlier": 0,
+  "events": [
+    { "id": "u0", "kind": "user", "text": "Look at the login page", "at": -60000 },
+    { "id": "a0", "kind": "assistant", "text": "The login page reads the session from a cookie.", "streaming": false, "at": -50000 }
+  ]
+}
