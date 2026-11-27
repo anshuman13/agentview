@@ -33,7 +33,6 @@ import no.pradhan.agentview.nativeapp.sessions.since
 import no.pradhan.agentview.nativeapp.ui.SectionHeader
 import no.pradhan.agentview.nativeapp.app.memoryFiles
 import no.pradhan.agentview.nativeapp.app.forgetMemory
-import no.pradhan.agentview.nativeapp.app.moveMemoryToWiki
 import no.pradhan.agentview.nativeapp.app.read
 import no.pradhan.agentview.nativeapp.app.readFile
 import no.pradhan.agentview.nativeapp.app.saveFile
@@ -166,7 +165,6 @@ fun MemorySheet(hub: Hub, cwd: String, instructionFiles: List<String>, initial: 
                             saving = false
                             if (gone) { open = null; reload() }
                         }
-                        Button("Move to wiki", { saving = true; hub.moveMemoryToWiki(f, cwd, reload, leave) }, variant = ButtonVariant.Plain, size = ButtonSize.Sm, icon = "book", enabled = !saving)
                         Button("Forget", { saving = true; hub.forgetMemory(f, reload, leave) }, variant = ButtonVariant.Plain, size = ButtonSize.Sm, icon = "trash", enabled = !saving)
                     }
                 }

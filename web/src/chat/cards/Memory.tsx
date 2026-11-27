@@ -23,7 +23,7 @@ import { loadErrorText } from '../../../../shared/loadError';
 import { PREFERENCE_CHARS, PREFERENCES, givenPreferences, leftOutPreferences } from '../../../../shared/preferences';
 import { Markdown } from '../Chat';
 import { addRepoRule, fetchMemory, saveMemory } from '../chatApi';
-import { forgetMemory, moveMemoryToWiki } from '../chatActions';
+import { forgetMemory } from '../chatActions';
 import { isMemoryIndex } from '../transcript/workFold';
 import { markLine, memoryMark, type MemoryFile, type MemoryMark } from './memoryLogic';
 
@@ -75,8 +75,8 @@ function AddRule({ file, onSaved }: { file: string; onSaved: () => void }) {
   );
 }
 
-// A memory file's body as a field with Save and Cancel; a save can be undone while the file stays open. Move to wiki and Forget are beside Edit on every file but MEMORY.md.
-function MemoryEdit({ file, draft, setDraft, onSaved, onMove, onForget }: { file: MemoryFile; draft: string | null; setDraft: (draft: string | null) => void; onSaved: (text: string) => void; onMove: () => Promise<void>; onForget: () => Promise<void> }) {
+// A memory file's body as a field with Save and Cancel; a save can be undone while the file stays open. Forget is beside Edit on every file but MEMORY.md.
+function MemoryEdit({ file, draft, setDraft, onSaved, onForget }: { file: MemoryFile; draft: string | null; setDraft: (draft: string | null) => void; onSaved: (text: string) => void; onForget: () => Promise<void> }) {
   const [saving, setSaving] = useState(false);
   const busy = (run: () => Promise<void>) => { setSaving(true); void run().finally(() => setSaving(false)); };
   const save = async (text: string, undo = false) => {
@@ -97,10 +97,7 @@ function MemoryEdit({ file, draft, setDraft, onSaved, onMove, onForget }: { file
         <>
           <div className="gl-actions">
             <Button size="sm" variant="plain" icon="edit" onClick={() => setDraft(file.text)}>Edit</Button>
-            {!isMemoryIndex(file.path) && <>
-              <Button size="sm" variant="plain" icon="book" disabled={saving} onClick={() => busy(onMove)}>Move to wiki</Button>
-              <Button size="sm" variant="plain" icon="trash" disabled={saving} onClick={() => busy(onForget)}>Forget</Button>
-            </>}
+            {!isMemoryIndex(file.path) && <Button size="sm" variant="plain" icon="trash" disabled={saving} onClick={() => busy(onForget)}>Forget</Button>}
           </div>
           <div className="bd-doc"><Markdown text={file.text || 'Empty'} /></div>
         </>
@@ -160,7 +157,7 @@ export function MemoryPick({ cwd, initial, onClose }: { cwd: string; initial?: s
           {mark && <div>{markLine(mark, open.at)}</div>}
         </div>
         {open.editable ? (
-          <MemoryEdit file={open} draft={draft} setDraft={setDraft} onSaved={(text) => { setOpen({ ...open, text }); reload(); }} onMove={() => leave(moveMemoryToWiki(open, reload))} onForget={() => leave(forgetMemory(open, reload))} />
+          <MemoryEdit file={open} draft={draft} setDraft={setDraft} onSaved={(text) => { setOpen({ ...open, text }); reload(); }} onForget={() => leave(forgetMemory(open, reload))} />
         ) : (
           <>
             {open.path === `${cwd}/${file}` && <div className="gl-actions"><Button size="sm" variant="plain" icon="edit" onClick={edit}>Edit</Button></div>}

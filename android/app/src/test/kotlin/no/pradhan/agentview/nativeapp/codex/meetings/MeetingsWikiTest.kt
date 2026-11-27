@@ -36,7 +36,6 @@ import no.pradhan.agentview.nativeapp.codex.parseRow
 import no.pradhan.agentview.nativeapp.codex.rowToChange
 import no.pradhan.agentview.nativeapp.codex.toJson
 import no.pradhan.agentview.nativeapp.app.claimRoute
-import no.pradhan.agentview.nativeapp.codex.wiki.chatSource
 import no.pradhan.agentview.nativeapp.codex.wiki.memoryPage
 import no.pradhan.agentview.nativeapp.codex.wiki.contestOf
 import no.pradhan.agentview.nativeapp.codex.wiki.newFact
@@ -351,7 +350,7 @@ class MeetingsWikiTest {
     }
 
     @Test fun aNewClaimIsTimedLikeTheWebOne() {
-        val f = newFact("  Use bun ", null, WORK, 7, "live", chatSource("Importer", "/Users/me/workspace/app/"), "c1")!!
+        val f = newFact("  Use bun ", null, WORK, 7, "live", """[{"kind":"chat","label":"Importer · app"}]""", "c1")!!
         assertEquals("Use bun", f.str("text"))
         assertEquals("live", f.str("state"))
         assertEquals("you", f.str("added_by"))
@@ -361,7 +360,6 @@ class MeetingsWikiTest {
         assertEquals(setOf("text", "page_id", "at", "state", "added_by", "sources"), f.times.keys)
         assertTrue(f.dirty)
         assertEquals("proposed", newFact("Loose", null, PERSONAL, 7)!!.str("state"))
-        assertEquals("chat · b", sourcesOf(newFact("x", null, WORK, 7, sources = chatSource(" ", "/a/b"))!!).single().label)
         assertNull(newFact("  ", null, WORK, 7))
     }
 

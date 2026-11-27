@@ -28,11 +28,9 @@ import no.pradhan.agentview.nativeapp.codex.reusableDaily
 import no.pradhan.agentview.nativeapp.codex.today
 import no.pradhan.agentview.nativeapp.codex.Need
 import no.pradhan.agentview.nativeapp.codex.withDismissal
-import no.pradhan.agentview.nativeapp.codex.wiki.chatSource
 import no.pradhan.agentview.nativeapp.codex.wiki.memoryClaim
 import no.pradhan.agentview.nativeapp.codex.wiki.newFact
 import no.pradhan.agentview.nativeapp.codex.wiki.restatedClaim
-import no.pradhan.agentview.nativeapp.sessions.segmentOf
 
 // A dismissed DM stops waiting and a dismissed bullet is stored on its brief, so every device hides them.
 fun Hub.hideNeed(n: Need): Boolean = when (n) {
@@ -148,10 +146,6 @@ fun Hub.shareToTask(item: SharedItem, profile: String): Boolean {
 }
 
 class RememberedClaim(val replaced: Boolean, val undo: () -> Unit)
-
-// Saves a live Memory claim in the chat's profile with the chat as its source; null when it was not saved.
-fun Hub.rememberClaim(text: String, title: String, cwd: String): RememberedClaim? =
-    saveMemoryClaim(newFact(text, null, segmentOf(cwd), System.currentTimeMillis(), "live", chatSource(title, cwd)))
 
 // Adds a live Memory claim, superseding the Memory claim it restates (web wiki.ts saveMemoryClaim).
 private fun Hub.saveMemoryClaim(fact: Row?): RememberedClaim? {

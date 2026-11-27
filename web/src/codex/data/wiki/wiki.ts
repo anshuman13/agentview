@@ -219,13 +219,6 @@ export function newFact(text: string, pageId: string | null, profile: Profile = 
   };
 }
 
-// A live Memory claim saved from a chat, with the chat's title and folder as its Chat source; android WikiLogic.kt chatSource says the same.
-export function rememberedFact(text: string, profile: Profile, title: string, cwd: string, now = Date.now()): Fact {
-  const fact = newFact(text, null, profile, now);
-  const label = `${title || 'chat'} · ${cwd.replace(/\/+$/, '').split('/').pop()}`;
-  return { ...fact, state: 'live', sources: JSON.stringify([{ kind: 'chat', label }]), field_times: JSON.stringify({ ...JSON.parse(fact.field_times), sources: now }) };
-}
-
 // A live Memory claim saved on the Memory page: trimmed, at most 400 characters, no source; null when blank. android WikiLogic.kt memoryClaim says the same.
 export function memoryClaim(text: string, profile: Profile, now = Date.now()): Fact | null {
   const body = text.trim().slice(0, 400);

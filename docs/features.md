@@ -283,13 +283,10 @@ cost so far. The status bar usage tooltip adds a Spend block with today's and th
   description or body is like a Memory claim the user rejected in the chat's profile, else In wiki when a current Memory claim
   restates it, else Stale when its modified time (`at` in /api/memory) is over 90 days old; the file view says it in full under
   the source line ("Similar to a claim you rejected: ...", "Also in the wiki: ...", "Not changed since <date>"). Beside Edit, an
-  editable memory file other than MEMORY.md has Move to wiki (hidden in phone read-only mode): it makes a live Memory claim from
-  the description (or the body on one line), cut to 400 characters and superseding the claim it restates, then posts `{ path }`
-  to /api/memory/remove, which deletes the file and the MEMORY.md lines that link to it and returns `{ raw, lines }`. The sheet
-  goes back to the list with "Moved to wiki" and Undo, which posts them to /api/memory/restore (only into a memory folder of the
-  chat, never over a file) and deletes the claim; a failed remove deletes the claim and says "Could not move the memory". Beside
-  it, Forget (also hidden in phone read-only mode, no confirm) posts the same remove and goes back to the list with "Memory
-  forgotten" and Undo, which posts the restore; a failed remove says "Could not forget the memory". A file
+  editable memory file other than MEMORY.md has Forget (hidden in phone read-only mode, no confirm): it posts `{ path }` to
+  /api/memory/remove, which deletes the file and the MEMORY.md lines that link to it and returns `{ raw, lines }`, and goes back
+  to the list with "Memory forgotten" and Undo, which posts them to /api/memory/restore (only into a memory folder of the chat,
+  never over a file); a failed remove says "Could not forget the memory". A file
   view shows its source line and a plain Back button on both clients; Back, web Esc and touch Back and phone system Back return to
   the list (the scrim and drag still close the sheet), asking "Discard the edit?" over an open edit. When /api/memory fails the
   list says "Could not load memory" with the reason and Retry. After the files, a "From the wiki" section (count,

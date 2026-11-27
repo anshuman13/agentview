@@ -6,10 +6,7 @@ import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
-import kotlinx.serialization.json.buildJsonArray
-import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.contentOrNull
-import kotlinx.serialization.json.put
 import no.pradhan.agentview.nativeapp.chat.s
 import no.pradhan.agentview.nativeapp.codex.DAY_MS
 import no.pradhan.agentview.nativeapp.codex.PERSONAL
@@ -167,10 +164,6 @@ fun sourcesOf(f: Row): List<Source> = runCatching {
         Source((o["kind"] as? JsonPrimitive)?.contentOrNull ?: "", label, (o["url"] as? JsonPrimitive)?.contentOrNull)
     }
 }.getOrDefault(emptyList())
-
-// The sources column of a claim saved from a chat: web/src/codex/data/wiki/wiki.ts chatSource.
-fun chatSource(title: String, cwd: String): String =
-    buildJsonArray { add(buildJsonObject { put("kind", "chat"); put("label", "${title.ifBlank { "chat" }} · ${cwd.trimEnd('/').substringAfterLast('/')}") }) }.toString()
 
 // A new claim of web/src/codex/data/wiki/wiki.ts newFact; null for blank text, so nothing is saved.
 fun newFact(text: String, pageId: String?, profile: String, now: Long, state: String = "proposed", sources: String? = null, id: String = UUID.randomUUID().toString()): Row? {

@@ -1,12 +1,9 @@
 import { embedded, getState, notice, prompt, send, setUi, subscribe } from '../app/store';
 import { showChat } from '../ui/util';
 import { handoffText } from './composer/composerLogic';
-import { assistantStore } from '../codex/data';
-import { rememberedFact, saveMemoryClaim } from '../codex/data/wiki/wiki';
 import { copyText, showSnack } from '../codex/view';
-import { profileOfPath } from '../../../shared/workspace';
 import { removeMemory, restoreMemory, type RemovedMemory } from './chatApi';
-import { memoryClaimText, type MemoryFile } from './cards/memoryLogic';
+import type { MemoryFile } from './cards/memoryLogic';
 
 // Puts text into the composer; the composer listens.
 export const insertText = (text: string) => window.dispatchEvent(new CustomEvent('agentview:insert', { detail: { text } }));
@@ -42,30 +39,6 @@ export function forkChat() {
     prompt(handoffText(sessionId), () => notice('The summary was not requested. Try Fork again'));
   });
   setTimeout(stop, 30_000);
-}
-
-// A live Memory claim in the chat's profile with the chat as its source.
-function rememberClaim(text: string) {
-  const st = getState();
-  const { cwd } = st.session;
-  return saveMemoryClaim(assistantStore(), rememberedFact(text, profileOfPath(cwd), st.live.find((c) => c.id === st.session.id)?.title ?? '', cwd));
-}
-
-// Makes a memory file a Memory claim and removes the file; Undo puts the file and its MEMORY.md lines back and deletes the claim, then runs `restored`. True once the file is gone.
-export async function moveMemoryToWiki(file: MemoryFile, restored: () => void) {
-  const claim = rememberClaim(memoryClaimText(file));
-  let removed: RemovedMemory;
-  try {
-    removed = await removeMemory(file.path);
-  } catch {
-    claim.undo();
-    showSnack('Could not move the memory');
-    return false;
-  }
-  showSnack(claim.replaced ? 'Moved to wiki, replacing a similar claim' : 'Moved to wiki', () => {
-    restoreMemory(file.path, removed).then(() => { claim.undo(); restored(); }, () => showSnack('Could not restore the memory'));
-  });
-  return true;
 }
 
 // Deletes a memory file and its MEMORY.md lines; Undo puts them back, then runs `restored`. True once the file is gone.

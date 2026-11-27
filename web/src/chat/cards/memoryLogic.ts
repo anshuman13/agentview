@@ -27,8 +27,6 @@ export function memoryMark(file: MemoryFile, facts: Fact[], profile: Profile, no
   return file.at > 0 && now - file.at > RETIRE_AFTER ? { mark: 'Stale', claim: '' } : null;
 }
 
-// The claim Move to wiki makes of a memory file: its description, else its body on one line, cut to the Remember limit. Android MemoryLogic.kt memoryClaimText says the same.
-export const memoryClaimText = (file: Pick<MemoryFile, 'description' | 'text'>) => (file.description.trim() || file.text.replace(/\s+/g, ' ').trim()).slice(0, 400);
 
 // The mark's long form under the file's source line.
 export function markLine(m: MemoryMark, at: number) {

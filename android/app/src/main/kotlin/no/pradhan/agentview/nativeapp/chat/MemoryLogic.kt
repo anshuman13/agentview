@@ -20,8 +20,6 @@ fun memoryMark(file: MemoryFile, facts: List<Row>, profile: String, now: Long): 
     return if (file.at > 0 && now - file.at > RETIRE_AFTER) MemoryMark("Stale", "") else null
 }
 
-// web memoryLogic.ts memoryClaimText: the claim Move to wiki makes of a memory file, its description, else its body on one line, cut to the Remember limit.
-fun memoryClaimText(file: MemoryFile) = file.description.trim().ifEmpty { file.text.replace(Regex("\\s+"), " ").trim() }.take(400)
 
 // shared/preferences.ts leftOutPreferences: how many of the profile's claims chats would get on their own that the 15 or 1500 character limit leaves out.
 fun leftOutPreferences(facts: List<Row>, profile: String, now: Long) =
