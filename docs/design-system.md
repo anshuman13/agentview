@@ -186,6 +186,7 @@ Old names still work: primary is filled, secondary (default) is gray, quiet is p
 ### IconButton
 `<IconButton icon label size on>`; square, `--radius` 8px, `--fg-muted`, `--fg` on hover over an `--fg` layer at `--state-hover-control` (pressed the same), `.on`
 is `--accent-text`. 28 / 36px, 44px on touch (Material 48dp target, sized to iOS 44pt). 44px hit area at max-width 480px.
+Glyphs are codicons, except the names in `shared/lineIcons.ts` (add, search, sidebar, terminal, globe, folder, more, mic, arrow-up, stop, copy, refresh, close, menu): Claude Code's thin outline icons as SVG paths in a 20 x 20 box with a 1.5 px stroke. Web `Icon` draws them inline; Android `AvIcon` reads them from the generated `Codicons.lines` (`./gradlew generateIcons`).
 
 ### Chip
 `<Chip on late size icon href>`; `.chip.chip-btn`. Filters and quick picks (Material filter chip). With `href` (plus `target`, `rel`) it renders an `<a>` with the same classes, for chips that open a link.

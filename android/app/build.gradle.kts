@@ -80,8 +80,9 @@ tasks.register("generateTokens") {
 
 tasks.register("generateIcons") {
     val css = rootProject.file("../node_modules/@vscode/codicons/dist/codicon.css")
+    val lines = rootProject.file("../shared/lineIcons.ts")
     val out = file("src/main/kotlin/no/pradhan/agentview/nativeapp/ui/Codicons.kt")
-    inputs.file(css)
+    inputs.files(css, lines)
     outputs.file(out)
-    doLast { out.writeText(no.pradhan.agentview.tokens.IconGen.generate(css.readText(), "no.pradhan.agentview.nativeapp.ui")) }
+    doLast { out.writeText(no.pradhan.agentview.tokens.IconGen.generate(css.readText(), "no.pradhan.agentview.nativeapp.ui", lines.readText())) }
 }

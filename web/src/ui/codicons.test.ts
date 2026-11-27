@@ -30,6 +30,13 @@ describe('codicon subset', () => {
     expect(missing).toEqual([]);
   });
 
+  it('has the same line icons as the generated Android table', async () => {
+    const { LINE_ICONS } = await import('../../../shared/lineIcons');
+    const kt = readFileSync(path.join(__dirname, '../../../android/app/src/main/kotlin/no/pradhan/agentview/nativeapp/ui/Codicons.kt'), 'utf8');
+    const android = Object.fromEntries([...kt.matchAll(/^ {8}"([a-z0-9-]+)" to \("([^"]+)" to (true|false)\),$/gm)].map((m) => [m[1], { d: m[2], ...(m[3] === 'true' ? { fill: true } : {}) }]));
+    expect(android).toEqual(LINE_ICONS);
+  });
+
   it('has no icon name built from a template, which the scan cannot see', () => {
     const built = files(src).filter((f) => /(?:<Icon name|\bicon)=\{`|\bicon: `/.test(readFileSync(f, 'utf8')));
     expect(built.map((f) => path.relative(src, f))).toEqual([]);

@@ -30,7 +30,12 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.scale
+import androidx.compose.ui.graphics.vector.PathParser
+import androidx.compose.foundation.Canvas
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
@@ -41,6 +46,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
 import no.pradhan.agentview.nativeapp.R
 
 enum class ButtonVariant { Filled, Tinted, Gray, Plain, Danger }
@@ -88,6 +94,7 @@ fun Button(
 // A codicon glyph (web Icon): drawn from the bundled font at a fixed size that ignores the font scale.
 @Composable
 fun AvIcon(name: String, desc: String? = null, size: Dp = Tokens.icon, modifier: Modifier = Modifier, tint: Color = LocalContentColor.current) {
+    Codicons.lines[name]?.let { (d, fill) -> return LineIcon(d, fill, desc, size, modifier, tint) }
     val code = Codicons.codepoints[name] ?: return
     val px = with(LocalDensity.current) { size.toSp() }
     Box(
@@ -99,6 +106,20 @@ fun AvIcon(name: String, desc: String? = null, size: Dp = Tokens.icon, modifier:
 }
 
 private val CodiconFont = FontFamily(Font(R.font.codicon))
+
+// A thin outline glyph from shared/lineIcons.ts (Claude Code's icons): path data in a 20 x 20 box, stroked 1.5 dp.
+@Composable
+private fun LineIcon(d: String, fill: Boolean, desc: String?, size: Dp, modifier: Modifier, tint: Color) {
+    val path = remember(d) { PathParser().parsePathString(d).toPath() }
+    val stroke = with(LocalDensity.current) { 1.5.dp.toPx() }
+    Canvas(modifier.size(size).then(if (desc != null) Modifier.semantics { contentDescription = desc } else Modifier.clearAndSetSemantics {})) {
+        val k = this.size.minDimension / 20f
+        scale(k, pivot = Offset.Zero) {
+            if (fill) drawPath(path, tint)
+            else drawPath(path, tint, style = Stroke(width = stroke / k, cap = StrokeCap.Round, join = StrokeJoin.Round))
+        }
+    }
+}
 
 // Icon button (web IconButton): a muted glyph with a touch-sized target, accent when on.
 @Composable

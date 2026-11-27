@@ -263,7 +263,7 @@ private fun ComposerActions(hub: Hub, s: ComposerState, running: Boolean, upload
     when {
         talking || (canTalk && !typed && !running) -> VoiceButton(fill, { hub.notice.value = it }, onSubmit = { s.submit(false, uploading, voice = true) }, onListening = { talking = it })
         running && !typed -> SendCircle("Stop", !hub.readOnly, hub::interrupt) { Box(Modifier.size(Tokens.sp6).background(c.bg, RoundedCornerShape(Tokens.radiusXs))) }
-        else -> SendCircle(if (running) "Queue" else "Send", canSend, { haptic.performHapticFeedback(HapticFeedbackType.Confirm); s.submit(false, uploading) }, if (running) ({ haptic.performHapticFeedback(HapticFeedbackType.LongPress); s.submit(true, uploading) }) else null) { AvIcon("send", null, Tokens.iconLg, tint = if (canSend) c.bg else c.fgFaint) }
+        else -> SendCircle(if (running) "Queue" else "Send", canSend, { haptic.performHapticFeedback(HapticFeedbackType.Confirm); s.submit(false, uploading) }, if (running) ({ haptic.performHapticFeedback(HapticFeedbackType.LongPress); s.submit(true, uploading) }) else null) { AvIcon("arrow-up", null, Tokens.iconLg, tint = if (canSend) c.bg else c.fgFaint) }
     }
 }
 
