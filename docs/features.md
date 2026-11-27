@@ -240,6 +240,10 @@ cost so far. The status bar usage tooltip adds a Spend block with today's and th
 - In the phone review pager, tapping a changed line opens the comment sheet, which also has Revert this change: the file
   is saved with that one block of changed lines put back to the last commit
 - Replies have no action buttons on the web or the phone; on the phone a hairline divider separates each prompt from the turn before it
+- The chat settings label (the web chip's mode text and the Android Chat settings row) reads model, effort and
+  permission mode, such as "Opus 5.5 · Medium · Auto": effort shows only when the model supports it, and the mode is
+  always named, Default and Supervised included. Web and Android build it with the same rule (`settingsLabel` in
+  `shared/providers.ts`, mirrored in `ComposerLogic.kt`, checked by `shared/fixtures/settings-label.json`)
 - On the phone, the composer's settings chip opens Chat settings with the models listed directly (one tap picks), then
   the permission modes (Supervised follows Auto), Account and Effort. The model you pick
   becomes the default for new chats, including the New chat shortcut. The web chip opens the same settings as a pick
