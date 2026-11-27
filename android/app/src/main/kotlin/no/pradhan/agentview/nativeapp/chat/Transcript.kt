@@ -176,11 +176,9 @@ private fun LazyListScope.transcriptRows(hub: Hub, view: ChatView, list: List<Fo
     val rewinds = view.rewinds
     val answers = view.answers
     val openAnswer = view.openAnswer
-    val firstId = view.items.firstOrNull()?.id
     itemsIndexed(list, key = { _, r -> r.key }, contentType = { _, r -> (r as? FoldRow.Row)?.it?.let { it::class } ?: r::class }) { i, r ->
         Column(Modifier.gap(gapAbove(list.getOrNull(i + 1), r))) {
             val it = (r as? FoldRow.Row)?.it
-            if (it is Item.User && it.id !in days && it.id != firstId) HorizontalDivider(Modifier.padding(bottom = Tokens.sp12), color = av.border, thickness = Tokens.hairline)
             it?.let { row -> days[row.id]?.let { DayDivider(it) } }
             if (r.key == newKey) NewLine()
             when {

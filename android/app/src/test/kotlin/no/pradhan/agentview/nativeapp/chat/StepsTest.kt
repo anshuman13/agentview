@@ -117,7 +117,7 @@ class StepsTest {
         val step = Item.Step("s", use("t", "Bash"), null)
         assertNull(gapAbove(null, user))
         assertEquals(Tokens.sp24, gapAbove(user, text))
-        assertEquals(Tokens.sp12, gapAbove(text, user))
+        assertEquals(Tokens.sp24, gapAbove(text, user))
         assertEquals(Tokens.sp4, gapAbove(text, step))
         assertNull(gapAbove(step, step))
     }

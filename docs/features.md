@@ -239,7 +239,7 @@ cost so far. The status bar usage tooltip adds a Spend block with today's and th
   continues from a short brief instead of the full context
 - In the phone review pager, tapping a changed line opens the comment sheet, which also has Revert this change: the file
   is saved with that one block of changed lines put back to the last commit
-- Replies have no action buttons on the web or the phone; on the phone a hairline divider separates each prompt from the turn before it
+- Replies have no action buttons on the web or the phone; turns are separated by space only, with a divider only where the day changes
 - The chat settings label (the web chip's mode text and the Android Chat settings row) reads model, effort and
   permission mode, such as "Opus 5.5 · Medium · Auto": effort shows only when the model supports it, and the mode is
   always named, Default and Supervised included. Web and Android build it with the same rule (`settingsLabel` in
