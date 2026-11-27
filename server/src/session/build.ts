@@ -23,8 +23,14 @@ export class BuildLoop {
     const s = this.s;
     s.pushEvent({ id, kind: 'user', text, at: Date.now() });
     if (args === 'usage') return s.system(BUILD_USAGE);
-    if (s.state.session.running) return s.system('Wait for this turn to end, then start the build');
     const existing = this.run;
+    if (args.until && !args.spec && !args.request) {
+      if (!existing) return s.system(BUILD_USAGE);
+      const until = untilAt(args.until);
+      s.runs.update(existing.id, { until });
+      return s.system(`Build keeps going until ${hhmm(until)}`);
+    }
+    if (s.state.session.running) return s.system('Wait for this turn to end, then start the build');
     // Build all on the spec a run is waiting on approves it.
     if (existing && args.spec && existing.spec === args.spec && existing.why === APPROVE) return this.resume();
     if (existing) return s.system('This chat already has a build run; stop it first');

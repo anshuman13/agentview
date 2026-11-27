@@ -5,6 +5,7 @@ describe('parseBuild', () => {
   it('reads auto, until and a request or spec path', () => {
     expect(parseBuild('/build add dark mode')).toEqual({ auto: false, until: null, spec: null, request: 'add dark mode' });
     expect(parseBuild('/build auto until 6:00 fix bugs')).toEqual({ auto: true, until: '06:00', spec: null, request: 'fix bugs' });
+    expect(parseBuild('/build until 9:00')).toEqual({ auto: false, until: '09:00', spec: null, request: '' });
     expect(parseBuild('/build until 21:30 .claude/specs/scan.md')).toEqual({ auto: false, until: '21:30', spec: '.claude/specs/scan.md', request: '' });
     expect(parseBuild('/build')).toBe('usage');
     expect(parseBuild('/builder x')).toBeNull();

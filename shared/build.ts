@@ -2,7 +2,7 @@ import { isSpecPath, specPrompt } from './specTasks.js';
 
 export const BUILD_COMMAND = { name: 'build', description: 'Build a request or spec task by task: [auto] [until HH:MM] <request or spec path>' };
 
-export const BUILD_USAGE = 'Usage: /build [auto] [until HH:MM] <request or .claude/specs/<slug>.md>. Without auto it waits for Build all after the spec and for you when a task is blocked; with until it finds more work for the goal until that time.';
+export const BUILD_USAGE = 'Usage: /build [auto] [until HH:MM] <request or .claude/specs/<slug>.md>. Without auto it waits for Build all after the spec and for you when a task is blocked; with until it finds more work for the goal until that time. /build until HH:MM alone moves the stop time of a running build.';
 
 export const BUILD_CAP_PCT = 60;
 
@@ -22,7 +22,7 @@ export function parseBuild(text: string): BuildArgs | 'usage' | null {
     else if (u && +u[1] < 24 && +u[2] < 60) { until = `${u[1].padStart(2, '0')}:${u[2]}`; rest = rest.slice(u[0].length); }
     else break;
   }
-  if (!rest) return 'usage';
+  if (!rest) return until && !auto ? { auto, until, spec: null, request: '' } : 'usage';
   const spec = !/\s/.test(rest) && isSpecPath(rest) ? rest : null;
   return { auto, until, spec, request: spec ? '' : rest };
 }
