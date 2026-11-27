@@ -14,6 +14,8 @@ import { FileIcon } from './FileIcon';
 import { CopyPathMenu, type MenuPoint } from './CopyPathItems';
 import { OpenEditors } from './OpenEditors';
 import { useFileTree, type Row } from './useFileTree';
+import { FileSearch, searching } from './FileSearch';
+import { SearchBox } from '../ui/Panel';
 
 const FolderPicker = lazy(() => import('../sessions/FolderPicker').then((m) => ({ default: m.FolderPicker })));
 
@@ -80,6 +82,7 @@ function ExplorerView({ cwd, phone }: { cwd: string; phone?: boolean }) {
   const recent = useStore((s) => s.recentFiles);
   const [picking, setPicking] = useState(false);
   const [copy, setCopy] = useState<MenuPoint | null>(null);
+  const [query, setQuery] = useState('');
   const here = findHere(useWorkspace(cwd).folders, cwd);
   const treeId = useId();
   const t = useFileTree(cwd, openFile, recent);
@@ -99,12 +102,13 @@ function ExplorerView({ cwd, phone }: { cwd: string; phone?: boolean }) {
         onClick={() => setPicking(true)}
       />
       {picking && <Suspense fallback={null}><FolderPicker onClose={() => setPicking(false)} /></Suspense>}
-      <div className="ex-tree" ref={t.tree} tabIndex={0} role="tree" aria-label="Files" aria-activedescendant={t.selAt >= 0 ? `${treeId}-${t.selAt}` : undefined} onKeyDown={t.onKey}>
+      <div className="ex-search"><SearchBox value={query} onChange={setQuery} label="Search in files" /></div>
+      {searching(query) ? <FileSearch query={query} /> : <div className="ex-tree" ref={t.tree} tabIndex={0} role="tree" aria-label="Files" aria-activedescendant={t.selAt >= 0 ? `${treeId}-${t.selAt}` : undefined} onKeyDown={t.onKey}>
         {t.rows.map((r, i) => {
           const open = r.dir && t.expanded.has(r.path);
           return <TreeRow key={r.path} r={r} id={`${treeId}-${i}`} open={open} loading={open && !t.dirs[r.path]} changed={!r.dir && recent.includes(r.path)} selected={r.path === t.sel} onClick={() => { t.setSel(r.path); t.activate(r); }} onMenu={(at) => setCopy({ path: r.path, ...at })} />;
         })}
-      </div>
+      </div>}
       {copy && <CopyPathMenu path={copy.path} cwd={cwd} at={copy} onClose={() => { setCopy(null); t.tree.current?.focus(); }} />}
     </div>
   );

@@ -16,6 +16,17 @@ data class TreeRow(val name: String, val path: String, val dir: Boolean, val hid
 data class FileData(val content: String = "", val original: String = "", val image: Boolean = false, val binary: Boolean = false, val error: String? = null)
 
 fun parseDir(body: String): List<DirEntry> = protocolJson.decodeFromString(ListSerializer(DirEntry.serializer()), body)
+// web/src/workspace/FileSearch.tsx: the Files search runs from 2 characters; hits are path:line rows.
+@Serializable
+data class SearchHit(val path: String, val line: Int, val text: String = "")
+
+@Serializable
+data class FileHits(val hits: List<SearchHit> = emptyList(), val more: Boolean = false)
+
+fun fileQuery(q: String): String? = q.trim().takeIf { it.length >= 2 }
+fun parseSearch(body: String): FileHits = protocolJson.decodeFromString(FileHits.serializer(), body)
+fun hitPlace(h: SearchHit) = "${h.path}:${h.line}"
+
 fun parseFile(body: String): FileData = protocolJson.decodeFromString(FileData.serializer(), body)
 
 fun shownCwd(st: StoreState): String? = st.session?.cwd?.ifEmpty { null } ?: st.live.firstOrNull { it.id == st.shownId }?.cwd

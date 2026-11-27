@@ -37,3 +37,9 @@
 @media (max-width: 900px) {
   .ex-tree .ex-twistie { width: var(--size-md); }
 }
+.ex-search { flex: none; padding: var(--sp-2) var(--sp-4); }
+.ex-search .page-search { max-width: none; height: 28px; margin: 0; padding: 0 var(--sp-4); }
+.ex-search .page-search input { font-size: var(--fs-sm); }
+.ex-hint { padding: var(--sp-4) var(--sp-6); color: var(--fg-muted); font-size: var(--fs-sm); }
+.ex-hits .ui-row { height: auto; padding-top: var(--sp-1); padding-bottom: var(--sp-1); user-select: text; }
+.ex-hit-text { font-family: var(--mono); font-size: var(--fs-sm); white-space: pre; overflow: hidden; text-overflow: ellipsis; }

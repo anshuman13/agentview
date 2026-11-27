@@ -47,3 +47,7 @@ export async function downloadSketch(file: SketchFile) {
   a.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
+
+export type SearchHit = { path: string; line: number; text: string };
+
+export const searchFiles = (q: string) => fetchJson<{ hits: SearchHit[]; more: boolean }>(api(`/api/search?q=${encodeURIComponent(q)}`));

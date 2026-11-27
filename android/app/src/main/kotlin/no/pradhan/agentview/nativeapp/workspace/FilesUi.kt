@@ -41,6 +41,8 @@ import kotlinx.coroutines.withContext
 import no.pradhan.agentview.nativeapp.chat.ChatImage
 import no.pradhan.agentview.nativeapp.app.Hub
 import no.pradhan.agentview.nativeapp.app.readDir
+import no.pradhan.agentview.nativeapp.app.searchFiles
+import no.pradhan.agentview.nativeapp.ui.SearchField
 import no.pradhan.agentview.nativeapp.app.readFile
 import no.pradhan.agentview.nativeapp.app.track
 import no.pradhan.agentview.nativeapp.ui.AvIcon
@@ -70,6 +72,9 @@ fun FilesScreen(hub: Hub, onBack: () -> Unit) {
     val shownId by hub.store.state.select { it.shownId }
     val chat = shownId
     var open by rememberSaveable(chat) { mutableStateOf<String?>(null) }
+    var openLine by rememberSaveable(chat) { mutableStateOf<Int?>(null) }
+    var query by rememberSaveable(chat) { mutableStateOf("") }
+    var found by remember(chat) { mutableStateOf<Pair<String, Result<FileHits>>?>(null) }
     val dirs = remember(chat) { mutableStateMapOf<String, List<DirEntry>>() }
     var expanded by rememberSaveable(chat) { mutableStateOf(listOf<String>()) }
     var showHidden by rememberSaveable { mutableStateOf(false) }
@@ -93,8 +98,16 @@ fun FilesScreen(hub: Hub, onBack: () -> Unit) {
     LaunchedEffect(missing.joinToString("\n"), chat) { fetch(missing) }
     LaunchedEffect(refresh) { if (refresh > 0) fetch(dirs.keys.toList()) }
 
+    val q = fileQuery(query)
+    LaunchedEffect(q, chat) {
+        if (q == null) return@LaunchedEffect
+        delay(250)
+        val r = runCatching { hub.searchFiles(q) }
+        if (r.exceptionOrNull() !is CancellationException) found = q to r
+    }
+
     val o = open
-    if (o != null) { FileScreen(hub, o, onBack = { open = null }); return }
+    if (o != null) { FileScreen(hub, o, onBack = { open = null; openLine = null }, line = openLine); return }
     Column(Modifier.fillMaxSize()) {
         WorkspaceHeader(hub, "Files", onBack) {
             MoreButton { close ->
@@ -105,6 +118,22 @@ fun FilesScreen(hub: Hub, onBack: () -> Unit) {
         }
         PageBody {
             LazyColumn(Modifier.fillMaxSize()) {
+                item { SearchField(query, { query = it }, "Search in files", Modifier.padding(top = Tokens.sp4)) }
+                if (q != null) {
+                    val f = found?.takeIf { it.first == q }?.second
+                    val hits = f?.getOrNull()
+                    when {
+                        f == null -> item { Hint("Searching…") }
+                        hits == null -> item { ErrorHint(f.exceptionOrNull()?.message ?: "Search failed") }
+                        hits.hits.isEmpty() -> item { Hint("No results") }
+                    }
+                    lazyGroup(hits?.hits.orEmpty(), key = { hitPlace(it) }) { h ->
+                        ListRow(h.text, meta = hitPlace(h), lines = 1, metaLines = 1, leading = { AvIcon("file", null, Tokens.iconMd, tint = av.fgMuted) }, onClick = { openLine = h.line; open = h.path })
+                    }
+                    if (hits?.more == true) item { Hint("First 200 results") }
+                    item { Spacer(Modifier.padding(bottom = Tokens.sp16)) }
+                    return@LazyColumn
+                }
                 if (error.isNotEmpty()) item { ErrorHint(error) }
                 else if (dirs[""] == null) item { Hint("Loading…") }
                 else if (rows.isEmpty()) item { EmptyState("No files", icon = "files", small = false) }

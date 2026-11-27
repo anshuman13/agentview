@@ -2,7 +2,8 @@ import { mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, symlinkSync
 import os from 'node:os';
 import path from 'node:path';
 import { afterAll, describe, expect, it } from 'bun:test';
-import { deleteSketch, listSketches, readFileWithOriginal, renameSketch, safeResolve } from './files.js';
+import { deleteSketch, listSketches, readFileWithOriginal, renameSketch, safeResolve, searchFiles } from './files.js';
+import { execFileSync } from 'node:child_process';
 
 describe('readFileWithOriginal access', () => {
   const tmp = realpathSync(mkdtempSync(path.join(os.tmpdir(), 'av-files-')));
@@ -99,5 +100,35 @@ describe('renameSketch and deleteSketch', () => {
     await deleteSketch(tmp, 'b.html');
     expect((await listSketches(tmp)).map((s) => s.name)).toEqual(['login v2.html']);
     expect(readFileSync(path.join(tmp, 'x.html'), 'utf8')).toBe('x');
+  });
+});
+
+describe('searchFiles', () => {
+  const tmp = realpathSync(mkdtempSync(path.join(os.tmpdir(), 'av-search-')));
+  mkdirSync(path.join(tmp, 'src'));
+  writeFileSync(path.join(tmp, 'src', 'a.ts'), 'const x = 1;\n  const Needle = 2;\n');
+  writeFileSync(path.join(tmp, 'notes.md'), 'a needle here\n');
+  writeFileSync(path.join(tmp, 'skip.log'), 'needle\n');
+  writeFileSync(path.join(tmp, '.gitignore'), '*.log\n');
+  writeFileSync(path.join(tmp, 'many.txt'), Array.from({ length: 250 }, (_, i) => `hit ${i}`).join('\n'));
+  afterAll(() => rmSync(tmp, { recursive: true, force: true }));
+
+  it('finds path:line hits, case-insensitive, without ignored files', async () => {
+    execFileSync('git', ['init', '-q'], { cwd: tmp });
+    const { hits, more } = await searchFiles(tmp, 'needle');
+    expect(more).toBe(false);
+    expect(hits).toEqual([{ path: 'notes.md', line: 1, text: 'a needle here' }, { path: 'src/a.ts', line: 2, text: 'const Needle = 2;' }]);
+  });
+
+  it('caps the hits at 200 and ignores short queries', async () => {
+    const res = await searchFiles(tmp, 'hit ');
+    expect(res.hits.length).toBe(200);
+    expect(res.more).toBe(true);
+    expect((await searchFiles(tmp, 'a')).hits).toEqual([]);
+  });
+
+  it('searches a folder that is not a repo', async () => {
+    rmSync(path.join(tmp, '.git'), { recursive: true, force: true });
+    expect((await searchFiles(tmp, 'needle')).hits.map((h) => h.path)).toContain('notes.md');
   });
 });

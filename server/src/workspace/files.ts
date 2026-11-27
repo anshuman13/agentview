@@ -4,7 +4,7 @@ import path from 'node:path';
 import { inside } from '../../../shared/util.js';
 import { sketchRename, sketchTitle } from '../../../shared/sketches.js';
 import { expandHome, workspaceRoots } from '../settings.js';
-import { git } from './git.js';
+import { git, safeGit } from './git.js';
 
 const HIDDEN = new Set(['node_modules', '.git', 'dist']);
 
@@ -149,4 +149,25 @@ export async function writeFileText(cwd: string, rel: string, content: string) {
   if (content.length > MAX_FILE) throw new Error('File too large to save');
   await writeFile(abs, content, 'utf8');
   return { path: rel, size: content.length };
+}
+
+const MAX_HITS = 200;
+const MAX_HIT_TEXT = 300;
+export type SearchHit = { path: string; line: number; text: string };
+
+// Plain-text, case-insensitive search of the chat's folder; in a repo it skips ignored files.
+export async function searchFiles(cwd: string, query: string): Promise<{ hits: SearchHit[]; more: boolean }> {
+  const q = query.trim();
+  if (q.length < 2) return { hits: [], more: false };
+  const args = ['grep', '-z', '-n', '-I', '-i', '-F', '--full-name', '-e', q];
+  const out = await safeGit(cwd, [...args, '--untracked'], [0, 1]).catch(() => safeGit(cwd, [...args, '--no-index', '--exclude-standard'], [0, 1]));
+  const hits: SearchHit[] = [];
+  let more = false;
+  for (const row of out.split('\n')) {
+    const [file, line, text] = row.split('\0');
+    if (!file || text === undefined) continue;
+    if (hits.length === MAX_HITS) { more = true; break; }
+    hits.push({ path: file, line: Number(line), text: text.trim().slice(0, MAX_HIT_TEXT) });
+  }
+  return { hits, more };
 }

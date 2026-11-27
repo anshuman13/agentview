@@ -4,7 +4,7 @@ import { configDef, inSettings, mcpCall, mcpConfig } from '../agent/claude/mcp.j
 import type { McpServerDef } from '../integrations/mcpClient.js';
 import { provider } from '../agent/registry.js';
 import { removeMemory, restoreMemory, saveMemory } from '../agent/memory.js';
-import { deleteSketch, listDir, listFiles, listSketches, renameSketch, readFileWithOriginal, readImage, writeFileText } from '../workspace/files.js';
+import { deleteSketch, listDir, listFiles, listSketches, renameSketch, readFileWithOriginal, readImage, searchFiles, writeFileText } from '../workspace/files.js';
 import { github } from '../integrations/github.js';
 import { attention, dismissAttention, refreshAttention } from '../integrations/attention.js';
 import { dismissFinding, getFindings } from '../session/findings.js';
@@ -93,6 +93,7 @@ export function chatFileRoutes(): Record<string, Entry<ChatCtx>> {
     'DELETE /api/sketches': entry(({ url, chat }) => deleteSketch(chat.cwd, url.searchParams.get('name') ?? '')),
     'ANY /api/sketches': entry(({ chat }) => listSketches(chat.cwd)),
     'ANY /api/files': entry(({ chat }) => listFiles(chat.cwd)),
+    'ANY /api/search': entry(({ url, chat }) => searchFiles(chat.cwd, url.searchParams.get('q') ?? '')),
     'ANY /api/dir': entry(({ url, chat }) => listDir(chat.cwd, url.searchParams.get('path') ?? '')),
     'PUT /api/file': entry(async ({ req, url, chat }) => writeFileText(chat.cwd, url.searchParams.get('path') ?? '', await readBody(req, MAX_FILE_BODY))),
     'ANY /api/file': entry(({ url, chat }) => readFileWithOriginal(chat.cwd, url.searchParams.get('path') ?? '')),
