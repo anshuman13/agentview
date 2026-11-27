@@ -257,6 +257,16 @@ export function rewindReplies(items: Item[]) {
   return out;
 }
 
+// True while a turn runs and nothing has come back since the last sent prompt: the reply start shows the working mark.
+export function awaitingReply(items: Item[], running: boolean) {
+  if (!running) return false;
+  for (let i = items.length - 1; i >= 0; i--) {
+    const it = items[i];
+    if (it.kind !== 'user' || !it.queued) return it.kind === 'user';
+  }
+  return false;
+}
+
 // The last reply of each finished turn, when nothing follows it in the turn: the answers that get a Copy action.
 // A prompt or a system line ends a turn, and the running turn gets none yet.
 export function turnAnswers(items: Item[], running = false) {

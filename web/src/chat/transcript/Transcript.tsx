@@ -17,7 +17,7 @@ import { FindBar, findPending, markHit, takeFind, type FindRequest } from './Fin
 import { showTurn, turnPending } from '../../sessions/openChat';
 import { RewindLink } from './Rewind';
 import { createFoldBuilder, type FoldRow } from './workFold';
-import { ALARM_TOOL, BUILD_TOOL, createTranscriptBuilder, exploreRuns, dayDividers, newMarker, newReplies, openAtNew, rewindReplies, turnAnswers, docCards, isDocFile, fileMeta, sameItem, type Item, type Rewind } from './steps';
+import { ALARM_TOOL, BUILD_TOOL, createTranscriptBuilder, exploreRuns, dayDividers, newMarker, newReplies, openAtNew, rewindReplies, turnAnswers, awaitingReply, docCards, isDocFile, fileMeta, sameItem, type Item, type Rewind } from './steps';
 import { pressable } from '../../ui/util';
 import { useCan } from '../useCan';
 import { copyReply, resume, retry } from '../chatActions';
@@ -157,6 +157,7 @@ function TranscriptView({ loaded, sessionId, events, earlier, cwd, running, bill
           : rowOf(r.it, i === 0);
         return day || r === newRow ? <Fragment key={id}>{day && <div className="tr-day"><span>{day}</span></div>}{r === newRow && <div className="tr-new"><span>New</span></div>}{row}</Fragment> : row;
       })}
+      {awaitingReply(items, running) && <div className="tr-working" role="status" aria-label="Working"><span className="tr-dots"><i /><i /></span></div>}
       {failText && <EndLine key={events.length} text={failText} label="Retry" onPress={retry} />}
       {stalled && !failed && <EndLine text="No activity for 15 min" label="Resume" onPress={resume} />}
       <UnsentRows />
