@@ -21,13 +21,11 @@ import no.pradhan.agentview.nativeapp.codex.autopilot.RunActions
 import no.pradhan.agentview.nativeapp.codex.autopilot.RunRows
 import no.pradhan.agentview.nativeapp.codex.autopilot.runLine
 import no.pradhan.agentview.nativeapp.app.Hub
-import no.pradhan.agentview.nativeapp.app.loadEarlier
 import no.pradhan.agentview.nativeapp.ops.Agent
 import no.pradhan.agentview.nativeapp.net.LiveChat
 import no.pradhan.agentview.nativeapp.net.SessionInfo
 import no.pradhan.agentview.nativeapp.app.archive
 import no.pradhan.agentview.nativeapp.app.closeChat
-import no.pradhan.agentview.nativeapp.app.remindChat
 import no.pradhan.agentview.nativeapp.app.rename
 import no.pradhan.agentview.nativeapp.app.stopTask
 import no.pradhan.agentview.nativeapp.net.ChatRun
@@ -36,11 +34,8 @@ import no.pradhan.agentview.nativeapp.ui.IconBtn
 import no.pradhan.agentview.nativeapp.ops.AgentList
 import no.pradhan.agentview.nativeapp.ops.UnseenAgentList
 import no.pradhan.agentview.nativeapp.sessions.renameTitle
-import no.pradhan.agentview.nativeapp.ui.Button
-import no.pradhan.agentview.nativeapp.ui.ButtonVariant
 import no.pradhan.agentview.nativeapp.ui.Chevron
 import no.pradhan.agentview.nativeapp.ui.ConfirmDialog
-import no.pradhan.agentview.nativeapp.ui.EmptyState
 import no.pradhan.agentview.nativeapp.ui.Group
 import no.pradhan.agentview.nativeapp.ui.Hairline
 import no.pradhan.agentview.nativeapp.ui.ListRow
@@ -104,32 +99,10 @@ internal fun ChatSheets(hub: Hub, live: LiveChat, session: SessionInfo?, agents:
         val close = { panels.file = null }
         Sheet(close, "File", padded = false) { Box(Modifier.height(sheetHeight()).keepScrollInside()) { FileScreen(hub, f.path, close, line = f.line) } }
     }
-    if (panels.remind) Sheet(onDismiss = { panels.remind = false }, title = "Remind me", padded = false, full = false) {
-        val choices = remember { remindChoices(System.currentTimeMillis()) }
-        Group { choices.forEachIndexed { i, (label, at) -> if (i > 0) Hairline(); ListRow(label, onClick = { hub.remindChat(live.title, sessionId!!, cwd, at); panels.remind = false }) } }
-    }
     when (panels.dialog) {
         "rename" -> RenameDialog(live.title, onSave = { hub.rename(sessionId!!, it) }, onDismiss = { panels.dialog = null })
         "archive" -> ConfirmDialog("Archive this chat?", "${live.title}\n\nYou can restore it from the bin for 7 days.", "Archive", { hub.archive(sessionId!!) }) { panels.dialog = null }
         "close" -> ConfirmDialog("Close this chat?", "${live.title}\n\nThe agent is still working on it and will stop. The transcript is kept.", "Close", { hub.closeChat(live.id) }) { panels.dialog = null }
-    }
-}
-
-// The chat menu's Prompts: each sent prompt with its time; a tap scrolls the transcript to it. Load earlier ends the list while older events are not loaded.
-@Composable
-internal fun PromptsSheet(hub: Hub, items: List<Item>, earlier: Int, onDismiss: () -> Unit) {
-    val prompts = remember(items) { sentPrompts(items) }
-    val loading by hub.loadingEarlier.collectAsState()
-    val now = rememberNow(false)
-    Sheet(onDismiss, "Prompts", padded = false, count = prompts.size.toString()) {
-        if (prompts.isEmpty()) EmptyState("No prompts yet", "Prompts you send show here", icon = "comment-discussion")
-        else Group {
-            prompts.forEachIndexed { i, p ->
-                if (i > 0) Hairline()
-                ListRow(p.text, if (p.at == 0L) null else "Sent ${replyTime(p.at, now.value)}", onClick = { onDismiss(); hub.showTurn.value = p.id })
-            }
-        }
-        if (earlier > 0) Button(if (loading) "Loading…" else "Load earlier", { hub.loadEarlier() }, Modifier.padding(start = Tokens.listPad, top = Tokens.sp4), variant = ButtonVariant.Plain, enabled = !loading)
     }
 }
 

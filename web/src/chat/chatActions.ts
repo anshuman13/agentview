@@ -1,6 +1,6 @@
 import { embedded, getState, notice, prompt, send, setUi, subscribe } from '../app/store';
 import { showChat } from '../ui/util';
-import { chatMarkdown, handoffText, lastReply, replyNote } from './composer/composerLogic';
+import { handoffText } from './composer/composerLogic';
 import { assistantStore } from '../codex/data';
 import { rememberedFact, saveMemoryClaim } from '../codex/data/wiki/wiki';
 import { copyText, showSnack } from '../codex/view';
@@ -44,18 +44,6 @@ export function forkChat() {
   setTimeout(stop, 30_000);
 }
 
-// A task "Check <chat>" due at the picked time, linked to the chat; the hub pushes it when due.
-export async function remindChat(at: number) {
-  const st = getState();
-  const { sessionId, cwd } = st.session;
-  if (!sessionId) return;
-  const title = st.live.find((c) => c.id === st.session.id)?.title || 'chat';
-  const { profile } = replyNote('', title, cwd);
-  const store = assistantStore();
-  const row = await store.capture(`Check ${title}`, 'task', profile, at);
-  await store.update(row, { source: 'chat', source_url: `${location.origin}/?session=${sessionId}` });
-}
-
 // A live Memory claim in the chat's profile with the chat as its source.
 function rememberClaim(text: string) {
   const st = getState();
@@ -95,18 +83,8 @@ export async function forgetMemory(file: MemoryFile, restored: () => void) {
   return true;
 }
 
-export function copyChatMarkdown() {
-  const st = getState();
-  copyText(chatMarkdown(st.events, st.live.find((c) => c.id === st.session.id)?.title ?? ''), 'Chat copied');
-}
-
 export function copyReply(text: string) {
   copyText(text, 'Reply copied');
-}
-
-export function copyLastReply() {
-  const reply = lastReply(getState().events);
-  if (reply) copyReply(reply);
 }
 
 export function copyPrompt(text: string) {

@@ -213,9 +213,6 @@ fun shellCommand(text: String): String? = text.trim().takeIf { it.startsWith("!"
 // web composerLogic.ts draftKey: a draft lives under the chat's Claude session id, which outlives the live chat id, and under the live id until the chat has one.
 fun draftKey(chat: String, sessionId: String?) = sessionId?.ifEmpty { null } ?: chat
 
-// web composerLogic.ts handoffText: Fork chat's new chat reads the old one's transcript (via @chat) and summarises it.
-fun handoffText(sessionId: String) =
-    "Summarise @chat:$sessionId so we can continue its work in this chat: the goal, decisions made, what is done, what is still open, and the files and commands that matter. At most 15 lines. Then wait for my next message."
 
 
 // shared/quickReplies.ts: Duet's tap-to-answer replies, offered while the chat's last word is a finished question from the agent.

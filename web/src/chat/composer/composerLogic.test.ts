@@ -1,9 +1,8 @@
 import { describe, expect, it } from 'bun:test';
 import { stampedNotes } from '../../codex/data/meetings/meetings';
 import type { Meeting } from '../../codex/data/wiki/wiki';
-import { accept, addUse, append, chatQuery, currentMeeting, buildHistory, filesEdited, ghostFor, rankChats, rankCommands, rankFiles, nextMode, remember, replyNote, sentPrompts, sharedTask, triggerAt, turnEnd, withUses, draftLine, readDraft } from './composerLogic';
+import { accept, addUse, append, chatQuery, currentMeeting, buildHistory, filesEdited, ghostFor, rankChats, rankCommands, rankFiles, nextMode, remember, sharedTask, triggerAt, turnEnd, withUses, draftLine, readDraft } from './composerLogic';
 import { stubGlobal, unstubAllGlobals } from '../../../../testing';
-import { WORKSPACE } from '../../../../shared/workspace';
 import type { ChatEvent, SavedSession } from '../../../../shared/protocol';
 
 let n = 0;
@@ -210,27 +209,6 @@ describe('chat mentions', () => {
     expect(chatQuery(triggerAt('see @src', 8))).toBeNull();
     const chats = [{ sessionId: 'a', title: '/tries worktrees', cwd: '/r' }, { sessionId: 'b', title: 'Day dividers', cwd: '/r' }, { sessionId: 'c', title: '', cwd: '/r' }] as SavedSession[];
     expect(rankChats(chats, 'tri').map((r) => r.item.sessionId)).toEqual(['a']);
-  });
-});
-
-describe('replyNote', () => {
-  it('puts the chat title first and picks the profile from the folder', () => {
-    WORKSPACE.personalRoot = '/Users/me/workspace_personal';
-    expect(replyNote(' Fixed. ', 'Importer', '/Users/me/workspace_personal/app')).toEqual({ text: 'Importer\nFixed.', profile: 'personal' });
-    expect(replyNote('Fixed.', '', '/Users/me/workspace/app')).toEqual({ text: 'Saved reply\nFixed.', profile: 'work' });
-  });
-});
-
-describe('sentPrompts', () => {
-  it('lists the sent prompts newest first and leaves out queued ones', () => {
-    const first = user('first');
-    const second = user('second');
-    const queued: ChatEvent = { id: 'q', kind: 'user', text: 'later', at: 99, queued: true };
-    expect(sentPrompts([first, tool('Read', {}), second, queued])).toEqual([second, first]);
-  });
-
-  it('is empty with no prompts', () => {
-    expect(sentPrompts([tool('Read', {})])).toEqual([]);
   });
 });
 

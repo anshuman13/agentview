@@ -40,7 +40,7 @@ import { memoryMark, type MemoryFile, type MemoryMark } from './chat/cards/memor
 import { leftOutPreferences, type Preference } from '../../shared/preferences';
 import { countChat } from './app/shell/counts';
 import { can } from './chat/capabilitiesLogic';
-import { addUse, buildHistory, chatImages, chatMarkdown, draftKey, failedLine, ghostFor, handoffText, joinMarks, lastReply, markChip, remember, splitMarks, turnEnd, userParts, withUses, type Use } from './chat/composer/composerLogic';
+import { addUse, buildHistory, chatImages, draftKey, failedLine, ghostFor, handoffText, joinMarks, markChip, remember, splitMarks, turnEnd, userParts, withUses, type Use } from './chat/composer/composerLogic';
 import { composerPlaceholder, shellLine, type PlaceholderDevice, type PlaceholderState } from '../../shared/composerText';
 import { agentChipCount, buildHead, headerState, nowMeta, runLine, stoppedText } from './sessions/runLogic';
 import { tryColumn } from './sessions/triesLogic';
@@ -611,13 +611,6 @@ describe('cases shared with the Android app', () => {
 
   for (const c of cases<{ name: string; kind: SetupKind; repo: string; mcpCommand: string; expected: string }>('setup-prompts')) {
     it(`setupPrompt: ${c.name}`, () => expect(setupPrompt(c.kind, c.repo, c.mcpCommand)).toBe(c.expected));
-  }
-
-  for (const c of cases<{ name: string; title: string; events: ChatEvent[]; markdown: string; lastReply: string | null }>('chat-markdown')) {
-    it(`chatMarkdown: ${c.name}`, () => {
-      expect(chatMarkdown(c.events, c.title)).toBe(c.markdown);
-      expect(lastReply(c.events)).toBe(c.lastReply);
-    });
   }
 
   for (const c of cases<{ name: string; sessionId: string; expected: string }>('handoff-text')) {

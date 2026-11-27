@@ -33,7 +33,6 @@ import no.pradhan.agentview.nativeapp.net.usageCmd
 import androidx.lifecycle.viewModelScope
 import java.util.UUID
 import kotlinx.coroutines.launch
-import no.pradhan.agentview.nativeapp.chat.handoffText
 import no.pradhan.agentview.nativeapp.chat.lastModelKey
 import no.pradhan.agentview.nativeapp.chat.modelsKey
 import no.pradhan.agentview.nativeapp.chat.parseModels
@@ -81,18 +80,6 @@ fun Hub.newChat(cwd: String? = null, model: String? = null, fork: String? = null
                 if (text != null) submit(text, false) { notice.value = "The message was not sent" }
             }
             if (draft != null) setDraft(id, draft)
-            link.value = DeepLink(chat = id)
-        }
-    }
-}
-
-// Fork chat: a new chat in the same folder and model that starts by summarising this one.
-fun Hub.forkChat(cwd: String?, sessionId: String, model: String?, provider: String?) {
-    if (readOnly) { notice.value = READ_ONLY_SENT; return }
-    viewModelScope.launch {
-        val id = switchTo(newSessionCmd(cwd = cwd, model = model, provider = provider))
-        if (id == null) notice.value = "The chat did not open" else {
-            submit(handoffText(sessionId), false) { notice.value = "The summary was not requested. Try Fork chat again." }
             link.value = DeepLink(chat = id)
         }
     }

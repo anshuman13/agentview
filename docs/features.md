@@ -234,7 +234,7 @@ cost so far. The status bar usage tooltip adds a Spend block with today's and th
   ends ("all tries reported"); it also ends when the parent chat closes or on Keep
 - `@chat:` in the web and phone composers lists the other chats by title; picking one inserts `@chat:<session id>`, and the server
   adds that chat's transcript path to the prompt so Claude can read it (the chat shows the prompt as typed)
-- "Fork chat" (New chat in the Fork pick of the web chat settings menu, the phone chat menu, or the palette) starts a new chat in the same folder and model
+- "Fork chat" (the palette's Chat: Fork Chat) starts a new chat in the same folder and model
   whose first prompt asks Claude to read the old chat (through `@chat:`) and summarise it in at most 15 lines, so the work
   continues from a short brief instead of the full context
 - In the phone review pager, tapping a changed line opens the comment sheet, which also has Revert this change: the file
@@ -247,8 +247,7 @@ cost so far. The status bar usage tooltip adds a Spend block with today's and th
 - On the phone, the composer's settings chip opens Chat settings with the models listed directly (one tap picks), then
   the permission modes (Supervised follows Auto), Account and Effort. The model you pick
   becomes the default for new chats, including the New chat shortcut. The web chip opens the same settings as a pick
-  (Permission mode, Model, Effort, Claude account, Fork, Remind me, Copy, Tools…); Fork holds Side chat and
-  New chat, Copy holds Last reply, Copy as Markdown and Continue in terminal, and Tools… holds Saved prompts, Images (every image the chat read, wrote or was
+  (Permission mode, Model, Effort, Claude account, Find in chat, Side chat, Continue in terminal, Tools…), and Tools… holds Saved prompts, Images (every image the chat read, wrote or was
   sent, newest first, with its path), TODOs, Memory and Hooks, in the phone's order and wording; Saved prompts and
   Images show "N prompts" and "N images" and are disabled at 0.
   The phone's chat menu
@@ -339,8 +338,6 @@ cost so far. The status bar usage tooltip adds a Spend block with today's and th
   triggers stop hooks, nothing fires while a permission or question waits, and without the file or an entry for the repo
   no hook exists (an invalid entry is skipped with a log line)
 - Phone Sessions rows of a chat with an unsent draft show only a red "Draft:" and its first line as their meta, like Slack's sidebar; web sidebar rows do the same, except for the chat you are viewing. A draft is stored under the chat's Claude session id (the live id until it has one, `draftKey`), so it survives a server restart and an idle close; a draft stored under a live id is moved on first read
-- "Remind me" in the phone chat menu adds an open task "Check <chat>" due in 1 hour, 3 hours or tomorrow at 9:00, linked to
-  the chat; the hub pushes it when due (like Slack's remind me about this); the web chat settings menu has the same Remind me
 - Opening a chat with replies or steps since you last saw it shows a red New line above the first of them, like Slack's
   unread divider: on the web from the seen time before this page opened the chat, on the phone from when the phone last showed it.
   When a finished reply sits at or after the line (`openAtNew`) and no find or turn link is pending, the chat opens once with the
@@ -348,9 +345,7 @@ cost so far. The status bar usage tooltip adds a Spend block with today's and th
   content that fits on screen, it opens at the end. Sending a prompt still jumps to the end
 - At the end of an idle chat with nothing pending, another open chat that is Needs you or Done (`unreadOrder`: Needs you first,
   then Done, newest first) shows a "Next: <title>" pill in the Jump to latest spot; a tap opens that chat
-- "Copy as Markdown" in the Copy pick of the web chat settings menu copies the loaded prompts and replies under the chat title
-  and leaves out subagent text; an untitled chat is headed "Chat". "Last reply" in the same pick (only when there is a reply) copies the
-  latest top-level answer; the phone's chat menu has "Copy last reply" for the same. Each finished turn's last reply, when nothing follows it in
+- Each finished turn's last reply, when nothing follows it in
   the turn (`turnAnswers`), has its own Copy action on both clients: on hover on the web, under the reply on the phone
 - "Find in chat" (the web chat settings menu or Cmd/Ctrl+F; the phone chat menu) opens a bar that searches every loaded prompt and
   top-level reply, also the replies inside a turn's work fold (which the bar scrolls to), for all query words with the sidebar message
@@ -363,20 +358,15 @@ cost so far. The status bar usage tooltip adds a Spend block with today's and th
   file editor the browser keeps the key; in Codex, or with Codex shown and no chat, it opens the task search on Tasks, focuses the wiki
   search on the wiki start page and otherwise opens the Codex Search page on the selected text; anywhere else it opens Find in the shown
   chat, on the sidebar search text when pressed from there
-- The phone chat menu's Prompts, after Find in chat, lists the loaded prompts that are not queued, newest first, with "Sent <time>"
-  (`sentPrompts`); a tap closes it and scrolls the transcript to that prompt, and while earlier events are not loaded the list ends with
-  Load earlier. Web has the same Prompts in the chat settings menu's Chat group, after Find in chat ("No prompts" and disabled at 0): each
-  prompt's first line with "Sent <time>", and a pick scrolls to it, widening the row window when it sits above Show earlier
 - The phone's + sheet has "Choose file" for any document type (kept under its display name, refused over 50 MB, the server's limit); an
   upload is marked `[Image: path]` or `[File: path]` by its type (`attachMark`, used by the web and the phone composer)
 - On the phone, images inserted from the keyboard (Gboard stickers, GIFs, clipboard images) upload into the composer's image chips (`KeyboardImages` in `Attach.kt`); Paste from the text field's menu does not take images yet
 - The phone's Tools sheet starts with Saved prompts, the last 50 prompts sent from the phone in any chat (newest first, kept once, not saved
   in a read-only check); a tap puts the prompt in the composer. The sheet shows the count and a "Filter prompts" field that keeps the
   prompts holding every word typed; with none saved it says "No saved prompts yet"
-- "Share chat" in the phone chat menu sends the same Markdown to the Android share sheet
-- "Side chat" in the Fork pick of the same menu, or ⌘; (Ctrl+; off Mac), forks the chat into the side column and keeps the original in the
+- "Side chat" in the web chat settings menu, or ⌘; (Ctrl+; off Mac), forks the chat into the side column and keeps the original in the
   main column, so a side question does not land in the running chat (like Claude desktop's side chat)
-- "Continue in terminal" in the Copy pick of the web chat settings menu copies `cd <repo> && claude --resume <id>`, with `CLAUDE_CONFIG_DIR` for
+- "Continue in terminal" in the web chat settings menu copies `cd <repo> && claude --resume <id>`, with `CLAUDE_CONFIG_DIR` for
   a Work account, to pick the chat up in the Claude CLI (the server builds the line, `session.resumeCommand`). Stop the chat first so two processes do not write to it. The phone Tools sheet has the same Continue in terminal, copying to the clipboard
 - A prompt that changed files has a Rewind files button under the turn's last reply, beside Copy, on web and phone, while the
   agent is idle. It puts the files back to how they were before that prompt (later turns' edits go too); the conversation itself

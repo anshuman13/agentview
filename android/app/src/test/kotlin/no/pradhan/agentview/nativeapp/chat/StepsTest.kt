@@ -122,15 +122,6 @@ class StepsTest {
         assertNull(gapAbove(step, step))
     }
 
-    @Test fun remindChoicesEndWithTomorrowMorning() {
-        val zone = java.time.ZoneId.of("Europe/Oslo")
-        val now = java.time.ZonedDateTime.of(2026, 11, 9, 23, 30, 0, 0, zone).toInstant().toEpochMilli()
-        val (hour, three, morning) = remindChoices(now, zone).map { it.second }
-        assertEquals(now + 3_600_000, hour)
-        assertEquals(now + 10_800_000, three)
-        assertEquals(java.time.ZonedDateTime.of(2026, 11, 10, 9, 0, 0, 0, zone).toInstant().toEpochMilli(), morning)
-    }
-
     @Test fun dayOfRowsFollowsTheLastDivider() {
         val ids = listOf("a", "b", "c", "d")
         val items = ids.map { Item.Assistant(it, it, false) }

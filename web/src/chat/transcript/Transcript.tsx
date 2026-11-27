@@ -103,13 +103,6 @@ function TranscriptView({ loaded, sessionId, events, earlier, cwd, running, bill
     reveal(list.length - at);
     return showTurn(r.kind === 'item' ? r.it.id : `work:${r.id}`, markHit);
   };
-  const goTo = useRef(goToHit);
-  goTo.current = goToHit;
-  useEffect(() => {
-    const show = (e: Event) => goTo.current((e as CustomEvent<{ id: string }>).detail.id);
-    window.addEventListener('agentview:show-prompt', show);
-    return () => window.removeEventListener('agentview:show-prompt', show);
-  }, []);
   const runs = useMemo(() => exploreRuns(items), [items]);
   const mark = useSeenMark();
   const days = useMemo(() => dayDividers(items, Date.now()), [items]);

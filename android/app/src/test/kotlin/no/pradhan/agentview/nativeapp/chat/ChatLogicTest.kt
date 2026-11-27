@@ -29,14 +29,6 @@ class ChatLogicTest {
         assertEquals("19 Nov 14:20", replyTime(Instant.parse("2026-11-19T14:20:00Z").toEpochMilli(), now))
     }
 
-    @Test fun sentPromptsAreNewestFirstWithoutQueued() {
-        val first = Item.User("1", "Fix the build", 1000, false, false)
-        val second = Item.User("3", "Now the tests", 3000, false, false)
-        val items = listOf(first, Item.Assistant("2", "Done", false), second, Item.User("4", "And docs", 4000, false, true))
-        assertEquals(listOf(second, first), sentPrompts(items))
-        assertEquals(emptyList<Item.User>(), sentPrompts(emptyList()))
-    }
-
     @Test fun lastReplyAtSkipsSubagentAndEmptyReplies() {
         val events = listOf(
             ChatEvent("1", "assistant", text = "Done", at = 1000),

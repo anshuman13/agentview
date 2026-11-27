@@ -5,7 +5,7 @@ const restoreMemory = vi.fn();
 let undo: (() => void) | undefined;
 const snacks: string[] = [];
 vi.mock('../app/store', () => ({ embedded: false, getState: () => ({ session: { id: 'c', cwd: '/Users/x/workspace/p' }, live: [] }), notice: vi.fn(), prompt: vi.fn(), send: vi.fn(), setUi: vi.fn(), subscribe: vi.fn() }));
-vi.mock('./composer/composerLogic', () => ({ chatMarkdown: vi.fn(), handoffText: vi.fn(), lastReply: vi.fn(), replyNote: vi.fn() }));
+vi.mock('./composer/composerLogic', () => ({ handoffText: vi.fn() }));
 vi.mock('../codex/data', () => ({ assistantStore: () => ({ snapshot: () => ({ facts: [] }), editRow }) }));
 vi.mock('../codex/view', () => ({ copyText: vi.fn(), showSnack: (text: string, u?: () => void) => { snacks.push(text); undo = u; } }));
 vi.mock('./chatApi', () => ({ removeMemory: async () => ({ raw: 'x', lines: [] }), restoreMemory }));

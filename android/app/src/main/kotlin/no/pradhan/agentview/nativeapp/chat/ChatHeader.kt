@@ -25,8 +25,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.ui.platform.LocalClipboardManager
-import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
@@ -38,7 +36,6 @@ import no.pradhan.agentview.nativeapp.net.SessionInfo
 import no.pradhan.agentview.nativeapp.app.archive
 import no.pradhan.agentview.nativeapp.net.billing
 import no.pradhan.agentview.nativeapp.app.closeChat
-import no.pradhan.agentview.nativeapp.app.forkChat
 import no.pradhan.agentview.nativeapp.app.rename
 import no.pradhan.agentview.nativeapp.ui.IconBtn
 import androidx.compose.foundation.clickable
@@ -61,7 +58,7 @@ import no.pradhan.agentview.nativeapp.ui.plural
 
 // Takes the fields it shows, not the ChatView, so a streamed token batch does not redraw the header.
 @Composable
-internal fun ChatHeader(hub: Hub, live: LiveChat, session: SessionInfo?, cost: Double, hasReply: Boolean, panels: ChatPanels, canReview: Boolean, running: Boolean, cwd: String, onChats: (() -> Unit)?, onReview: () -> Unit) {
+internal fun ChatHeader(hub: Hub, live: LiveChat, session: SessionInfo?, cost: Double, panels: ChatPanels, canReview: Boolean, running: Boolean, cwd: String, onChats: (() -> Unit)?, onReview: () -> Unit) {
     val ws by hub.workspace.collectAsState()
     var newChat by remember { mutableStateOf(false) }
     Row(Modifier.fillMaxWidth().height(Tokens.tabbarH).padding(horizontal = Tokens.sp2), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Tokens.sp2)) {
@@ -71,7 +68,7 @@ internal fun ChatHeader(hub: Hub, live: LiveChat, session: SessionInfo?, cost: D
             Text(chatPlace(ws, cwd), style = Type.footnote, color = av.fgMuted, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
         IconBtn("edit", "New chat", { newChat = true }, tint = av.fg)
-        ChatMenu(hub, live, session, hasReply, panels, canReview, running, cwd, onReview)
+        ChatMenu(hub, live, session, panels, canReview, running, cwd, onReview)
     }
     val from = remember(ws.saved, live.sessionId, session?.sessionId) { startedFrom(ws.saved, live.sessionId ?: session?.sessionId) }
     if (from != null) {
@@ -132,26 +129,12 @@ private fun ChatSubtitle(live: LiveChat, session: SessionInfo?, viewCost: Double
 }
 
 @Composable
-private fun ChatMenu(hub: Hub, live: LiveChat, session: SessionInfo?, hasReply: Boolean, panels: ChatPanels, canReview: Boolean, running: Boolean, cwd: String, onReview: () -> Unit) {
-    val context = androidx.compose.ui.platform.LocalContext.current
-    val clip = LocalClipboardManager.current
+private fun ChatMenu(hub: Hub, live: LiveChat, session: SessionInfo?, panels: ChatPanels, canReview: Boolean, running: Boolean, cwd: String, onReview: () -> Unit) {
     val sessionId = live.sessionId ?: session?.sessionId
     MoreButton { close ->
         MenuItem(reviewLabel(false, canReview), "source-control", { close(); onReview() }, enabled = canReview)
         MenuItem("Find in chat", "search", { close(); panels.find = true })
-        MenuItem("Prompts", "list-ordered", { close(); panels.prompts = true })
         MenuItem("Rename", "edit", { close(); panels.dialog = "rename" }, enabled = sessionId != null)
-        MenuItem("Fork chat", "repo-forked", { close(); hub.forkChat(cwd, sessionId!!, session?.model, session?.provider) }, enabled = sessionId != null)
-        MenuItem("Remind me", "bell", { close(); panels.remind = true }, enabled = sessionId != null)
-        MenuItem("Share chat", "share", {
-            close()
-            val send = android.content.Intent(android.content.Intent.ACTION_SEND).setType("text/plain").putExtra(android.content.Intent.EXTRA_TEXT, chatMarkdown(live.title, hub.store.state.value.events))
-            context.startActivity(android.content.Intent.createChooser(send, null))
-        }, enabled = hasReply)
-        MenuItem("Copy last reply", "copy", {
-            close()
-            lastReply(hub.store.state.value.events)?.let { clip.setText(AnnotatedString(it)); hub.notice.value = "Reply copied" }
-        }, enabled = hasReply)
         MenuItem("Tools\u2026", "tools", { close(); panels.tools = true })
         MenuItem("Close chat", "close", { close(); if (running || live.pending > 0) panels.dialog = "close" else hub.closeChat(live.id) })
         MenuSeparator()

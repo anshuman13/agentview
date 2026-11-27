@@ -5,7 +5,6 @@ import { firstLine } from '../../ui/util';
 import { compactAt, type ChatEvent, type SavedSession } from '../../../../shared/protocol';
 import { isBlock } from '../../../../shared/util';
 import { timedMeetings } from '../../../../shared/plan';
-import { profileOfPath } from '../../../../shared/workspace';
 import { live, type Meeting } from '../../codex/data/wiki/wiki';
 
 type Trigger = { kind: 'command' | 'file'; start: number; query: string } | { kind: 'shell' } | null;
@@ -198,39 +197,6 @@ export function saveDraft(key: string, text: string) {
     if (text) localStorage.setItem(storageKey(key), text);
     else localStorage.removeItem(storageKey(key));
   } catch {}
-}
-
-// The loaded prompts and replies as Markdown, like the phone's Share chat and Goose's session export.
-export function chatMarkdown(events: ChatEvent[], title: string) {
-  const parts = events.flatMap((e) => (e.kind === 'user' && !e.queued ? [`**You:** ${e.text.trim()}`] : e.kind === 'assistant' && !e.parent && e.text.trim() ? [e.text.trim()] : []));
-  return [`# ${title.trim() || 'Chat'}`, ...parts].join('\n\n') + '\n';
-}
-
-// The text of the last top-level assistant reply, or null when there is none.
-export function lastReply(events: ChatEvent[]) {
-  for (let i = events.length - 1; i >= 0; i--) {
-    const e = events[i];
-    if (e.kind === 'assistant' && !e.parent && e.text.trim()) return e.text.trim();
-  }
-  return null;
-}
-
-// The loaded prompts that were sent, newest first, like the phone chat menu's Prompts.
-export function sentPrompts(events: ChatEvent[]) {
-  return events.flatMap((e) => (e.kind === 'user' && !e.queued ? [e] : [])).reverse();
-}
-
-// A reply saved to Notes: the chat title on the first line, in the profile of the chat's folder.
-export function replyNote(text: string, title: string, cwd: string) {
-  return { text: `${title || 'Saved reply'}\n${text.trim()}`, profile: profileOfPath(cwd) };
-}
-
-// Slack's "Remind me about this", the same choices as the phone's chat menu.
-export function remindChoices(now: number) {
-  const tomorrow = new Date(now);
-  tomorrow.setDate(tomorrow.getDate() + 1);
-  tomorrow.setHours(9, 0, 0, 0);
-  return [{ label: 'In 1 hour', at: now + 3_600_000 }, { label: 'In 3 hours', at: now + 3 * 3_600_000 }, { label: 'Tomorrow at 9:00', at: tomorrow.getTime() }];
 }
 
 // The mode Shift+Tab switches to: the next one the provider offers, wrapping around.

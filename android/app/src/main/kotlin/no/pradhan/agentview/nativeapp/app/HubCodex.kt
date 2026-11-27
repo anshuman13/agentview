@@ -183,8 +183,3 @@ private fun Hub.savedToMemory(claim: RememberedClaim?) {
 suspend fun Hub.parseTask(text: String, profile: String): ParsedTask =
     protocolJson.decodeFromString(api.parseTask(buildJsonObject { put("profile", profile); put("text", text) }.toString()))
 
-fun Hub.remindChat(title: String, sessionId: String, cwd: String, at: Long) {
-    val extra = mapOf("source" to "chat", "source_url" to "${origin.value}/?session=$sessionId")
-    if (codex.capture("Check ${title.ifBlank { "chat" }}", "open", segmentOf(cwd), at, extra) != null) notice.value = "Reminder set"
-}
-

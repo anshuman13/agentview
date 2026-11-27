@@ -1,15 +1,14 @@
-import { notice, useStore } from '../app/store';
+import { useStore } from '../app/store';
 import { runHook } from './chatActions';
-import { chatImages, lastReply, remindChoices, sentPrompts } from './composer/composerLogic';
-import { time } from '../sessions/brief/time';
+import { chatImages } from './composer/composerLogic';
 import { QuickPick } from '../ui/QuickPick';
 import { Section } from '../ui/Section';
 import { Sheet } from '../ui/Sheet';
 import { useNarrow } from '../app/shell/useNarrow';
 import { keyText } from '../app/shell/keys';
 import { ACCOUNT_LABEL } from '../../../shared/protocol';
-import { firstLine, plural } from '../ui/util';
-import { copyChatMarkdown, copyLastReply, copyResumeCommand, forkChat, remindChat, sideChat } from './chatActions';
+import { plural } from '../ui/util';
+import { copyResumeCommand, sideChat } from './chatActions';
 import { useChatSettings, type Pick } from './ChatSettings';
 import { useCan } from './useCan';
 import { ChoicePick, SheetRows } from './SettingsPickers';
@@ -23,10 +22,11 @@ export function SettingsMenu({ pick, setPick, close }: Props) {
   const sessionId = useStore((s) => s.session.sessionId);
   const account = useStore((s) => s.session.account) ?? 'main';
   const accounts = useStore((s) => s.session.accounts) ?? [];
-  const prompts = sentPrompts(useStore((s) => s.events)).length;
   const act = (fn: () => void) => { fn(); close(); };
   const onPick = (v: string) => {
     if (v === 'find') return act(() => window.dispatchEvent(new Event('agentview:find')));
+    if (v === 'side') return act(sideChat);
+    if (v === 'terminal') return act(() => copyResumeCommand(resumeCommand!));
     setPick({ kind: v as Pick['kind'], at: pick.at });
   };
   const narrow = useNarrow();
@@ -41,9 +41,8 @@ export function SettingsMenu({ pick, setPick, close }: Props) {
     ]],
     ['Chat', [
       action('find', 'Find in chat', 'Search the prompts and replies'),
-      picker('prompts', 'Prompts', prompts ? plural(prompts, 'prompt') : 'No prompts', !prompts),
-      ...(sessionId ? [picker('fork', 'Fork', 'Side chat or a new chat from a summary'), picker('remind', 'Remind me', 'Add a task to check this chat later')] : []),
-      picker('copy', 'Copy', resumeCommand ? 'As Markdown or the terminal command' : 'As Markdown'),
+      ...(sessionId ? [action('side', 'Side chat', `Ask in a fork beside this chat (${keyText('⌘;')})`)] : []),
+      ...(resumeCommand ? [action('terminal', 'Continue in terminal', 'Copy the command that resumes this chat')] : []),
       picker('tools', 'Tools…', 'Saved prompts, images, TODOs, memory, hooks'),
     ]],
   ] as const;
@@ -93,68 +92,6 @@ export function ToolsPick({ pick, setPick, close, savedCount }: Props & { savedC
 }
 
 type SubProps = { pick: Pick; close: () => void; back: () => void };
-
-export function PromptsPick({ pick, close, back }: SubProps) {
-  const prompts = sentPrompts(useStore((s) => s.events));
-  return (
-    <ChoicePick
-      back={back}
-      anchor={pick.at}
-      title="Prompts"
-      items={prompts.map((e) => ({ value: e.id, label: firstLine(e.text).slice(0, 200), detail: `Sent ${time(e.at)}` }))}
-      onPick={(id) => { close(); window.dispatchEvent(new CustomEvent('agentview:show-prompt', { detail: { id } })); }}
-      onClose={close}
-    />
-  );
-}
-
-export function ForkPick({ pick, close, back }: SubProps) {
-  return (
-    <ChoicePick
-      back={back}
-      anchor={pick.at}
-      title="Fork"
-      items={[
-        { value: 'side', label: 'Side chat', detail: `Ask in a fork beside this chat (${keyText('⌘;')})` },
-        { value: 'fork', label: 'New chat', detail: 'Start a new chat from a summary of this one' },
-      ]}
-      onPick={(v) => { (v === 'side' ? sideChat : forkChat)(); close(); }}
-      onClose={close}
-    />
-  );
-}
-
-export function CopyPick({ pick, close, back }: SubProps) {
-  const resumeCommand = useStore((s) => s.session.resumeCommand);
-  const hasReply = useStore((s) => lastReply(s.events) !== null);
-  return (
-    <ChoicePick
-      back={back}
-      anchor={pick.at}
-      title="Copy"
-      items={[
-        ...(hasReply ? [{ value: 'reply', label: 'Last reply', detail: 'The latest answer as Markdown' }] : []),
-        { value: 'markdown', label: 'Copy as Markdown', detail: 'Prompts and replies loaded here' },
-        ...(resumeCommand ? [{ value: 'terminal', label: 'Continue in terminal', detail: 'Copy the command that resumes this chat' }] : []),
-      ]}
-      onPick={(v) => { if (v === 'terminal') copyResumeCommand(resumeCommand!); else if (v === 'reply') copyLastReply(); else copyChatMarkdown(); close(); }}
-      onClose={close}
-    />
-  );
-}
-
-export function RemindPick({ pick, close, back }: SubProps) {
-  return (
-    <ChoicePick
-      back={back}
-      anchor={pick.at}
-      title="Remind me"
-      items={remindChoices(Date.now()).map((c) => ({ value: String(c.at), label: c.label }))}
-      onPick={(v) => { remindChat(Number(v)).then(() => notice('Reminder set'), () => notice('Could not set the reminder. Try again.')); close(); }}
-      onClose={close}
-    />
-  );
-}
 
 export function HooksPick({ pick, close, back }: SubProps) {
   const hooks = useStore((s) => s.session.hooks) ?? [];

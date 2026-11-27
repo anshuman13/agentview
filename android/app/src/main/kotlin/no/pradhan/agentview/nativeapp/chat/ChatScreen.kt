@@ -58,13 +58,11 @@ class ChatPanels {
     var servers by mutableStateOf(false)
     var images by mutableStateOf(false)
     var todos by mutableStateOf(false)
-    var remind by mutableStateOf(false)
     var memory by mutableStateOf(false)
     var hooks by mutableStateOf(false)
     var saved by mutableStateOf(false)
     var tools by mutableStateOf(false)
     var find by mutableStateOf(false)
-    var prompts by mutableStateOf(false)
     var file by mutableStateOf<FilePath?>(null)
     var dialog by mutableStateOf<String?>(null)
 }
@@ -116,7 +114,7 @@ fun ChatScreen(hub: Hub, onOpenAgent: (String) -> Unit, onOpenWork: (String) -> 
     prOpen?.let { PullsScreen(hub, onBack = { prOpen = null }, initial = it); return }
 
     Column(Modifier.fillMaxSize()) {
-        ChatHeader(hub, live, session, view.cost, view.items.any { it is Item.Assistant }, panels, left.isNotEmpty(), running, cwd, onChats) { review = 0 }
+        ChatHeader(hub, live, session, view.cost, panels, left.isNotEmpty(), running, cwd, onChats) { review = 0 }
         ChatStatus(live, session, view.cost, remember(view.events) { lastReplyAt(view.events) }, if (view.agents.isNotEmpty() || live.agentList.isNotEmpty() || run != null) agentChipCount(view.agents.size, live.agentList.size) else null) { panels.agents = true }
         run?.let { buildHead(it) }?.let { BuildHead(it) }
         Hairline()
@@ -146,7 +144,6 @@ fun ChatScreen(hub: Hub, onOpenAgent: (String) -> Unit, onOpenWork: (String) -> 
         Composer(hub, live.id, live.sessionId, session, running, pending.isNotEmpty())
     }
     ChatSheets(hub, live, session, view.agents, view.images, panels, cwd, onOpenAgent, run)
-    if (panels.prompts) PromptsSheet(hub, view.items, earlier) { panels.prompts = false }
 }
 
 @Composable

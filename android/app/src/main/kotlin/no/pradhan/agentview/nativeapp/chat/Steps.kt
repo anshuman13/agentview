@@ -347,9 +347,6 @@ fun openAtNew(items: List<Item>, newId: String?): String? {
 
 private fun lastReplyEvent(events: List<ChatEvent>) = events.lastOrNull { it.kind == "assistant" && it.parent == null && it.text.isNotBlank() }
 
-// The text of the last top-level assistant reply, or null when there is none.
-fun lastReply(events: List<ChatEvent>): String? = lastReplyEvent(events)?.text?.trim()
-
 // When the last top-level assistant reply came, or null when there is none or it has no time.
 fun lastReplyAt(events: List<ChatEvent>): Long? = lastReplyEvent(events)?.at?.takeIf { it > 0 }
 
