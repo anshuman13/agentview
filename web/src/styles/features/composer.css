@@ -116,6 +116,12 @@
   .cp-add { position: relative; flex: none; }
   .cp-add > .icon-btn, .cp-row > :is(.voice:not(.cp-talk)) { width: var(--touch); height: var(--touch); border-radius: var(--radius-round); }
   .cp-add > .ui-menu { top: auto; right: auto; bottom: 100%; left: 0; white-space: nowrap; }
+  .cp-add > .ui-menu:not(.sheet).cp-conns { min-width: 260px; max-height: 60vh; overflow-y: auto; }
+  .cp-conn-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+  .cp-switch { flex: none; width: 28px; height: 16px; padding: 2px; border-radius: var(--radius-pill); background: var(--border-strong); transition: background var(--dur); }
+  .cp-switch > span { display: block; width: 12px; height: 12px; border-radius: var(--radius-round); background: var(--fg-strong); transition: transform var(--dur); }
+  .cp-switch.on { background: var(--accent); }
+  .cp-switch.on > span { background: var(--on-accent); transform: translateX(12px); }
 }
 .cp-quick { display: flex; flex-wrap: wrap; gap: var(--sp-3); padding: 0 0 var(--sp-4); }
 .cp-quick .chip { height: 30px; padding: 0 var(--sp-5); border: var(--hairline); border-radius: var(--radius-pill); background: transparent; color: var(--fg); font-size: var(--fs-sm); }

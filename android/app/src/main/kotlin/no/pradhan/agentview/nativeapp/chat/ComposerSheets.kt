@@ -33,6 +33,12 @@ import no.pradhan.agentview.nativeapp.app.setMode
 import no.pradhan.agentview.nativeapp.app.setModel
 import no.pradhan.agentview.nativeapp.app.setReview
 import no.pradhan.agentview.nativeapp.app.submit
+import no.pradhan.agentview.nativeapp.app.command
+import no.pradhan.agentview.nativeapp.app.DeepLink
+import no.pradhan.agentview.nativeapp.ops.mcpToggleCmd
+import no.pradhan.agentview.nativeapp.ui.DotState
+import no.pradhan.agentview.nativeapp.ui.StatusDot
+import no.pradhan.agentview.nativeapp.ui.Toggle
 import no.pradhan.agentview.nativeapp.ui.AvIcon
 import no.pradhan.agentview.nativeapp.ui.Chevron
 import no.pradhan.agentview.nativeapp.ui.Group
@@ -46,13 +52,14 @@ import no.pradhan.agentview.nativeapp.ui.av
 
 internal class Choice(val value: String, val label: String, val detail: String = "")
 
-internal enum class Picker { Add, Settings, Effort, Account, Context }
+internal enum class Picker { Add, Settings, Effort, Account, Context, Connectors }
 
 @Composable
 internal fun ComposerSheets(hub: Hub, s: ComposerState, uploading: Int, session: SessionInfo?, sheet: Picker?, attach: Attach, onSheet: (Picker?) -> Unit) {
     when (sheet) {
         Picker.Add -> AddSheet(s, uploading, session, attach, onSheet)
         Picker.Context -> ContextSheet(s, session, onSheet)
+        Picker.Connectors -> ConnectorsSheet(hub, session, onSheet)
         Picker.Settings -> ChatSettingsSheet(hub, session, onSheet)
         Picker.Effort -> PickerSheet("Select effort", effortsFor(session?.models.orEmpty(), session?.model).map { Choice(it, EFFORT_LABEL[it] ?: it) }, session?.effort, { hub.setEffort(it) }) { onSheet(null) }
         Picker.Account -> PickerSheet("Select Claude account", (session?.accounts?.ifEmpty { null } ?: listOf(session?.account ?: "main")).map { Choice(it, ACCOUNT_LABEL[it] ?: it, listOfNotNull(ACCOUNT_NOTE[it], usageText(session?.usage).ifEmpty { null }?.takeIf { _ -> it == (session?.account ?: "main") }).joinToString(" · ")) }, session?.account ?: "main", { hub.setAccount(it) }) { onSheet(null) }
@@ -79,6 +86,29 @@ private fun AddSheet(s: ComposerState, uploading: Int, session: SessionInfo?, at
                 Hairline(lead = true)
                 ListRow("Context", "$pct% used", leading = icon("pulse"), onClick = { onSheet(Picker.Context) }, trailing = { Chevron() })
             }
+            val conns = composerConnectors(session?.mcp.orEmpty())
+            if (conns.isNotEmpty() && session?.capabilities?.can("mcp") != false) {
+                Hairline(lead = true)
+                ListRow("Connectors", "${conns.count { it.on }} on", leading = icon("plug"), onClick = { onSheet(Picker.Connectors) }, trailing = { Chevron() })
+            }
+        }
+    }
+}
+
+@Composable
+private fun ConnectorsSheet(hub: Hub, session: SessionInfo?, onSheet: (Picker?) -> Unit) {
+    val rows = composerConnectors(session?.mcp.orEmpty())
+    val canEdit = session?.capabilities?.can("mcpEdit") != false && !hub.readOnly
+    val dot = { tone: String -> when (tone) { "ok" -> DotState.Ok; "bad" -> DotState.Bad; "warn" -> DotState.Warn; "wait" -> DotState.Busy; else -> DotState.Faint } }
+    Sheet({ onSheet(null) }, "Connectors", padded = false, full = false, onBack = { onSheet(Picker.Add) }) {
+        Group {
+            rows.forEachIndexed { i, r ->
+                if (i > 0) Hairline(lead = true)
+                ListRow(r.label, r.note.takeIf { r.on && it.isNotEmpty() }, leading = { StatusDot(dot(r.tone)) }, toggle = Toggle(r.on, canEdit) { on -> hub.command(mcpToggleCmd(r.name, on)) })
+            }
+        }
+        Group {
+            ListRow("Manage", leading = { AvIcon("settings-gear", null, Tokens.iconMd, tint = av.fgMuted) }, onClick = { onSheet(null); hub.link.value = DeepLink(page = "mcp") }, trailing = { Chevron() })
         }
     }
 }

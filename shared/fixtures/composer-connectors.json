@@ -1,0 +1,25 @@
+[
+  {
+    "name": "sorts by name without the claude.ai prefix and maps each status",
+    "mcp": [
+      { "name": "linear", "status": "connected" },
+      { "name": "claude.ai Gmail", "status": "needs-auth" },
+      { "name": "browser", "status": "disabled" },
+      { "name": "grafana", "status": "failed" },
+      { "name": "piscina", "status": "pending" }
+    ],
+    "expected": [
+      { "name": "browser", "label": "browser", "tone": "off", "note": "Off", "on": false },
+      { "name": "claude.ai Gmail", "label": "Gmail", "tone": "warn", "note": "Needs login", "on": true },
+      { "name": "grafana", "label": "grafana", "tone": "bad", "note": "Failed", "on": true },
+      { "name": "linear", "label": "linear", "tone": "ok", "note": "", "on": true },
+      { "name": "piscina", "label": "piscina", "tone": "wait", "note": "Connecting", "on": true }
+    ]
+  },
+  {
+    "name": "an unknown status shows as is",
+    "mcp": [{ "name": "x", "status": "weird" }],
+    "expected": [{ "name": "x", "label": "x", "tone": "off", "note": "weird", "on": true }]
+  },
+  { "name": "no servers", "mcp": [], "expected": [] }
+]

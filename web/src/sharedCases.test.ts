@@ -22,6 +22,7 @@ import { markOps, type Mark } from '../../shared/markup';
 import { shellRows } from '../../shared/backgroundShells';
 import type { BackgroundShell } from '../../shared/protocol';
 import { setupPrompt, type SetupKind } from '../../shared/setupPrompt';
+import { composerConnectors } from '../../shared/composerConnectors';
 import { appendRule } from '../../shared/steering';
 import { isSpecPath, specProgress, specPrompt, specSlug, specTasks, startTaskPrompt, withoutOpenTasks, type SpecTask } from '../../shared/specTasks';
 import { pathCopies } from './workspace/copyPathLogic';
@@ -651,6 +652,10 @@ describe('cases shared with the Android app', () => {
 
   for (const c of cases<{ name: string; kind: SetupKind; repo: string; mcpCommand: string; expected: string }>('setup-prompts')) {
     it(`setupPrompt: ${c.name}`, () => expect(setupPrompt(c.kind, c.repo, c.mcpCommand)).toBe(c.expected));
+  }
+
+  for (const c of cases<{ name: string; mcp: { name: string; status: string }[]; expected: unknown }>('composer-connectors')) {
+    it(`composerConnectors: ${c.name}`, () => expect(composerConnectors(c.mcp)).toEqual(c.expected as never));
   }
 
   for (const c of cases<{ name: string; sessionId: string; expected: string }>('handoff-text')) {

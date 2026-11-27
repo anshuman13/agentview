@@ -9,6 +9,7 @@ import no.pradhan.agentview.nativeapp.net.ModelInfo
 import no.pradhan.agentview.nativeapp.net.PlanUsage
 import no.pradhan.agentview.nativeapp.net.SessionInfo
 import no.pradhan.agentview.nativeapp.net.menuModes
+import no.pradhan.agentview.nativeapp.ops.McpServer
 import no.pradhan.agentview.nativeapp.ops.mcpSlug
 import no.pradhan.agentview.nativeapp.ops.tokens
 import no.pradhan.agentview.nativeapp.sessions.SavedSession
@@ -280,3 +281,13 @@ internal fun placeholderState(waiting: Boolean, compacting: Boolean, running: Bo
     running -> "running"
     else -> "idle"
 }
+
+// shared/composerConnectors.ts: the live chat's servers for the composer's Connectors sheet, sorted by name.
+data class ConnectorRow(val name: String, val label: String, val tone: String, val note: String, val on: Boolean)
+
+private val CONNECTOR_STATE = mapOf("connected" to ("ok" to ""), "failed" to ("bad" to "Failed"), "needs-auth" to ("warn" to "Needs login"), "pending" to ("wait" to "Connecting"), "disabled" to ("off" to "Off"))
+
+fun composerConnectors(mcp: List<McpServer>): List<ConnectorRow> = mcp.map { s ->
+    val (tone, note) = CONNECTOR_STATE[s.status] ?: ("off" to s.status)
+    ConnectorRow(s.name, s.name.removePrefix("claude.ai "), tone, note, s.status != "disabled")
+}.sortedBy { it.label.lowercase() }

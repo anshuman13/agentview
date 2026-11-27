@@ -254,6 +254,8 @@ import no.pradhan.agentview.nativeapp.workspace.specSlug
 import no.pradhan.agentview.nativeapp.workspace.specTasks
 import no.pradhan.agentview.nativeapp.workspace.withoutOpenTasks
 import no.pradhan.agentview.nativeapp.workspace.startTaskPrompt
+import no.pradhan.agentview.nativeapp.chat.ConnectorRow
+import no.pradhan.agentview.nativeapp.chat.composerConnectors
 import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Test
@@ -279,6 +281,14 @@ class SharedCasesTest {
         for (c in cases("guess-profile")) {
             val meetings = c.getValue("meetings").jsonArray.map { meetingRow(it.jsonObject, now) }
             assertEquals(c.str("name"), c.str("expected"), guessProfile(c.str("question"), meetings, c.str("fallback"), now))
+        }
+    }
+
+    @Test fun composerConnectorsCases() {
+        for (c in cases("composer-connectors")) {
+            val mcp = c.getValue("mcp").jsonArray.map { it.jsonObject.let { o -> McpServer(o.str("name"), o.str("status")) } }
+            val expected = c.getValue("expected").jsonArray.map { it.jsonObject.let { o -> ConnectorRow(o.str("name"), o.str("label"), o.str("tone"), o.str("note"), o.getValue("on").jsonPrimitive.boolean) } }
+            assertEquals(c.str("name"), expected, composerConnectors(mcp))
         }
     }
 
