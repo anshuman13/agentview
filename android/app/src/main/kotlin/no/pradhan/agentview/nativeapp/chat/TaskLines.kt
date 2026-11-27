@@ -104,9 +104,9 @@ internal fun TaskLines(hub: Hub, fold: FoldRow.Fold, cwd: String, live: Boolean,
             }
         }
         // The task checklist sits in a framed list with a line between rows, as the Claude apps show a step's details.
-        if (steps.isNotEmpty()) Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(Tokens.shapeLg)).border(Tokens.hairline, av.border, RoundedCornerShape(Tokens.shapeLg))) {
+        if (steps.isNotEmpty()) Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(Tokens.shapeLg)).border(Tokens.hairline, av.borderCard, RoundedCornerShape(Tokens.shapeLg))) {
             steps.forEachIndexed { i, s ->
-                if (i > 0) HorizontalDivider(thickness = Tokens.hairline, color = av.border)
+                if (i > 0) HorizontalDivider(thickness = Tokens.hairline, color = av.borderCard)
                 when {
                     s.done -> Task({ AvIcon("check", null, Tokens.sp5, tint = av.ok) }, s.title, av.fg)
                     s == current -> Task(spin, fold.now.ifEmpty { s.title }, av.fgStrong)
@@ -114,7 +114,7 @@ internal fun TaskLines(hub: Hub, fold: FoldRow.Fold, cwd: String, live: Boolean,
                 }
             }
             if (live && current == null && fold.now.isNotEmpty()) {
-                HorizontalDivider(thickness = Tokens.hairline, color = av.border)
+                HorizontalDivider(thickness = Tokens.hairline, color = av.borderCard)
                 Task(spin, fold.now, av.fgStrong)
             }
         }

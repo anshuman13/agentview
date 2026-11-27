@@ -82,7 +82,7 @@ internal fun TranscriptBox(
         }
         return
     }
-    Column(Modifier.fillMaxWidth().border(BorderStroke(Tokens.hairline, av.border), shape).clip(shape)) {
+    Column(Modifier.fillMaxWidth().border(BorderStroke(Tokens.hairline, av.borderCard), shape).clip(shape)) {
         Row(
             Modifier.fillMaxWidth().heightIn(min = Tokens.rowOne).let { if (onLongClick != null) it.combinedClickable(onLongClick = onLongClick, onClick = onOpen ?: toggle) else it.clickable(onClick = onOpen ?: toggle) }.padding(start = Tokens.listPad, end = Tokens.sp4, top = Tokens.sp3, bottom = Tokens.sp3),
             verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Tokens.sp6),
@@ -103,7 +103,7 @@ internal fun TranscriptBox(
             style = Type.meta, color = av.metaFg, minLines = if (reserveSummary) 2 else 1, maxLines = 2, overflow = TextOverflow.Ellipsis,
         )
         if (shown && onOpen == null) {
-            HorizontalDivider(color = av.border, thickness = Tokens.hairline)
+            HorizontalDivider(color = av.borderCard, thickness = Tokens.hairline)
             content()
         }
     }

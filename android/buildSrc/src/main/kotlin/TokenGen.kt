@@ -46,11 +46,11 @@ object TokenGen {
         "dark" to mapOf(
             "bg" to "#191919", "group-page" to "#191919", "container-lowest" to "#151515", "container-low" to "#1E1E1E", "surface" to "#232424",
             "group-card" to "#202020", "raised" to "#303030", "sunken" to "#363636", "hover" to "#343434", "fg" to "#EFEFEF", "fg-strong" to "#F7F7F7",
-            "fg-muted" to "#A0A0A0", "fg-faint" to "#9A9A9A", "border-strong" to "#858585", "border" to "#393A3A", "border-card" to "#393A3A",
+            "fg-muted" to "#A0A0A0", "fg-faint" to "#9A9A9A", "border-strong" to "#858585", "border" to "#393A3A", "border-card" to "#2B2B2B",
             "accent" to "#7AA7F0", "accent-fill" to "#7AA7F0", "accent-text" to "#7AA7F0", "on-accent" to "#0B2350", "primary-container" to "#1D3B6E",
             "on-primary-container" to "#D8E4FF", "accent-soft" to "#2F3340", "on-secondary-container" to "#E3E3E3", "inverse-surface" to "#E3E3E3",
             "inverse-on-surface" to "#303030", "inverse-primary" to "#2B59A8", "ok" to "#3FB950", "ok-container" to "#00522A",
-            "on-ok-container" to "#9CF6B8", "warn" to "#FBB315", "warn-container" to "#5A4300", "on-warn-container" to "#FFE08B", "warn-soft" to "#5A4300",
+            "on-ok-container" to "#9CF6B8", "warn" to "#E49C06", "warn-container" to "#5A4300", "on-warn-container" to "#FFE08B", "warn-soft" to "#5A4300",
             "err" to "#F87F7F", "err-container" to "#8C1D2E", "on-err-container" to "#FFD9DC", "on-err" to "#5C0016", "agent" to "#43C9BD",
             "agent-container" to "#00504A", "on-agent-container" to "#9FF2E7", "on-agent" to "#003733", "info" to "#76A0E6", "info-container" to "#1E3A66",
             "on-info-container" to "#D6E3FF", "work" to "#6F9AE0", "personal" to "#E8A3FF",
@@ -58,7 +58,7 @@ object TokenGen {
         "light" to mapOf(
             "bg" to "#FFFFFF", "group-page" to "#FFFFFF", "container-lowest" to "#FFFFFF", "container-low" to "#F9F9F9", "surface" to "#FCFCFC",
             "group-card" to "#F7F7F7", "raised" to "#FFFFFF", "sunken" to "#F3F3F3", "hover" to "#EFEFF0", "fg" to "#191919", "fg-strong" to "#0F0F0F",
-            "fg-muted" to "#656565", "fg-faint" to "#6B6B6B", "border-strong" to "#767676", "border" to "#E2E2E3", "border-card" to "#E2E2E3",
+            "fg-muted" to "#666666", "fg-faint" to "#6B6B6B", "border-strong" to "#767676", "border" to "#E2E2E3", "border-card" to "#EBEBEB",
             "accent" to "#2B59A8", "accent-fill" to "#2F6BD8", "accent-text" to "#2B59A8", "on-accent" to "#FFFFFF", "primary-container" to "#D8E4FF",
             "on-primary-container" to "#0B2350", "accent-soft" to "#E3E9F5", "on-secondary-container" to "#1F2433", "inverse-surface" to "#303030",
             "inverse-on-surface" to "#F3F3F3", "inverse-primary" to "#A9C4F5", "ok" to "#0B7D1A", "ok-container" to "#C4F2D3",

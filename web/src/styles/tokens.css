@@ -165,7 +165,7 @@
   --file-folder: #dcb67a;
 }
 
-/* Dark: Claude desktop's neutral greys, sampled 26 Nov 2026. Page and main pane are bg, sidebar and cards surface, menus raised. */
+/* Dark: Claude desktop's neutral greys, sampled 26 Nov 2026; muted text, card border, warn, diff-add and syntax from Claude Code, 27 Nov. Page and main pane are bg, sidebar and cards surface, menus raised. */
 :root,
 :root[data-theme='dark'] {
   color-scheme: dark;
@@ -185,9 +185,9 @@
   --state-selected: 15%;
   --border: #393a3a;
   --border-strong: #4a4a4a;
-  --border-card: #393a3a;
+  --border-card: #2b2b2b;
   --fg-faint: #9a9a9a;
-  --fg-muted: #a0a0a0;
+  --fg-muted: #9c9c9c;
   --fg: #efefef;
   --fg-strong: #f7f7f7;
   --hue-violet: #c19aff;
@@ -213,10 +213,10 @@
   --c-knowledge: var(--fg-muted);
   --claude: var(--fg-muted);
   --ok: #3fb950;
-  --warn: #fbb315;
+  --warn: #e49c06;
   --err: #f87f7f;
   --modified: var(--hue-amber);
-  --diff-add: var(--hue-green);
+  --diff-add: #32d74b;
   --diff-del: var(--hue-red);
   --t-read: var(--fg-muted);
   --t-edit: var(--fg-muted);
@@ -224,18 +224,18 @@
   --t-web: var(--fg-muted);
   --t-mcp: var(--fg-muted);
   --app-gradient: none;
-  --syn-keyword: var(--hue-violet);
-  --syn-string: var(--hue-green);
+  --syn-keyword: #cc7bf4;
+  --syn-string: #9be963;
   --syn-operator: var(--fg-muted);
   --syn-number: var(--hue-orange);
   --syn-comment: var(--fg-faint);
   --syn-type: var(--hue-yellow);
   --syn-property: var(--hue-magenta);
-  --syn-definition: var(--hue-blue);
+  --syn-definition: #70b8ff;
   --syn-invalid: var(--hue-red);
 }
 
-/* Light: Claude desktop's neutral greys, sampled 26 Nov 2026. Status and kind hues are darkened where they also colour text. */
+/* Light: Claude desktop's neutral greys, sampled 26 Nov 2026; muted text, card border, diff-add and syntax from Claude Code, 27 Nov. Status and kind hues are darkened where they also colour text. */
 :root[data-theme='light'] {
   color-scheme: light;
   --group-page: #ffffff;
@@ -254,9 +254,9 @@
   --state-selected: 11%;
   --border: #e2e2e3;
   --border-strong: #cfcfcf;
-  --border-card: #e2e2e3;
+  --border-card: #ebebeb;
   --fg-faint: #6b6b6b;
-  --fg-muted: #656565;
+  --fg-muted: #666666;
   --fg: #191919;
   --fg-strong: #0f0f0f;
   --hue-violet: #8041e6;
@@ -288,7 +288,7 @@
   --warn: #895a03;
   --err: #a42629;
   --modified: var(--hue-yellow);
-  --diff-add: var(--hue-green);
+  --diff-add: #006c10;
   --diff-del: var(--hue-red);
   --t-read: var(--fg-muted);
   --t-edit: var(--fg-muted);
@@ -297,13 +297,13 @@
   --t-mcp: var(--fg-muted);
   --app-gradient: none;
   --syn-keyword: var(--hue-violet);
-  --syn-string: var(--hue-green);
+  --syn-string: #008000;
   --syn-operator: var(--fg-muted);
   --syn-number: var(--hue-orange);
   --syn-comment: var(--fg-faint);
   --syn-type: var(--hue-yellow);
   --syn-property: var(--hue-magenta);
-  --syn-definition: var(--hue-blue);
+  --syn-definition: #0051c2;
   --syn-invalid: var(--hue-red);
 }
 
