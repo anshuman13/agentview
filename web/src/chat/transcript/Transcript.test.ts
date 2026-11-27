@@ -2,7 +2,7 @@ import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'bun:test';
 import { Explored } from './StepRows';
-import { awaitingReply, buildTranscript, createTranscriptBuilder, duration, exploreLabel, exploreRuns, stepLabel, stepTone, type Item } from './steps';
+import { awaitingReply, buildTranscript, runningStep, createTranscriptBuilder, duration, exploreLabel, exploreRuns, stepLabel, stepTone, type Item } from './steps';
 import { replyLine, sumEdits } from '../../../../shared/edits';
 import { buildTurns } from './turns';
 import { chatLine } from '../../sessions/folders';
@@ -219,5 +219,15 @@ describe('awaitingReply', () => {
     expect(awaitingReply([user('u1'), { kind: 'assistant', id: 'a1', text: 'x', streaming: true }], true)).toBe(false);
     expect(awaitingReply([user('u1'), { kind: 'assistant', id: 'a1', text: 'x', streaming: true }, user('u2', true)], true)).toBe(false);
     expect(awaitingReply([], true)).toBe(false);
+  });
+});
+
+describe('runningStep', () => {
+  it('names the last step still waiting on a result, as it happens', () => {
+    const bash = tool('Bash', { command: 'npm test' });
+    const read = tool('Read', { file_path: '/p/a.ts' });
+    expect(runningStep(buildTranscript([user('go'), read, result(read.id), bash]), '/p')).toBe('Running npm test…');
+    expect(runningStep(buildTranscript([user('go'), bash, result(bash.id)]), '/p')).toBe('');
+    expect(runningStep(buildTranscript([user('go'), tool('mcp__agentview__set_status', { text: 'x' })]), '/p')).toBe('');
   });
 });

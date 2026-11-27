@@ -5,6 +5,7 @@ import { Button, Chip } from '../../ui/Button';
 import { MemoryPick } from '../cards/Memory';
 import { proposalState, usedClaimState, type Claim, type FoldRow, type Proposal } from './workFold';
 import { openWork } from '../chatActions';
+import { runningStep } from './steps';
 import { useAssistantTable } from '../../codex/data';
 import { setView } from '../../codex/view';
 import { MEMORY } from '../../codex/wiki/shared';
@@ -13,7 +14,7 @@ import { command, plural, pressable } from '../../ui/util';
 
 // A turn's tasks as small lines, and on the right a button that opens the turn's tool calls in their own tab.
 // A finished turn shows only the tasks it marked done: the steps it never reached are no longer next.
-export const Tasks = memo(function Tasks({ row: { id, steps: all, now, work, claims, proposed, remembered }, live }: { row: Extract<FoldRow, { kind: 'fold' }>; live: boolean }) {
+export const Tasks = memo(function Tasks({ row: { id, hidden, steps: all, now, work, claims, proposed, remembered }, live }: { row: Extract<FoldRow, { kind: 'fold' }>; live: boolean }) {
   const tools = work.tools;
   const [reading, setReading] = useState(false);
   const [proposing, setProposing] = useState(false);
@@ -23,6 +24,7 @@ export const Tasks = memo(function Tasks({ row: { id, steps: all, now, work, cla
   const done = steps.filter((s) => s.done).length;
   const current = live ? steps.find((s) => !s.done) : undefined;
   const spin = <span className="tr-dots" aria-hidden="true"><i /><i /></span>;
+  const doing = live ? runningStep(hidden, cwd) : '';
   return (
     <div id={`turn-work:${id}`} className="tr-steps">
       <div className="tr-steps-head">
@@ -30,7 +32,7 @@ export const Tasks = memo(function Tasks({ row: { id, steps: all, now, work, cla
         {claims.length > 0 && <Chip size="sm" on={reading} className="tr-claims-chip" aria-expanded={reading} onClick={() => setReading((v) => !v)}>{`Used ${plural(claims.length, 'claim')}`}</Chip>}
         {proposed.length > 0 && <Chip size="sm" on={proposing} className="tr-claims-chip" aria-expanded={proposing} onClick={() => setProposing((v) => !v)}>{`Proposed ${plural(proposed.length, 'claim')}`}</Chip>}
         {remembered.length > 0 && <Chip size="sm" className="tr-claims-chip" onClick={() => setMemory(true)}>{`Remembered ${plural(remembered.length, 'memory', 'memories')}`}</Chip>}
-        {tools > 0 && <button type="button" className="tr-tools" title="Open this turn's tool calls in a tab" onClick={() => openWork(id)}>{`Used ${plural(tools, 'tool')}`}<Icon name="chevron-right" small /></button>}
+        {tools > 0 && <button type="button" className="tr-tools" title="Open this turn's tool calls in a tab" onClick={() => openWork(id)}>{doing ? <>{spin}<span className="tr-doing">{doing}</span></> : `Used ${plural(tools, 'tool')}`}<Icon name="chevron-right" small /></button>}
       </div>
       {reading && <UsedClaims claims={claims} />}
       {proposing && <ProposedClaims proposed={proposed} />}
