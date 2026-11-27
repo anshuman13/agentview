@@ -219,6 +219,7 @@ cost so far. The status bar usage tooltip adds a Spend block with today's and th
 - A subagent shows in the chat as a collapsible box: a chevron, its description, a meta line (type, duration once it ended, step count), one Badge (Running, Done, Failed or Skipped) and a summary under the header, clamped to 2 lines. While it runs the summary is the SDK's one-line progress, refreshed about every 30 s, until the first one the last step; once it ends it is the first line of the report. A running agent has a Stop button in the header. Boxes start collapsed; the body shows the steps and the report on the web, the last 3 steps and a Steps and report row that opens the Agents pane on the phone. Every transcript box (agents, Explored groups) collapses from its header, and whether it is open is kept per device for the 300 boxes saved last. Summaries are on for Claude chats only (not Codex or OpenRouter), and each costs a small cached fork of the agent every 30 s
 - Questions, plan approvals and permissions show as buttons in the chat
 - A plan approval card splits the plan into paragraphs; tapping one stages a comment on it. Keep planning with comments
+- Once answered, the plan folds to one step line: Proposed plan "title" with a muted Approved or Not approved
   sends one message that quotes each commented paragraph (first 80 characters, as `> ...`) followed by its comment, and
   without comments just declines the plan
 - The latest to-do list Claude wrote (TodoWrite) shows as a card above the composer: "3 of 7" and the item in progress,
