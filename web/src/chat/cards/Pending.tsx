@@ -13,6 +13,7 @@ import { lineDiff } from '../../../../shared/lineDiff';
 import { blockedRule, MODE_HINTS, planFeedback, planParagraphs } from './pendingLogic';
 import { QuestionCard } from './QuestionCard';
 import { useCardKeys } from './useCardKeys';
+import { editPairs } from '../../../../shared/edits';
 
 export function Pending() {
   const pending = useStore((s) => s.pending);
@@ -147,11 +148,10 @@ function BashBody({ input, title }: BodyProps) {
 }
 
 function EditBody({ tool, input }: BodyProps) {
-  const edits = tool === 'Write' ? [{ new_string: input.content }] : tool === 'Edit' ? [input] : Array.isArray(input.edits) ? (input.edits as Record<string, unknown>[]) : [];
   return (
     <>
       <div className="pd-path">{str(input.file_path)}</div>
-      {edits.map((e, n) => <Diff key={n} a={str(e.old_string)} b={str(e.new_string)} />)}
+      {(editPairs(tool, input) ?? []).map(([a, b], n) => <Diff key={n} a={a} b={b} />)}
     </>
   );
 }
@@ -197,7 +197,7 @@ function Row({ k, v }: { k: string; v: string }) {
 
 const MAX_LINES = 200;
 
-function Diff({ a, b }: { a: string; b: string }) {
+export function Diff({ a, b }: { a: string; b: string }) {
   const lines = useMemo(() => lineDiff(a, b), [a, b]);
   return (
     <pre className="pd-diff">

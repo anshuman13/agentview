@@ -19,6 +19,15 @@ export function editCount(name: string, input: Record<string, unknown>): EditCou
   return null;
 }
 
+// The old and new text of each change an edit tool call makes, or null for other tools.
+export function editPairs(name: string, input: Record<string, unknown>): [string, string][] | null {
+  const s = (v: unknown) => (typeof v === 'string' ? v : '');
+  if (name === 'Write') return [['', s(input.content)]];
+  if (name === 'Edit') return [[s(input.old_string), s(input.new_string)]];
+  if (name === 'MultiEdit') return (Array.isArray(input.edits) ? (input.edits as Record<string, unknown>[]) : []).map((e) => [s(e?.old_string), s(e?.new_string)]);
+  return null;
+}
+
 function failedTools(events: ChatEvent[]) {
   const failed = new Set<string>();
   for (const e of events) if (e.kind === 'tool_result' && e.isError) failed.add(e.toolUseId);

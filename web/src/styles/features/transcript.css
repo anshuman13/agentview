@@ -89,8 +89,10 @@
 }
 .tr-detail pre { max-height: 320px; font-family: var(--mono); font-size: var(--fs-xs); white-space: pre-wrap; overflow-wrap: anywhere; color: var(--fg); }
 .tr-detail pre.err { color: var(--err); }
+.tr-detail .pd-diff { padding: var(--sp-2) 0; }
 .tr-report { max-height: 50vh; max-height: 50dvh; font-size: var(--fs-sm); }
 
+.tr-diffs { display: flex; flex-direction: column; gap: var(--sp-3); padding: var(--sp-4) var(--sp-5) var(--sp-5) var(--sp-7); }
 .tr-err { color: var(--err); }
 .tr-box.err { border-color: color-mix(in srgb, var(--err) 40%, transparent); }
 .tr-dir { color: var(--fg-muted); }

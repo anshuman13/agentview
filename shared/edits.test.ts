@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test';
-import { replyLine, roundOf } from './edits';
+import { editPairs, replyLine, roundOf } from './edits';
 import type { ChatEvent } from './protocol';
 
 describe('roundOf', () => {
@@ -24,5 +24,14 @@ describe('stripRound', () => {
     const events: ChatEvent[] = [{ id: 'a', kind: 'assistant', text: 'All checks pass.\nROUND: done checks pass', streaming: false, at: 1 }];
     expect(replyLine(events)).toBe('All checks pass.');
     expect(replyLine([{ ...events[0], text: 'ROUND: nothing' } as ChatEvent])).toBeUndefined();
+  });
+});
+
+describe('editPairs', () => {
+  it('reads the old and new text of each edit tool', () => {
+    expect(editPairs('Write', { file_path: 'a', content: 'x' })).toEqual([['', 'x']]);
+    expect(editPairs('Edit', { old_string: 'a', new_string: 'b' })).toEqual([['a', 'b']]);
+    expect(editPairs('MultiEdit', { edits: [{ old_string: 'a', new_string: 'b' }, { new_string: 'c' }] })).toEqual([['a', 'b'], ['', 'c']]);
+    expect(editPairs('Bash', { command: 'ls' })).toBeNull();
   });
 });

@@ -5,6 +5,8 @@ import { Icon } from '../../ui/Icon';
 import { Markdown } from '../Chat';
 import { CopyPathItems } from '../../workspace/CopyPathItems';
 import { FileIcon } from '../../workspace/FileIcon';
+import { Diff } from '../cards/Pending';
+import { editPairs } from '../../../../shared/edits';
 import { LinkAction, TranscriptBox } from './Box';
 import { Badge } from '../../ui/Badge';
 import { agentSummary } from '../../sessions/agents';
@@ -45,9 +47,10 @@ export function Step({ use, result, cwd, settled }: { use: ToolUse; result?: Too
 
 function Detail({ use, result }: { use: ToolUse; result?: ToolResult }) {
   const input = typeof use.input.command === 'string' ? use.input.command : JSON.stringify(use.input, null, 2);
+  const pairs = editPairs(use.name, use.input);
   return (
     <div className="tr-detail" onClick={(e) => e.stopPropagation()}>
-      <pre>{input}</pre>
+      {pairs ? pairs.map(([a, b], n) => <Diff key={n} a={a} b={b} />) : <pre>{input}</pre>}
       {result && <pre className={result.isError && !denied(result) ? 'err' : ''}>{result.text || '(no output)'}</pre>}
     </div>
   );
@@ -67,9 +70,11 @@ export function FileCard({ it, cwd }: { it: Extract<Item, { kind: 'file' }>; cwd
       title={name}
       meta={it.error ? <span className="tr-err">{it.error}</span> : <>{cut >= 0 && <span className="tr-dir">{rel.slice(0, cut + 1)} </span>}<span className="tr-count"><span className="add">+{it.count.add}</span> <span className="del">-{it.count.del}</span></span></>}
       action={<LinkAction label="Open" onClick={open} />}
-      onOpen={open}
+      onOpen={it.error ? open : undefined}
       menu={<CopyPathItems path={it.path} cwd={cwd} />}
-    />
+    >
+      <div className="tr-diffs">{it.uses.flatMap((u) => editPairs(u.name, u.input) ?? []).map(([a, b], n) => <Diff key={n} a={a} b={b} />)}</div>
+    </TranscriptBox>
   );
 }
 
