@@ -20,6 +20,8 @@ Branch prefix: anshuman/build/
 - Symlink `node_modules`, `server/node_modules` and `web/node_modules` from the main checkout.
 - Checks, from the worktree root, for every package touched plus assistant whenever shared/ or server/src changed: `npx tsc --noEmit -p web`, `npx tsc --noEmit -p server`, `npx tsc --noEmit -p assistant`, `npm test` from the root, `cd assistant && bun test`, and `npm run build -w web` when web changed.
 
+- Android (user, 27 Nov): no APK build per task. When a task touches android/, run only the unit tests, `cd android && JAVA_HOME=/opt/homebrew/opt/openjdk@17/libexec/openjdk.jdk/Contents/Home ./gradlew testDebugUnitTest` (compiles and runs them, screenshots included). Run `android/build.sh` (release APK, R8) once per batch: when 5 tasks touching android/ have landed since the last one, at the end of the run, and before any phone install.
+
 ## Test
 - Cover every (UI) criterion with a committed test, not a throwaway click script: logic as unit tests under `bun test` (no click-flow tests); layout, clipping and overlap only in the small Playwright set under web/e2e (`bun run e2e`, every server and hub call stubbed); Android as Robolectric/Roborazzi or Compose UI tests in the unit test step. Never return a criterion as unverified with verdict pass: a criterion without a test that runs it makes the verdict fail.
 - Checks for the packages the diff touches: `npx tsc --noEmit -p web|server|assistant`, `npm test` from the root, `cd assistant && bun test`.
