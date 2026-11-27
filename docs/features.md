@@ -546,6 +546,10 @@ and the run goes on. With until it asks for 1 to 3 more tasks for the goal when 
 searches find nothing. It ends with a recap at the stop time, at 60% weekly usage or when the tasks are done; Pause
 takes effect after the current task. Build all on a spec's Tasks header, Start as Build on the New chat sheet and the
 MCP tool `start_build` (any chat; it opens a new chat in the project, linked under the calling chat) start one.
+Each task brief gives the 5-hour usage, its reset and the points per minute per agent (`burnRate` over the last 15
+minutes of usage samples, split over the build chat and the helpers the last brief allowed), and `helperCount` allows
+0 to 3 helpers so the projected pct at the reset stays near 90%: the agent then takes that many independent open tasks
+at once, one Agent subagent per task in its own worktree, and cherry-picks their commits; none at 60% weekly usage.
 
 A build started with `start_build` belongs to the chat that called it. The host keeps the calling chat's session id
 with the new build chat and, when the build chat gets its first session id, writes `{ child: { parent, kind, at } }` to

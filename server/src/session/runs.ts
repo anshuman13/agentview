@@ -99,7 +99,7 @@ export class Runs {
     return this.runs.find((r) => r.kind === 'build' && r.chatId === chatId && r.state !== 'done');
   }
 
-  update(id: string | undefined, patch: Partial<Pick<ChatRun, 'chatId' | 'sessionId' | 'state' | 'why' | 'round' | 'max' | 'nextAt' | 'review' | 'pr' | 'spec' | 'phase' | 'clearing' | 'pausing' | 'idle' | 'progress' | 'task' | 'until'>>) {
+  update(id: string | undefined, patch: Partial<Pick<ChatRun, 'chatId' | 'sessionId' | 'state' | 'why' | 'round' | 'max' | 'nextAt' | 'review' | 'pr' | 'spec' | 'phase' | 'clearing' | 'pausing' | 'idle' | 'progress' | 'task' | 'until' | 'helpers'>>) {
     const run = this.get(id);
     if (!run || run.state === 'done') return;
     Object.assign(run, patch);

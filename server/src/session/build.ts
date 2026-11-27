@@ -1,9 +1,10 @@
 import { randomUUID } from 'node:crypto';
 import { readFile, readdir, stat } from 'node:fs/promises';
 import path from 'node:path';
-import { APPROVE, BLOCKED, BUILD_USAGE, FAILED, PAUSED_BY_YOU, buildSpecPrompt, hhmm, moreBrief, nextStep, recapBrief, taskBrief, untilAt, type BuildArgs, type BuildStep } from '../../../shared/build.js';
+import { APPROVE, BLOCKED, BUILD_USAGE, FAILED, PAUSED_BY_YOU, buildHelpers, buildSpecPrompt, burnRate, hhmm, moreBrief, nextStep, recapBrief, taskBrief, untilAt, type BuildArgs, type BuildStep, type BuildUsage } from '../../../shared/build.js';
 import type { ChatRun, RoundOutcome } from '../../../shared/protocol.js';
 import { specTasks } from '../../../shared/specTasks.js';
+import { samplesSince } from '../usage/store.js';
 import { ROUND_INSTRUCTION, STOPPED_BY_YOU, firstSentence } from './runs.js';
 import type { AgentSession } from './session.js';
 
@@ -134,7 +135,19 @@ export class BuildLoop {
     if (run.phase === 'more') return this.send(moreBrief(run.spec, run.until ?? Date.now()));
     const tasks = specTasks(await readFile(this.abs(run.spec), 'utf8').catch(() => ''));
     const n = tasks.filter((t) => t.done).length + 1;
-    this.send(taskBrief(run.spec, n, tasks.length, Boolean(run.auto)));
+    const usage = this.usage(run);
+    this.s.runs.update(run.id, { helpers: buildHelpers(usage) });
+    this.send(taskBrief(run.spec, n, tasks.length, Boolean(run.auto), usage));
+  }
+
+  // The plan's 5-hour numbers, with the burn of the last 15 minutes split over the build chat and the helpers it allowed.
+  private usage(run: ChatRun): BuildUsage | null {
+    const { usage, account } = this.s.state.session;
+    if (!usage?.fiveHour) return null;
+    const now = Date.now();
+    const rate = burnRate(samplesSince(account, now - 15 * 60_000));
+    const perAgent = rate === null ? null : rate / (1 + (run.helpers ?? 0));
+    return { pct: usage.fiveHour.pct, resetsAt: usage.fiveHour.resetsAt, perAgent, weekPct: usage.week?.pct ?? null };
   }
 
   private send(text: string) {

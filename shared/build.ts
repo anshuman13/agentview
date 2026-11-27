@@ -5,6 +5,11 @@ export const BUILD_COMMAND = { name: 'build', description: 'Build a request or s
 export const BUILD_USAGE = 'Usage: /build [auto] [until HH:MM] <request or .claude/specs/<slug>.md>. Without auto it waits for Build all after the spec and for you when a task is blocked; with until it finds more work for the goal until that time. /build until HH:MM alone moves the stop time of a running build.';
 
 export const BUILD_CAP_PCT = 60;
+// Helpers are picked so the 5-hour pct projects to this at the reset: about 95%, less a margin for swings in the rate.
+export const HELPER_TARGET_PCT = 90;
+// Points per minute one agent is assumed to burn before there are samples to measure it.
+export const DEFAULT_AGENT_RATE = 1;
+export const MAX_HELPERS = 3;
 
 export type BuildArgs = { auto: boolean; until: string | null; spec: string | null; request: string };
 
@@ -42,12 +47,53 @@ export const notesPath = (spec: string) => spec.replace(/\.(md|markdown|mdx)$/i,
 
 export const buildSpecPrompt = (request: string) => `${specPrompt(request)}\n\nStart the spec with a "Goal:" line saying what done looks like.`;
 
-export function taskBrief(spec: string, n: number, of: number, auto: boolean) {
+// The 5-hour burn in points per minute from usage samples, oldest first; samples before the last reset are left out.
+// null when they span under 2 minutes.
+export function burnRate(samples: { at: number; fiveHour?: number }[]) {
+  const pts = samples.filter((p): p is { at: number; fiveHour: number } => p.fiveHour !== undefined);
+  let from = 0;
+  for (let i = 1; i < pts.length; i++) if (pts[i].fiveHour < pts[i - 1].fiveHour) from = i;
+  const first = pts[from];
+  const last = pts.at(-1);
+  if (!first || !last || last.at - first.at < 2 * 60_000) return null;
+  return Math.max(0, (last.fiveHour - first.fiveHour) / ((last.at - first.at) / 60_000));
+}
+
+// The 5-hour pct and reset, the measured points per minute per running agent (null without samples) and the weekly pct.
+export type BuildUsage = { pct: number; resetsAt: number | null; perAgent: number | null; weekPct: number | null };
+
+// How many helper agents a build round may start (0 to 3): the most for which the 5-hour pct projected to the reset,
+// with the build chat as one agent, stays at or under HELPER_TARGET_PCT. Without a measured rate it tries 1 at the default.
+export function helperCount(o: { pct: number; mins: number | null; perAgent: number | null; weekPct: number | null }) {
+  if (o.mins === null || (o.weekPct !== null && o.weekPct >= BUILD_CAP_PCT)) return 0;
+  const rate = o.perAgent ?? DEFAULT_AGENT_RATE;
+  const max = o.perAgent === null ? 1 : MAX_HELPERS;
+  let n = 0;
+  while (n < max && o.pct + rate * (n + 2) * o.mins <= HELPER_TARGET_PCT) n++;
+  return n;
+}
+
+const minsTo = (u: BuildUsage, now: number) => (u.resetsAt === null ? null : Math.max(0, (u.resetsAt - now) / 60_000));
+
+export const buildHelpers = (u: BuildUsage | null | undefined, now = Date.now()) => (u ? helperCount({ ...u, mins: minsTo(u, now) }) : 0);
+
+function usageBrief(u: BuildUsage, now: number) {
+  const mins = minsTo(u, now);
+  const reset = u.resetsAt === null || mins === null ? '' : `, resets ${hhmm(u.resetsAt)} (${Math.round(mins)} min)`;
+  const rate = u.perAgent === null ? `no measured rate yet, assuming ${DEFAULT_AGENT_RATE} pts/min per agent` : `about ${u.perAgent.toFixed(1)} pts/min per agent`;
+  const week = u.weekPct === null ? '' : `, weekly ${u.weekPct}%`;
+  const head = ` 5-hour usage ${u.pct}%${reset}, ${rate}${week}:`;
+  const n = buildHelpers(u, now);
+  if (!n) return `${head} work alone, without helper agents.`;
+  return `${head} start up to ${n} helper${n > 1 ? 's' : ''}. For each of the next unchecked tasks that is independent of yours and of the others, start one subagent with the Agent tool and isolation "worktree", telling it to do only that task, run the checks and commit, without touching the spec. Keep tasks that touch the same files, need the emulator or need the browser for later rounds. Do your own task meanwhile, then cherry-pick each helper's commit onto this branch, run the checks again, and tick those tasks too with their lines in the notes.`;
+}
+
+export function taskBrief(spec: string, n: number, of: number, auto: boolean, usage?: BuildUsage | null, now = Date.now()) {
   const notes = notesPath(spec);
   const stuck = auto
     ? 'If you cannot finish it, change its box to [~] with the reason after the task, add that to the notes, and finish with ROUND: blocked.'
     : 'If you cannot finish it or need a decision from me, say what you need and finish with ROUND: blocked or ROUND: question.';
-  return `Build run, task ${n} of ${of}. Read ${spec} and ${notes} if it exists, then do only the first unchecked task: make the change, run this repo's checks, and commit without pushing. Then tick its box in the spec and add 2 to 4 lines to ${notes}: what changed, the commit, and what the next task needs to know. ${stuck}`;
+  return `Build run, task ${n} of ${of}. Read ${spec} and ${notes} if it exists, then do only the first unchecked task: make the change, run this repo's checks, and commit without pushing. Then tick its box in the spec and add 2 to 4 lines to ${notes}: what changed, the commit, and what the next task needs to know. ${stuck}${usage ? usageBrief(usage, now) : ''}`;
 }
 
 export const moreBrief = (spec: string, until: number) =>

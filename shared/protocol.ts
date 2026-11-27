@@ -190,6 +190,8 @@ export type ChatRun = {
   idle?: number;
   progress?: string;
   task?: string;
+  // Helper agents the last task brief allowed, besides the build chat.
+  helpers?: number;
 };
 
 export type McpProp = { type?: string | string[]; description?: string; enum?: unknown[]; default?: unknown; title?: string; maxLength?: number };
