@@ -103,6 +103,12 @@ internal fun ChatStatus(live: LiveChat, session: SessionInfo?, viewCost: Double,
     }
 }
 
+// The build chat's task line under the status (web Brief.tsx tl-build).
+@Composable
+internal fun BuildHead(text: String) {
+    Text(text, Modifier.fillMaxWidth().padding(start = Tokens.listPad, end = Tokens.sp2, bottom = Tokens.sp2), style = Type.footnote, color = av.fgMuted, maxLines = 1, overflow = TextOverflow.Ellipsis)
+}
+
 @Composable
 private fun ChatSubtitle(live: LiveChat, session: SessionInfo?, viewCost: Double, replyAt: Long?) {
     val status = statusLine(live, session)

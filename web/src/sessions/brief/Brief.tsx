@@ -12,7 +12,7 @@ import { Icon } from '../../ui/Icon';
 import { IconButton } from '../../ui/Button';
 import { Sheet } from '../../ui/Sheet';
 import { agentsOf } from '../agents';
-import { agentChipCount } from '../runLogic';
+import { agentChipCount, buildHead } from '../runLogic';
 import { useChatRun } from '../useChatRun';
 import { useNarrow } from '../../app/shell/useNarrow';
 import { command, plural, useTick } from '../../ui/util';
@@ -117,6 +117,7 @@ export function Brief() {
   const title = chatTitle || chatTitleOf(turns[0]?.prompt ?? '') || 'New chat';
   const startRename = savedId ? () => setRenaming(true) : undefined;
   const press = useLongPress(startRename);
+  const head = run && buildHead(run);
 
   return (
     <div className="brief-row">
@@ -141,6 +142,7 @@ export function Brief() {
           <HeadState state={state} status={status} chat={live} pending={pending.length} lastReply={lastReply} lastTool={lastTool} done={doneSteps} next={next} />
           {side && (phone || railClosed) && <button className="tl-agents" onClick={() => { if (phone) { setShowAgents(true); setAgentSel(null); } else setRailClosed(false); }}>{agentCount > 0 ? plural(agentCount, 'agent') : 'Run'}<Icon name="chevron-right" small /></button>}
         </div>
+        {head && <div className="tl-build" title={head}>{head}</div>}
         <Transcript />
       </div>
       {waiting && <div className="brief-cards"><Pending /></div>}

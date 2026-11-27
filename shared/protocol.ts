@@ -178,7 +178,7 @@ export type ChatRun = {
   paseo?: boolean;
   review?: 'pending';
   pr?: string;
-  // A build run: its spec, the stop time of Keep going, auto (no approval), the step it is on and "3 of 7" tasks done.
+  // A build run: its spec, the stop time of Keep going, auto (no approval), the step it is on, "3 of 7" tasks done and the first open task.
   spec?: string;
   until?: number | null;
   auto?: boolean;
@@ -187,6 +187,7 @@ export type ChatRun = {
   pausing?: boolean;
   idle?: number;
   progress?: string;
+  task?: string;
 };
 
 export type McpProp = { type?: string | string[]; description?: string; enum?: unknown[]; default?: unknown; title?: string; maxLength?: number };

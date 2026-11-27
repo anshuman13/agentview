@@ -20,6 +20,15 @@ export function buildLine(run: Pick<ChatRun, 'progress' | 'until' | 'phase' | 'w
   return `Build · ${step}${run.until ? ` · until ${hhmm(run.until)}` : ''}`;
 }
 
+// The build chat's header line: "Task 4 of 7 · <task> · until 06:00", or the step it is on. Null for other runs.
+export function buildHead(run: Pick<ChatRun, 'kind' | 'phase' | 'progress' | 'task' | 'until'>) {
+  if (run.kind !== 'build') return null;
+  const [done, total] = (run.progress ?? '').split(' of ').map(Number);
+  const task = !total ? 'Starting' : done >= total ? `All ${total} tasks done` : [`Task ${done + 1} of ${total}`, run.task].filter(Boolean).join(' · ');
+  const step = run.phase === 'spec' ? 'Writing the spec' : run.phase === 'recap' ? 'Writing the recap' : run.phase === 'more' ? 'Finding more work' : task;
+  return `${step}${run.until ? ` · until ${hhmm(run.until)}` : ''}`;
+}
+
 export type HeaderState = { text: string; tone: 'running' | 'needs' | 'failed' | 'warn' | 'idle' };
 
 // The state of a chat for the header: what needs the user first, then the running turn, running agents, the run between rounds.

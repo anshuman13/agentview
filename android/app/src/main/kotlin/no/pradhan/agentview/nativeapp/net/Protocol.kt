@@ -190,6 +190,7 @@ data class ChatRun(
     val phase: String? = null,
     val pausing: Boolean = false,
     val progress: String? = null,
+    val task: String? = null,
 )
 
 @Serializable

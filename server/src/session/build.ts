@@ -150,7 +150,7 @@ export class BuildLoop {
     const text = run.spec ? await readFile(this.abs(run.spec), 'utf8').catch(() => '') : '';
     const tasks = specTasks(text);
     const done = tasks.filter((t) => t.done).length;
-    this.s.runs.update(run.id, { progress: `${done} of ${tasks.length}` });
+    this.s.runs.update(run.id, { progress: `${done} of ${tasks.length}`, task: tasks.find((t) => !t.done)?.text ?? '' });
     return tasks.length - done;
   }
 

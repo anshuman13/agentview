@@ -46,6 +46,25 @@ fun buildLine(run: ChatRun): String {
     return "Build · $step" + (run.until?.let { " · until ${clock(it)}" } ?: "")
 }
 
+// The build chat's header line: "Task 4 of 7 · <task> · until 06:00", or the step it is on; null for other runs (web runLogic.ts buildHead).
+fun buildHead(run: ChatRun): String? {
+    if (run.kind != "build") return null
+    val parts = run.progress.orEmpty().split(" of ").map { it.toIntOrNull() ?: 0 }
+    val done = parts[0]
+    val total = parts.getOrElse(1) { 0 }
+    val step = when (run.phase) {
+        "spec" -> "Writing the spec"
+        "recap" -> "Writing the recap"
+        "more" -> "Finding more work"
+        else -> when {
+            total == 0 -> "Starting"
+            done >= total -> "All $total tasks done"
+            else -> listOfNotNull("Task ${done + 1} of $total", run.task?.ifEmpty { null }).joinToString(" · ")
+        }
+    }
+    return step + (run.until?.let { " · until ${clock(it)}" } ?: "")
+}
+
 // shared/build.ts APPROVE: a build run waiting for Build all.
 const val BUILD_APPROVE = "Approve the spec: Build all"
 

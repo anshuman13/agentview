@@ -556,7 +556,10 @@ refreshed when the chat's events change and every 30 s until the build ends. A c
 tool's result text. While a build the chat started is open (not Done or Stopped), a bar pinned under the chat header
 (`BuildBar.tsx`, `BuildBar.kt`, rows from `buildRows`) shows its spec, "Task n of N", the last round and the state; a
 tap opens the build chat. The build chat's header shows "Started from <parent title>" under the title, and a tap opens the
-parent chat (`startedFrom.ts`, `startedFrom` in `Folders.kt`).
+parent chat (`startedFrom.ts`, `startedFrom` in `Folders.kt`). Under its status line it shows what the build is doing
+now: "Task n of N · <first open task> · until HH:MM", or Writing the spec, Finding more work, Writing the recap, All N
+tasks done (`buildHead` in `sessions/runLogic.ts` and `RunsLogic.kt`, `shared/fixtures/build-head.json`; the run's `task`
+is set with its progress from the spec).
 
 On the web a chat's run heads its Agents rail (`RailHead`), on Android its Agents sheet (`RunActions` and `RunRows` in
 `RunsUi.kt`): tries show Open board and Stop, jobs Stop, and with no run the header has Stop all agents. Under the state

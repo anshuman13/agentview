@@ -134,6 +134,7 @@ import no.pradhan.agentview.nativeapp.chat.statusLine
 import no.pradhan.agentview.nativeapp.chat.stripRound
 import no.pradhan.agentview.nativeapp.codex.autopilot.TryColumn
 import no.pradhan.agentview.nativeapp.codex.autopilot.runLine
+import no.pradhan.agentview.nativeapp.codex.autopilot.buildHead
 import no.pradhan.agentview.nativeapp.codex.autopilot.stoppedText
 import no.pradhan.agentview.nativeapp.sessions.Repo
 import no.pradhan.agentview.nativeapp.sessions.Workspace
@@ -610,6 +611,13 @@ class SharedCasesTest {
         for (c in cases("run-line")) {
             val run = JsonObject(mapOf("id" to toJson("r")) + c.getValue("run").jsonObject).decode<ChatRun>()
             assertEquals(c.str("name"), c.str("expected"), runLine(run))
+        }
+    }
+
+    @Test fun buildHead() {
+        for (c in cases("build-head")) {
+            val run = JsonObject(mapOf("id" to toJson("r")) + c.getValue("run").jsonObject).decode<ChatRun>()
+            assertEquals(c.str("name"), c.nullable("expected")?.jsonPrimitive?.content, buildHead(run))
         }
     }
 

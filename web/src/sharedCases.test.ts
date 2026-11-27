@@ -42,7 +42,7 @@ import { countChat } from './app/shell/counts';
 import { can } from './chat/capabilitiesLogic';
 import { addUse, buildHistory, chatImages, chatMarkdown, draftKey, failedLine, ghostFor, handoffText, joinMarks, lastReply, markChip, remember, splitMarks, turnEnd, userParts, withUses, type Use } from './chat/composer/composerLogic';
 import { composerPlaceholder, shellLine, type PlaceholderDevice, type PlaceholderState } from '../../shared/composerText';
-import { agentChipCount, headerState, nowMeta, runLine, stoppedText } from './sessions/runLogic';
+import { agentChipCount, buildHead, headerState, nowMeta, runLine, stoppedText } from './sessions/runLogic';
 import { tryColumn } from './sessions/triesLogic';
 import { parseWhen, stripWhen } from './codex/data/tasks/when';
 import { cadenceLine, cadenceOf, moveRule } from './codex/data/tasks/recur';
@@ -660,6 +660,10 @@ describe('cases shared with the Android app', () => {
 
   for (const c of cases<{ name: string; run: Omit<Partial<ChatRun>, 'tries'> & { tries?: Partial<Try>[] }; expected: string }>('run-line')) {
     it(`runLine: ${c.name}`, () => expect(runLine(run({ ...c.run, tries: c.run.tries?.map((t) => ({ n: 0, chatId: '', sessionId: '', branch: '', ...t })) }))).toBe(c.expected));
+  }
+
+  for (const c of cases<{ name: string; run: Partial<ChatRun>; expected: string | null }>('build-head')) {
+    it(`buildHead: ${c.name}`, () => expect(buildHead(run(c.run))).toBe(c.expected));
   }
 
   for (const c of cases<{ name: string; task: Parameters<typeof taskChatPrompt>[0]; expected: string }>('task-chat-prompt')) {
