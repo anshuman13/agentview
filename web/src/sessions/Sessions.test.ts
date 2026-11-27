@@ -1,7 +1,7 @@
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'bun:test';
-import { buildFolders, buildsState, type Folder, type RepoGroup, chatFinder, chatMenuItems, chatState, doneChats, findHere, groupByRepo, groupChats, rowsById, groupByKind, groupGlance, holdOrder, newChatGroups, orderGroups, renameTitle, segmentOf, since, staleKeys, unreadCount, waitingChats } from './folders';
+import { buildFolders, buildsState, type Folder, type RepoGroup, chatFinder, chatMenuItems, chatWindowUrl, chatState, doneChats, findHere, groupByRepo, groupChats, rowsById, groupByKind, groupGlance, holdOrder, newChatGroups, orderGroups, renameTitle, segmentOf, since, staleKeys, unreadCount, waitingChats } from './folders';
 import { RepoRow } from './RepoRow';
 import type { LiveChat, Repo, SavedSession, Worktree } from '../../../shared/protocol';
 import { WORKSPACE } from '../../../shared/workspace';
@@ -392,6 +392,13 @@ describe('chatMenuItems', () => {
 
   it('gives an idle chat neither', () => {
     expect(items(false, false)[0]).toBe('pin');
+  });
+
+  it('offers its own window after Open beside', () => {
+    const keys = chatMenuItems({ failed: false, stalled: false, canPin: true, beside: true, ownWindow: true, closable: true });
+    expect(keys.slice(keys.indexOf('beside'), keys.indexOf('beside') + 3)).toEqual(['beside', 'window', 'close']);
+    expect(items(false, false)).not.toContain('window');
+    expect(chatWindowUrl('a b')).toBe('/?chat=a%20b&alone=1');
   });
 });
 

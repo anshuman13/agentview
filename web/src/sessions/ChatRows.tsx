@@ -1,5 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react';
-import { markUnread, notice, rootOf, send, useStore } from '../app/store';
+import { embedded, markUnread, notice, rootOf, send, useStore } from '../app/store';
+import { tauriInvoke } from '../app/runtime/tauri';
 import { Icon } from '../ui/Icon';
 import { MenuItem, MenuSeparator } from '../ui/Menu';
 import { Row } from '../ui/Row';
@@ -9,7 +10,7 @@ import { providerMark, shortModel } from '../../../shared/providers';
 import { save } from '../ui/util';
 import { RenameInput } from './RenameInput';
 import { ChatPr } from '../ops/pulls';
-import { archiveChat, buildsState, chatMenuItems, chatSwipe, chatLine, chatBranch, chatState, closeChat, renameChat, repoName, removeRequest, restoreChat, rootLookup, rowsById, since, type ChatSession, type ChatState, type Folder } from './folders';
+import { archiveChat, buildsState, chatMenuItems, chatSwipe, chatLine, chatBranch, chatState, closeChat, openChatWindow, renameChat, repoName, removeRequest, restoreChat, rootLookup, rowsById, since, type ChatSession, type ChatState, type Folder } from './folders';
 import { askLine } from './runLogic';
 import { Swipe } from '../codex/gestures/Swipe';
 import { copyText, showSnack } from '../codex/view';
@@ -128,7 +129,7 @@ function ChatRow({ sessionId, title, cwd, lastModified, live, opening, meta, sta
         onClick={onOpen}
         onDoubleClick={sessionId ? (e) => { if ((e.target as HTMLElement).closest('.ui-row-title')) setRenaming(true); } : undefined}
         onLongPress={sessionId ? () => setRenaming(true) : undefined}
-        menu={chatMenuItems({ failed: state === 'failed' && !!live, stalled: !!live?.stalled, canPin: !!sessionId && !!onPin, beside: !!onBeside, closable: !!onClose, unread: !!sessionId && !shown && !selected }).map((key) => {
+        menu={chatMenuItems({ failed: state === 'failed' && !!live, stalled: !!live?.stalled, canPin: !!sessionId && !!onPin, beside: !!onBeside, ownWindow: !!live && !embedded && !tauriInvoke(), closable: !!onClose, unread: !!sessionId && !shown && !selected }).map((key) => {
           switch (key) {
             case 'resume': return <MenuItem key={key} icon="play" onClick={resume}>Resume</MenuItem>;
             case 'retry': return <MenuItem key={key} icon="refresh" disabled={retrying} onClick={retry}>Retry</MenuItem>;
@@ -138,6 +139,7 @@ function ChatRow({ sessionId, title, cwd, lastModified, live, opening, meta, sta
             case 'link': return <MenuItem key={key} icon="link" onClick={() => copyText(`${location.origin}/?session=${sessionId}`, 'Link copied')}>Copy link</MenuItem>;
             case 'rename': return <MenuItem key={key} icon="edit" disabled={!sessionId} onClick={() => setRenaming(true)}>Rename</MenuItem>;
             case 'beside': return <MenuItem key={key} icon="split-horizontal" className="desktop-only" onClick={onBeside!}>Open beside</MenuItem>;
+            case 'window': return <MenuItem key={key} icon="multiple-windows" className="desktop-only" onClick={() => openChatWindow(live!.id)}>Open in new window</MenuItem>;
             case 'close': return <MenuItem key={key} icon="close" onClick={onClose!}>Close chat</MenuItem>;
             case 'separator': return <MenuSeparator key={key} />;
             case 'archive': return <MenuItem key={key} icon="archive" danger disabled={!sessionId} onClick={() => actions.archive(saved, !!pinned, onPin)}>Archive</MenuItem>;

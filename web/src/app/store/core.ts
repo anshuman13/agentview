@@ -16,8 +16,15 @@ type UiState = {
   sketch: string | null;
 };
 
-// A side chat column is this app in an iframe; it shows one chat and nothing else.
-export const embedded = typeof window !== 'undefined' && window.self !== window.top;
+// A side chat column (this app in an iframe) or a chat opened in its own window (?alone) shows one chat and nothing else.
+const ALONE = 'agentview.alone';
+const alone = () => {
+  try {
+    if (new URLSearchParams(location.search).has('alone')) sessionStorage.setItem(ALONE, '1');
+    return sessionStorage.getItem(ALONE) === '1';
+  } catch { return false; }
+};
+export const embedded = typeof window !== 'undefined' && (window.self !== window.top || alone());
 const storedBeside = () => { try { return embedded ? null : localStorage.getItem('agentview.beside') || null; } catch { return null; } };
 
 export const OUTBOX_KEY = 'agentview.outbox';
