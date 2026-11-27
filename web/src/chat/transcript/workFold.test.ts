@@ -108,6 +108,13 @@ describe('foldTurns', () => {
     expect(kinds(fold([user('go'), tool('Bash')]))).toEqual(['user', 'fold']);
   });
 
+  it('gives the last turn a fold with its latest thinking line, and earlier turns none', () => {
+    const think = (text: string): ChatEvent => ({ id: `th${text}`, kind: 'thinking', text, at: 1 });
+    const rows = fold([user('a'), think('old'), say('one'), user('b'), think('first'), think('second')]);
+    expect(kinds(rows)).toEqual(['user', 'assistant', 'user', 'fold']);
+    expect(rows[3]).toMatchObject({ kind: 'fold', thought: 'second', last: true });
+  });
+
   it('has no fold for a turn with nothing hidden, and folds each turn on its own', () => {
     const rows = fold([user('hi'), say('hello'), user('go'), tool('Bash'), say('done')]);
     expect(kinds(rows)).toEqual(['user', 'assistant', 'user', 'fold', 'assistant']);

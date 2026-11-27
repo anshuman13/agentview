@@ -13,7 +13,7 @@ const notes = (items: Item[]) => (items.length === 1 ? noteOf(items[0]) : '') ||
 
 export type FoldRow =
   | { kind: 'item'; it: Item }
-  | { kind: 'fold'; id: string; hidden: Item[]; work: Work; last: boolean; steps: StatusStep[]; now: string; claims: Claim[]; proposed: Proposal[]; remembered: string[] };
+  | { kind: 'fold'; id: string; hidden: Item[]; work: Work; last: boolean; steps: StatusStep[]; now: string; thought: string; claims: Claim[]; proposed: Proposal[]; remembered: string[] };
 
 export type Claim = { id: string; text: string; where: string };
 
@@ -100,6 +100,17 @@ function stepsByTurn(events: ChatEvent[]) {
   return out;
 }
 
+// Each prompt's latest thinking line; Android WorkFold.kt thoughtsByTurn says the same.
+function thoughtsByTurn(events: ChatEvent[]) {
+  const out = new Map<string, string>();
+  let key = '';
+  for (const e of events) {
+    if (e.kind === 'user') key = e.id;
+    if (e.kind === 'thinking') out.set(key, e.text);
+  }
+  return out;
+}
+
 const taskList = (t: Tasks | undefined): StatusStep[] => (t ? [...t.done, ...t.next.filter((n) => !t.done.some((d) => d.title === n.title))] : []);
 
 type Span = { at: number; end: number; cost: number };
@@ -148,6 +159,7 @@ function foldGroups(items: Item[], events: ChatEvent[], cards: Set<string>, last
   const prompts = new Set(events.filter((e) => e.kind === 'user').map((e) => e.id));
   const span = spans(events, lastCost);
   const steps = stepsByTurn(events);
+  const thoughts = thoughtsByTurn(events);
   const groups: Item[][] = [];
   for (const it of items) {
     if (prompts.has(it.id) || groups.length === 0) groups.push([]);
@@ -169,8 +181,10 @@ function foldGroups(items: Item[], events: ChatEvent[], cards: Set<string>, last
       if (shown) rows.push({ kind: 'item', it });
     });
     const tasks = steps.get(key);
-    if (hidden.length > 0 || tasks) {
-      const fold: FoldRow = { kind: 'fold', id: key || first.id, hidden, work: workOf(hidden, span.get(key) ?? span.get('')!), last: endsChat && g === groups.length - 1, steps: taskList(tasks), now: tasks?.now ?? '', claims: claimsOf(hidden), proposed: proposedOf(hidden), remembered: rememberedOf(hidden) };
+    const last = endsChat && g === groups.length - 1;
+    const thought = (last && thoughts.get(key)) || '';
+    if (hidden.length > 0 || tasks || thought) {
+      const fold: FoldRow = { kind: 'fold', id: key || first.id, hidden, work: workOf(hidden, span.get(key) ?? span.get('')!), last, steps: taskList(tasks), now: tasks?.now ?? '', thought, claims: claimsOf(hidden), proposed: proposedOf(hidden), remembered: rememberedOf(hidden) };
       const at = reply < 0 ? rows.length : rows.findIndex((r) => r.kind === 'item' && r.it === group[reply]);
       rows.splice(at, 0, fold);
     }
@@ -187,7 +201,7 @@ const sameFields = (a: object, b: object) => {
 
 function sameRow(a: FoldRow, b: FoldRow) {
   if (a.kind === 'item' || b.kind === 'item') return a.kind === 'item' && b.kind === 'item' && a.it === b.it;
-  return a.id === b.id && a.last === b.last && a.now === b.now && sameFields(a.work, b.work)
+  return a.id === b.id && a.last === b.last && a.now === b.now && a.thought === b.thought && sameFields(a.work, b.work)
     && sameList(a.hidden, b.hidden, Object.is)
     && sameList(a.steps, b.steps, sameFields)
     && sameList(a.claims, b.claims, sameFields)

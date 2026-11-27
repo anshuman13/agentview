@@ -14,7 +14,7 @@ import { command, plural, pressable } from '../../ui/util';
 
 // A turn's tasks as small lines, and on the right a button that opens the turn's tool calls in their own tab.
 // A finished turn shows only the tasks it marked done: the steps it never reached are no longer next.
-export const Tasks = memo(function Tasks({ row: { id, hidden, steps: all, now, work, claims, proposed, remembered }, live }: { row: Extract<FoldRow, { kind: 'fold' }>; live: boolean }) {
+export const Tasks = memo(function Tasks({ row: { id, hidden, steps: all, now, thought, work, claims, proposed, remembered }, live }: { row: Extract<FoldRow, { kind: 'fold' }>; live: boolean }) {
   const tools = work.tools;
   const [reading, setReading] = useState(false);
   const [proposing, setProposing] = useState(false);
@@ -25,6 +25,8 @@ export const Tasks = memo(function Tasks({ row: { id, hidden, steps: all, now, w
   const current = live ? steps.find((s) => !s.done) : undefined;
   const spin = <span className="tr-dots" aria-hidden="true"><i /><i /></span>;
   const doing = live ? runningStep(hidden, cwd) : '';
+  const thinking = live ? thought : '';
+  if (!tools && !steps.length && !claims.length && !proposed.length && !remembered.length && !thinking) return null;
   return (
     <div id={`turn-work:${id}`} className="tr-steps">
       <div className="tr-steps-head">
@@ -34,6 +36,7 @@ export const Tasks = memo(function Tasks({ row: { id, hidden, steps: all, now, w
         {remembered.length > 0 && <Chip size="sm" className="tr-claims-chip" onClick={() => setMemory(true)}>{`Remembered ${plural(remembered.length, 'memory', 'memories')}`}</Chip>}
         {tools > 0 && <button type="button" className="tr-tools" title="Open this turn's tool calls in a tab" onClick={() => openWork(id)}>{doing ? <>{spin}<span className="tr-doing">{doing}</span></> : `Used ${plural(tools, 'tool')}`}<Icon name="chevron-right" small /></button>}
       </div>
+      {thinking && <div className="tr-thought">{thinking}</div>}
       {reading && <UsedClaims claims={claims} />}
       {proposing && <ProposedClaims proposed={proposed} />}
       {memory && <MemoryPick cwd={cwd} initial={remembered.length === 1 ? remembered[0] : undefined} onClose={() => setMemory(false)} />}
