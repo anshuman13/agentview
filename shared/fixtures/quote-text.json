@@ -1,8 +1,0 @@
-[
-  { "name": "one line", "text": "one line", "expected": "> one line\n\n" },
-  { "name": "two lines", "text": "line one\nline two", "expected": "> line one\n> line two\n\n" },
-  { "name": "empty inner line", "text": "first\n\nsecond", "expected": "> first\n>\n> second\n\n" },
-  { "name": "trims surrounding blank lines", "text": "\n\n  passage  \n\n", "expected": "> passage\n\n" },
-  { "name": "cuts a long run at a word end", "text": "word ", "times": 400, "endsWith": " word word ...\n\n", "length": 1507 },
-  { "name": "cuts before a word past the limit", "text": "a", "times": 1498, "after": " bcd", "endsWith": "aaa ...\n\n", "length": 1506 }
-]

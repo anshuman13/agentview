@@ -272,7 +272,7 @@ internal fun ItemRow(hub: Hub, it: Item, chat: String, cwd: String, settled: Boo
 fun Modifier.leftBar(color: androidx.compose.ui.graphics.Color, width: Dp = Tokens.sp1): Modifier =
     drawBehind { drawRect(color, size = androidx.compose.ui.geometry.Size(width.toPx(), size.height)) }
 
-// Copy (the Markdown source) and Rewind files under the turn's last reply (web Rewind.tsx); Quote is in the chat menu.
+// Copy (the Markdown source) and Rewind files under the turn's last reply (web Rewind.tsx).
 @Composable
 private fun ReplyActions(hub: Hub, copy: String?, rewind: Item.User?) {
     val clip = LocalClipboardManager.current

@@ -1,4 +1,4 @@
-import { Fragment, memo, useEffect, useLayoutEffect, useMemo, useRef, useState, type RefObject } from 'react';
+import { Fragment, memo, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { setAtLatest, useStore } from '../../app/store';
 import { Icon } from '../../ui/Icon';
 import { Button, IconButton } from '../../ui/Button';
@@ -18,7 +18,7 @@ import { createFoldBuilder, type FoldRow } from './workFold';
 import { ALARM_TOOL, BUILD_TOOL, createTranscriptBuilder, exploreRuns, dayDividers, newMarker, newReplies, openAtNew, rewindReplies, turnAnswers, docCards, isDocFile, fileMeta, sameItem, type Item, type Rewind } from './steps';
 import { pressable } from '../../ui/util';
 import { useCan } from '../useCan';
-import { copyReply, insertText, resume, retry } from '../chatActions';
+import { copyReply, resume, retry } from '../chatActions';
 import { failedLine } from '../composer/composerLogic';
 import { billing, providerLabel } from '../../../../shared/providers';
 import { isSketchPath } from '../../../../shared/sketches';
@@ -29,8 +29,6 @@ import { useRowWindow, useSeenMark } from './useRowWindow';
 import { UnsentRows, UserRow } from './UserRow';
 import { Tasks } from './TaskLines';
 import { AgentRow, Explored, FileCard, Step } from './StepRows';
-import { quoteText } from '../../../../shared/composerText';
-import { useSelectionAt } from '../../ui/useSelectionAt';
 import { freshReplies, knownIds } from './streamFade';
 
 export const Transcript = memo(function Transcript() {
@@ -52,25 +50,6 @@ function EndLine({ text, label, onPress }: { text: string; label: string; onPres
 }
 
 // The finished top-level reply a node lies in.
-const replyOf = (rows: HTMLElement | null, node: Node | null) => {
-  const reply = (node instanceof Element ? node : node?.parentElement)?.closest('.tr-assistant');
-  return reply && reply.parentElement === rows && !reply.classList.contains('streaming') ? reply : null;
-};
-
-function QuoteButton({ rows }: { rows: RefObject<HTMLDivElement | null> }) {
-  const { at, clear } = useSelectionAt(rows, rows, 100, (sel) => {
-    const reply = replyOf(rows.current, sel.anchorNode);
-    return !!reply && reply === replyOf(rows.current, sel.focusNode);
-  });
-  if (!at) return null;
-  const quote = () => {
-    insertText(quoteText(at.quote));
-    document.getSelection()?.removeAllRanges();
-    clear();
-  };
-  return <Button size="sm" variant="filled" icon="quote" className="tr-quote" style={{ left: at.x, top: at.top }} onMouseDown={(e) => e.preventDefault()} onClick={quote}>Quote</Button>;
-}
-
 function TranscriptView({ sessionId, events, earlier, cwd, running, bill, failed, stalled, label }: { sessionId: string | null; events: ChatEvent[]; earlier: number; cwd: string; running: boolean; bill: string; failed: boolean; stalled: boolean; label: string }) {
   const [build] = useState(createTranscriptBuilder);
   const items = useMemo(() => build(events), [build, events]);
@@ -178,7 +157,6 @@ function TranscriptView({ sessionId, events, earlier, cwd, running, bill, failed
       {failText && <EndLine key={events.length} text={failText} label="Retry" onPress={retry} />}
       {stalled && !failed && <EndLine text="No activity for 15 min" label="Resume" onPress={resume} />}
       <UnsentRows />
-      <QuoteButton rows={rows} />
       </div>
     </div>
     {!stuck && (behind || running) && (

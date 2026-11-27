@@ -34,12 +34,3 @@ export function shellLine(lang: string | null | undefined, code: string): string
   const cmd = lines.length === 1 ? lines[0].replace(/^\$(\s+|$)/, '').trim() : '';
   return cmd && !/[\x00-\x08\x0a-\x1f\x7f]/.test(cmd) ? cmd : null;
 }
-
-const QUOTE_MAX = 1500;
-
-// A selected passage of a reply as a Markdown quote for the composer, ending in a blank line.
-export function quoteText(text: string) {
-  let body = text.trim();
-  if (body.length > QUOTE_MAX) body = `${body.slice(0, QUOTE_MAX + 1).replace(/\s+\S*$/, '').slice(0, QUOTE_MAX)} ...`;
-  return `${body.split('\n').map((l) => (l.trim() ? `> ${l}` : '>')).join('\n')}\n\n`;
-}

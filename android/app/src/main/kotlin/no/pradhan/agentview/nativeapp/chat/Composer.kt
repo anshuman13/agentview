@@ -106,7 +106,7 @@ fun Composer(hub: Hub, chatId: String, sessionId: String?, session: SessionInfo?
     val focus = remember { FocusRequester() }
     val keyboard = LocalSoftwareKeyboardController.current
     val window = LocalWindowInfo.current
-    // Quote, Use again and Saved prompts tap in a sheet or menu window; focus waits until this window has it back.
+    // Use again and Saved prompts tap in a sheet or menu window; focus waits until this window has it back.
     LaunchedEffect(chatId) {
         hub.composerFocus.collect {
             if (it != chatId) return@collect

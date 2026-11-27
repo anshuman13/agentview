@@ -15,7 +15,6 @@
 :is(.tr, .tr-rows) > .tr-act + .tr-box, :is(.tr, .tr-rows) > .tr-box + .tr-act { margin-top: var(--sp-2); }
 :is(.tr, .tr-rows) > .tr-user + * { margin-top: var(--sp-12); }
 .tr-rows { position: relative; }
-.tr-rows > .tr-quote { position: absolute; z-index: 5; margin: 0; box-shadow: var(--elev-3); transform: translateY(-100%); }
 
 .tr-user {
   position: relative; width: fit-content; max-width: 85%; margin-left: auto; padding: var(--sp-5) var(--sp-6); border-radius: var(--shape-lg);

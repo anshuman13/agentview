@@ -322,15 +322,7 @@ cost so far. The status bar usage tooltip adds a Spend block with today's and th
   then Use again, which puts that prompt in the composer to edit and send again (like editing a Slack message), and
   Copy, which copies the prompt text ("Prompt copied"). On the phone a long press on a prompt opens the same menu, with
   the Sent time first as a disabled line. Queued and stopping prompts have none of these (a queued one has Send now).
-- Selecting text inside one finished reply in the web transcript shows Quote, which puts the passage in the composer as
-  a Markdown quote ("> " on each line, cut at 1500 characters, a blank line after) after any draft (`quoteText` in
-  `shared/composerText.ts`). A selection in a prompt, a step, an agent box or across two replies shows nothing; Esc or a
-  click elsewhere hides it. The phone uses the system selection menu.
-- On the phone a finished reply's footer has Quote after Copy (not in read-only mode). It opens a Quote sheet with the
-  reply's blocks (split at blank lines, fenced code whole), each clamped to 4 lines and checked by a tap; Quote N puts the
-  picked blocks, in reply order, after the draft with the same rule as web (`quoteText` in `chat/QuoteSheet.kt`,
-  `shared/fixtures/quote-text.json`). Quote, Use again on a sent prompt and a tap in Saved prompts then focus the
-  composer with the cursor at the end and the keyboard up, as every insert does on web.
+- On the phone, Use again on a sent prompt and a tap in Saved prompts focus the composer with the cursor at the end and the keyboard up, as every insert does on web.
 - A fenced bash, sh, shell, zsh or console block of one line in a chat reply shows Run in terminal beside Copy (web on
   hover, Android an icon button, not in read-only mode). It types the command, without a leading "$ ", into the chat's
   last terminal (or a new one) and opens the terminal without pressing Enter (`shellLine`, checked by
