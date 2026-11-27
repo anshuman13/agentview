@@ -140,7 +140,6 @@ fun OverviewPage(hub: Hub, st: CodexState, profile: String?, now: Long, actions:
     val seen by hub.workspace.select { it.seen }
     val shown by hub.store.state.select { it.shownId }
     val groups = remember(live, seen, shown) { agentGroups(live, seen, shown) }
-    val done = remember(live, groups, shown, now / 60_000) { activity(live, groups.flatMap { g -> g.second.map { it.id } }.toSet() + listOfNotNull(shown), dayStart(now)) }
     val failedCalendars = remember(st.scans) { failedCalendars(st.scans) }
     CompositionLocalProvider(LocalCardGroups provides true) { LazyColumn(Modifier.fillMaxSize()) {
         if (failedCalendars.isNotEmpty()) item(key = "failed-calendars") {
@@ -149,7 +148,6 @@ fun OverviewPage(hub: Hub, st: CodexState, profile: String?, now: Long, actions:
         morningSection(hub, st, profile, now)
         item(key = "up-next") { UpNextSection(hub, st, d, now, actions, onOpen, onNeeds, onAdd, onMeeting, onNotes) }
         agentSections(groups) { hub.link.value = DeepLink(chat = it) }
-        if (done.isNotEmpty()) activitySection(done) { hub.link.value = DeepLink(chat = it) }
         if (d.rows.isNotEmpty()) todaySection(d, now, actions, all, { all = true }, onOpen, onMeeting)
         if (d.s.overdue.isEmpty() && d.s.today.isEmpty()) ideasSection(hub, st, d, now)
         planDaySection(d, plan, { plan = it }, now, actions)
@@ -260,19 +258,6 @@ private fun LazyListScope.agentSections(groups: List<Pair<AgentGroup, List<LiveC
                     }
                     ListRow(c.title.ifBlank { UNTITLED }, meta, onClick = { onOpen(c.id) })
                 }
-            }
-        }
-    }
-}
-
-private fun LazyListScope.activitySection(rows: List<ActivityRow>, onOpen: (String) -> Unit) {
-    item(key = "activity") {
-        var open by rememberSaveable { mutableStateOf(false) }
-        Group {
-            ListRow("Done today", "${rows.size} · last: ${rows[0].title}", lines = 1, onClick = { open = !open }, trailing = { AvIcon(if (open) "chevron-up" else "chevron-down", null, Tokens.icon, tint = av.fgMuted) })
-            if (open) rows.forEach { a ->
-                Hairline()
-                ListRow(a.title, "${a.line} · ${clock(a.at)}", leading = { AvIcon(if (a.failed) "error" else "pass", null, Tokens.icon, tint = if (a.failed) av.warn else av.ok) }, lines = 1, onClick = { onOpen(a.id) })
             }
         }
     }
