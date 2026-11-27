@@ -41,6 +41,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.withLink
 import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
@@ -101,37 +102,40 @@ fun Markdown(text: String, modifier: Modifier = Modifier, streaming: Boolean = f
 }
 
 @Composable
-private fun MdBlocks(blocks: List<MdBlock>, modifier: Modifier = Modifier, reading: Boolean = false) {
+private fun MdBlocks(blocks: List<MdBlock>, modifier: Modifier = Modifier, reading: Boolean = false, muted: Boolean = false) {
     val parentFresh = LocalFreshBlock.current
     val seen = remember { blocks.size }
-    Column(modifier, verticalArrangement = Arrangement.spacedBy(Tokens.mdGap)) {
+    Column(modifier) {
         blocks.forEachIndexed { i, b ->
-            CompositionLocalProvider(LocalFreshBlock provides (parentFresh || i >= seen)) { MdBlockView(b, reading) }
+            // Like web margins: a heading keeps a wider gap above it and a narrow one below.
+            val top = when { i == 0 -> 0.dp; b is MdBlock.Heading -> Tokens.mdHeadGap; blocks[i - 1] is MdBlock.Heading -> Tokens.sp3; else -> Tokens.mdGap }
+            Box(Modifier.padding(top = top)) {
+                CompositionLocalProvider(LocalFreshBlock provides (parentFresh || i >= seen)) { MdBlockView(b, reading, muted) }
+            }
         }
     }
 }
 
 @Composable
-private fun MdBlockView(b: MdBlock, reading: Boolean) {
-    val body = (if (reading) Type.reading else Type.body).copy(color = av.fg)
+private fun MdBlockView(b: MdBlock, reading: Boolean, muted: Boolean) {
+    val body = (if (reading) Type.reading else Type.body).copy(color = if (muted) av.fgMuted else av.fg)
     when (b) {
         is MdBlock.Para -> Text(fadedText(inlineText(b.inlines), body.color), style = body)
         is MdBlock.Heading -> Text(
             fadedText(inlineText(b.inlines), body.color),
             style = if (reading) body.copy(fontWeight = FontWeight.Bold, fontSize = if (b.level <= 1) body.fontSize * 1.25f else body.fontSize)
-                else (if (b.level <= 1) Type.headline.copy(fontSize = Tokens.fsXl) else Type.headline).copy(color = av.fg),
-            modifier = Modifier.padding(top = Tokens.mdHeadGap - Tokens.mdGap),
+                else (if (b.level <= 1) Type.headline.copy(fontSize = Tokens.fsXl) else Type.headline).copy(color = body.color),
         )
         is MdBlock.Code -> CodeBlock(b.text, b.lang)
         is MdBlock.Quote -> Row(Modifier.height(IntrinsicSize.Min)) {
             Box(Modifier.width(Tokens.bar).fillMaxHeight().background(av.borderStrong))
-            MdBlocks(b.blocks, Modifier.padding(start = Tokens.sp4), reading)
+            MdBlocks(b.blocks, Modifier.padding(start = Tokens.sp5), reading, muted = true)
         }
         is MdBlock.Items -> Column(verticalArrangement = Arrangement.spacedBy(Tokens.mdItemGap)) {
             b.items.forEachIndexed { n, item ->
                 Row {
                     Text(if (b.ordered) "${b.start + n}." else "•", style = body, color = av.fgMuted, modifier = Modifier.width(Tokens.leadWidth).padding(start = Tokens.sp2))
-                    MdBlocks(item, Modifier.weight(1f), reading)
+                    MdBlocks(item, Modifier.weight(1f), reading, muted)
                 }
             }
         }

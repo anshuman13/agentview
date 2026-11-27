@@ -43,7 +43,8 @@
 .tr-assistant .md :is(h1, h2, h3, h4) { font-size: 1em; font-weight: 700; }
 .tr-assistant .md h1 { font-size: 1.25em; }
 .tr-assistant .md h2 { font-size: 1.12em; }
-.tr-assistant .md :is(strong, b, th) { font-weight: 700; }
+.tr-assistant .md :is(strong, b) { font-weight: 700; }
+.tr-assistant .md table { font-size: var(--fs-subheadline); line-height: var(--lh-snug); }
 .tr-assistant .md code { font-size: 0.82em; }
 .tr-system { font-size: var(--fs-sm); color: var(--fg-muted); }
 .tr-system.err { color: var(--err); }
@@ -158,8 +159,6 @@
 .tr-alarm-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--type-body-size); line-height: var(--type-body-line); }
 .tr-alarm-status { display: flex; align-items: center; gap: var(--sp-3); font-size: var(--type-meta-size); line-height: var(--type-meta-line); color: var(--meta-fg); }
 .tr-alarm-status.error { color: var(--err); }
-.tr-assistant .md :is(th, td) { border-width: 0 0 1px; border-color: var(--border); padding: var(--sp-3) var(--sp-8) var(--sp-3) 0; }
-.tr-assistant .md th { border-bottom-color: var(--border-strong); }
 .tr-steps-head > span + .tr-tools::before { content: '\00b7'; margin-right: var(--sp-3); }
 .tr-subs { display: flex; flex-direction: column; gap: var(--sp-3); }
 .tr-sub-feed { display: flex; flex-direction: column; gap: var(--sp-5); padding: var(--sp-4) var(--sp-6) var(--sp-6); }

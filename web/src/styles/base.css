@@ -68,8 +68,8 @@ pre.wrap { white-space: pre-wrap; word-break: break-word; font-family: inherit; 
 @media (hover: none) { :is(.md-copy, .md-run) { opacity: 1; } }
 .md a { color: var(--link); text-decoration: none; }
 @media (hover: hover) { .md a:hover { text-decoration: underline; } }
-.md table { display: block; max-width: 100%; overflow-x: auto; border-collapse: collapse; }
-.md :is(th, td) { border-bottom: 1px solid var(--border); padding: var(--sp-4) var(--sp-6) var(--sp-4) 0; text-align: left; word-break: normal; overflow-wrap: normal; }
+.md table { display: block; max-width: 100%; overflow-x: auto; border-collapse: collapse; font-family: var(--font); }
+.md :is(th, td) { border-bottom: 1px solid var(--border); padding: var(--sp-4) var(--sp-6) var(--sp-4) 0; text-align: left; vertical-align: top; word-break: normal; overflow-wrap: normal; }
 .md th { border-bottom-color: var(--border-strong); font-weight: 600; }
 .md blockquote { border-left: 3px solid var(--border-strong); padding-left: var(--sp-5); color: var(--fg-muted); }
 .md strong { color: var(--fg); }
