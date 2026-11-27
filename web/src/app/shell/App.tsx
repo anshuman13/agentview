@@ -54,7 +54,7 @@ export function App() {
       <Restarting />
       <Offline />
       <div className="body">
-        <ActivityBar showing={showing} sidebar={sidebar} view={view} browserShown={editor === 'browser'} showView={showView} openPage={openPage} switchEditor={() => setEditor((v) => (v === 'file' ? 'browser' : 'file'))} />
+        <ActivityBar showing={showing} sidebar={sidebar} view={view} browserShown={editor === 'browser'} showView={showView} openPage={openPage} switchEditor={() => setEditor((v) => (v === 'file' ? 'browser' : 'file'))} toggleSidebar={() => setSidebar((v) => !v)} />
 
         <SidebarPane view={view} tab={tab} chatsView={chatsView} setView={setView} project={project} back={goHome} />
         <div className="sash side-sash desktop-only" onPointerDown={startSideResize} />
@@ -76,14 +76,12 @@ export function App() {
             showWork={() => { setEditor('work'); setTab((t) => (t === 'browser' || t === 'agents' ? 'code' : t)); }}
             closeWork={closeWork}
             mobileExplorer={mobileExplorer}
-            sidebar={sidebar}
             chatOpen={chatOpen}
             showFile={() => { setEditor('file'); setBrowse(false); setTab((t) => (t === 'browser' || t === 'agents' ? 'code' : t)); }}
             showPage={(p) => { setEditor(p); setTab((t) => (t === 'browser' || t === 'agents' ? 'code' : t)); }}
             showExplorer={() => { setTab('code'); setEditor('file'); setBrowse(true); }}
             closeBrowser={() => { setEditor('file'); setTab((t) => (t === 'browser' ? 'chat' : t)); }}
             closePage={closePage}
-            toggleSidebar={() => setSidebar((v) => !v)}
             toggleChat={() => setChatOpen((v) => !v)}
           />
           <div className={`editor ${active === 'file' ? 'shown' : ''}`}><Suspense fallback={<Loading />}><CodePane /></Suspense></div>

@@ -12,20 +12,18 @@ type Props = {
   showWork: () => void;
   closeWork: () => void;
   mobileExplorer: boolean;
-  sidebar: boolean;
   chatOpen: boolean;
   showFile: () => void;
   showPage: (p: Page) => void;
   showExplorer: () => void;
   closeBrowser: () => void;
   closePage: () => void;
-  toggleSidebar: () => void;
   toggleChat: () => void;
 };
 
 const reveal = (el: HTMLElement | null) => el?.scrollIntoView({ inline: 'nearest', block: 'nearest' });
 
-export function EditorTabs({ showing, page, work, showWork, closeWork, mobileExplorer, sidebar, chatOpen, showFile, showPage, showExplorer, closeBrowser, closePage, toggleSidebar, toggleChat }: Props) {
+export function EditorTabs({ showing, page, work, showWork, closeWork, mobileExplorer, chatOpen, showFile, showPage, showExplorer, closeBrowser, closePage, toggleChat }: Props) {
   const openFile = useStore((s) => s.ui.openFile);
   const pendingCount = useStore((s) => s.pending.length);
   const fileName = openFile ? openFile.split('/').pop() : null;
@@ -61,9 +59,6 @@ export function EditorTabs({ showing, page, work, showWork, closeWork, mobileExp
         </div>
       )}
       <span className="tabs-spacer desktop-only" />
-      <button className="tab-tool desktop-only" title={`${sidebar ? 'Hide' : 'Show'} the left sidebar (${keyText('⌘B')})`} aria-keyshortcuts={ariaKeys('⌘B')} onClick={toggleSidebar}>
-        <Icon name={sidebar ? 'layout-sidebar-left' : 'layout-sidebar-left-off'} small />
-      </button>
       <button className="tab-tool desktop-only" title={`${chatOpen ? 'Hide' : 'Show'} the chat (${keyText('⌥⌘B')})`} aria-keyshortcuts={ariaKeys('⌥⌘B')} onClick={toggleChat}>
         <Icon name={chatOpen ? 'layout-sidebar-right' : 'layout-sidebar-right-off'} small />
         {!chatOpen && pendingCount > 0 && <span className="badge">{pendingCount}</span>}

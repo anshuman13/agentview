@@ -15,13 +15,17 @@ export const VIEWS: { id: View; icon: string; title: string }[] = [
   { id: 'sessions', icon: 'repo', title: 'Workspace' },
 ];
 
-type Props = { showing: string; sidebar: boolean; view: View; browserShown: boolean; showView: (v: View) => void; openPage: (p: Page) => void; switchEditor: () => void };
+type Props = { showing: string; sidebar: boolean; view: View; browserShown: boolean; showView: (v: View) => void; openPage: (p: Page) => void; switchEditor: () => void; toggleSidebar: () => void };
 
-export function ActivityBar({ showing, sidebar, view, browserShown, showView, openPage, switchEditor }: Props) {
+export function ActivityBar({ showing, sidebar, view, browserShown, showView, openPage, switchEditor, toggleSidebar }: Props) {
   const pages = usePages();
   const { chats } = useCounts();
   return (
     <aside className="activitybar desktop-only">
+      <button className="side-toggle" title={`${sidebar ? 'Hide' : 'Show'} the sidebar (${keyText('⌘B')})`} aria-label={`${sidebar ? 'Hide' : 'Show'} the sidebar`} aria-keyshortcuts={ariaKeys('⌘B')} aria-pressed={sidebar} onClick={toggleSidebar}>
+        <Icon name={sidebar ? 'layout-sidebar-left' : 'layout-sidebar-left-off'} />
+      </button>
+      <span className="divider" />
       {VIEWS.map((v) => (
         <button key={v.id} data-view={v.id} className={(v.id === 'assistant' ? showing === 'assistant' : sidebar && view === v.id) ? 'active' : ''} title={v.id === 'assistant' ? `Codex (${keyText('⌘I')})` : v.title} aria-label={v.title} aria-keyshortcuts={v.id === 'assistant' ? ariaKeys('⌘I') : undefined} onClick={() => showView(v.id)}>
           <Icon name={v.icon} />
