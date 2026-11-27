@@ -64,7 +64,7 @@ function TranscriptView({ loaded, sessionId, events, earlier, cwd, running, bill
   const replyCount = useMemo(() => items.filter((it) => it.kind === 'assistant').length, [items]);
   const cards = useMemo(() => docCards(items), [items]);
   const [fold] = useState(createFoldBuilder);
-  const list = useMemo<FoldRow[]>(() => fold(items, events, cards).filter((r) => r.kind === 'item' || r.steps.length > 0 || r.work.tools > 0), [fold, items, events, cards]);
+  const list = useMemo<FoldRow[]>(() => fold(items, events, cards).filter((r) => r.kind === 'item' || r.steps.length > 0 || r.work.tools > 0 || r.thought !== ''), [fold, items, events, cards]);
   const { shown, start, from, staging, loading, showEarlier, reveal } = useRowWindow(list.length, replyCount, earlier, box, scroll.stick);
   const [finding, setFinding] = useState(false);
   useEffect(() => {

@@ -90,7 +90,7 @@ fun Transcript(hub: Hub, view: ChatView, earlier: Int, settled: Boolean, chatId:
     val noEvents by hub.store.state.select { it.events.isEmpty() }
     val canRewind by hub.store.state.select { it.session?.capabilities?.rewind ?: true }
     val bill by hub.store.state.select { billing(it.session?.provider) }
-    val list = remember(view.items, view.folds) { view.foldRows.filter { it is FoldRow.Row || (it is FoldRow.Fold && (it.steps.isNotEmpty() || it.work.tools > 0)) } }
+    val list = remember(view.items, view.folds) { view.foldRows.filter { it is FoldRow.Row || (it is FoldRow.Fold && (it.steps.isNotEmpty() || it.work.tools > 0 || it.thought.isNotEmpty())) } }
     val folded = remember(view.runs) { view.runs.values.flatMap { r -> r.drop(1).map { it.id } }.toSet() }
     val fresh = remember(chatId) { FreshReplies() }
     remember(items) { fresh.update(items) }
