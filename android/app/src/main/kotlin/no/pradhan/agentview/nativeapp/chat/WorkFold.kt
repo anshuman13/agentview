@@ -134,10 +134,10 @@ private class Span(val at: Long) {
 }
 
 // Each prompt's time, the time of its last result and the cost its results add over the result before them (the first loaded result has none); rows before the first prompt belong to "".
-private fun spans(events: List<ChatEvent>): Map<String, Span> {
+private fun spans(events: List<ChatEvent>, lastCost: Double?): Map<String, Span> {
     val out = HashMap<String, Span>()
     var cur = Span(events.firstOrNull()?.at ?: 0L).also { out[""] = it }
-    var last: Double? = null
+    var last = lastCost
     for (e in events) {
         if (e.kind == "user") cur = Span(e.at).also { out[e.id] = it }
         else if (e.kind == "result") {
@@ -170,11 +170,30 @@ private fun workOf(items: List<Item>, span: Span): Work {
 }
 
 // Splits the rows into turns, one per prompt, and moves the work of each into one fold placed above its last reply, or at its end while there is no reply.
-fun foldTurns(items: List<Item>, events: List<ChatEvent>): List<FoldRow> {
-    val prompts = events.filter { it.kind == "user" }.mapTo(HashSet()) { it.id }
-    val span = spans(events)
-    val steps = stepsByTurn(events)
+fun foldTurns(items: List<Item>, events: List<ChatEvent>): List<FoldRow> = foldGroups(items, events, docCardIds(items), null, true)
+
+private fun <T> samePrefix(a: List<T>, b: List<T>, n: Int) = a.size >= n && b.size >= n && (0 until n).all { a[it] === b[it] }
+
+// web workFold.ts createFoldBuilder: foldTurns that refolds only the last turn when the turns before it are the same objects as in the previous fold, and keeps their rows.
+fun foldTurns(items: List<Item>, events: List<ChatEvent>, prevItems: List<Item>, prevEvents: List<ChatEvent>, prevFolds: List<FoldRow>): List<FoldRow> {
+    val cut = events.indexOfLast { it.kind == "user" }
+    val itemCut = if (cut < 0) -1 else items.indexOfFirst { it.id == events[cut].id }
+    if (itemCut < 0 || prevEvents.indexOfLast { it.kind == "user" } != cut || prevItems.indexOfFirst { it.id == events[cut].id } != itemCut ||
+        !samePrefix(prevEvents, events, cut) || !samePrefix(prevItems, items, itemCut)) return foldTurns(items, events)
     val cards = docCardIds(items)
+    val prevCards = docCardIds(prevItems)
+    if ((0 until itemCut).any { (items[it].id in cards) != (items[it].id in prevCards) }) return foldTurns(items, events)
+    val head = prevFolds.indexOfFirst { it is FoldRow.Row && it.it.id == events[cut].id }
+    if (head < 0) return foldTurns(items, events)
+    val lastCost = (cut - 1 downTo 0).firstNotNullOfOrNull { events[it].takeIf { e -> e.kind == "result" && e.costUsd > 0 }?.costUsd }
+    return prevFolds.subList(0, head) + foldGroups(items.subList(itemCut, items.size), events.subList(cut, events.size), cards, lastCost, true)
+}
+
+// foldTurns over a run of whole turns; lastCost is the cost of the result before them, endsChat whether the run's last turn is the chat's last.
+private fun foldGroups(items: List<Item>, events: List<ChatEvent>, cards: Set<String>, lastCost: Double?, endsChat: Boolean): List<FoldRow> {
+    val prompts = events.filter { it.kind == "user" }.mapTo(HashSet()) { it.id }
+    val span = spans(events, lastCost)
+    val steps = stepsByTurn(events)
     val groups = mutableListOf<MutableList<Item>>()
     for (it in items) {
         if (it.id in prompts || groups.isEmpty()) groups.add(mutableListOf())
@@ -198,7 +217,7 @@ fun foldTurns(items: List<Item>, events: List<ChatEvent>): List<FoldRow> {
         val tasks = steps[key]
         if (hidden.isNotEmpty() || tasks != null) {
             val at = if (reply < 0) rows.size else rows.indexOfFirst { it is FoldRow.Row && it.it === group[reply] }
-            rows.add(at, FoldRow.Fold(key.ifEmpty { first.id }, hidden, workOf(hidden, span[key] ?: span.getValue("")), g == groups.lastIndex, tasks?.list().orEmpty(), tasks?.now.orEmpty(), claimsOf(hidden), proposedOf(hidden), rememberedOf(hidden)))
+            rows.add(at, FoldRow.Fold(key.ifEmpty { first.id }, hidden, workOf(hidden, span[key] ?: span.getValue("")), endsChat && g == groups.lastIndex, tasks?.list().orEmpty(), tasks?.now.orEmpty(), claimsOf(hidden), proposedOf(hidden), rememberedOf(hidden)))
         }
         out += rows
     }

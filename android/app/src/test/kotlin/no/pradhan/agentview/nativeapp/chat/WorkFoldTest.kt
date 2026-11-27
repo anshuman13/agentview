@@ -5,6 +5,7 @@ import kotlinx.serialization.json.JsonPrimitive
 import no.pradhan.agentview.nativeapp.net.ChatEvent
 import no.pradhan.agentview.nativeapp.net.protocolJson
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
 
@@ -20,6 +21,23 @@ class WorkFoldTest {
     private fun fold(events: List<ChatEvent>) = foldTurns(buildTranscript(events), events)
     private fun kinds(rows: List<FoldRow>) = rows.map { r -> if (r is FoldRow.Fold) "fold" else (r as FoldRow.Row).it::class.simpleName }
     private val work = Work(12, 3, 1, 0, 120_000, 0.4)
+
+    @Test
+    fun aRebuiltViewFoldsLikeFoldTurnsAndKeepsSettledRows() {
+        val w1 = tool("Write", path("/r/docs/plan.md"))
+        val w2 = tool("Write", path("/r/docs/plan.md"))
+        val events = listOf(say("hi"), user(), w1, result(w1), say("a"), done(0.1), user(), tool("Bash"), say("b"), done(0.3), user(), w2, result(w2), say("c"), done(0.6))
+        var view: ChatView? = null
+        for (i in 1..events.size) {
+            val now = events.subList(0, i)
+            val next = buildView("c", now, 0L, view)
+            assertEquals(fold(now), next.folds)
+            view = next
+        }
+        val more = buildView("c", events + tool("Bash"), 0L, view)
+        val head = more.folds.indexOfFirst { it is FoldRow.Row && it.it.id == events[10].id }
+        (0 until head).forEach { assertTrue(more.folds[it] === view!!.folds[it]) }
+    }
 
     @Test
     fun titleKeepsToolsAndFilesAndMovesTheRestToTheDetail() {

@@ -105,10 +105,9 @@ const taskList = (t: Tasks | undefined): StatusStep[] => (t ? [...t.done, ...t.n
 type Span = { at: number; end: number; cost: number };
 
 // Each prompt's time, the time of its last result and the cost its results add over the result before them (the first loaded result has none); rows before the first prompt belong to ''.
-function spans(events: ChatEvent[]) {
+function spans(events: ChatEvent[], last: number | null) {
   const out = new Map<string, Span>([['', { at: events[0]?.at ?? 0, end: 0, cost: 0 }]]);
   let cur = out.get('')!;
-  let last: number | null = null;
   for (const e of events) {
     if (e.kind === 'user') out.set(e.id, (cur = { at: e.at, end: 0, cost: 0 }));
     else if (e.kind === 'result') {
@@ -141,8 +140,13 @@ function workOf(items: Item[], span: Span): Work {
 // Splits the rows into turns, one per prompt, and moves the work of each into one fold placed above its last reply, or at its end while there is no reply.
 // Android WorkFold.kt foldTurns says the same.
 export function foldTurns(items: Item[], events: ChatEvent[], cards = docCards(items)): FoldRow[] {
+  return foldGroups(items, events, cards, null, true);
+}
+
+// foldTurns over a run of whole turns; lastCost is the cost of the result before them, endsChat whether the run's last turn is the chat's last.
+function foldGroups(items: Item[], events: ChatEvent[], cards: Set<string>, lastCost: number | null, endsChat: boolean): FoldRow[] {
   const prompts = new Set(events.filter((e) => e.kind === 'user').map((e) => e.id));
-  const span = spans(events);
+  const span = spans(events, lastCost);
   const steps = stepsByTurn(events);
   const groups: Item[][] = [];
   for (const it of items) {
@@ -166,7 +170,7 @@ export function foldTurns(items: Item[], events: ChatEvent[], cards = docCards(i
     });
     const tasks = steps.get(key);
     if (hidden.length > 0 || tasks) {
-      const fold: FoldRow = { kind: 'fold', id: key || first.id, hidden, work: workOf(hidden, span.get(key) ?? span.get('')!), last: g === groups.length - 1, steps: taskList(tasks), now: tasks?.now ?? '', claims: claimsOf(hidden), proposed: proposedOf(hidden), remembered: rememberedOf(hidden) };
+      const fold: FoldRow = { kind: 'fold', id: key || first.id, hidden, work: workOf(hidden, span.get(key) ?? span.get('')!), last: endsChat && g === groups.length - 1, steps: taskList(tasks), now: tasks?.now ?? '', claims: claimsOf(hidden), proposed: proposedOf(hidden), remembered: rememberedOf(hidden) };
       const at = reply < 0 ? rows.length : rows.findIndex((r) => r.kind === 'item' && r.it === group[reply]);
       rows.splice(at, 0, fold);
     }
@@ -193,14 +197,42 @@ function sameRow(a: FoldRow, b: FoldRow) {
 
 const rowKey = (r: FoldRow) => (r.kind === 'item' ? `item:${r.it.id}` : `fold:${r.id}`);
 
-// foldTurns that hands back the previous row object for every row that came out the same, so an append changes only the rows of its own turn.
+const samePrefix = <T>(a: T[], b: T[], n: number) => {
+  for (let i = n - 1; i >= 0; i--) if (a[i] !== b[i]) return false;
+  return true;
+};
+
+type Settled = { events: ChatEvent[]; items: Item[]; cut: number; itemCut: number; cards: string; lastCost: number | null; rows: FoldRow[] };
+
+// foldTurns that refolds only the last turn while the turns before it stay the same, and hands back the previous row object for every row that came out the same, so an append changes only the rows of its own turn.
 export function createFoldBuilder() {
   let prev = new Map<string, FoldRow>();
+  let settled: Settled | null = null;
+  const reuse = (r: FoldRow) => {
+    const old = prev.get(rowKey(r));
+    return old && sameRow(old, r) ? old : r;
+  };
   return (items: Item[], events: ChatEvent[], cards = docCards(items)): FoldRow[] => {
-    const rows = foldTurns(items, events, cards).map((r) => {
-      const old = prev.get(rowKey(r));
-      return old && sameRow(old, r) ? old : r;
-    });
+    let cut = events.length - 1;
+    while (cut >= 0 && events[cut].kind !== 'user') cut--;
+    const itemCut = cut < 0 ? -1 : items.findIndex((it) => it.id === events[cut].id);
+    let rows: FoldRow[];
+    if (itemCut < 0) {
+      settled = null;
+      rows = foldTurns(items, events, cards).map(reuse);
+    } else {
+      const head = items.slice(0, itemCut);
+      const headCards = new Set(head.filter((it) => cards.has(it.id)).map((it) => it.id));
+      const cardKey = [...headCards].join();
+      if (!settled || settled.cut !== cut || settled.itemCut !== itemCut || settled.cards !== cardKey || !samePrefix(settled.events, events, cut) || !samePrefix(settled.items, items, itemCut)) {
+        let lastCost: number | null = null;
+        for (let i = cut - 1; i >= 0 && lastCost === null; i--) { const e = events[i]; if (e.kind === 'result' && e.costUsd > 0) lastCost = e.costUsd; }
+        settled = { events, items, cut, itemCut, cards: cardKey, lastCost, rows: foldGroups(head, events.slice(0, cut), headCards, null, false).map(reuse) };
+      }
+      settled.events = events;
+      settled.items = items;
+      rows = [...settled.rows, ...foldGroups(items.slice(itemCut), events.slice(cut), cards, settled.lastCost, true).map(reuse)];
+    }
     prev = new Map(rows.map((r) => [rowKey(r), r]));
     return rows;
   };

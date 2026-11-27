@@ -63,7 +63,7 @@ fun buildView(chat: String, events: List<ChatEvent>, now: Long, prev: ChatView?)
         items.filterIsInstance<Item.File>().filter { it.error == null }.map { it.path },
         rewindReplies(items), exploreRuns(items), days, dayOfRows(items, days),
         events.associate { it.id to it.at }, items.lastOrNull { it is Item.User }?.id, latestChecklist(events), docCardIds(items),
-        foldTurns(items, events), answers, openAnswerOf(items, answers), items.count { it is Item.Assistant },
+        if (prev?.chat == chat) foldTurns(items, events, prev.items, prev.events, prev.folds) else foldTurns(items, events), answers, openAnswerOf(items, answers), items.count { it is Item.Assistant },
     )
 }
 

@@ -70,6 +70,30 @@ describe('createFoldBuilder', () => {
     const items = buildTranscript(events);
     expect(createFoldBuilder()(items, events)).toEqual(foldTurns(items, events));
   });
+
+  it('gives the rows foldTurns gives at every step, with costs and a doc card that moves to a later turn', () => {
+    const run = setup();
+    const write = (n: number) => tool('Write', { file_path: '/r/docs/plan.md', content: `v${n}` });
+    const w1 = write(1);
+    const w2 = write(2);
+    const events = [say('hi'), user('one'), w1, result(w1.id), say('a'), done(0.1), user('two'), tool('Bash'), say('b'), done(0.3), user('three'), w2, result(w2.id), say('c'), done(0.6)];
+    for (let i = 1; i <= events.length; i++) {
+      const now = events.slice(0, i);
+      expect(run(now)).toEqual(fold(now));
+    }
+  });
+
+  it('refolds an earlier turn whose doc card a later write takes over', () => {
+    const write = (n: number) => tool('Write', { file_path: '/r/docs/plan.md', content: `v${n}` });
+    const w1 = write(1);
+    const before = [user('one'), w1, result(w1.id), say('a'), user('two')];
+    const items = buildTranscript(before);
+    const after = [...before, write(2)];
+    const more = [...items, buildTranscript(after).at(-1)!];
+    const folds = createFoldBuilder();
+    folds(items, before);
+    expect(folds(more, after)).toEqual(foldTurns(more, after));
+  });
 });
 
 describe('foldTurns', () => {
