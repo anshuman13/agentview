@@ -46,6 +46,17 @@ private fun stepsByTurn(events: List<ChatEvent>): Map<String, Tasks> {
     return out
 }
 
+// web workFold.ts thoughtsByTurn: each prompt's latest thinking line.
+private fun thoughtsByTurn(events: List<ChatEvent>): Map<String, String> {
+    val out = HashMap<String, String>()
+    var key = ""
+    for (e in events) {
+        if (e.kind == "user") key = e.id
+        if (e.kind == "thinking") out[key] = e.text
+    }
+    return out
+}
+
 sealed interface FoldRow {
     val key: String
 
@@ -53,7 +64,7 @@ sealed interface FoldRow {
         override val key get() = it.id
     }
 
-    data class Fold(val id: String, val hidden: List<Item>, val work: Work, val last: Boolean, val steps: List<StatusStep> = emptyList(), val now: String = "", val claims: List<Claim> = emptyList(), val proposed: List<Proposal> = emptyList(), val remembered: List<String> = emptyList()) : FoldRow {
+    data class Fold(val id: String, val hidden: List<Item>, val work: Work, val last: Boolean, val steps: List<StatusStep> = emptyList(), val now: String = "", val thought: String = "", val claims: List<Claim> = emptyList(), val proposed: List<Proposal> = emptyList(), val remembered: List<String> = emptyList()) : FoldRow {
         override val key get() = "work:$id"
     }
 }
@@ -194,6 +205,7 @@ private fun foldGroups(items: List<Item>, events: List<ChatEvent>, cards: Set<St
     val prompts = events.filter { it.kind == "user" }.mapTo(HashSet()) { it.id }
     val span = spans(events, lastCost)
     val steps = stepsByTurn(events)
+    val thoughts = thoughtsByTurn(events)
     val groups = mutableListOf<MutableList<Item>>()
     for (it in items) {
         if (it.id in prompts || groups.isEmpty()) groups.add(mutableListOf())
@@ -215,9 +227,11 @@ private fun foldGroups(items: List<Item>, events: List<ChatEvent>, cards: Set<St
             if (shown) rows += FoldRow.Row(it)
         }
         val tasks = steps[key]
-        if (hidden.isNotEmpty() || tasks != null) {
+        val last = endsChat && g == groups.lastIndex
+        val thought = if (last) thoughts[key].orEmpty() else ""
+        if (hidden.isNotEmpty() || tasks != null || thought.isNotEmpty()) {
             val at = if (reply < 0) rows.size else rows.indexOfFirst { it is FoldRow.Row && it.it === group[reply] }
-            rows.add(at, FoldRow.Fold(key.ifEmpty { first.id }, hidden, workOf(hidden, span[key] ?: span.getValue("")), endsChat && g == groups.lastIndex, tasks?.list().orEmpty(), tasks?.now.orEmpty(), claimsOf(hidden), proposedOf(hidden), rememberedOf(hidden)))
+            rows.add(at, FoldRow.Fold(key.ifEmpty { first.id }, hidden, workOf(hidden, span[key] ?: span.getValue("")), last, tasks?.list().orEmpty(), tasks?.now.orEmpty(), thought, claimsOf(hidden), proposedOf(hidden), rememberedOf(hidden)))
         }
         out += rows
     }

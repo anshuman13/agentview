@@ -23,6 +23,16 @@ class WorkFoldTest {
     private val work = Work(12, 3, 1, 0, 120_000, 0.4)
 
     @Test
+    fun theLastTurnGetsAFoldWithItsLatestThinkingLine() {
+        val think = { t: String -> ChatEvent(id("th"), "thinking", text = t, at = n * 1000) }
+        val rows = fold(listOf(user(), think("old"), say("one"), user(), think("first"), think("second")))
+        assertEquals(listOf("User", "Assistant", "User", "fold"), kinds(rows))
+        val f = rows[3] as FoldRow.Fold
+        assertEquals("second", f.thought)
+        assertTrue(f.last)
+    }
+
+    @Test
     fun aRebuiltViewFoldsLikeFoldTurnsAndKeepsSettledRows() {
         val w1 = tool("Write", path("/r/docs/plan.md"))
         val w2 = tool("Write", path("/r/docs/plan.md"))

@@ -10,6 +10,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.foundation.background
@@ -56,6 +57,8 @@ internal fun TaskLines(hub: Hub, fold: FoldRow.Fold, cwd: String, live: Boolean,
     val current = if (live) steps.firstOrNull { !it.done } else null
     val spin = @Composable { WorkDots() }
     val doing = if (live) runningStep(fold.hidden, cwd) else ""
+    val thinking = if (live) fold.thought else ""
+    if (fold.work.tools == 0 && steps.isEmpty() && fold.claims.isEmpty() && fold.proposed.isEmpty() && fold.remembered.isEmpty() && thinking.isEmpty()) return
     var reading by remember { mutableStateOf(false) }
     var proposing by remember { mutableStateOf(false) }
     var memory by remember { mutableStateOf(false) }
@@ -81,6 +84,7 @@ internal fun TaskLines(hub: Hub, fold: FoldRow.Fold, cwd: String, live: Boolean,
                 AvIcon("chevron-right", null, Tokens.sp5, tint = av.fgMuted)
             }
         }
+        if (thinking.isNotEmpty()) Text(thinking, style = Type.footnote, color = av.fgMuted, fontStyle = FontStyle.Italic, maxLines = 1, overflow = TextOverflow.Ellipsis)
         @Composable fun Task(icon: @Composable () -> Unit, text: String, color: androidx.compose.ui.graphics.Color) =
             Row(Modifier.fillMaxWidth().padding(horizontal = Tokens.sp6, vertical = Tokens.sp4), horizontalArrangement = Arrangement.spacedBy(Tokens.sp4)) { Box(Modifier.padding(top = Tokens.sp1)) { icon() }; Text(text, style = Type.footnote, color = color) }
         if (reading) {
