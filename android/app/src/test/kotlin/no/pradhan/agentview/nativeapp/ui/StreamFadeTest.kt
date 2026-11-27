@@ -27,6 +27,12 @@ class StreamFadeTest {
         assertEquals(listOf(40 to 46), fadeRanges(b, 46, 1050).map { it.start to it.end })
     }
 
+    @Test fun aBlockThatAppearsMidStreamFadesItsWholeFirstChunk() {
+        val a = nextTails(emptyList(), 0, 12, 1000)
+        assertEquals(listOf(FadeRange(0, 12, 0f)), fadeRanges(a, 12, 1000))
+        assertEquals(emptyList<FadeRange>(), fadeRanges(nextTails(emptyList(), null, 12, 1000), 12, 1000))
+    }
+
     @Test fun nothingIsAddedWhenTheTextDidNotGrow() {
         assertEquals(emptyList<Tail>(), nextTails(emptyList(), 8, 8, 0))
     }

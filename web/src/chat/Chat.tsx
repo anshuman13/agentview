@@ -39,10 +39,10 @@ function onCopy(e: MouseEvent<HTMLDivElement>) {
 const reduceMotion = typeof matchMedia === 'function' ? matchMedia('(prefers-reduced-motion: reduce)') : null;
 
 const Block = memo(
-  function Block({ m, token, fade }: { m: Md; token: Token; fade?: boolean }) {
+  function Block({ m, token, fade, fresh }: { m: Md; token: Token; fade?: boolean; fresh?: boolean }) {
     const html = m.md.parser([token]);
     const ref = useRef<HTMLDivElement>(null);
-    const tails = useRef<{ tails: Tail[]; len: number | null }>({ tails: [], len: null });
+    const tails = useRef<{ tails: Tail[]; len: number | null }>({ tails: [], len: fresh ? 0 : null });
     useLayoutEffect(() => {
       const el = ref.current;
       if (!el || !fade || reduceMotion?.matches) return;
@@ -78,11 +78,14 @@ export function Markdown({ text, id, files = true, fade }: { text: string; id?: 
     return out;
   }, [m, id, text]);
   const blocks = useMemo(() => (m && files && html === null ? m.splitBlocks(text) : null), [m, files, html, text]);
+  // Blocks past the count at the first render arrived while this message was on screen, so their first chunk fades too.
+  const seen = useRef<number | null>(null);
+  if (blocks && seen.current === null) seen.current = blocks.length;
   if (!m) return <div className="md" style={{ whiteSpace: 'pre-wrap' }}>{text}</div>;
   if (!files) return <div className="md" onClick={onCopy} dangerouslySetInnerHTML={{ __html: m.mdNoFiles.parse(text, { async: false }) as string }} />;
   let body;
   if (html !== null) body = <div className="md" onClick={onCopy} onContextMenu={onMenu} dangerouslySetInnerHTML={{ __html: html }} />;
   else if (!blocks) body = <div className="md" onClick={onCopy} onContextMenu={onMenu} dangerouslySetInnerHTML={{ __html: m.md.parse(text, { async: false }) as string }} />;
-  else body = <div className="md" onClick={onCopy} onContextMenu={onMenu}>{blocks.map((t, i) => <Block key={i} m={m} token={t} fade={fade} />)}</div>;
+  else body = <div className="md" onClick={onCopy} onContextMenu={onMenu}>{blocks.map((t, i) => <Block key={i} m={m} token={t} fade={fade} fresh={i >= seen.current!} />)}</div>;
   return <>{body}{copyMenu}</>;
 }

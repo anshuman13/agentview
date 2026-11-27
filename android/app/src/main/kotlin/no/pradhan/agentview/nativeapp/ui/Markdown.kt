@@ -101,8 +101,12 @@ fun Markdown(text: String, modifier: Modifier = Modifier, streaming: Boolean = f
 
 @Composable
 private fun MdBlocks(blocks: List<MdBlock>, modifier: Modifier = Modifier, reading: Boolean = false) {
+    val parentFresh = LocalFreshBlock.current
+    val seen = remember { blocks.size }
     Column(modifier, verticalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
-        for (b in blocks) MdBlockView(b, reading)
+        blocks.forEachIndexed { i, b ->
+            CompositionLocalProvider(LocalFreshBlock provides (parentFresh || i >= seen)) { MdBlockView(b, reading) }
+        }
     }
 }
 

@@ -34,6 +34,9 @@ fun fadeRanges(tails: List<Tail>, len: Int, now: Long): List<FadeRange> =
 // True inside a streaming reply when motion is on; set by Markdown.
 val LocalStreamFade = staticCompositionLocalOf { false }
 
+// True for a block that appeared after its message was on screen: its first chunk fades too. Set per block index by Markdown.
+val LocalFreshBlock = staticCompositionLocalOf { false }
+
 private class FadeState { var tails = emptyList<Tail>(); var len: Int? = null }
 
 private fun nowMs() = System.nanoTime() / 1_000_000
@@ -42,7 +45,8 @@ private fun nowMs() = System.nanoTime() / 1_000_000
 @Composable
 fun fadedText(text: AnnotatedString, color: Color): AnnotatedString {
     if (!LocalStreamFade.current) return text
-    val state = remember { FadeState() }
+    val fresh = LocalFreshBlock.current
+    val state = remember { FadeState().also { if (fresh) it.len = 0 } }
     val len = text.length
     val tails = remember(len) {
         state.tails = nextTails(state.tails, state.len, len, nowMs())
