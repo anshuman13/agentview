@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test';
-import { buildCommands, itemKey, matchCommand, paletteItems, pinCommands, rankCommands, rankItems, recentItems, remember, seeAllCount, type PaletteItem } from './paletteLogic';
+import { buildCommands, itemKey, nextTab, tabEntries, tabKeyDir, matchCommand, paletteItems, pinCommands, rankCommands, rankItems, recentItems, remember, seeAllCount, type PaletteItem } from './paletteLogic';
 
 const models = [{ value: 'claude-opus-4-1', displayName: 'Opus 4.1' }, { value: 'claude-sonnet-4-5', displayName: 'Sonnet 4.5' }];
 const cmds = buildCommands(models, true);
@@ -175,5 +175,37 @@ describe('seeAllCount', () => {
   it('counts wiki facts', () => {
     const withFact = { ...data, pages: [{ ...base, id: 'p1', profile: 'work', title: 'Animals', summary: '', state: null }], facts: [{ ...base, id: 'f1', profile: 'work', page_id: 'p1', text: 'The zebra is striped', state: null }] } as unknown as Parameters<typeof seeAllCount>[0];
     expect(seeAllCount(withFact, 'all', 'zebra')).toBeGreaterThan(4);
+  });
+});
+
+describe('palette tabs', () => {
+  const pin = { row: { cmd: { id: 'pin:a', label: 'Chat: A', pinned: true }, hits: [], recent: false } };
+  const cmd = { row: { cmd: { id: 'theme', label: 'Preferences: Toggle Theme' }, hits: [], recent: false } };
+  const item = (kind: PaletteItem['kind']) => ({ item: { item: { kind, profile: 'work', id: kind, title: kind, at: null }, hits: [] } });
+  const all = { all: 3 };
+  const entries = [pin, cmd, item('task'), item('meeting'), item('wiki'), all];
+
+  it('filters entries by tab', () => {
+    expect(tabEntries(entries, 'All')).toEqual(entries);
+    expect(tabEntries(entries, 'Chats')).toEqual([pin]);
+    expect(tabEntries(entries, 'Commands')).toEqual([cmd]);
+    expect(tabEntries(entries, 'Tasks')).toEqual([item('task')]);
+    expect(tabEntries(entries, 'Meetings')).toEqual([item('meeting')]);
+    expect(tabEntries(entries, 'Wiki')).toEqual([item('wiki')]);
+  });
+
+  it('steps tabs and wraps', () => {
+    expect(nextTab('All', 1)).toBe('Chats');
+    expect(nextTab('All', -1)).toBe('Commands');
+    expect(nextTab('Commands', 1)).toBe('All');
+  });
+
+  it('changes tab with arrows only on an empty field or at an edge', () => {
+    expect(tabKeyDir('ArrowRight', '', 0, 0)).toBe(1);
+    expect(tabKeyDir('ArrowLeft', 'abc', 0, 0)).toBe(-1);
+    expect(tabKeyDir('ArrowRight', 'abc', 3, 3)).toBe(1);
+    expect(tabKeyDir('ArrowLeft', 'abc', 2, 2)).toBe(0);
+    expect(tabKeyDir('ArrowRight', 'abc', 0, 3)).toBe(0);
+    expect(tabKeyDir('ArrowDown', '', 0, 0)).toBe(0);
   });
 });

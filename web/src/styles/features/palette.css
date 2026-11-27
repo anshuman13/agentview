@@ -24,6 +24,9 @@
 .palette-label b { color: var(--accent-text); font-weight: 600; }
 .palette-key, .palette-group { flex: none; color: var(--fg-faint); font-size: var(--fs-xs); }
 .palette-key { font-family: var(--mono); }
+.palette-tabs { display: flex; gap: var(--sp-2); flex: none; margin: calc(-1 * var(--sp-2)) var(--sp-4) var(--sp-3); overflow-x: auto; scrollbar-width: none; }
+.palette-foot { flex: none; margin-top: auto; padding: var(--sp-3) var(--sp-8); border-top: 1px solid var(--border); color: var(--fg-faint); font-size: var(--fs-xs); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.palette-foot kbd { font-family: var(--mono); color: var(--fg-muted); }
 .palette-empty { padding: 0 var(--sp-8) var(--sp-5); color: var(--fg-muted); font-size: var(--fs-sm); }
 
 .switcher li .fs-name { flex: none; white-space: nowrap; }
@@ -37,6 +40,7 @@
   .palette-input { height: var(--touch); }
   .palette-input input, .palette-prefix { font-size: var(--fs-2xl); }
   .palette li { height: var(--touch); font-size: var(--fs-lg); }
+  .palette-foot { display: none; }
 }
 
 .shortcuts {

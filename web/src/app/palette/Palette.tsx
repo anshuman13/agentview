@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyEvent } from 'react';
 import { setUi, useStore } from '../store';
 import type { SavedSession } from '../../../../shared/protocol';
 import { providerModes } from '../../../../shared/providers';
@@ -9,10 +9,11 @@ import { openSearch, useView } from '../../codex/view';
 import { assistantStore } from '../../codex/data';
 import { PINS_URL, get } from '../../sessions/folders';
 import { command, listKeys, save, storedStrings } from '../../ui/util';
-import { ITEMS_KEY, KEY, MAX_RECENT_ITEMS, MAX_ROWS, buildCommands, itemKey, paletteItems, pinCommands, rankCommands, rankItems, recentItems, remember, seeAllCount, type Command, type PaletteItem } from './paletteLogic';
+import { ITEMS_KEY, KEY, MAX_RECENT_ITEMS, MAX_ROWS, PALETTE_TABS, buildCommands, itemKey, nextTab, tabEntries, tabKeyDir, tabKind, type PaletteTab, paletteItems, pinCommands, rankCommands, rankItems, recentItems, remember, seeAllCount, type Command, type PaletteItem } from './paletteLogic';
 import { openItem, perform } from './paletteActions';
 import { appSettings } from '../appSettings';
 import { PaletteEntries, type Entry } from './PaletteEntries';
+import { Chip } from '../../ui/Button';
 import '../../styles/features/palette.css';
 
 export function Palette() {
@@ -27,6 +28,7 @@ export function Palette() {
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState('');
   const [idx, setIdx] = useState(0);
+  const [tab, setTab] = useState<PaletteTab>('All');
   const [recent, setRecent] = useState(() => storedStrings(KEY));
   const [recentOpened, setRecentOpened] = useState(() => storedStrings(ITEMS_KEY));
   const list = useRef<HTMLUListElement>(null);
@@ -39,16 +41,20 @@ export function Palette() {
 
   const items = useMemo(() => (open ? paletteItems(assistantStore().snapshot()) : []), [open]);
   const blank = !q.trim();
-  const itemRows = useMemo(() => (blank ? recentItems(items, recentOpened) : rankItems(items, q, recentOpened)), [items, q, blank, recentOpened]);
+  const kind = tabKind(tab);
+  const itemRows = useMemo(() => {
+    if (kind) return rankItems(items.filter((i) => i.kind === kind), q, recentOpened, MAX_ROWS);
+    return blank ? recentItems(items, recentOpened) : rankItems(items, q, recentOpened);
+  }, [items, q, blank, recentOpened, kind]);
   const { filter } = useView();
   const total = useMemo(() => {
     const snap = assistantStore().snapshot();
     return open && !blank && snap.phase === 'ready' ? seeAllCount(snap, filter, q) : 0;
   }, [open, blank, filter, q]);
   const all: Entry[] = total > 0 ? [{ all: total }] : [];
-  const entries: Entry[] = blank
+  const entries: Entry[] = tabEntries(blank
     ? [...itemRows.map((h) => ({ item: h })), ...rows.map((r) => ({ row: r }))]
-    : [...rows.map((r) => ({ row: r })), ...itemRows.map((h) => ({ item: h })), ...all];
+    : [...rows.map((r) => ({ row: r })), ...itemRows.map((h) => ({ item: h })), ...all], tab);
 
   useEffect(() => {
     if (!open) return;
@@ -67,9 +73,10 @@ export function Palette() {
       setOpen((v) => !v);
       setQ('');
       setIdx(0);
+      setTab('All');
       setUi({ switcherOpen: false, repoPicker: false });
     };
-    const onOpen = () => { setOpen(true); setQ(''); setIdx(0); };
+    const onOpen = () => { setOpen(true); setQ(''); setIdx(0); setTab('All'); };
     window.addEventListener('keydown', onKey, true);
     window.addEventListener('agentview:palette', onOpen);
     return () => {
@@ -107,6 +114,14 @@ export function Palette() {
     openSearch(q);
     command('assistant');
   };
+  const pickTab = (t: PaletteTab) => { setTab(t); setIdx(0); };
+  const keys = listKeys({ count: entries.length, idx, setIdx, onEnter: () => enter(entries[idx]), onEscape: close });
+  const onKeyDown = (e: ReactKeyEvent<HTMLInputElement>) => {
+    const dir = tabKeyDir(e.key, q, e.currentTarget.selectionStart, e.currentTarget.selectionEnd);
+    if (!dir) return keys(e);
+    e.preventDefault();
+    pickTab(nextTab(tab, dir));
+  };
   const enter = (e?: Entry) => e && ('row' in e ? run(e.row.cmd) : 'all' in e ? runAll() : runItem(e.item.item));
 
   return (
@@ -121,11 +136,17 @@ export function Palette() {
             placeholder="Type a command"
             spellCheck={false}
             onChange={(e) => { setQ(e.target.value); setIdx(0); }}
-            onKeyDown={listKeys({ count: entries.length, idx, setIdx, onEnter: () => enter(entries[idx]), onEscape: close })}
+            onKeyDown={onKeyDown}
           />
+        </div>
+        <div className="palette-tabs" role="tablist" aria-label="Type">
+          {PALETTE_TABS.map((t) => (
+            <Chip key={t} size="sm" role="tab" aria-selected={t === tab} on={t === tab} tabIndex={-1} onMouseDown={(e) => e.preventDefault()} onClick={() => pickTab(t)}>{t}</Chip>
+          ))}
         </div>
         <PaletteEntries list={list} entries={entries} idx={idx} blank={blank} q={q} run={run} runItem={runItem} runAll={runAll} />
         {!entries.length && <div className="palette-empty">Nothing matches</div>}
+        <div className="palette-foot">Close <kbd>Esc</kbd> · Change type <kbd>← →</kbd> · Open <kbd>↵</kbd></div>
       </div>
     </div>
   );

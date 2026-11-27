@@ -165,3 +165,29 @@ export function rankItems(items: PaletteItem[], query: string, recent: string[],
   });
   return rows.slice(0, max).map((r) => ({ item: r.item, hits: r.m.hits }));
 }
+
+export const PALETTE_TABS = ['All', 'Chats', 'Tasks', 'Meetings', 'Wiki', 'Commands'] as const;
+export type PaletteTab = (typeof PALETTE_TABS)[number];
+const TAB_KIND: Partial<Record<PaletteTab, PaletteItem['kind']>> = { Tasks: 'task', Meetings: 'meeting', Wiki: 'wiki' };
+export const tabKind = (tab: PaletteTab) => TAB_KIND[tab];
+
+export function tabEntries<E extends { row: Row } | { item: ItemHit } | { all: number }>(entries: E[], tab: PaletteTab): E[] {
+  if (tab === 'All') return entries;
+  return entries.filter((e) => {
+    if ('all' in e) return false;
+    if ('item' in e) return e.item.item.kind === TAB_KIND[tab];
+    return tab === 'Chats' ? Boolean(e.row.cmd.pinned) : tab === 'Commands' && !e.row.cmd.pinned;
+  });
+}
+
+export function nextTab(tab: PaletteTab, dir: 1 | -1): PaletteTab {
+  const i = PALETTE_TABS.indexOf(tab);
+  return PALETTE_TABS[(i + dir + PALETTE_TABS.length) % PALETTE_TABS.length];
+}
+
+export function tabKeyDir(key: string, value: string, start: number | null, end: number | null): 1 | -1 | 0 {
+  if (start !== end) return 0;
+  if (key === 'ArrowLeft' && (!value || start === 0)) return -1;
+  if (key === 'ArrowRight' && (!value || start === value.length)) return 1;
+  return 0;
+}
