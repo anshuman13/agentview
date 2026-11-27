@@ -24,7 +24,6 @@ class ChatView(
     val items: List<Item>,
     val agents: List<Agent>,
     val cost: Double,
-    val images: List<String>,
     val changed: List<String>, // one path per edit, so a later edit of a reverted file shows again
     val rewinds: Map<String, Item.User>, // rewindReplies(items)
     val runs: Map<String, List<Item.Step>>,
@@ -45,7 +44,7 @@ class ChatView(
 
 
     fun withItem(events: List<ChatEvent>, items: List<Item>, item: Item, answers: Set<String> = this.answers, openAnswer: String? = this.openAnswer) =
-        ChatView(chat, events, items, agents, cost, images, changed, rewinds, runs, days, dayOf, ats, sent, checklist, docCards, folds.map { it.with(item) }, answers, openAnswer, replyCount)
+        ChatView(chat, events, items, agents, cost, changed, rewinds, runs, days, dayOf, ats, sent, checklist, docCards, folds.map { it.with(item) }, answers, openAnswer, replyCount)
 
     companion object {
         val EMPTY = buildView("", emptyList(), 0L, null)
@@ -59,7 +58,7 @@ fun buildView(chat: String, events: List<ChatEvent>, now: Long, prev: ChatView?)
     val days = dayDividers(items, now)
     val answers = turnAnswers(items)
     return ChatView(
-        chat, events, items, buildAgents(events, items), chatCost(events), chatImages(events),
+        chat, events, items, buildAgents(events, items), chatCost(events),
         items.filterIsInstance<Item.File>().filter { it.error == null }.map { it.path },
         rewindReplies(items), exploreRuns(items), days, dayOfRows(items, days),
         events.associate { it.id to it.at }, items.lastOrNull { it is Item.User }?.id, latestChecklist(events), docCardIds(items),

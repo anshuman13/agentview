@@ -90,18 +90,6 @@ export function userParts(text: string): UserPart[] {
   return parts.filter((p) => !('text' in p) || p.text);
 }
 
-const IMAGE_FILE = /\.(png|jpe?g|gif|webp|avif|svg)$/i;
-
-// The images a chat read, wrote or was sent, newest first, each once (Android chatImages).
-export function chatImages(events: ChatEvent[]): string[] {
-  const paths = events.flatMap((e) => {
-    if (e.kind === 'tool_use') return (e.name === 'Read' || e.name === 'Write') && typeof e.input.file_path === 'string' && IMAGE_FILE.test(e.input.file_path) ? [e.input.file_path] : [];
-    if (e.kind === 'user') return userParts(e.text).flatMap((p) => ('image' in p ? [p.image] : []));
-    return [];
-  });
-  return [...new Set(paths.reverse())];
-}
-
 export function addUse(uses: Use[], u: Use): Use[] {
   const keep = (x: Use) => x.server !== u.server || (!!u.tool && !!x.tool && x.tool !== u.tool);
   return [...uses.filter(keep), u];

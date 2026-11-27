@@ -3,7 +3,7 @@ import path from 'node:path';
 import { readFile } from 'node:fs/promises';
 import type { AgentSession } from './session.js';
 
-export type Hook = { name: string; on: 'save' | 'stop' | 'manual'; glob?: string; prompt: string };
+export type Hook = { name: string; on: 'save' | 'stop'; glob?: string; prompt: string };
 
 const FILE = path.join(os.homedir(), '.agentview/hooks.json');
 const DEBOUNCE_MS = 30_000;
@@ -20,7 +20,7 @@ export function parseHooks(raw: unknown, repo: string, bad: (line: string) => vo
   const list = (raw as Record<string, unknown> | null)?.[repo];
   if (!Array.isArray(list)) return [];
   return list.flatMap((h: Partial<Hook> | null, i) => {
-    const ok = typeof h?.name === 'string' && h.name && typeof h.prompt === 'string' && h.prompt && (h.on === 'save' || h.on === 'stop' || h.on === 'manual') && (h.glob === undefined || typeof h.glob === 'string');
+    const ok = typeof h?.name === 'string' && h.name && typeof h.prompt === 'string' && h.prompt && (h.on === 'save' || h.on === 'stop') && (h.glob === undefined || typeof h.glob === 'string');
     if (!ok) bad(`hooks.json: skipped invalid hook ${i} for ${repo}`);
     return ok ? [{ name: h.name!, on: h.on!, prompt: h.prompt!, ...(h.glob !== undefined && { glob: h.glob }) }] : [];
   });
@@ -39,7 +39,6 @@ export class Hooks {
   async load() {
     const raw = await readFile(this.file, 'utf8').then((t) => JSON.parse(t) as unknown, () => null);
     this.list = parseHooks(raw, path.basename(this.s.cwd));
-    this.s.setSession({ hooks: this.list.filter((h) => h.on === 'manual').map((h) => h.name) });
   }
 
   private waiting() {
@@ -70,10 +69,4 @@ export class Hooks {
     return edited && hooks.length > 0 && !chained && !this.waiting() ? promptOf(hooks) : null;
   }
 
-  run(name: string) {
-    const hook = this.list.find((h) => h.on === 'manual' && h.name === name);
-    if (!hook) return;
-    if (this.waiting()) return this.s.system('Answer the pending question first, then run the hook');
-    this.s.prompts.orQueue(promptOf([hook]));
-  }
 }

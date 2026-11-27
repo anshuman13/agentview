@@ -6,7 +6,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -47,15 +46,13 @@ import no.pradhan.agentview.nativeapp.ui.Type
 import no.pradhan.agentview.nativeapp.ui.av
 import no.pradhan.agentview.nativeapp.ui.rememberNow
 import no.pradhan.agentview.nativeapp.workspace.DevServersSheet
-import no.pradhan.agentview.nativeapp.ui.plural
 
 @Composable
-internal fun ChatSheets(hub: Hub, live: LiveChat, session: SessionInfo?, agents: List<Agent>, images: List<String>, panels: ChatPanels, cwd: String, onOpenAgent: (String) -> Unit, run: ChatRun?) {
+internal fun ChatSheets(hub: Hub, live: LiveChat, session: SessionInfo?, agents: List<Agent>, panels: ChatPanels, cwd: String, onOpenAgent: (String) -> Unit, run: ChatRun?) {
     val clip = LocalClipboardManager.current
     val sessionId = live.sessionId ?: session?.sessionId
     val unseen = remember(live.agentList, agents) { unseenAgents(live.agentList, agents) }
     val now = rememberNow(panels.agents && (unseen.isNotEmpty() || agents.any { it.status == "running" }))
-    val prompts by hub.savedPrompts.items.collectAsState()
     if (panels.agents) Sheet(onDismiss = { panels.agents = false }, title = "Agents", padded = false, full = false, action = { AgentsActions(hub, run, agents) }) {
         run?.let { r ->
             val line = listOfNotNull(runLine(r), loopNow(r, live.now).next?.let { "next $it" }).joinToString(" · ")
@@ -66,20 +63,11 @@ internal fun ChatSheets(hub: Hub, live: LiveChat, session: SessionInfo?, agents:
         UnseenAgentList(unseen) { now.value }
     }
     if (panels.tools) Sheet(onDismiss = { panels.tools = false }, title = "Tools", padded = false, full = false) {
-        val hooks = session?.hooks.orEmpty()
         val open = { panel: () -> Unit -> { panels.tools = false; panel() } }
         Group {
-            ListRow("Saved prompts", plural(prompts.size, "prompt"), muted = prompts.isEmpty(), onClick = if (prompts.isEmpty()) null else open { panels.saved = true }, trailing = { Chevron() })
-            Hairline()
-            ListRow("Images", plural(images.size, "image"), muted = images.isEmpty(), onClick = if (images.isEmpty()) null else open { panels.images = true }, trailing = { Chevron() })
-            Hairline()
             ListRow("Dev servers", "Dev servers on this Mac", onClick = open { panels.servers = true }, trailing = { Chevron() })
             Hairline()
-            ListRow("TODOs", "TODO, FIXME and AI! comments in the repo", onClick = open { panels.todos = true }, trailing = { Chevron() })
-            Hairline()
             ListRow("Memory", "Instruction and memory files", onClick = open { panels.memory = true }, trailing = { Chevron() })
-            Hairline()
-            ListRow("Hooks", if (hooks.isEmpty()) "None" else "${hooks.size}", onClick = open { panels.hooks = true }, trailing = { Chevron() })
             session?.resumeCommand?.let { command ->
                 Hairline()
                 ListRow("Continue in terminal", "Copy the command that resumes this chat", onClick = open {
@@ -89,12 +77,8 @@ internal fun ChatSheets(hub: Hub, live: LiveChat, session: SessionInfo?, agents:
             }
         }
     }
-    if (panels.saved) SavedPromptsSheet(hub, prompts, live.id) { panels.saved = false }
-    if (panels.images) ImagesSheet(hub, live.id, images, cwd) { panels.images = false }
     if (panels.servers) DevServersSheet(hub) { panels.servers = false }
-    if (panels.todos) TodosSheet(hub, cwd) { panels.todos = false }
     if (panels.memory) MemorySheet(hub, cwd, session?.instructionFiles.orEmpty()) { panels.memory = false }
-    if (panels.hooks) HooksSheet(hub, session?.hooks.orEmpty()) { panels.hooks = false }
     panels.file?.let { f ->
         val close = { panels.file = null }
         Sheet(close, "File", padded = false) { Box(Modifier.height(sheetHeight()).keepScrollInside()) { FileScreen(hub, f.path, close, line = f.line) } }

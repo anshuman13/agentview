@@ -12,7 +12,6 @@ const config = {
   project: [
     { name: 'lint', on: 'save', glob: 'src/**/*.ts', prompt: 'Lint it' },
     { name: 'tests', on: 'stop', prompt: 'Run tests' },
-    { name: 'docs', on: 'manual', prompt: 'Update docs' },
     { name: 'bad', on: 'sometimes', prompt: 'x' },
   ],
 };
@@ -34,21 +33,18 @@ describe('hooks', () => {
     expect(globMatch('src/**/*.ts', 'src/b.ts')).toBe(true);
     expect(globMatch('*.ts', 'src/b.ts')).toBe(false);
     const bad = vi.fn();
-    expect(parseHooks(config, 'project', bad).map((h) => h.name)).toEqual(['lint', 'tests', 'docs']);
+    expect(parseHooks(config, 'project', bad).map((h) => h.name)).toEqual(['lint', 'tests']);
     expect(bad).toHaveBeenCalledOnce();
   });
 
   it('fires nothing without a file or an entry for the repo', async () => {
     const { s, send } = await loaded('missing.json');
     s.hooks.saved('src/a.ts');
-    s.hooks.run('docs');
     expect(send).not.toHaveBeenCalled();
-    expect(s.state.session.hooks).toEqual([]);
   });
 
   it('runs a save hook at most once per 30 seconds and only for matching paths', async () => {
     const { s, send, result } = await loaded();
-    expect(s.state.session.hooks).toEqual(['docs']);
     s.hooks.saved('README.md');
     expect(send).not.toHaveBeenCalled();
     s.hooks.saved('src/a.ts', false, 1000);
@@ -87,8 +83,6 @@ describe('hooks', () => {
     const { s, send } = await loaded();
     s.state.pending.push({ id: 'p' } as never);
     s.hooks.saved('src/a.ts');
-    s.hooks.run('docs');
     expect(send).not.toHaveBeenCalled();
-    expect(s.state.events.at(-1)).toMatchObject({ kind: 'system' });
   });
 });

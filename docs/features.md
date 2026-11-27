@@ -247,11 +247,9 @@ cost so far. The status bar usage tooltip adds a Spend block with today's and th
 - On the phone, the composer's settings chip opens Chat settings with the models listed directly (one tap picks), then
   the permission modes (Supervised follows Auto), Account and Effort. The model you pick
   becomes the default for new chats, including the New chat shortcut. The web chip opens the same settings as a pick
-  (Permission mode, Model, Effort, Claude account, Find in chat, Side chat, Continue in terminal, Tools…), and Tools… holds Saved prompts, Images (every image the chat read, wrote or was
-  sent, newest first, with its path), TODOs, Memory and Hooks, in the phone's order and wording; Saved prompts and
-  Images show "N prompts" and "N images" and are disabled at 0.
+  (Permission mode, Model, Effort, Claude account, Find in chat, Side chat, Continue in terminal, Memory).
   The phone's chat menu
-  has a Tools… sheet with Saved prompts, Images, Dev servers, TODOs, Memory, Hooks and Continue in terminal
+  has a Tools… sheet with Dev servers, Memory and Continue in terminal
 - In the web and phone transcripts, 3 or more finished Read, Grep and Glob steps in a row fold into one row such as
   "Explored 4 files, 2 searches"; the header opens the steps, and the group keeps its choice like any transcript box
 - The New chat sheet (the phone's new chat buttons; on web the Sessions bar's New session in a repo and a repo's +) has Start as: Auto (the default for new chats), Plan first or Build (`/build ` and the request in the composer, nothing sent), for every provider (Plan first starts a Codex chat in Default), then Provider when more than one is enabled, Repo when none is given, and Model. Model checks the last model used when it is listed, else the first listed model, which the chat gets when none is sent (`checkedModel` in `shared/providers.ts` with `shared/fixtures/checked-model.json`, mirrored in `chat/NewChatLogic.kt`); Start sends a model only when one was used or picked. The mode is set right after the chat opens (`START_MODES` and `startTexts` in `shared/providers.ts` with `shared/fixtures/start-texts.json`, mirrored in `chat/NewChatLogic.kt`). After Repo, Continue lists up to 3 closed chats of that repo, newest first (`recentInRepo`, `shared/fixtures/recent-in-repo.json`; hidden in phone read-only mode); a tap opens the chat. ⌘O and the repo picker still start a chat in any folder or a new project
@@ -271,7 +269,7 @@ cost so far. The status bar usage tooltip adds a Spend block with today's and th
 - "Memory" in the Tools sheet of the phone chat menu lists the repo's CLAUDE.md, each account's CLAUDE.md and its memory files for the folder
   (a Codex chat lists the repo's AGENTS.md, or CLAUDE.md when there is none, and ~/.codex/AGENTS.md)
   (name, description, where it comes from); a tap shows the file (like Windsurf's memories panel), from /api/memory.
-  The web has the same list under Memory in the Tools pick of the chat settings menu. Only the repo instruction file (the first in the chat's `instructionFiles`) can be changed: its file view
+  The web has the same list under Memory in the chat settings menu. Only the repo instruction file (the first in the chat's `instructionFiles`) can be changed: its file view
   has Edit (the web opens it in the editor tab with the pencil on; the phone shows a field with Save), and the list ends with
   an Add a rule field whose Enter appends `- <text>` to it (created if missing) and shows Rule added with Undo; a failed write
   says "Could not save the rule. Your text is still here." A Claude memory file (a .md file in an account's `projects/<folder>/memory`
@@ -316,7 +314,7 @@ cost so far. The status bar usage tooltip adds a Spend block with today's and th
   then Use again, which puts that prompt in the composer to edit and send again (like editing a Slack message), and
   Copy, which copies the prompt text ("Prompt copied"). On the phone a long press on a prompt opens the same menu, with
   the Sent time first as a disabled line. Queued and stopping prompts have none of these (a queued one has Send now).
-- On the phone, Use again on a sent prompt and a tap in Saved prompts focus the composer with the cursor at the end and the keyboard up, as every insert does on web.
+- On the phone, Use again on a sent prompt focuses the composer with the cursor at the end and the keyboard up, as every insert does on web.
 - A fenced bash, sh, shell, zsh or console block of one line in a chat reply shows Run in terminal beside Copy (web on
   hover, Android an icon button, not in read-only mode). It types the command, without a leading "$ ", into the chat's
   last terminal (or a new one) and opens the terminal without pressing Enter (`shellLine`, checked by
@@ -328,13 +326,10 @@ cost so far. The status bar usage tooltip adds a Spend block with today's and th
   Slack's new messages pill. It is one control: a pill on a desktop, a round button with the badge on the phone
 - The web transcript draws Slack-style day dividers (Today, Yesterday, "Tuesday 3 November") above each prompt that starts a
   new day, like the phone; a chat that stays within today has none
-- "TODOs" in the Tools sheet of the phone chat menu lists TODO and FIXME comments from tracked files, with Aider-style comments that start or
-  end with AI! (do this) or AI? (answer this) first; a tap puts a prompt for that comment in the composer. The web Tools pick has the same TODOs list
 - Prompt hooks come from `~/.agentview/hooks.json`, keyed by repo folder name like `autofix` in attention.json:
-  `{"myrepo": [{"name": "tests", "on": "stop", "prompt": "Run the tests"}, {"name": "lint", "on": "save", "glob": "src/**/*.ts", "prompt": "Lint it"}, {"name": "docs", "on": "manual", "prompt": "Update the docs"}]}`.
+  `{"myrepo": [{"name": "tests", "on": "stop", "prompt": "Run the tests"}, {"name": "lint", "on": "save", "glob": "src/**/*.ts", "prompt": "Lint it"}]}`.
   `save` queues the prompt with the path when a matching file changes between turns (once per 30 s per hook), `stop`
-  queues it when a turn that changed files ends, and `manual` hooks are listed under Hooks in the Tools sheet (phone) and
-  Tools pick (web), where a tap queues them. The prompt shows in the transcript as "Hook: <name>". A hook turn never
+  queues it when a turn that changed files ends. The prompt shows in the transcript as "Hook: <name>". A hook turn never
   triggers stop hooks, nothing fires while a permission or question waits, and without the file or an entry for the repo
   no hook exists (an invalid entry is skipped with a log line)
 - Phone Sessions rows of a chat with an unsent draft show only a red "Draft:" and its first line as their meta, like Slack's sidebar; web sidebar rows do the same, except for the chat you are viewing. A draft is stored under the chat's Claude session id (the live id until it has one, `draftKey`), so it survives a server restart and an idle close; a draft stored under a live id is moved on first read
@@ -361,9 +356,6 @@ cost so far. The status bar usage tooltip adds a Spend block with today's and th
 - The phone's + sheet has "Choose file" for any document type (kept under its display name, refused over 50 MB, the server's limit); an
   upload is marked `[Image: path]` or `[File: path]` by its type (`attachMark`, used by the web and the phone composer)
 - On the phone, images inserted from the keyboard (Gboard stickers, GIFs, clipboard images) upload into the composer's image chips (`KeyboardImages` in `Attach.kt`); Paste from the text field's menu does not take images yet
-- The phone's Tools sheet starts with Saved prompts, the last 50 prompts sent from the phone in any chat (newest first, kept once, not saved
-  in a read-only check); a tap puts the prompt in the composer. The sheet shows the count and a "Filter prompts" field that keeps the
-  prompts holding every word typed; with none saved it says "No saved prompts yet"
 - "Side chat" in the web chat settings menu, or ⌘; (Ctrl+; off Mac), forks the chat into the side column and keeps the original in the
   main column, so a side question does not land in the running chat (like Claude desktop's side chat)
 - "Continue in terminal" in the web chat settings menu copies `cd <repo> && claude --resume <id>`, with `CLAUDE_CONFIG_DIR` for

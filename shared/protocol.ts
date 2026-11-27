@@ -132,8 +132,6 @@ export type SessionInfo = {
   instructionFiles?: string[];
   // The shell line that continues the chat in the provider's own CLI; null when it has none.
   resumeCommand?: string | null;
-  // Names of the manual prompt hooks for this chat's repo.
-  hooks?: string[];
 };
 
 export type SessionUpdate = Omit<SessionInfo, 'commands' | 'mcp'> & Partial<Pick<SessionInfo, 'commands' | 'mcp'>>;
@@ -417,7 +415,6 @@ export type ClientMessage =
   | { type: 'stop_task'; toolUseId: string }
   | { type: 'view'; id: string }
   | { type: 'retry' }
-  | { type: 'run_hook'; name: string }
   | { type: 'close'; id: string }
   | { type: 'open_session'; sessionId: string }
   | { type: 'new_session'; cwd?: string; fork?: string; profile?: 'work' | 'personal'; model?: string; provider?: Provider; text?: string }

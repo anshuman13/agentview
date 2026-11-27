@@ -42,10 +42,6 @@ function steerCommand(chat: AgentSession, msg: Msg<'steer'>) {
   notSent(chat, chat.steer(msg.text, shortId(msg.id)));
 }
 
-function runHookCommand(chat: AgentSession, msg: Msg<'run_hook'>) {
-  if (typeof msg.name === 'string') chat.hooks.run(msg.name);
-}
-
 function setModelCommand(chat: AgentSession, msg: Msg<'set_model'>) {
   chat.setModel(msg.model).catch((err) => chat.system(`Could not set the model: ${errText(err)}`));
 }
@@ -65,8 +61,6 @@ export function command(chat: AgentSession, msg: ClientMessage): Promise<unknown
       return void chat.approvals.answerQuestion(msg.id, msg.answers);
     case 'permission':
       return void chat.answerPermission(msg.id, msg.allow, msg.always);
-    case 'run_hook':
-      return runHookCommand(chat, msg);
     case 'retry':
       return chat.retryLast();
     case 'allow_blocked':

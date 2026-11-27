@@ -3,7 +3,7 @@ import { mkdtempSync, mkdirSync, rmSync, writeFileSync, existsSync, readFileSync
 import os from 'node:os';
 import path from 'node:path';
 import { afterAll, describe, expect, it } from 'bun:test';
-import { gitRoute, gitStatus, parseStatus, parseLog, parseNumstat, parseTodos } from './git.js';
+import { gitRoute, gitStatus, parseStatus, parseLog, parseNumstat } from './git.js';
 
 const repo = mkdtempSync(path.join(os.tmpdir(), 'agentview-git-'));
 const sh = (...args: string[]) => execFileSync('git', args, { cwd: repo });
@@ -107,27 +107,6 @@ describe('git log route', () => {
     expect(((await route('log', null, `since=${Date.now() + 60_000}`)) as { commits: unknown[] }).commits).toEqual([]);
     await expect(route('log', null, 'since=abc')).rejects.toThrow('since');
     await expect(route('log', null)).rejects.toThrow('since');
-  });
-});
-
-describe('parseTodos', () => {
-  it('reads TODO and FIXME comments and skips lock files and strings', () => {
-    const out = ['src/a.ts:12:  // TODO: retry on 429', 'web/b.css:3:/* FIXME(ana) dark mode */', 'package-lock.json:9:"TODO": 1', 'x.md:1:Fix the TODOS list', 'y.py:4:# TODO', 'z.kt:7:val p = "Resolve the TODO at x"'].join('\n');
-    expect(parseTodos(out)).toEqual([
-      { path: 'src/a.ts', line: 12, text: 'retry on 429' },
-      { path: 'web/b.css', line: 3, text: 'dark mode' },
-      { path: 'y.py', line: 4, text: '' },
-    ]);
-  });
-
-  it('puts Aider AI! and AI? comments first', () => {
-    const out = ['a.ts:1:// TODO later', 'b.ts:5:  // make this async AI!', 'c.py:9:# AI? why retry twice', 'd.css:2:a { color: #fff } /* AI! use a token */', 'e.ts:3:const s = "AI!"', 'f.test.ts:4:// TODO in a test', 'src/test/G.kt:2:// AI! fixture'].join('\n');
-    expect(parseTodos(out)).toEqual([
-      { path: 'b.ts', line: 5, text: 'make this async', ai: '!' },
-      { path: 'c.py', line: 9, text: 'why retry twice', ai: '?' },
-      { path: 'd.css', line: 2, text: 'use a token', ai: '!' },
-      { path: 'a.ts', line: 1, text: 'later' },
-    ]);
   });
 });
 

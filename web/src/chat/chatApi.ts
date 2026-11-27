@@ -37,7 +37,6 @@ export async function runInTerminal(cmd: string, enter: boolean) {
   };
 }
 
-export const fetchTodos = () => fetch(api('/api/git/todos')).then((r) => r.json());
 
 export const fetchMemory = () => fetchJson<MemoryFile[]>(api('/api/memory'));
 

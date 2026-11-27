@@ -198,27 +198,6 @@ export async function reviewDiff(cwd: string, env?: Record<string, string>) {
   return { base: base.replace(/^origin\//, ''), ...(await withLoose(cwd, loose.slice(0, MAX_LOOSE), env, (e) => diffSince(cwd, since, [], e))) };
 }
 
-export type Todo = { path: string; line: number; text: string; ai?: '!' | '?' };
-
-// `git grep -n` lines for TODO and FIXME comments, as tasks to hand to Claude. Lock files, minified code and tests are skipped.
-// Aider-style comments that start or end with AI! (do this) or AI? (answer this) come first.
-export function parseTodos(out: string, max = 100): Todo[] {
-  const todos: Todo[] = [];
-  const asks: Todo[] = [];
-  for (const l of out.split('\n')) {
-    const m = /^(.+?):(\d+):(.*)$/.exec(l);
-    if (!m || m[3].length > 400 || /(^|\/)(package-lock\.json|yarn\.lock|pnpm-lock\.yaml|bun\.lock)$|\.min\.|\.test\.|Test\.kt$|(^|\/)(test|tests|__tests__)\//.test(m[1])) continue;
-    const ai = /(?:\/\/|#|\/\*|<!--|^\s*\*|--)\s*(?:AI([!?])\s*(.*?)|(.*?)\s*\bAI([!?]))\s*(?:\*\/|-->)?\s*$/.exec(m[3]);
-    if (ai) {
-      asks.push({ path: m[1], line: Number(m[2]), text: (ai[2] ?? ai[3]).trim(), ai: (ai[1] ?? ai[4]) as '!' | '?' });
-      continue;
-    }
-    const text = /(?:\/\/|#|\/\*|<!--|^\s*\*|--)\s*(?:TODO|FIXME)\b(?:\([^)]*\))?[:\s]*(.*)$/.exec(m[3])?.[1]?.replace(/\s*(\*\/|-->)\s*$/, '').trim();
-    if (text !== undefined) todos.push({ path: m[1], line: Number(m[2]), text });
-  }
-  return [...asks, ...todos].slice(0, max);
-}
-
 const MAX_COMMITS = 20;
 
 // `git log --format=%h%x1f%ct%x1f%s` lines, newest first as git prints them.
@@ -237,7 +216,6 @@ export async function gitRoute(cwd: string, route: string, query: URLSearchParam
     if (!query.get('since') || !Number.isFinite(since) || since < 0) throw new Error('since must be a time in milliseconds');
     return { commits: parseLog(await git(cwd, ['log', `--since=${new Date(since).toISOString()}`, `--max-count=${MAX_COMMITS}`, '--format=%h%x1f%ct%x1f%s'], [0, 128])) };
   }
-  if (route === 'todos') return { todos: parseTodos(await git(cwd, ['grep', '-n', '-I', '-w', '-E', 'TODO|FIXME|AI[!?]'], [0, 1])) };
   if (route === 'diff') return { diff: await diff(cwd, query.get('path') ?? '', query.get('staged') === 'true') };
   if (!body) throw new Error('Use POST');
   if (route === 'commit') {

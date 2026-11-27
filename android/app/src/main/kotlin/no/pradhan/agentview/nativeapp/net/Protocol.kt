@@ -227,7 +227,6 @@ data class SessionInfo(
     val account: String? = null,
     val accounts: List<String> = emptyList(),
     val usage: PlanUsage? = null,
-    val hooks: List<String> = emptyList(),
     val review: Boolean = false,
     val provider: String? = null,
     val capabilities: Capabilities = Capabilities(),
@@ -384,7 +383,6 @@ fun answerCmd(id: String, answers: Map<String, String>) = cmd("answer") {
     put("id", id)
     put("answers", buildJsonObject { answers.forEach { (k, v) -> put(k, v) } })
 }
-fun runHookCmd(name: String) = cmd("run_hook") { put("name", name) }
 fun allowBlockedCmd(id: String) = cmd("allow_blocked") { put("id", id) }
 fun sendNowCmd(id: String) = cmd("send_now") { put("id", id) }
 fun setModelCmd(model: String) = cmd("set_model") { put("model", model) }

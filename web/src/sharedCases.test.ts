@@ -40,7 +40,7 @@ import { memoryMark, type MemoryFile, type MemoryMark } from './chat/cards/memor
 import { leftOutPreferences, type Preference } from '../../shared/preferences';
 import { countChat } from './app/shell/counts';
 import { can } from './chat/capabilitiesLogic';
-import { addUse, buildHistory, chatImages, draftKey, failedLine, ghostFor, handoffText, joinMarks, markChip, remember, splitMarks, turnEnd, userParts, withUses, type Use } from './chat/composer/composerLogic';
+import { addUse, buildHistory, draftKey, failedLine, ghostFor, handoffText, joinMarks, markChip, remember, splitMarks, turnEnd, userParts, withUses, type Use } from './chat/composer/composerLogic';
 import { composerPlaceholder, shellLine, type PlaceholderDevice, type PlaceholderState } from '../../shared/composerText';
 import { agentChipCount, buildHead, headerState, nowMeta, runLine, stoppedText } from './sessions/runLogic';
 import { tryColumn } from './sessions/triesLogic';
@@ -628,10 +628,6 @@ describe('cases shared with the Android app', () => {
 
   for (const c of cases<{ name: string; text: string; parts: unknown[] }>('user-parts')) {
     it(`userParts: ${c.name}`, () => expect(userParts(c.text)).toEqual(c.parts));
-  }
-
-  for (const c of cases<{ name: string; events: ChatEvent[]; expected: string[] }>('chat-images')) {
-    it(`chatImages: ${c.name}`, () => expect(chatImages(c.events)).toEqual(c.expected));
   }
 
   for (const c of cases<{ name: string; chat: string; sessionId: string | null; expected: string }>('draft-key')) {

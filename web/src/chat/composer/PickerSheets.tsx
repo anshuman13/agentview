@@ -4,21 +4,10 @@ import { plural } from '../../ui/util';
 import type { Pick } from '../ChatSettings';
 import { addUse, type Use } from './composerLogic';
 
-type Props = { pick: Pick | null; setPick: (p: Pick | null) => void; sentHistory: string[]; setUses: (f: (u: Use[]) => Use[]) => void; apply: (text: string) => void; focus: () => void };
+type Props = { pick: Pick | null; setPick: (p: Pick | null) => void; setUses: (f: (u: Use[]) => Use[]) => void; focus: () => void };
 
-export function PickerSheets({ pick, setPick, sentHistory, setUses, apply, focus }: Props) {
+export function PickerSheets({ pick, setPick, setUses, focus }: Props) {
   const servers = useStore((s) => s.session.mcp).filter((m) => m.status === 'connected');
-  if (pick?.kind === 'saved') {
-    return (
-      <QuickPick
-        anchor={pick.at}
-        title="Saved prompts"
-        items={[...sentHistory].reverse().map((t, i) => ({ value: String(i), label: t.replace(/\s+/g, ' ').slice(0, 200) }))}
-        onPick={(v) => { apply([...sentHistory].reverse()[Number(v)]); setPick(null); focus(); }}
-        onClose={() => setPick(null)}
-      />
-    );
-  }
   if (pick?.kind === 'mcp') {
     return (
       <QuickPick

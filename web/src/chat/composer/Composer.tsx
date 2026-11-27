@@ -166,8 +166,8 @@ export const Composer = memo(function Composer() {
         </ul>
       )}
       <Announcer key={chat} />
-      <ChatSettings pick={pick} setPick={setPick} savedCount={h.sentHistory.length} />
-      <PickerSheets pick={pick} setPick={setPick} sentHistory={h.sentHistory} setUses={setUses} apply={apply} focus={() => ta.current?.focus()} />
+      <ChatSettings pick={pick} setPick={setPick} />
+      <PickerSheets pick={pick} setPick={setPick} setUses={setUses} focus={() => ta.current?.focus()} />
     </div>
   );
 });

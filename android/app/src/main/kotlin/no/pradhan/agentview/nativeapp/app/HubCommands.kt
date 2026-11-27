@@ -17,7 +17,6 @@ import no.pradhan.agentview.nativeapp.net.protocolJson
 import no.pradhan.agentview.nativeapp.net.reviewCmd
 import no.pradhan.agentview.nativeapp.net.rewindCmd
 import no.pradhan.agentview.nativeapp.net.runCmd
-import no.pradhan.agentview.nativeapp.net.runHookCmd
 import no.pradhan.agentview.nativeapp.net.sendNowCmd
 import no.pradhan.agentview.nativeapp.net.setAccountCmd
 import no.pradhan.agentview.nativeapp.net.setEffortCmd
@@ -140,7 +139,6 @@ fun Hub.permission(id: String, allow: Boolean, always: Boolean = false) = post(p
 
 fun Hub.allowBlocked(id: String) = post(allowBlockedCmd(id), store.wanted)
 
-fun Hub.runHook(name: String) = post(runHookCmd(name), store.wanted)
 
 fun Hub.sendNow(id: String) = post(sendNowCmd(id), store.wanted)
 

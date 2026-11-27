@@ -113,7 +113,6 @@ export const answerPermission = (id: string, allow: boolean, always?: boolean) =
 export const answerQuestion = (id: string, answers: Record<string, string>) => send({ type: 'answer', id, answers });
 export const allowBlocked = (id: string) => send({ type: 'allow_blocked', id });
 export const reviewChange = (id: string, action: 'keep' | 'undo', file?: string, hunk?: number) => send({ type: 'review', id, action, file, hunk });
-export const runHook = (name: string) => send({ type: 'run_hook', name });
 export const setModel = (model: string) => send({ type: 'set_model', model });
 export const setEffort = (effort: string) => send({ type: 'set_effort', effort });
 export const setAccount = (account: string) => send({ type: 'set_account', account });

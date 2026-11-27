@@ -1,15 +1,13 @@
 import { useStore } from '../app/store';
 import { MemoryPick } from './cards/Memory';
-import { TodosPick } from './cards/Todos';
-import { ImagesPick } from './cards/Images';
 import { EFFORT_LABEL } from '../../../shared/protocol';
 import { menuModes, modelRow, providerModes } from '../../../shared/providers';
-import { HooksPick, SettingsMenu, ToolsPick } from './SettingsMenu';
+import { SettingsMenu } from './SettingsMenu';
 import { AccountPick, EffortPick, ModePick, ModelPick } from './SettingsPickers';
 
 const MODE_ICON: Record<string, string> = { default: 'shield', acceptEdits: 'edit', plan: 'eye', readOnly: 'eye', auto: 'zap', dontAsk: 'circle-slash' };
 
-export type Pick = { kind: 'menu' | 'model' | 'effort' | 'account' | 'mode' | 'tools' | 'saved' | 'mcp' | 'mcpTools' | 'memory' | 'todos' | 'hooks' | 'images'; at: DOMRect; server?: string };
+export type Pick = { kind: 'menu' | 'model' | 'effort' | 'account' | 'mode' | 'mcp' | 'mcpTools' | 'memory'; at: DOMRect; server?: string };
 
 export function useChatSettings() {
   const mode = useStore((s) => s.session.permissionMode) ?? 'default';
@@ -28,21 +26,17 @@ export function useChatSettings() {
 }
 
 // The chat settings menu and the pickers it opens; the saved prompt and MCP pickers stay with the composer.
-export function ChatSettings({ pick, setPick, savedCount }: { pick: Pick | null; setPick: (p: Pick | null) => void; savedCount: number }) {
+export function ChatSettings({ pick, setPick }: { pick: Pick | null; setPick: (p: Pick | null) => void }) {
   const cwd = useStore((s) => s.session.cwd);
   if (!pick) return null;
   const close = () => setPick(null);
-  const back = () => setPick({ kind: pick.kind === 'hooks' ? 'tools' : 'menu', at: pick.at });
+  const back = () => setPick({ kind: 'menu', at: pick.at });
   switch (pick.kind) {
     case 'menu': return <SettingsMenu pick={pick} setPick={setPick} close={close} />;
-    case 'hooks': return <HooksPick pick={pick} close={close} back={back} />;
-    case 'todos': return <TodosPick anchor={pick.at} onClose={close} />;
     case 'memory': return <MemoryPick cwd={cwd} onClose={close} />;
-    case 'images': return <ImagesPick cwd={cwd} onClose={close} />;
     case 'model': return <ModelPick pick={pick} close={close} back={back} />;
     case 'effort': return <EffortPick pick={pick} close={close} back={back} />;
     case 'account': return <AccountPick pick={pick} close={close} back={back} />;
-    case 'tools': return <ToolsPick pick={pick} setPick={setPick} close={close} savedCount={savedCount} />;
     case 'mode': return <ModePick pick={pick} close={close} back={back} />;
     default: return null;
   }

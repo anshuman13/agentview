@@ -56,11 +56,7 @@ import no.pradhan.agentview.nativeapp.ui.rememberLoad
 class ChatPanels {
     var agents by mutableStateOf(false)
     var servers by mutableStateOf(false)
-    var images by mutableStateOf(false)
-    var todos by mutableStateOf(false)
     var memory by mutableStateOf(false)
-    var hooks by mutableStateOf(false)
-    var saved by mutableStateOf(false)
     var tools by mutableStateOf(false)
     var find by mutableStateOf(false)
     var file by mutableStateOf<FilePath?>(null)
@@ -143,7 +139,7 @@ fun ChatScreen(hub: Hub, onOpenAgent: (String) -> Unit, onOpenWork: (String) -> 
         run?.let { if (it.kind == "job" && it.review == "pending") ReviewCard(hub, it) }
         Composer(hub, live.id, live.sessionId, session, running, pending.isNotEmpty())
     }
-    ChatSheets(hub, live, session, view.agents, view.images, panels, cwd, onOpenAgent, run)
+    ChatSheets(hub, live, session, view.agents, panels, cwd, onOpenAgent, run)
 }
 
 @Composable
