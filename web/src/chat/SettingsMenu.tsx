@@ -43,7 +43,6 @@ export function SettingsMenu({ pick, setPick, close }: Props) {
       action('find', 'Find in chat', 'Search the prompts and replies'),
       picker('prompts', 'Prompts', prompts ? plural(prompts, 'prompt') : 'No prompts', !prompts),
       ...(sessionId ? [picker('fork', 'Fork', 'Side chat or a new chat from a summary'), picker('remind', 'Remind me', 'Add a task to check this chat later')] : []),
-      picker('remember', 'Remember…', 'Save a preference to Memory'),
       picker('copy', 'Copy', resumeCommand ? 'As Markdown or the terminal command' : 'As Markdown'),
       picker('tools', 'Tools…', 'Saved prompts, images, TODOs, memory, hooks'),
     ]],

@@ -168,8 +168,6 @@ private fun Hub.saveMemoryClaim(fact: Row?): RememberedClaim? {
     }
 }
 
-fun Hub.rememberFromChat(text: String, title: String, cwd: String) = savedToMemory(rememberClaim(text, title, cwd))
-
 // The Memory page's Remember: a live Memory claim in the profile with no source.
 fun Hub.rememberInMemory(text: String, profile: String) = savedToMemory(saveMemoryClaim(memoryClaim(text, profile, System.currentTimeMillis())))
 

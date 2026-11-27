@@ -322,7 +322,7 @@ private fun ProposeClaim(page: Row?, filter: String?, actions: TaskActions) {
     }
 }
 
-// Saves a live Memory claim at once, as Remember in a chat does.
+// Saves a live Memory claim at once, superseding a similar one.
 @Composable
 private fun RememberClaim(onRemember: (String) -> Unit) {
     var open by remember { mutableStateOf(false) }
@@ -521,7 +521,7 @@ fun WikiPageView(st: CodexState, page: Row, profile: String?, now: Long, actions
             if (showOlder) lazyGroup(older, key = { "old:${it.key}" }) { ClaimRow(Claim(it, emptyList()), now, actions, review, page.title ?: "", onOpenChat, stale = it.id in staleIds, flash = it.id == flash) }
         }
         if (groups.isEmpty() && older.isEmpty()) item {
-            if (memory) EmptyState("Nothing remembered yet", "Use Remember here or in a chat", icon = "book")
+            if (memory) EmptyState("Nothing remembered yet", "Use Remember to add one", icon = "book")
             else EmptyState("No claims yet", "They appear here as meetings, Slack threads and issues mention ${page.title}", icon = "book")
         }
         item { Spacer(Modifier.padding(bottom = Tokens.sp16)) }

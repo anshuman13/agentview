@@ -85,7 +85,7 @@ export function WikiPage({ id }: { id: string }) {
               <ShowMore shown={shown} total={total} onMore={more} />
               <OlderClaims older={older} stale={stale} open={showOlder} toggle={() => setShowOlder((v) => !v)} page={page.title ?? ''} flash={flash} />
               {!groups.length && !older.length && (pid ? <EmptyState size="sm" icon="book" title="No claims yet" hint={`They appear here as meetings, Slack threads and issues mention ${page.title}`} />
-                : <EmptyState size="sm" icon="book" title="Nothing remembered yet" hint="Use Remember here or in a chat" />)}
+                : <EmptyState size="sm" icon="book" title="Nothing remembered yet" hint="Use Remember to add one" />)}
             </article>
           </div>
         )}

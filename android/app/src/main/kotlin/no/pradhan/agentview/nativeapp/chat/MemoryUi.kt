@@ -35,7 +35,6 @@ import no.pradhan.agentview.nativeapp.app.memoryFiles
 import no.pradhan.agentview.nativeapp.app.forgetMemory
 import no.pradhan.agentview.nativeapp.app.moveMemoryToWiki
 import no.pradhan.agentview.nativeapp.app.read
-import no.pradhan.agentview.nativeapp.app.rememberFromChat
 import no.pradhan.agentview.nativeapp.app.readFile
 import no.pradhan.agentview.nativeapp.app.saveFile
 import no.pradhan.agentview.nativeapp.app.saveMemory
@@ -122,8 +121,6 @@ fun MemorySheet(hub: Hub, cwd: String, instructionFiles: List<String>, initial: 
     var open by remember { mutableStateOf<MemoryFile?>(null) }
     var opened by remember { mutableStateOf(initial == null) }
     val facts by hub.codex.state.select { it.facts }
-    val title by hub.store.state.select { st -> st.live.firstOrNull { it.id == st.shownId }?.title.orEmpty() }
-    var remembering by remember { mutableStateOf(false) }
     val listScroll = rememberScrollState()
     val now = System.currentTimeMillis()
     val markOf = { f: MemoryFile -> memoryMark(f, facts, segmentOf(cwd), now) }
@@ -190,11 +187,11 @@ fun MemorySheet(hub: Hub, cwd: String, instructionFiles: List<String>, initial: 
             }
         }
         if (list != null && !hub.readOnly) AddRule(hub, file, reload)
-        // The wiki's Memory claims that new chats in this profile start with, and Remember to add one; web Memory.tsx GivenClaims shows the same.
+        // The wiki's Memory claims that new chats in this profile start with; web Memory.tsx GivenClaims shows the same.
         val given = givenPreferences(facts, segmentOf(cwd), now)
-        SectionHeader("From the wiki", given.size.takeIf { it > 0 }?.toString(), action = if (hub.readOnly) null else ({ Button("Remember", { remembering = true }, variant = ButtonVariant.Plain, size = ButtonSize.Sm, icon = "add") }))
+        SectionHeader("From the wiki", given.size.takeIf { it > 0 }?.toString())
         Text("New chats get these", Modifier.padding(horizontal = Tokens.listPad), style = Type.footnote, color = av.fgMuted)
-        if (given.isEmpty()) EmptyState("Nothing from the wiki yet", "Remember adds a preference every new chat in this profile starts with")
+        if (given.isEmpty()) EmptyState("Nothing from the wiki yet", "Memory claims on the wiki are given to every new chat in this profile")
         else given.forEach { f ->
             val openClaim = {
                 hub.link.value = DeepLink(codexRoute = claimRoute(f))
@@ -217,5 +214,4 @@ fun MemorySheet(hub: Hub, cwd: String, instructionFiles: List<String>, initial: 
             }, Modifier.padding(horizontal = Tokens.listPad), variant = ButtonVariant.Plain, size = ButtonSize.Sm)
         }
     }
-    if (remembering) TextDialog("Remember", "", "Save", { hub.rememberFromChat(it, title, cwd) }, { remembering = false }, maxLength = 400, detail = "Saved to Memory for every later chat.")
 }

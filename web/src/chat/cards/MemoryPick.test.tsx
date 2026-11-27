@@ -47,7 +47,7 @@ describe('GivenClaims', () => {
     const html = renderToStaticMarkup(<GivenClaims facts={facts} cwd="/w/repo" onClose={() => {}} />);
     expect(html).toContain('From the wiki');
     expect(html).toContain('New chats get these');
-    expect(html).toContain('Remember</button>');
+    expect(html).not.toContain('Remember</button>');
     expect(html).not.toContain('Nothing from the wiki yet');
     expect(html.match(/class="ui-row[ "]/g)).toHaveLength(2);
     expect(html).toContain('Ship small diffs');
@@ -66,11 +66,11 @@ describe('GivenClaims', () => {
     expect(renderToStaticMarkup(<GivenClaims facts={many.slice(0, 3)} cwd="/w/repo" onClose={() => {}} />)).not.toContain('more not given');
   });
 
-  it('says the wiki can feed chats and offers Remember with no given claims', () => {
+  it('says the wiki can feed chats with no given claims', () => {
     const html = renderToStaticMarkup(<GivenClaims facts={[]} cwd="/w/repo" onClose={() => {}} />);
     expect(html).toContain('From the wiki');
     expect(html).toContain('Nothing from the wiki yet');
-    expect(html).toContain('Remember</button>');
+    expect(html).not.toContain('Remember</button>');
   });
 
   it('retires a claim from its More menu', () => {

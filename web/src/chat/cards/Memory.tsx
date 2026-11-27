@@ -23,7 +23,7 @@ import { loadErrorText } from '../../../../shared/loadError';
 import { PREFERENCE_CHARS, PREFERENCES, givenPreferences, leftOutPreferences } from '../../../../shared/preferences';
 import { Markdown } from '../Chat';
 import { addRepoRule, fetchMemory, saveMemory } from '../chatApi';
-import { forgetMemory, moveMemoryToWiki, rememberChat } from '../chatActions';
+import { forgetMemory, moveMemoryToWiki } from '../chatActions';
 import { isMemoryIndex } from '../transcript/workFold';
 import { markLine, memoryMark, type MemoryFile, type MemoryMark } from './memoryLogic';
 
@@ -38,10 +38,6 @@ export function memoryWhere(f: Pick<MemoryFile, 'path'>, cwd: string) {
 
 // Rules go to the first instruction file, the repo's, as a path in the folder; android MemoryUi.kt ruleFile says the same.
 export const ruleFile = (cwd: string, files?: string[]) => (files?.[0]?.startsWith(`${cwd}/`) ? files[0].slice(cwd.length + 1) : 'CLAUDE.md');
-
-export function RememberPick({ close }: { close: () => void }) {
-  return <Confirm title="Remember" detail="Saved to Memory for every later chat." action="Save" icon="lightbulb" input={{ value: '', placeholder: 'What to remember', maxLength: 400 }} run={async (text) => rememberChat(text)} onClose={close} />;
-}
 
 // Enter appends a bullet to the repo instruction file; Undo removes it again.
 function AddRule({ file, onSaved }: { file: string; onSaved: () => void }) {
@@ -189,9 +185,8 @@ export function MemoryPick({ cwd, initial, onClose }: { cwd: string; initial?: s
   );
 }
 
-// The wiki's Memory claims that new chats in this profile start with; a tap opens the claim on the Memory page, Retire drops it from the list, Remember adds one.
+// The wiki's Memory claims that new chats in this profile start with; a tap opens the claim on the Memory page, Retire drops it from the list.
 export function GivenClaims({ facts, cwd, onClose }: { facts: Fact[]; cwd: string; onClose: () => void }) {
-  const [remember, setRemember] = useState(false);
   const profile = profileOfPath(cwd);
   const given = givenPreferences(facts, profile);
   const left = leftOutPreferences(facts, profile);
@@ -202,12 +197,11 @@ export function GivenClaims({ facts, cwd, onClose }: { facts: Fact[]; cwd: strin
   };
   return (
     <>
-      <Section label="From the wiki" count={sectionCount(given.length)} action={<Button size="sm" variant="plain" icon="add" onClick={() => setRemember(true)}>Remember</Button>} />
+      <Section label="From the wiki" count={sectionCount(given.length)} />
       <div className="gl-hint muted">New chats get these</div>
       {given.length ? given.map((f) => <GivenClaim key={f.id} fact={f} open={() => openMemory(f.id)} />)
-        : <EmptyState size="sm" title="Nothing from the wiki yet" hint="Remember adds a preference every new chat in this profile starts with" />}
+        : <EmptyState size="sm" title="Nothing from the wiki yet" hint="Memory claims on the wiki are given to every new chat in this profile" />}
       {left > 0 && <div className="gl-hint muted">{`${left} more not given: new chats get the ${PREFERENCES} newest, up to ${PREFERENCE_CHARS} characters`}<Button size="sm" variant="plain" onClick={() => openMemory()}>Open Memory</Button></div>}
-      {remember && <RememberPick close={() => setRemember(false)} />}
     </>
   );
 }

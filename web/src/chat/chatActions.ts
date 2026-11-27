@@ -63,11 +63,6 @@ function rememberClaim(text: string) {
   return saveMemoryClaim(assistantStore(), rememberedFact(text, profileOfPath(cwd), st.live.find((c) => c.id === st.session.id)?.title ?? '', cwd));
 }
 
-export function rememberChat(text: string) {
-  const { replaced, undo } = rememberClaim(text);
-  showSnack(replaced ? 'Saved to Memory, replacing a similar claim' : 'Saved to Memory', undo);
-}
-
 // Makes a memory file a Memory claim and removes the file; Undo puts the file and its MEMORY.md lines back and deletes the claim, then runs `restored`. True once the file is gone.
 export async function moveMemoryToWiki(file: MemoryFile, restored: () => void) {
   const claim = rememberClaim(memoryClaimText(file));

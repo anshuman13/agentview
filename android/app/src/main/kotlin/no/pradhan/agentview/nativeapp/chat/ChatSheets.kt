@@ -28,7 +28,6 @@ import no.pradhan.agentview.nativeapp.net.SessionInfo
 import no.pradhan.agentview.nativeapp.app.archive
 import no.pradhan.agentview.nativeapp.app.closeChat
 import no.pradhan.agentview.nativeapp.app.remindChat
-import no.pradhan.agentview.nativeapp.app.rememberFromChat
 import no.pradhan.agentview.nativeapp.app.rename
 import no.pradhan.agentview.nativeapp.app.stopTask
 import no.pradhan.agentview.nativeapp.net.ChatRun
@@ -111,7 +110,6 @@ internal fun ChatSheets(hub: Hub, live: LiveChat, session: SessionInfo?, agents:
     }
     when (panels.dialog) {
         "rename" -> RenameDialog(live.title, onSave = { hub.rename(sessionId!!, it) }, onDismiss = { panels.dialog = null })
-        "remember" -> TextDialog("Remember", "", "Save", { hub.rememberFromChat(it, live.title, cwd) }, { panels.dialog = null }, maxLength = 400, detail = "Saved to Memory for every later chat.")
         "archive" -> ConfirmDialog("Archive this chat?", "${live.title}\n\nYou can restore it from the bin for 7 days.", "Archive", { hub.archive(sessionId!!) }) { panels.dialog = null }
         "close" -> ConfirmDialog("Close this chat?", "${live.title}\n\nThe agent is still working on it and will stop. The transcript is kept.", "Close", { hub.closeChat(live.id) }) { panels.dialog = null }
     }
