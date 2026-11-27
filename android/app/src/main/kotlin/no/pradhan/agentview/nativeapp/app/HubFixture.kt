@@ -19,8 +19,13 @@ fun fixtureMessages(text: String): List<ServerMessage> {
     return items.mapNotNull { runCatching { parseMessage(it.toString()) }.getOrNull() }
 }
 
-fun withFixture(m: ServerMessage, chat: LiveChat?): ServerMessage =
-    if (m is ServerMessage.Live && chat != null && m.chats.none { it.id == chat.id }) ServerMessage.Live(m.chats + chat) else m
+// While the fixture chat is shown, the server's messages for the chat it still streams are dropped.
+fun withFixture(m: ServerMessage, chat: LiveChat?, shown: String?): ServerMessage? = when {
+    chat == null -> m
+    m is ServerMessage.Live -> if (m.chats.none { it.id == chat.id }) ServerMessage.Live(m.chats + chat) else m
+    shown == chat.id -> null
+    else -> m
+}
 
 // Readonly checks only: shows a chat from files pushed to the app's external files folder, then feeds the stream file every chunkMs.
 internal fun Hub.loadFixture(chat: String, stream: String?, chunkMs: Long) {
@@ -31,7 +36,7 @@ internal fun Hub.loadFixture(chat: String, stream: String?, chunkMs: Long) {
         val init = withContext(Dispatchers.IO) { read(chat) }.firstOrNull() as? ServerMessage.Init
         if (init == null) { notice.value = "No fixture chat in $chat"; return@launch }
         fixtureChat = LiveChat(init.chatId, "Fixture chat", init.session?.cwd.orEmpty(), running = true, sessionId = init.chatId)
-        store.handle(withFixture(ServerMessage.Live(store.state.value.live), fixtureChat))
+        store.handle(ServerMessage.Live(store.state.value.live + fixtureChat!!))
         store.show(init.chatId)
         store.handle(init)
         link.value = DeepLink(view = "agents")

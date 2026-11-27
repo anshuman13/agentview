@@ -362,7 +362,7 @@ class Hub(internal val app: Application, private val saved: SavedStateHandle) : 
         if (m is ServerMessage.PhoneAlarm) setPhoneAlarm(m)
         if (m is ServerMessage.Findings) setFindings(m.review.target, m.review)
         if (m is ServerMessage.FileChanged) fileChanged.tryEmit(m.path)
-        store.handle(withFixture(m, fixtureChat))
+        withFixture(m, fixtureChat, store.wanted)?.let(store::handle)
         store.state.value.session?.let { s ->
             val group = modelGroup(s.provider, providers.value)
             val list = modelsOf(group)
