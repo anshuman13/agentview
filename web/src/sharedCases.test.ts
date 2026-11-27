@@ -18,6 +18,7 @@ import { needsEarlier } from './chat/transcript/window';
 import { binLeft, buildFolders, chatBranch, chatPlace, folderBadge, since } from './sessions/folders';
 import { findingFixPrompt, findingsFixPrompt } from '../../shared/reviewPrompt';
 import { linesQuote } from '../../shared/linesQuote';
+import { markOps, type Mark } from '../../shared/markup';
 import { setupPrompt, type SetupKind } from '../../shared/setupPrompt';
 import { appendRule } from '../../shared/steering';
 import { isSpecPath, specProgress, specPrompt, specSlug, specTasks, startTaskPrompt, withoutOpenTasks, type SpecTask } from '../../shared/specTasks';
@@ -601,6 +602,10 @@ describe('cases shared with the Android app', () => {
       expect(elementPrompt(c.el)).toBe(c.prompt);
       expect(withElements(' fix this ', [c.el])).toBe(`fix this\n\n${c.prompt}`);
     });
+  }
+
+  for (const c of cases<{ name: string; w: number; h: number; marks: Mark[]; ops: object[] }>('markup-ops')) {
+    it(`markOps: ${c.name}`, () => expect(markOps(c.marks, c.w, c.h) as object[]).toEqual(c.ops));
   }
 
   for (const c of cases<{ name: string; saved: string | null; repo: string | null; expected: string | null }>('chat-branch')) {

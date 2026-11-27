@@ -60,8 +60,8 @@ import no.pradhan.agentview.nativeapp.ui.SectionHeader
 import no.pradhan.agentview.nativeapp.ui.Tokens
 
 // Browser (web/src/workspace/BrowserPane.tsx): the streamed frames of the Mac's Chrome tab. A tap clicks the page, a drag
-// scrolls it, and a tap in a text field opens the keyboard. Input, Back, Reload, picking a tab and connecting Chrome are
-// writes and stay off in a read-only run.
+// scrolls it, and a tap in a text field opens the keyboard. Mark up draws on the frame and adds it to the prompt. Input,
+// Back, Reload, picking a tab and connecting Chrome are writes and stay off in a read-only run.
 @Composable
 fun BrowserScreen(hub: Hub, onBack: () -> Unit) {
     val origin by hub.origin.collectAsState()
@@ -93,6 +93,8 @@ fun BrowserScreen(hub: Hub, onBack: () -> Unit) {
     val tab = tabs.tabs.firstOrNull { it.id == tabs.current }
     // Pick mode (web BrowserPane): Chrome outlines the element under a tap, which adds it to the prompt as a chip.
     var picking by remember { mutableStateOf(false) }
+    var marking by remember { mutableStateOf(false) }
+    val markup = remember { MarkupState() }
     val pickOn = picking && state.state == "on"
     DisposableEffect(pickOn, tabs.current) {
         if (pickOn) sendJson(buildJsonObject { put("t", "pick"); put("on", true) })
@@ -107,13 +109,14 @@ fun BrowserScreen(hub: Hub, onBack: () -> Unit) {
 
     Column(Modifier.fillMaxSize()) {
         PageHeader("Browser", onBack, subtitle = tab?.let { { androidx.compose.material3.Text(it.title.ifEmpty { it.url }, maxLines = 1) } }) {
-            if (state.state == "on" && !hub.readOnly) IconBtn("inspect", if (picking) "Stop picking" else "Pick an element", { picking = !picking }, on = picking)
+            if (state.state == "on" && !hub.readOnly) IconBtn("inspect", if (picking) "Stop picking" else "Pick an element", { picking = !picking; marking = false }, on = picking)
+            if (state.state == "on" && !hub.readOnly) IconBtn("edit", if (marking) "Close markup" else "Mark up", { marking = !marking; picking = false }, on = marking)
             if (state.state == "on") MoreButton { close ->
                 MenuItem("Back", "arrow-left", { close(); send("back") })
                 MenuItem("Reload", "refresh", { close(); send("reload") })
             }
         }
-        PageBody {
+        Box(Modifier.weight(1f)) { PageBody {
             LazyColumn(Modifier.fillMaxSize()) {
                 when (state.state) {
                     "connecting" -> item { EmptyState("Connecting to Chrome…", if (state.own) null else "Allow remote debugging if Chrome asks", icon = "globe", small = false) }
@@ -143,6 +146,7 @@ fun BrowserScreen(hub: Hub, onBack: () -> Unit) {
                                         }
                                     }
                                 }, contentScale = ContentScale.FillWidth)
+                                if (marking) MarkupLayer(markup, f)
                                 BasicTextField(kbd, { v ->
                                     kbdInput(kbd.text, v.text).forEach { (t, value) -> sendJson(buildJsonObject { put("t", t); put(if (t == "key") "key" else "text", value); if (value == "Enter") put("keyCode", 13) else if (value == "Backspace") put("keyCode", 8) }) }
                                     kbd = if (v.text.isEmpty() || '\n' in v.text || v.text.length > 200) TextFieldValue(KBD_SEED, TextRange(KBD_SEED.length)) else v
@@ -170,6 +174,7 @@ fun BrowserScreen(hub: Hub, onBack: () -> Unit) {
                 }
                 item { Spacer(Modifier.padding(bottom = Tokens.sp16)) }
             }
-        }
+        } }
+        if (marking && state.state == "on") MarkupBar(hub, markup, frame) { marking = false }
     }
 }

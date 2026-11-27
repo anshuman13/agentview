@@ -1,0 +1,149 @@
+[
+  {
+    "name": "pen box and text on a wide frame",
+    "w": 1600,
+    "h": 900,
+    "marks": [
+      {
+        "t": "pen",
+        "c": "Clay",
+        "pts": [
+          0.1,
+          0.2,
+          0.15,
+          0.25,
+          0.2,
+          0.22
+        ]
+      },
+      {
+        "t": "box",
+        "c": "Red",
+        "x0": 0.6,
+        "y0": 0.5,
+        "x1": 0.4,
+        "y1": 0.3
+      },
+      {
+        "t": "text",
+        "c": "Blue",
+        "x": 0.5,
+        "y": 0.75,
+        "text": " bigger button "
+      }
+    ],
+    "ops": [
+      {
+        "t": "pen",
+        "color": "#D97757",
+        "width": 6,
+        "pts": [
+          160,
+          180,
+          240,
+          225,
+          320,
+          198
+        ]
+      },
+      {
+        "t": "box",
+        "color": "#E5372E",
+        "width": 6,
+        "x": 640,
+        "y": 270,
+        "w": 320,
+        "h": 180
+      },
+      {
+        "t": "text",
+        "color": "#2D7FF9",
+        "size": 32,
+        "x": 800,
+        "y": 675,
+        "text": "bigger button"
+      }
+    ]
+  },
+  {
+    "name": "small frame keeps the minimum sizes",
+    "w": 300,
+    "h": 200,
+    "marks": [
+      {
+        "t": "box",
+        "c": "White",
+        "x0": 0.1,
+        "y0": 0.1,
+        "x1": 0.9,
+        "y1": 0.9
+      }
+    ],
+    "ops": [
+      {
+        "t": "box",
+        "color": "#FFFFFF",
+        "width": 2,
+        "x": 30,
+        "y": 20,
+        "w": 240,
+        "h": 160
+      }
+    ]
+  },
+  {
+    "name": "dots, clicks and empty text draw nothing",
+    "w": 1000,
+    "h": 1000,
+    "marks": [
+      {
+        "t": "pen",
+        "c": "Green",
+        "pts": [
+          0.5,
+          0.5
+        ]
+      },
+      {
+        "t": "box",
+        "c": "Black",
+        "x0": 0.5,
+        "y0": 0.5,
+        "x1": 0.5005,
+        "y1": 0.5
+      },
+      {
+        "t": "text",
+        "c": "Black",
+        "x": 0.1,
+        "y": 0.1,
+        "text": "   "
+      }
+    ],
+    "ops": []
+  },
+  {
+    "name": "unknown colour falls back to Clay",
+    "w": 800,
+    "h": 600,
+    "marks": [
+      {
+        "t": "text",
+        "c": "Pink",
+        "x": 0.25,
+        "y": 0.5,
+        "text": "x"
+      }
+    ],
+    "ops": [
+      {
+        "t": "text",
+        "color": "#D97757",
+        "size": 21,
+        "x": 200,
+        "y": 300,
+        "text": "x"
+      }
+    ]
+  }
+]

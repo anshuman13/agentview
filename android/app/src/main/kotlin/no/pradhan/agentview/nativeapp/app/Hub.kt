@@ -499,6 +499,13 @@ class Hub(internal val app: Application, private val saved: SavedStateHandle) : 
         composerFocus.tryEmit(chat)
     }
 
+    // Adds an uploaded file's [Image: path] marker to a chat's draft, as an attachment chip (web agentview:attach).
+    fun attachToDraft(chat: String, mark: String) {
+        val s = no.pradhan.agentview.nativeapp.chat.splitMarks(draft(chat))
+        setDraft(chat, no.pradhan.agentview.nativeapp.chat.joinMarks(s.body, s.marks + mark))
+        draftChanged.tryEmit(chat)
+    }
+
     private fun appendDraft(chat: String, text: String) {
         setDraft(chat, appendPrompt(draft(chat), text))
         draftChanged.tryEmit(chat)

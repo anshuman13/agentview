@@ -159,6 +159,9 @@ import no.pradhan.agentview.nativeapp.ui.agoShort
 import no.pradhan.agentview.nativeapp.workspace.fileDiff
 import no.pradhan.agentview.nativeapp.workspace.linesQuote
 import no.pradhan.agentview.nativeapp.workspace.PickedElement
+import no.pradhan.agentview.nativeapp.workspace.Mark
+import no.pradhan.agentview.nativeapp.workspace.MarkOp
+import no.pradhan.agentview.nativeapp.workspace.markOps
 import no.pradhan.agentview.nativeapp.workspace.elementChip
 import no.pradhan.agentview.nativeapp.workspace.elementPrompt
 import no.pradhan.agentview.nativeapp.workspace.withElements
@@ -1340,6 +1343,30 @@ class SharedCasesTest {
             assertEquals(c.str("name"), c.str("chip"), elementChip(el))
             assertEquals(c.str("name"), c.str("prompt"), elementPrompt(el))
             assertEquals(c.str("name"), "fix this\n\n" + c.str("prompt"), withElements(" fix this ", listOf(el)))
+        }
+    }
+
+    @Test fun markOpsCases() {
+        for (c in cases("markup-ops")) {
+            val marks = c.getValue("marks").jsonArray.map { e ->
+                val m = e.jsonObject
+                fun f(k: String) = m.getValue(k).jsonPrimitive.double.toFloat()
+                when (m.str("t")) {
+                    "pen" -> Mark.Pen(m.str("c"), m.getValue("pts").jsonArray.map { it.jsonPrimitive.double.toFloat() })
+                    "box" -> Mark.Box(m.str("c"), f("x0"), f("y0"), f("x1"), f("y1"))
+                    else -> Mark.Text(m.str("c"), f("x"), f("y"), m.str("text"))
+                }
+            }
+            val want = c.getValue("ops").jsonArray.map { e ->
+                val o = e.jsonObject
+                fun d(k: String) = o.getValue(k).jsonPrimitive.double
+                when (o.str("t")) {
+                    "pen" -> MarkOp.Pen(o.str("color"), o.getValue("width").jsonPrimitive.int, o.getValue("pts").jsonArray.map { it.jsonPrimitive.double })
+                    "box" -> MarkOp.Box(o.str("color"), o.getValue("width").jsonPrimitive.int, d("x"), d("y"), d("w"), d("h"))
+                    else -> MarkOp.Text(o.str("color"), o.getValue("size").jsonPrimitive.int, d("x"), d("y"), o.str("text"))
+                }
+            }
+            assertEquals(c.str("name"), want, markOps(marks, c.getValue("w").jsonPrimitive.int, c.getValue("h").jsonPrimitive.int))
         }
     }
 

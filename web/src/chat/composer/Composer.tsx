@@ -81,6 +81,11 @@ export const Composer = memo(function Composer() {
     window.addEventListener('agentview:element', add);
     return () => window.removeEventListener('agentview:element', add);
   }, []);
+  useEffect(() => {
+    const add = (e: Event) => void attach((e as CustomEvent<File[]>).detail);
+    window.addEventListener('agentview:attach', add);
+    return () => window.removeEventListener('agentview:attach', add);
+  }, [attach]);
 
   const ghost = !ac.open && !ac.shell && ac.at === text.length ? ghostFor(text, h.history) : '';
   const typed = full.trim().length > 0 || elements.length > 0;

@@ -24,3 +24,18 @@
   }
 }
 .chrome-frame.picking { cursor: crosshair; }
+.markup-layer { position: absolute; z-index: 1; touch-action: none; cursor: crosshair; }
+.markup-layer.tool-text { cursor: text; }
+.markup-text {
+  position: absolute; z-index: 2; min-width: 120px; padding: 0 var(--sp-1); font-size: var(--fs-lg); font-weight: 500;
+  background: transparent; border: 1px dashed currentColor; border-radius: var(--radius-sm);
+}
+.markup-bar {
+  position: absolute; bottom: calc(var(--sp-6) + var(--safe-bottom)); left: 50%; transform: translateX(-50%); z-index: var(--z-float);
+  display: flex; align-items: center; gap: var(--sp-1); padding: var(--sp-2) var(--sp-3);
+  background: var(--raised); border: 1px solid var(--border); border-radius: var(--radius-md); box-shadow: var(--shadow-md);
+}
+.markup-bar .icon-btn.on { color: var(--accent-text); background: var(--accent-soft); }
+.markup-swatch { display: inline-block; width: 14px; height: 14px; border-radius: var(--radius-pill); border: 1px solid var(--border-strong); vertical-align: -2px; }
+.markup-colours { position: relative; }
+.markup-colours > .ui-menu { top: auto; right: auto; bottom: calc(100% + var(--sp-3)); left: 0; white-space: nowrap; }

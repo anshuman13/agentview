@@ -5,12 +5,13 @@ import { EmptyState } from '../ui/Panel';
 import { readFlag, saveFlag } from '../ui/util';
 import { useChromeSocket, type ChromeState, type Tab } from './useChromeSocket';
 import { useFrameInput } from './useFrameInput';
+import { Markup } from './Markup';
 
 type Send = (m: object) => unknown;
 
-type BarProps = { picking: boolean; setPicking: (v: boolean) => void; send: Send; tabs: Tab[]; tab: Tab | undefined; pinned: string | null; phone: boolean; setPhone: (v: boolean) => void; focusKeyboard: () => void; goFull: () => void };
+type BarProps = { picking: boolean; setPicking: (v: boolean) => void; marking: boolean; setMarking: (v: boolean) => void; send: Send; tabs: Tab[]; tab: Tab | undefined; pinned: string | null; phone: boolean; setPhone: (v: boolean) => void; focusKeyboard: () => void; goFull: () => void };
 
-function BrowserBar({ picking, setPicking, send, tabs, tab, pinned, phone, setPhone, focusKeyboard, goFull }: BarProps) {
+function BrowserBar({ picking, setPicking, marking, setMarking, send, tabs, tab, pinned, phone, setPhone, focusKeyboard, goFull }: BarProps) {
   const [url, setUrl] = useState('');
   const [editing, setEditing] = useState(false);
   useEffect(() => {
@@ -43,6 +44,7 @@ function BrowserBar({ picking, setPicking, send, tabs, tab, pinned, phone, setPh
         {tabs.map((t) => <option key={t.id} value={t.id}>{t.title || t.url}</option>)}
       </select>
       <IconButton icon="inspect" label="Pick an element" on={picking} aria-pressed={picking} title={picking ? 'Click an element to add it to the prompt. Esc ends picking' : 'Pick an element on the page and add it to the prompt'} onClick={() => setPicking(!picking)} />
+      <IconButton icon="edit" label="Mark up" on={marking} aria-pressed={marking} title={marking ? 'Close markup. Esc also closes it' : 'Draw on the page and add it to the chat'} onClick={() => setMarking(!marking)} />
       {tab && <IconButton icon="close" label="Close tab" title="Close this tab in Chrome" onClick={() => send({ t: 'close', id: tab.id })} />}
       <IconButton
         icon="device-mobile"
@@ -67,7 +69,10 @@ export function BrowserPane({ onEmpty }: { onEmpty?: () => void }) {
   const [phone, setPhone] = useState(() => readFlag('browser-phone', false));
   const { send, vp, state, tabs, current, pinned, hasFrame } = useChromeSocket({ img, kbd, host }, phone, onEmpty);
   const input = useFrameInput(send, img, kbd, vp);
-  const [picking, setPicking] = useState(false);
+  const [picking, setPickingNow] = useState(false);
+  const [marking, setMarkingNow] = useState(false);
+  const setPicking = (v: boolean) => { setPickingNow(v); if (v) setMarkingNow(false); };
+  const setMarking = (v: boolean) => { setMarkingNow(v); if (v) setPickingNow(false); };
   const on = state.state === 'on';
 
   // Pick mode: the pointer outlines the element under it in Chrome, a click or tap adds it to the prompt, Esc ends it.
@@ -104,6 +109,8 @@ export function BrowserPane({ onEmpty }: { onEmpty?: () => void }) {
       <BrowserBar
         picking={picking}
         setPicking={setPicking}
+        marking={marking}
+        setMarking={setMarking}
         send={send}
         tabs={tabs}
         tab={tabs.find((t) => t.id === current)}
@@ -125,6 +132,7 @@ export function BrowserPane({ onEmpty }: { onEmpty?: () => void }) {
           onWheel={input.onWheel}
           onContextMenu={(e) => e.preventDefault()}
         />
+        {marking && hasFrame && <Markup img={img} onClose={() => setMarkingNow(false)} />}
         {!hasFrame && (
           <EmptyState size="md" icon="globe" title={tabs.length ? 'Waiting for the tab to draw' : 'No tab open in Chrome'} hint="Chrome only draws the tab that is in front. Pick a tab above to bring it forward" />
         )}
