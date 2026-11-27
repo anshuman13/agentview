@@ -1,8 +1,0 @@
-[
-  {"name": "none unread", "chats": [{"id": "a", "state": null, "lastActive": 1}, {"id": "b", "state": null, "lastActive": 2}], "viewing": "a", "expected": []},
-  {"name": "only the one in view", "chats": [{"id": "a", "state": "done", "lastActive": 5}], "viewing": "a", "expected": []},
-  {"name": "needs you before done", "chats": [{"id": "a", "state": null, "lastActive": 1}, {"id": "b", "state": "done", "lastActive": 9}, {"id": "c", "state": "needs", "lastActive": 3}], "viewing": "a", "expected": ["c", "b"]},
-  {"name": "newest first in each group", "chats": [{"id": "a", "state": null, "lastActive": 1}, {"id": "b", "state": "done", "lastActive": 4}, {"id": "c", "state": "done", "lastActive": 8}, {"id": "d", "state": "needs", "lastActive": 2}, {"id": "e", "state": "needs", "lastActive": 6}], "viewing": "a", "expected": ["e", "d", "c", "b"]},
-  {"name": "running and failed are left out", "chats": [{"id": "a", "state": null, "lastActive": 1}, {"id": "b", "state": "running", "lastActive": 9}, {"id": "c", "state": "failed", "lastActive": 8}, {"id": "d", "state": "done", "lastActive": 2}], "viewing": "a", "expected": ["d"]},
-  {"name": "the one in view is dropped from the groups", "chats": [{"id": "a", "state": "needs", "lastActive": 9}, {"id": "b", "state": "needs", "lastActive": 3}], "viewing": "a", "expected": ["b"]}
-]

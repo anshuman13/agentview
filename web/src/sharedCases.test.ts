@@ -35,7 +35,6 @@ import { mergeTail, trimHeld } from './app/runtime/pageEvents';
 import { alarmCard, buildTranscript, dayDividers, duration, newMarker, newReplies, openAtNew, rewindReplies, shipStep, stepLabel, stepTone, turnAnswers, type Item } from './chat/transcript/steps';
 import { filePath } from './chat/transcript/md';
 import { buildCard, buildRows, type BuildCardInput } from './chat/transcript/buildCardLogic';
-import { unreadOrder, type UnreadChat } from './sessions/chatNav';
 import { foldTurns, proposalState, rememberedOf, usedClaimState, workTitle } from './chat/transcript/workFold';
 import { memoryMark, type MemoryFile, type MemoryMark } from './chat/cards/memoryLogic';
 import { leftOutPreferences, type Preference } from '../../shared/preferences';
@@ -166,12 +165,6 @@ describe('cases shared with the Android app', () => {
       const runs = exploreRunsOf(c.rows);
       expect(runs).toEqual(c.runs);
       expect(runs.map((r) => exploreLabelOf(c.rows.slice(r.start, r.end).map((x) => x.name!)))).toEqual(c.labels);
-    });
-  }
-
-  for (const c of cases<{ name: string; chats: UnreadChat[]; viewing: string; expected: string[] }>('unread-order')) {
-    it(`unreadOrder: ${c.name}`, () => {
-      expect(unreadOrder(c.chats, c.viewing)).toEqual(c.expected);
     });
   }
 

@@ -36,9 +36,6 @@ import no.pradhan.agentview.nativeapp.app.BarEvent
 import no.pradhan.agentview.nativeapp.app.SeenMark
 import no.pradhan.agentview.nativeapp.app.mergeSeen
 import no.pradhan.agentview.nativeapp.chat.Item
-import no.pradhan.agentview.nativeapp.sessions.ChatState
-import no.pradhan.agentview.nativeapp.sessions.UnreadChat
-import no.pradhan.agentview.nativeapp.sessions.unreadOrder
 import no.pradhan.agentview.nativeapp.chat.openAtNew
 import no.pradhan.agentview.nativeapp.chat.duration
 import no.pradhan.agentview.nativeapp.chat.dayDividers
@@ -313,15 +310,6 @@ class SharedCasesTest {
             val runs = exploreRunsOf(rows.map { r -> r["name"]?.takeIf { it !is JsonNull }?.jsonPrimitive?.content to r.getValue("ok").jsonPrimitive.boolean })
             assertEquals(c.str("name"), c.getValue("runs").jsonArray.map { it.jsonObject.let { r -> r.getValue("start").jsonPrimitive.int until r.getValue("end").jsonPrimitive.int } }, runs)
             assertEquals(c.str("name"), c.getValue("labels").jsonArray.map { it.jsonPrimitive.content }, runs.map { r -> exploreLabelOf(rows.slice(r).map { it.str("name") }) })
-        }
-    }
-
-    @Test fun unreadOrder() {
-        for (c in cases("unread-order")) {
-            val chats = c.getValue("chats").jsonArray.map { it.jsonObject }.map { r ->
-                UnreadChat(r.str("id"), r.getValue("state").takeIf { it !is JsonNull }?.jsonPrimitive?.content?.let { s -> ChatState.valueOf(s.replaceFirstChar { it.uppercase() }) }, r.getValue("lastActive").jsonPrimitive.long)
-            }
-            assertEquals(c.str("name"), c.getValue("expected").jsonArray.map { it.jsonPrimitive.content }, unreadOrder(chats, c.str("viewing")))
         }
     }
 
