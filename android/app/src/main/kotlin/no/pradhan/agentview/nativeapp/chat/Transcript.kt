@@ -229,6 +229,8 @@ fun Transcript(hub: Hub, view: ChatView, earlier: Int, settled: Boolean, chatId:
     val bill by hub.store.state.select { billing(it.session?.provider) }
     val list = remember(view.items, view.folds) { view.foldRows.filter { it is FoldRow.Row || (it is FoldRow.Fold && (it.steps.isNotEmpty() || it.work.tools > 0)) } }
     val folded = remember(view.runs) { view.runs.values.flatMap { r -> r.drop(1).map { it.id } }.toSet() }
+    val fresh = remember(chatId) { FreshReplies() }
+    remember(items) { fresh.update(items) }
     val seen = remember(chatId) { hub.leftAt(chatId) to System.currentTimeMillis() }
     val newId = remember(items, seen) { newMarker(items, view.ats, seen.first, seen.second) }
     val newKey = remember(list, newId) { newId?.let { id -> list.firstOrNull { r -> if (r is FoldRow.Fold) r.hidden.any { it.id == id } else r.key == id }?.key } }
@@ -282,7 +284,7 @@ fun Transcript(hub: Hub, view: ChatView, earlier: Int, settled: Boolean, chatId:
                     if (!retried) Button("Retry", { retried = true; hub.retryTurn(chatId) }, size = ButtonSize.Sm)
                 }
             }
-            transcriptRows(hub, view, list, bill, newKey, folded, chatId, cwd, running, canRewind, onOpenAgent, onOpenWork)
+            transcriptRows(hub, view, list, bill, newKey, folded, chatId, cwd, running, canRewind, fresh, onOpenAgent, onOpenWork)
             if (earlier > 0) item(key = "earlier") {
                 Box(Modifier.fillMaxWidth().heightIn(min = Tokens.touch).clickable(enabled = !loading) { hub.loadEarlier() }, contentAlignment = Alignment.Center) {
                     Text(if (loading) "Loading earlier…" else "Show earlier ($earlier hidden)", style = Type.callout, color = av.accentText)
@@ -305,7 +307,7 @@ fun Transcript(hub: Hub, view: ChatView, earlier: Int, settled: Boolean, chatId:
     }
 }
 
-private fun LazyListScope.transcriptRows(hub: Hub, view: ChatView, list: List<FoldRow>, bill: String, newKey: String?, folded: Set<String>, chatId: String, cwd: String, running: Boolean, canRewind: Boolean, onOpenAgent: (String) -> Unit, onOpenWork: (String) -> Unit) {
+private fun LazyListScope.transcriptRows(hub: Hub, view: ChatView, list: List<FoldRow>, bill: String, newKey: String?, folded: Set<String>, chatId: String, cwd: String, running: Boolean, canRewind: Boolean, fresh: FreshReplies, onOpenAgent: (String) -> Unit, onOpenWork: (String) -> Unit) {
     // Fields that keep their identity while a reply streams, so the rows do not capture the view, which does not.
     val days = view.days
     val runs = view.runs
@@ -327,7 +329,10 @@ private fun LazyListScope.transcriptRows(hub: Hub, view: ChatView, list: List<Fo
                     val run = runs[it.id]
                     when {
                         run != null -> ExploredRow(hub, it.id, run, cwd, !running)
-                        else -> ItemRow(hub, it, chatId, cwd, !running, onOpenAgent, if (!running && canRewind) rewinds[it.id] else null, card = it.id in docCards, answer = it.id in answers && (!running || it.id != openAnswer))
+                        else -> {
+                            val born = remember(it.id) { fresh.take(it.id) }
+                            ItemRow(hub, it, chatId, cwd, !running, onOpenAgent, if (!running && canRewind) rewinds[it.id] else null, card = it.id in docCards, answer = it.id in answers && (!running || it.id != openAnswer), fresh = born)
+                        }
                     }
                 }
             }
@@ -454,11 +459,11 @@ private fun JumpButton(replies: Int, modifier: Modifier, onClick: () -> Unit) {
 }
 
 @Composable
-internal fun ItemRow(hub: Hub, it: Item, chat: String, cwd: String, settled: Boolean, onOpenAgent: (String) -> Unit, rewind: Item.User? = null, card: Boolean = false, answer: Boolean = false, readOnly: Boolean = false) {
+internal fun ItemRow(hub: Hub, it: Item, chat: String, cwd: String, settled: Boolean, onOpenAgent: (String) -> Unit, rewind: Item.User? = null, card: Boolean = false, answer: Boolean = false, readOnly: Boolean = false, fresh: Boolean = false) {
     when (it) {
         is Item.User -> UserRow(hub, it, chat, readOnly)
         is Item.Assistant -> {
-            Markdown(it.text, Modifier.fillMaxWidth(), it.streaming, reading = true)
+            Markdown(it.text, Modifier.fillMaxWidth(), it.streaming, reading = true, fresh = fresh)
             if (!it.streaming && (answer || rewind != null)) ReplyActions(hub, if (answer) it.text.trim() else null, rewind)
         }
         is Item.System -> Text(it.text, style = Type.footnote, color = if (it.error) av.err else av.fgMuted)

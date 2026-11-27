@@ -38,6 +38,7 @@ import { FIRST_ROWS, hiddenCount, needsEarlier, revealMore, stageRows, windowSta
 import { ROW_WINDOW, type ChatEvent } from '../../../../shared/protocol';
 import { quoteText } from '../../../../shared/composerText';
 import { useSelectionAt } from '../../ui/useSelectionAt';
+import { freshReplies, knownIds } from './streamFade';
 
 export const Transcript = memo(function Transcript() {
   const events = useStore((s) => s.events);
@@ -345,12 +346,15 @@ function TranscriptView({ sessionId, events, earlier, cwd, running, bill, failed
   const replies = stuck ? 0 : newReplies(items, scroll.leftAt);
   const jumpLabel = `Jump to latest${replies > 0 ? ` · ${replies} new ${replies === 1 ? 'reply' : 'replies'}` : ''}`;
   const failText = failed && !running ? failedLine(events, label) : null;
+  const known = useRef<Set<string> | null>(null);
+  const fresh = freshReplies(known.current, items);
+  useEffect(() => { known.current = knownIds(known.current, items); }, [items]);
 
   const rowOf = (it: Item, first: boolean) => {
     if (!first && folded.has(it.id)) return null;
     const run = runs.get(it.id);
     if (run) return <Explored key={it.id} id={it.id} run={run} cwd={cwd} />;
-    return <Row key={it.id} it={it} cwd={cwd} settled={!running} card={cards.has(it.id)} answer={answers.has(it.id)} rewind={canRewind && !running ? rewinds.get(it.id) : undefined} />;
+    return <Row key={it.id} it={it} cwd={cwd} settled={!running} card={cards.has(it.id)} answer={answers.has(it.id)} rewind={canRewind && !running ? rewinds.get(it.id) : undefined} fresh={fresh.has(it.id)} />;
   };
 
   return (
@@ -528,13 +532,13 @@ function ProposedClaims({ proposed }: { proposed: Proposal[] }) {
   );
 }
 
-function RowImpl({ it, cwd, settled, card, answer, rewind, readOnly }: { it: Item; cwd: string; settled?: boolean; card?: boolean; answer?: boolean; rewind?: Rewind; readOnly?: boolean }) {
+function RowImpl({ it, cwd, settled, card, answer, rewind, readOnly, fresh }: { it: Item; cwd: string; settled?: boolean; card?: boolean; answer?: boolean; rewind?: Rewind; readOnly?: boolean; fresh?: boolean }) {
   const label = useStore((s) => providerLabel(s.session.provider));
   switch (it.kind) {
     case 'user':
       return <div id={`turn-${it.id}`} className={`tr-user ${it.stopping ? 'stopping' : ''} ${it.queued ? 'queued' : ''}`}>{it.voice && <span className="tr-mic" title="Spoken"><Icon name="mic" small /></span>}<UserText id={it.id} text={it.text} />{it.stopping && <span className="tr-stop"><Icon name="loading" small spin />{`Stopping ${label} to send this`}</span>}{it.queued && <span className="tr-stop"><Icon name="clock" small />{`Waiting for ${label}'s next step`}<Button variant="plain" size="sm" className="tl-send-now" title={`Stop ${label}'s current step and send this now`} onClick={() => send({ type: 'send_now', id: it.id })}>Send now</Button></span>}{!it.stopping && !it.queued && !readOnly && <span className="tr-acts"><IconButton icon="reply" label="Use again" onClick={() => window.dispatchEvent(new CustomEvent('agentview:insert', { detail: { text: it.text } }))} /><IconButton icon="copy" label="Copy" onClick={() => copyPrompt(it.text)} /></span>}</div>;
     case 'assistant':
-      return <div id={`turn-${it.id}`} className={`tr-assistant ${it.streaming ? 'streaming' : ''}`}><Markdown text={it.text} id={it.streaming ? undefined : it.id} fade={it.streaming} />{!it.streaming && (answer || rewind) && <div className="tr-acts">{answer && <IconButton icon="copy" label="Copy" onClick={() => copyReply(it.text.trim())} />}{rewind && <RewindLink rewind={rewind} />}</div>}</div>;
+      return <div id={`turn-${it.id}`} className={`tr-assistant ${it.streaming ? 'streaming' : ''}`}><Markdown text={it.text} id={it.streaming ? undefined : it.id} fade={it.streaming} fresh={fresh} />{!it.streaming && (answer || rewind) && <div className="tr-acts">{answer && <IconButton icon="copy" label="Copy" onClick={() => copyReply(it.text.trim())} />}{rewind && <RewindLink rewind={rewind} />}</div>}</div>;
     case 'system':
       return <div className={`tr-system${it.error ? ' err' : ''}`}>{it.text}</div>;
     case 'step':

@@ -11,6 +11,20 @@ export function nextTails(tails: Tail[], prevLen: number | null, len: number, no
   return len > prevLen ? [...live, { start: prevLen, at: now }] : live;
 }
 
+// Replies that started streaming while their chat was showing: ids missing from what the transcript had already rendered.
+// known is null until the transcript first shows items, so a chat opened mid-reply has none.
+export function freshReplies(known: Set<string> | null, items: { kind: string; id: string; streaming?: boolean }[]): Set<string> {
+  if (!known) return new Set();
+  return new Set(items.filter((it) => it.kind === 'assistant' && it.streaming && !known.has(it.id)).map((it) => it.id));
+}
+
+export function knownIds(known: Set<string> | null, items: { id: string }[]): Set<string> | null {
+  if (!items.length) return known;
+  const next = known ?? new Set<string>();
+  for (const it of items) next.add(it.id);
+  return next;
+}
+
 export function fadeRanges(tails: Tail[], len: number, now: number): FadeRange[] {
   return tails.map((t, i) => ({ start: t.start, end: Math.min(tails[i + 1]?.start ?? len, len), delay: t.at - now })).filter((r) => r.end > r.start);
 }

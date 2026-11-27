@@ -83,8 +83,9 @@ const val MARKDOWN_STREAM_MS = 100L
 private val parsed = LruCache<String, List<MdBlock>>(64)
 
 // Parses off the main thread. While `streaming` the text is re-parsed at most every MARKDOWN_STREAM_MS; a finished message is parsed once.
+// `fresh` marks a message that arrived while its chat was showing: all its blocks count as new, so its opening words fade.
 @Composable
-fun Markdown(text: String, modifier: Modifier = Modifier, streaming: Boolean = false, reading: Boolean = false) {
+fun Markdown(text: String, modifier: Modifier = Modifier, streaming: Boolean = false, reading: Boolean = false, fresh: Boolean = false) {
     val latest by rememberUpdatedState(text to streaming)
     val blocks by produceState(parsed.get(text)) {
         var last = 0L
@@ -96,7 +97,7 @@ fun Markdown(text: String, modifier: Modifier = Modifier, streaming: Boolean = f
         }
     }
     val fade = streaming && !motionOff()
-    blocks?.let { CompositionLocalProvider(LocalStreamFade provides fade) { MdBlocks(it, modifier, reading) } }
+    blocks?.let { CompositionLocalProvider(LocalStreamFade provides fade, LocalFreshBlock provides fresh) { MdBlocks(it, modifier, reading) } }
 }
 
 @Composable

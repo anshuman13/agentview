@@ -57,8 +57,9 @@ const Block = memo(
   (a, b) => a.token.raw === b.token.raw && a.fade === b.fade,
 );
 
-export function Markdown({ text, id, files = true, fade }: { text: string; id?: string; files?: boolean; fade?: boolean }) {
+export function Markdown({ text, id, files = true, fade, fresh }: { text: string; id?: string; files?: boolean; fade?: boolean; fresh?: boolean }) {
   const m = useMd();
+  const born = useRef(fresh);
   const [menu, setMenu] = useState<MenuPoint | null>(null);
   const onMenu = (e: MouseEvent<HTMLDivElement>) => {
     const link = (e.target as HTMLElement).closest<HTMLElement>('[data-open]');
@@ -79,8 +80,9 @@ export function Markdown({ text, id, files = true, fade }: { text: string; id?: 
   }, [m, id, text]);
   const blocks = useMemo(() => (m && files && html === null ? m.splitBlocks(text) : null), [m, files, html, text]);
   // Blocks past the count at the first render arrived while this message was on screen, so their first chunk fades too.
+  // A fresh message (one that arrived while its chat was showing) counts none, so its opening words fade.
   const seen = useRef<number | null>(null);
-  if (blocks && seen.current === null) seen.current = blocks.length;
+  if (blocks && seen.current === null) seen.current = born.current ? 0 : blocks.length;
   if (!m) return <div className="md" style={{ whiteSpace: 'pre-wrap' }}>{text}</div>;
   if (!files) return <div className="md" onClick={onCopy} dangerouslySetInnerHTML={{ __html: m.mdNoFiles.parse(text, { async: false }) as string }} />;
   let body;
