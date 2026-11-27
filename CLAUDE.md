@@ -36,3 +36,8 @@ varies by provider follows the Providers section of the same file.
 `a shell am start -n no.pradhan.agentview.native/no.pradhan.agentview.nativeapp.MainActivity --ez readonly true --es origin http://localhost:7777`.
 `readonly` blocks every write to the live server. Screenshots: `a exec-out screencap -p > /tmp/x.png`, and check the file is not empty before reading it.
 Reset any `wm size` or `wm density` change when done.
+
+## Subagents
+- Before starting any subagent, ask `curl -s 'http://127.0.0.1:7777/api/helpers?agents=<N>'`, where N is this chat plus the helpers it already has running. Start at most `helpers` more; 0 means work alone.
+- The count comes from the last 15 minutes of measured 5-hour burn per agent, projected to the reset with a 90% target, and is 0 at the 60% weekly cap. With an hour and 30% left at a light burn it allows 2; early in a window at a heavy burn it allows none.
+- Ask again before each new batch. Build runs get the same count in their round brief.

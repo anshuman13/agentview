@@ -34,7 +34,7 @@ import { savePaste } from './body.js';
 import { readBody, failed } from '../json.js';
 import { entry, type Ctx, type Entry, type Prefix, type RouteDeps } from './routeTypes.js';
 import { exec } from '../exec.js';
-import { usageReport } from '../usage/report.js';
+import { helperReport, usageReport } from '../usage/report.js';
 
 export function sessionRoutes(d: RouteDeps): Record<string, Entry<Ctx>> {
   return {
@@ -226,6 +226,11 @@ export function systemRoutes(d: RouteDeps): Record<string, Entry<Ctx>> {
       const days = Number(url.searchParams.get('days') ?? 30);
       if (!Number.isInteger(days) || days < 1 || days > 366) return failed(400, 'days must be a whole number from 1 to 366');
       return usageReport(days);
+    }),
+    'GET /api/helpers': entry(({ url }) => {
+      const agents = Number(url.searchParams.get('agents') ?? 1);
+      if (!Number.isInteger(agents) || agents < 1 || agents > 20) return failed(400, 'agents must be a whole number from 1 to 20');
+      return helperReport(agents);
     }),
     'POST /api/restart': entry(({ url }) => {
       d.restart(url.searchParams.has('now'), url.searchParams.has('full'));

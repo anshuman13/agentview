@@ -73,6 +73,17 @@ export function helperCount(o: { pct: number; mins: number | null; perAgent: num
   return n;
 }
 
+// Helper advice for any chat about to start subagents: the account's measured burn split over the agents running now
+// (the asking chat plus its helpers), sized by helperCount.
+export function helperAdvice(o: { pct: number; resetsAt: number | null; rate: number | null; weekPct: number | null; agents: number }, now = Date.now()) {
+  const perAgent = o.rate === null ? null : o.rate / Math.max(1, o.agents);
+  const mins = o.resetsAt === null ? null : Math.max(0, (o.resetsAt - now) / 60_000);
+  const total = helperCount({ pct: o.pct, mins, perAgent, weekPct: o.weekPct });
+  const helpers = Math.max(0, total - Math.max(0, o.agents - 1));
+  const why = mins === null ? 'no 5-hour reset known' : `5-hour ${o.pct}%, ${Math.round(mins)} min to reset, ${perAgent === null ? 'no measured rate' : `${perAgent.toFixed(2)} pts/min per agent`}`;
+  return { helpers, perAgent, mins, why };
+}
+
 const minsTo = (u: BuildUsage, now: number) => (u.resetsAt === null ? null : Math.max(0, (u.resetsAt - now) / 60_000));
 
 export const buildHelpers = (u: BuildUsage | null | undefined, now = Date.now()) => (u ? helperCount({ ...u, mins: minsTo(u, now) }) : 0);

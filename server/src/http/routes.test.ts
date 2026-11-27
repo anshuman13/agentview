@@ -248,6 +248,10 @@ describe('routes', () => {
     });
   });
 
+  it('rejects a bad agents count for helper advice', async () => {
+    expect((await call('GET', '/api/helpers?agents=0')).code).toBe(400);
+  });
+
   it('serves the usage report for logged-in accounts', async () => {
     const logged = vi.spyOn(accounts, 'loggedInAccounts').mockReturnValue(['main']);
     const r = await call('GET', '/api/usage?days=3');

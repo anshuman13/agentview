@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test';
-import { burnRate, helperCount, nextStep, parseBuild, taskBrief, untilAt } from './build';
+import { burnRate, helperAdvice, helperCount, nextStep, parseBuild, taskBrief, untilAt } from './build';
 
 describe('parseBuild', () => {
   it('reads auto, until and a request or spec path', () => {
@@ -48,6 +48,25 @@ describe('burnRate', () => {
   it('is null for samples spanning under 2 minutes', () => {
     expect(burnRate([])).toBeNull();
     expect(burnRate([{ at: 0, fiveHour: 10 }, { at: m, fiveHour: 12 }])).toBeNull();
+  });
+});
+
+describe('helperAdvice', () => {
+  const now = Date.parse('2026-11-27T21:38:00');
+  const at = (mins: number) => now + mins * 60_000;
+
+  it('allows 2 more with an hour left, 30% left and a light measured burn', () => {
+    expect(helperAdvice({ pct: 70, resetsAt: at(60), rate: 0.1, weekPct: 30, agents: 1 }, now).helpers).toBe(2);
+  });
+
+  it('allows none early in the window at 1 pt/min across 4 agents, the 27 Nov evening', () => {
+    expect(helperAdvice({ pct: 8, resetsAt: at(292), rate: 1, weekPct: 37, agents: 4 }, now).helpers).toBe(0);
+  });
+
+  it('counts helpers already running against the total', () => {
+    const one = helperAdvice({ pct: 20, resetsAt: at(30), rate: 0.3, weekPct: 20, agents: 1 }, now).helpers;
+    const three = helperAdvice({ pct: 20, resetsAt: at(30), rate: 0.9, weekPct: 20, agents: 3 }, now).helpers;
+    expect([one, three]).toEqual([3, 1]);
   });
 });
 
