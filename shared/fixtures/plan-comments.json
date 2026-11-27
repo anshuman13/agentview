@@ -1,0 +1,76 @@
+{
+ "paragraphs": [
+  {
+   "name": "blank lines split, a fenced block stays whole",
+   "plan": "# Plan\n\n1. Add a route\n2. Test it\n\n```ts\nconst a = 1;\n\nconst b = 2;\n```\n\nDone",
+   "expected": [
+    "# Plan",
+    "1. Add a route\n2. Test it",
+    "```ts\nconst a = 1;\n\nconst b = 2;\n```",
+    "Done"
+   ]
+  },
+  {
+   "name": "tilde fence",
+   "plan": "a\n\n~~~\nx\n\ny\n~~~",
+   "expected": [
+    "a",
+    "~~~\nx\n\ny\n~~~"
+   ]
+  },
+  {
+   "name": "several blank lines and spaces",
+   "plan": "\n\na\n  \n\nb\n",
+   "expected": [
+    "a",
+    "b"
+   ]
+  },
+  {
+   "name": "windows line ends",
+   "plan": "a\r\nb\r\n\r\nc",
+   "expected": [
+    "a\nb",
+    "c"
+   ]
+  }
+ ],
+ "feedback": [
+  {
+   "name": "quotes each commented paragraph",
+   "paragraphs": [
+    "Step one\nmore",
+    "Second xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+    "Third"
+   ],
+   "notes": {
+    "0": " use a worktree ",
+    "1": "too big",
+    "2": "  "
+   },
+   "expected": "Comments on the plan:\n\n> Step one more\nuse a worktree\n\n> Second xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx…\ntoo big"
+  },
+  {
+   "name": "no comments",
+   "paragraphs": [
+    "a"
+   ],
+   "notes": {},
+   "expected": ""
+  }
+ ],
+ "blocked": [
+  {
+   "rule": "Bash(rm -rf \\(x\\) \\\\y)",
+   "expected": "rm -rf (x) \\y"
+  },
+  {
+   "rule": "WebFetch(domain:x.com)",
+   "expected": "WebFetch(domain:x.com)"
+  },
+  {
+   "rule": "Bash(ls",
+   "expected": "ls"
+  }
+ ]
+}

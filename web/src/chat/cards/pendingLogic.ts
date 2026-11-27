@@ -12,7 +12,7 @@ export function planParagraphs(plan: string): string[] {
   const out: string[] = [];
   let cur: string[] = [];
   let fence = false;
-  for (const line of plan.split('\n')) {
+  for (const line of plan.split(/\r?\n/)) {
     if (/^\s*(```|~~~)/.test(line)) fence = !fence;
     if (!fence && !line.trim()) {
       if (cur.length) out.push(cur.join('\n'));
@@ -39,5 +39,5 @@ export function planFeedback(paragraphs: string[], notes: Record<number, string>
 
 // The command of a blocked Bash rule, unescaped; any other rule as it is.
 export function blockedRule(rule: string) {
-  return rule.startsWith('Bash(') ? rule.slice(5, -1).replace(/\\([\\()])/g, '$1') : rule;
+  return rule.startsWith('Bash(') ? rule.slice(5).replace(/\)$/, '').replace(/\\([\\()])/g, '$1') : rule;
 }

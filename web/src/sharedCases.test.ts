@@ -13,6 +13,7 @@ import { FEATURES, featureRows, paletteFeature, shownFeature, type UseDays } fro
 import type { Capabilities, ChatEvent, Finding, ChatRun, Effort, LiveChat, Provider, SavedSession, SpawnedBuild, Try } from '../../shared/protocol';
 import { START_MODES, billing, checkedModel, menuModes, modeSteps, modelRow, newestModels, providerLabel, providerMark, providerModes, settingsLabel, shortModel, startModeFor, startTexts, type Billing } from '../../shared/providers';
 import { recentInRepo } from './app/newChat';
+import { blockedRule, planFeedback, planParagraphs } from './chat/cards/pendingLogic';
 import { binLeft, buildFolders, chatPlace, since } from './sessions/folders';
 import { findingFixPrompt, findingsFixPrompt } from '../../shared/reviewPrompt';
 import { setupPrompt, type SetupKind } from '../../shared/setupPrompt';
@@ -189,6 +190,13 @@ describe('cases shared with the Android app', () => {
     const ats = new Map(f.rows.map((r) => [r.id, r.at]));
     for (const c of f.marker) it(`newMarker: ${c.name}`, () => expect(newMarker(items, ats, c.seen, c.openedAt)).toBe(c.expected));
     for (const c of f.replies) it(`newReplies: ${c.name}`, () => expect(newReplies(items, c.lastSeen)).toBe(c.expected));
+  }
+
+  {
+    const f = JSON.parse(readFileSync(new URL('../../shared/fixtures/plan-comments.json', import.meta.url), 'utf8')) as { paragraphs: { name: string; plan: string; expected: string[] }[]; feedback: { name: string; paragraphs: string[]; notes: Record<number, string>; expected: string }[]; blocked: { rule: string; expected: string }[] };
+    for (const c of f.paragraphs) it(`planParagraphs: ${c.name}`, () => expect(planParagraphs(c.plan)).toEqual(c.expected));
+    for (const c of f.feedback) it(`planFeedback: ${c.name}`, () => expect(planFeedback(c.paragraphs, c.notes)).toBe(c.expected));
+    for (const c of f.blocked) it(`blockedRule: ${c.rule}`, () => expect(blockedRule(c.rule)).toBe(c.expected));
   }
 
   for (const c of cases<{ ms: number; expected: string }>('step-duration')) {

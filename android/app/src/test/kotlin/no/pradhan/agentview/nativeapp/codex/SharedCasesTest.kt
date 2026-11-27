@@ -43,6 +43,9 @@ import no.pradhan.agentview.nativeapp.chat.Use
 import no.pradhan.agentview.nativeapp.chat.openAtNew
 import no.pradhan.agentview.nativeapp.chat.duration
 import no.pradhan.agentview.nativeapp.chat.dayDividers
+import no.pradhan.agentview.nativeapp.chat.blockedRule
+import no.pradhan.agentview.nativeapp.chat.planFeedback
+import no.pradhan.agentview.nativeapp.chat.planParagraphs
 import no.pradhan.agentview.nativeapp.chat.newMarker
 import no.pradhan.agentview.nativeapp.chat.newReplies
 import no.pradhan.agentview.nativeapp.chat.stepLabel
@@ -356,6 +359,17 @@ class SharedCasesTest {
         for (c in f.getValue("replies").jsonArray.map { it.jsonObject }) {
             assertEquals(c.str("name"), c.getValue("expected").jsonPrimitive.int, newReplies(items, c.str("lastSeen")))
         }
+    }
+
+    @Test fun planComments() {
+        val f = Json.parseToJsonElement(File("../../shared/fixtures/plan-comments.json").readText()).jsonObject
+        fun strings(e: JsonElement) = e.jsonArray.map { it.jsonPrimitive.content }
+        for (c in f.getValue("paragraphs").jsonArray.map { it.jsonObject }) assertEquals(c.str("name"), strings(c.getValue("expected")), planParagraphs(c.str("plan")))
+        for (c in f.getValue("feedback").jsonArray.map { it.jsonObject }) {
+            val notes = c.getValue("notes").jsonObject.entries.associate { it.key.toInt() to it.value.jsonPrimitive.content }
+            assertEquals(c.str("name"), c.str("expected"), planFeedback(strings(c.getValue("paragraphs")), notes))
+        }
+        for (c in f.getValue("blocked").jsonArray.map { it.jsonObject }) assertEquals(c.str("rule"), c.str("expected"), blockedRule(c.str("rule")))
     }
 
     @Test fun stepDurations() {
