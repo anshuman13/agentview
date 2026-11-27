@@ -118,7 +118,7 @@ class StepsTest {
         assertNull(gapAbove(null, user))
         assertEquals(Tokens.sp24, gapAbove(user, text))
         assertEquals(Tokens.sp24, gapAbove(text, user))
-        assertEquals(Tokens.sp4, gapAbove(text, step))
+        assertEquals(Tokens.sp6, gapAbove(text, step))
         assertNull(gapAbove(step, step))
     }
 
