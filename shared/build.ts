@@ -123,6 +123,7 @@ export const PAUSED_BY_YOU = 'Paused by you';
 export const BLOCKED = 'Needs you: a task is blocked';
 export const APPROVE = 'Approve the spec: Build all';
 export const FAILED = 'The last turn failed';
+export const WAITING_RESET = 'Waiting for the 5-hour reset';
 
 // What a build run does after a turn of its task phase.
 export function nextStep(o: { pausing: boolean; asked: boolean; failed: boolean; auto: boolean; open: number; until: number | null; idle: number; weekPct: number | null; now: number }): BuildStep {

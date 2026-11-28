@@ -29,8 +29,9 @@ export class UsageLimit {
   }
 
   // A turn that ended on a usage limit goes on under the other account, if it has usage left.
+  // A build run stays on its account and waits for the reset instead.
   failOver() {
-    if (!this.reset) return false;
+    if (!this.reset || this.s.runs.buildFor(this.s.id)?.state === 'running') return false;
     const from = this.s.driver.account;
     const to = this.hit(this.reset);
     if (!to) return false;

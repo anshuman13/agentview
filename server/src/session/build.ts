@@ -1,15 +1,18 @@
 import { randomUUID } from 'node:crypto';
 import { readFile, readdir, stat } from 'node:fs/promises';
 import path from 'node:path';
-import { APPROVE, BLOCKED, BUILD_USAGE, FAILED, PAUSED_BY_YOU, buildHelpers, buildSpecPrompt, burnRate, hhmm, moreBrief, nextStep, recapBrief, taskBrief, untilAt, type BuildArgs, type BuildStep, type BuildUsage } from '../../../shared/build.js';
+import { APPROVE, BLOCKED, BUILD_USAGE, FAILED, PAUSED_BY_YOU, WAITING_RESET, buildHelpers, buildSpecPrompt, burnRate, hhmm, moreBrief, nextStep, recapBrief, taskBrief, untilAt, type BuildArgs, type BuildStep, type BuildUsage } from '../../../shared/build.js';
 import type { ChatRun, RoundOutcome } from '../../../shared/protocol.js';
 import { specTasks } from '../../../shared/specTasks.js';
 import { samplesSince } from '../usage/store.js';
+import { after } from './wakeups.js';
 import { ROUND_INSTRUCTION, STOPPED_BY_YOU, firstSentence } from './runs.js';
 import type { AgentSession } from './session.js';
 
 // A spec run in one chat: each task in a fresh context (/clear, then a brief), until the list is done, the stop time, or the usage cap.
 export class BuildLoop {
+  private waitTimer: NodeJS.Timeout | null = null;
+
   constructor(private s: AgentSession) {}
 
   private get run() {
@@ -66,6 +69,12 @@ export class BuildLoop {
       return this.sendStep(run);
     }
     if (run.phase === 'recap') return runs.end(run.id, run.why || 'done');
+    // At the 5-hour limit the run pauses on its own account and resumes a minute after the reset.
+    const reset = this.s.usage.reset;
+    if (reset && run.state === 'running') {
+      runs.update(run.id, { state: 'paused', why: `${WAITING_RESET} at ${hhmm(reset)}`, nextAt: reset + 60_000, pausing: false });
+      return this.armWait();
+    }
     if (run.phase === 'spec') return this.specWritten(run);
     // A message from you answers a blocked task or a failed turn, and the run goes on.
     if (run.state === 'paused' && (run.why === BLOCKED || run.why === FAILED)) runs.update(run.id, { state: 'running', why: '' });
@@ -92,12 +101,25 @@ export class BuildLoop {
   kick() {
     const run = this.run;
     if (run?.state === 'running' && !this.s.state.session.running) void (run.clearing ? this.sendStep(run) : this.advance(null));
+    this.armWait();
+  }
+
+  private armWait() {
+    const run = this.run;
+    if (this.waitTimer) clearTimeout(this.waitTimer);
+    this.waitTimer = null;
+    if (!run?.nextAt || run.state !== 'paused' || !run.why.startsWith(WAITING_RESET)) return;
+    this.waitTimer = after(run.nextAt, () => {
+      this.waitTimer = null;
+      const now = this.run;
+      if (now?.state === 'paused' && now.why.startsWith(WAITING_RESET)) this.resume();
+    });
   }
 
   private resume() {
     const run = this.run;
     if (!run) return;
-    this.s.runs.update(run.id, { state: 'running', why: '', pausing: false, ...(run.phase === 'spec' && { phase: 'task' }) });
+    this.s.runs.update(run.id, { state: 'running', why: '', pausing: false, nextAt: null, ...(run.phase === 'spec' && { phase: 'task' }) });
     if (!this.s.state.session.running) void this.advance(null);
   }
 
