@@ -1,7 +1,7 @@
 import { Database } from 'bun:sqlite';
 import fs from 'node:fs';
 import path from 'node:path';
-import type { Account, UsageDay, UsageExtra, UsageLatest, UsageWindow } from '../../../shared/protocol.js';
+import type { Account, Provider, UsageDay, UsageExtra, UsageLatest, UsageWindow } from '../../../shared/protocol.js';
 import { STATE_DIR } from '../agent/claude/accounts.js';
 
 type RateWindow = { utilization: number | null; resets_at: string | null } | null | undefined;
@@ -17,16 +17,20 @@ export type RawUsage = {
   } | null;
 };
 
+export type UsageKey = Account | 'codex';
+
 export type CallRow = {
   id: string;
   at: number;
-  account: Account;
+  account: UsageKey;
+  provider?: Provider;
   chat: string | null;
   model: string | null;
   input: number;
   output: number;
   cacheWrite: number;
   cacheRead: number;
+  reasoning?: number;
   guessed?: boolean;
 };
 
@@ -49,7 +53,14 @@ function store() {
     CREATE INDEX IF NOT EXISTS calls_account_at ON calls(account, at);
     CREATE TABLE IF NOT EXISTS meta(key TEXT PRIMARY KEY, value TEXT);
   `);
+  migrateCalls(db);
   return db;
+}
+
+export function migrateCalls(d: Database) {
+  const cols = new Set((d.query('PRAGMA table_info(calls)').all() as { name: string }[]).map((c) => c.name));
+  if (!cols.has('provider')) d.exec(`ALTER TABLE calls ADD COLUMN provider TEXT DEFAULT 'claude'`);
+  if (!cols.has('reasoning')) d.exec('ALTER TABLE calls ADD COLUMN reasoning INTEGER DEFAULT 0');
 }
 
 export function closeStore() {
@@ -120,8 +131,10 @@ export function samplesSince(account: Account, since: number) {
 // Returns true when the row is new; a message id already stored is skipped.
 export function saveCall(c: CallRow) {
   const r = store()
-    .query('INSERT OR IGNORE INTO calls(id, at, account, chat, model, input, output, cache_write, cache_read, guessed) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
-    .run(c.id, c.at, c.account, c.chat, c.model, c.input, c.output, c.cacheWrite, c.cacheRead, c.guessed ? 1 : 0);
+    .query(
+      'INSERT OR IGNORE INTO calls(id, at, account, provider, chat, model, input, output, cache_write, cache_read, reasoning, guessed) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+    )
+    .run(c.id, c.at, c.account, c.provider ?? 'claude', c.chat, c.model, c.input, c.output, c.cacheWrite, c.cacheRead, c.reasoning ?? 0, c.guessed ? 1 : 0);
   return r.changes > 0;
 }
 
@@ -133,8 +146,18 @@ export function saveCalls(rows: CallRow[]) {
   return added;
 }
 
+export function callsSince(account: UsageKey, since: number): CallRow[] {
+  const rows = store()
+    .query(
+      `SELECT id, at, account, provider, chat, model, input, output, cache_write AS cacheWrite, cache_read AS cacheRead, reasoning, guessed
+       FROM calls WHERE account = ? AND at >= ? ORDER BY at, id`,
+    )
+    .all(account, since) as (Omit<CallRow, 'guessed'> & { guessed: number })[];
+  return rows.map((r) => ({ ...r, guessed: !!r.guessed }));
+}
+
 // Token totals per local day, only for days with calls.
-export function tokensByDay(account: Account, since: number): UsageDay[] {
+export function tokensByDay(account: UsageKey, since: number): UsageDay[] {
   return store()
     .query(
       `SELECT strftime('%Y-%m-%d', at / 1000, 'unixepoch', 'localtime') AS day,

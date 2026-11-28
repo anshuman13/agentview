@@ -27,8 +27,8 @@ describe('recordCall', () => {
     const rows = db.query('SELECT * FROM calls ORDER BY id').all();
     db.close();
     expect(rows).toEqual([
-      { id: 'msg_a', at: 1000, account: 'alt', chat: 's1', model: 'claude-opus', input: 10, output: 20, cache_write: 30, cache_read: 40, guessed: 0 },
-      { id: 'msg_b', at: 3000, account: 'alt2', chat: 's2', model: 'claude-sonnet', input: 5, output: 0, cache_write: 0, cache_read: 0, guessed: 0 },
+      { id: 'msg_a', at: 1000, account: 'alt', chat: 's1', model: 'claude-opus', input: 10, output: 20, cache_write: 30, cache_read: 40, guessed: 0, provider: 'claude', reasoning: 0 },
+      { id: 'msg_b', at: 3000, account: 'alt2', chat: 's2', model: 'claude-sonnet', input: 5, output: 0, cache_write: 0, cache_read: 0, guessed: 0, provider: 'claude', reasoning: 0 },
     ]);
   });
 });

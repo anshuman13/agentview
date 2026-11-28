@@ -1,8 +1,9 @@
-import { rmSync } from 'node:fs';
+import { mkdirSync, rmSync } from 'node:fs';
 import path from 'node:path';
 import { afterAll, beforeEach, describe, expect, it } from 'bun:test';
 import { STATE_DIR } from '../agent/claude/accounts.js';
-import { closeStore, getMeta, latestSample, samplesSince, saveCall, saveCalls, saveSample, setMeta, tokensByDay, type CallRow } from './store.js';
+import { Database } from 'bun:sqlite';
+import { callsSince, closeStore, getMeta, latestSample, samplesSince, saveCall, saveCalls, saveSample, setMeta, tokensByDay, type CallRow } from './store.js';
 
 const reset = () => {
   closeStore();
@@ -80,5 +81,29 @@ describe('usage store', () => {
     setMeta('backfilled_at', '1');
     setMeta('backfilled_at', '2');
     expect(getMeta('backfilled_at')).toBe('2');
+  });
+
+  it('stores provider and reasoning for Claude and Codex calls', () => {
+    saveCall(call('c1', '2026-11-25T10:00:00', 1));
+    saveCall(call('x1', '2026-11-25T11:00:00', 5, { account: 'codex', provider: 'codex', model: 'gpt-5.5', reasoning: 9 }));
+    expect(callsSince('main', 0)).toEqual([{ ...call('c1', '2026-11-25T10:00:00', 1), provider: 'claude', reasoning: 0, guessed: false }]);
+    expect(callsSince('codex', 0)).toEqual([
+      { ...call('x1', '2026-11-25T11:00:00', 5), account: 'codex', provider: 'codex', model: 'gpt-5.5', reasoning: 9, guessed: false },
+    ]);
+  });
+
+  it('migrates an old calls table and keeps its rows', () => {
+    mkdirSync(STATE_DIR, { recursive: true });
+    const old = new Database(path.join(STATE_DIR, 'usage.db'));
+    old.exec(
+      'CREATE TABLE calls(id TEXT PRIMARY KEY, at INTEGER, account TEXT, chat TEXT, model TEXT, input INTEGER, output INTEGER, cache_write INTEGER, cache_read INTEGER, guessed INTEGER)',
+    );
+    old.query("INSERT INTO calls VALUES ('o1', 5, 'alt', 's1', 'claude-opus', 1, 2, 3, 4, 0)").run();
+    old.close();
+    expect(callsSince('alt', 0)).toEqual([
+      { id: 'o1', at: 5, account: 'alt', provider: 'claude', chat: 's1', model: 'claude-opus', input: 1, output: 2, cacheWrite: 3, cacheRead: 4, reasoning: 0, guessed: false },
+    ]);
+    closeStore();
+    expect(callsSince('alt', 0)).toHaveLength(1);
   });
 });
