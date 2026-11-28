@@ -10,7 +10,7 @@ import { providerMark, shortModel } from '../../../shared/providers';
 import { save } from '../ui/util';
 import { RenameInput } from './RenameInput';
 import { ChatPr } from '../ops/pulls';
-import { archiveChat, buildsState, chatMenuItems, nestChat, sectionChat, savedChats, chatSwipe, chatLine, chatBranch, chatState, closeChat, openChatWindow, renameChat, repoName, removeRequest, restoreChat, rootLookup, rowsById, since, type ChatSession, type ChatState, type Folder } from './folders';
+import { archiveChat, buildsState, CHAT_MENU_KEYS, chatMenuItems, nestChat, sectionChat, savedChats, chatSwipe, chatLine, chatBranch, chatState, closeChat, openChatWindow, renameChat, repoName, removeRequest, restoreChat, rootLookup, rowsById, since, type ChatSession, type ChatState, type Folder } from './folders';
 import { askLine } from './runLogic';
 import { Swipe } from '../codex/gestures/Swipe';
 import { copyText, showSnack } from '../codex/view';
@@ -167,11 +167,11 @@ function ChatRow({ sessionId, title, cwd, lastModified, live, opening, meta, sta
           switch (key) {
             case 'resume': return <MenuItem key={key} icon="play" onClick={resume}>Resume</MenuItem>;
             case 'retry': return <MenuItem key={key} icon="refresh" disabled={retrying} onClick={retry}>Retry</MenuItem>;
-            case 'pin': return <MenuItem key={key} icon={pinned ? 'pinned' : 'pin'} onClick={() => void onPin!(!pinned)}>{pinned ? 'Unpin' : 'Pin'}</MenuItem>;
-            case 'unread': return <MenuItem key={key} icon="mail" onClick={() => markUnread(sessionId!)}>Mark as unread</MenuItem>;
+            case 'pin': return <MenuItem key={key} shortcut={CHAT_MENU_KEYS[key]} icon={pinned ? 'pinned' : 'pin'} onClick={() => void onPin!(!pinned)}>{pinned ? 'Unpin' : 'Pin'}</MenuItem>;
+            case 'unread': return <MenuItem key={key} shortcut={CHAT_MENU_KEYS[key]} icon="mail" onClick={() => markUnread(sessionId!)}>Mark as unread</MenuItem>;
             case 'mute': return <MenuItem key={key} icon={muted ? 'bell' : 'bell-slash'} onClick={() => { setMuted(sessionId!, !muted); setMute(!muted); }}>{muted ? 'Unmute' : 'Mute'}</MenuItem>;
             case 'link': return <MenuItem key={key} icon="link" onClick={() => copyText(`${location.origin}/?session=${sessionId}`, 'Link copied')}>Copy link</MenuItem>;
-            case 'rename': return <MenuItem key={key} icon="edit" disabled={!sessionId} onClick={() => setRenaming(true)}>Rename</MenuItem>;
+            case 'rename': return <MenuItem key={key} shortcut={CHAT_MENU_KEYS[key]} icon="edit" disabled={!sessionId} onClick={() => setRenaming(true)}>Rename</MenuItem>;
             case 'nest': return <MenuItem key={key} icon="indent" onClick={() => setNesting(true)}>Nest under…</MenuItem>;
             case 'unnest': return <MenuItem key={key} icon="debug-step-out" onClick={() => void nestChat(sessionId!, '')}>Un-nest</MenuItem>;
             case 'section': return <MenuItem key={key} icon="list-tree" onClick={() => setSectioning(true)}>Move to section…</MenuItem>;
@@ -180,7 +180,7 @@ function ChatRow({ sessionId, title, cwd, lastModified, live, opening, meta, sta
             case 'window': return <MenuItem key={key} icon="multiple-windows" className="desktop-only" onClick={() => openChatWindow(live!.id)}>Open in new window</MenuItem>;
             case 'close': return <MenuItem key={key} icon="close" onClick={onClose!}>Close chat</MenuItem>;
             case 'separator': return <MenuSeparator key={key} />;
-            case 'archive': return <MenuItem key={key} icon="archive" danger disabled={!sessionId} onClick={() => actions.archive(saved, !!pinned, onPin)}>Archive</MenuItem>;
+            case 'archive': return <MenuItem key={key} shortcut={CHAT_MENU_KEYS[key]} icon="archive" danger disabled={!sessionId} onClick={() => actions.archive(saved, !!pinned, onPin)}>Archive</MenuItem>;
           }
         })}
       />

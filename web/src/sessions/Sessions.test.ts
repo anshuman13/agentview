@@ -1,7 +1,7 @@
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'bun:test';
-import { buildFolders, buildsState, type Folder, type RepoGroup, chatFinder, chatMenuItems, chatWindowUrl, chatState, doneChats, findHere, groupByRepo, groupChats, rowsById, groupByKind, groupGlance, holdOrder, newChatGroups, orderGroups, renameTitle, segmentOf, since, staleKeys, unreadCount, waitingChats } from './folders';
+import { buildFolders, buildsState, type Folder, type RepoGroup, chatFinder, CHAT_MENU_KEYS, chatMenuItems, chatWindowUrl, chatState, doneChats, findHere, groupByRepo, groupChats, rowsById, groupByKind, groupGlance, holdOrder, newChatGroups, orderGroups, renameTitle, segmentOf, since, staleKeys, unreadCount, waitingChats } from './folders';
 import { RepoRow } from './RepoRow';
 import type { LiveChat, Repo, SavedSession, Worktree } from '../../../shared/protocol';
 import { WORKSPACE } from '../../../shared/workspace';
@@ -379,6 +379,10 @@ describe('renameTitle', () => {
 });
 
 describe('chatMenuItems', () => {
+  it('gives Pin, Mark as unread, Rename and Archive distinct letter keys', () => {
+    expect(CHAT_MENU_KEYS).toEqual({ pin: 'P', unread: 'U', rename: 'R', archive: 'A' });
+  });
+
   const items = (failed: boolean, stalled: boolean) => chatMenuItems({ failed, stalled, canPin: true, beside: false, closable: false });
 
   it('puts Resume first for a stalled chat', () => {

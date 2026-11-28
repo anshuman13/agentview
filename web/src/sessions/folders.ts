@@ -216,6 +216,9 @@ export const archiveChat = (s: { sessionId: string; title: string }, onDone: () 
 export const chatMenuItems = ({ failed, stalled, canPin, beside, ownWindow = false, closable, unread = false, nested = false, inSection = false }: { failed: boolean; stalled: boolean; canPin: boolean; beside: boolean; ownWindow?: boolean; closable: boolean; unread?: boolean; nested?: boolean; inSection?: boolean }) =>
   [stalled && !failed && 'resume', failed && 'retry', canPin && 'pin', unread && 'unread', canPin && 'mute', canPin && 'link', 'rename', canPin && 'nest', nested && 'unnest', canPin && 'section', inSection && 'unsection', beside && 'beside', ownWindow && 'window', closable && 'close', 'separator', 'archive'].filter(Boolean) as ('resume' | 'retry' | 'pin' | 'unread' | 'mute' | 'link' | 'rename' | 'nest' | 'unnest' | 'section' | 'unsection' | 'beside' | 'window' | 'close' | 'separator' | 'archive')[];
 
+// One-key picks in a chat row's menu, like Claude.app's session menu.
+export const CHAT_MENU_KEYS: Partial<Record<ReturnType<typeof chatMenuItems>[number], string>> = { pin: 'P', unread: 'U', rename: 'R', archive: 'A' };
+
 export const chatWindowUrl = (id: string) => `/?chat=${encodeURIComponent(id)}&alone=1`;
 export const openChatWindow = (id: string) => window.open(chatWindowUrl(id), `chat-${id}`, 'popup,width=760,height=900');
 
