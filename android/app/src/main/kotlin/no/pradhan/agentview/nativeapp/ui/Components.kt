@@ -55,10 +55,14 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 
 // The shared components, one per web primitive (web/src/ui and web/src/styles/components). Screens build only from these and the tokens.
 
-val Mono = TextStyle(fontFamily = MonoFont, fontSize = Tokens.fsSubheadline, lineHeight = Tokens.lineMd)
+// Code font size from Settings > Appearance, in web px (11 to 16, default 13, which is 14 sp here).
+val CODE_FONT_SIZES = listOf(11, 12, 13, 14, 15, 16)
+var codeFontSize by mutableIntStateOf(13)
+val Mono: TextStyle get() = TextStyle(fontFamily = MonoFont, fontSize = (codeFontSize + 1).sp, lineHeight = (codeFontSize + 7).sp)
 
 // Page header with an optional back or Lists button: 64dp, a one-line title ending in an ellipsis, optional muted text right after it and an optional muted subtitle.
 @Composable

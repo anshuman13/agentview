@@ -93,7 +93,7 @@ a.tr-obj:hover { text-decoration: underline; }
   padding: var(--sp-4) var(--sp-5); overflow: auto; line-height: var(--lh);
   background: var(--bg); border: 1px solid var(--border-card); border-radius: var(--radius);
 }
-.tr-detail pre { max-height: 320px; font-family: var(--mono); font-size: var(--fs-xs); white-space: pre-wrap; overflow-wrap: anywhere; color: var(--fg); }
+.tr-detail pre { max-height: 320px; font-family: var(--mono); font-size: calc(var(--code-fs) - 2px); white-space: pre-wrap; overflow-wrap: anywhere; color: var(--fg); }
 .tr-detail pre.err { color: var(--err); }
 .tr-detail .pd-diff { padding: var(--sp-2) 0; }
 .tr-out { position: relative; display: flex; flex-direction: column; }

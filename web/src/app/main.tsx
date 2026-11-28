@@ -7,6 +7,7 @@ import { Guard } from './shell/Guard';
 import { touch } from './touch/touch';
 import { openExternal } from './shell/macApi';
 import './deepLinks';
+import '../ui/codeFont';
 import { connect } from './store';
 import { DesignPage } from './lazy';
 import { watchStill } from './stillLoops';

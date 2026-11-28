@@ -21,6 +21,7 @@ import androidx.compose.ui.platform.LocalContext
 
 import no.pradhan.agentview.nativeapp.codex.syncLine
 import no.pradhan.agentview.nativeapp.chat.TRANSCRIPT_VIEWS
+import no.pradhan.agentview.nativeapp.ui.CODE_FONT_SIZES
 import no.pradhan.agentview.nativeapp.ui.Chevron
 import no.pradhan.agentview.nativeapp.ui.ChoiceRow
 import no.pradhan.agentview.nativeapp.ui.ConfirmDialog
@@ -47,6 +48,7 @@ fun SettingsScreen(hub: Hub, onBack: () -> Unit, onOrigin: () -> Unit) {
     val theme by hub.theme.collectAsState()
     val transcriptView by hub.transcriptView.collectAsState()
     val transcriptWidth by hub.transcriptWidth.collectAsState()
+    val codeFont by hub.codeFont.collectAsState()
     val origin by hub.origin.collectAsState()
     val notify by hub.notifyOn.collectAsState()
     val quiet = hub.quietHours.collectAsState().value.takeIf { it in QUIET_HOURS } ?: ""
@@ -89,6 +91,13 @@ fun SettingsScreen(hub: Hub, onBack: () -> Unit, onOrigin: () -> Unit) {
                     ChoiceRow("Narrow", "Messages keep a reading width on tablets", checked = transcriptWidth != "wide", onClick = { hub.setTranscriptWidth("narrow") })
                     Hairline()
                     ChoiceRow("Wide", "Messages fill more of a tablet or landscape screen", checked = transcriptWidth == "wide", onClick = { hub.setTranscriptWidth("wide") })
+                }
+                SectionHeader("Code font size", color = av.fg)
+                Group {
+                    CODE_FONT_SIZES.forEachIndexed { i, size ->
+                        if (i > 0) Hairline()
+                        ChoiceRow("$size px", if (size == 13) "Default" else null, checked = codeFont == size, onClick = { hub.setCodeFont(size) })
+                    }
                 }
                 if (providers.size > 1) {
                     SectionHeader("Providers", color = av.fg)

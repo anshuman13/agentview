@@ -19,7 +19,7 @@
   margin: 0; min-width: 0; overflow: auto;
   background: var(--sunken); border: 1px solid var(--border); border-radius: var(--radius-sm);
 }
-.pd-code, .pd-diff, .pd-preview { max-height: 240px; padding: var(--sp-4) var(--sp-5); white-space: pre-wrap; word-break: break-word; font: var(--fs-sm)/var(--line-sm) var(--mono); }
+.pd-code, .pd-diff, .pd-preview { max-height: 240px; padding: var(--sp-4) var(--sp-5); white-space: pre-wrap; word-break: break-word; font: calc(var(--code-fs) - 1px)/var(--line-sm) var(--mono); }
 .pd-diff { padding: var(--sp-2) 0; }
 .pd-diff > div { padding: 0 var(--sp-5); min-height: 18px; }
 .pd-diff .add { background: color-mix(in srgb, var(--diff-add) 14%, transparent); }

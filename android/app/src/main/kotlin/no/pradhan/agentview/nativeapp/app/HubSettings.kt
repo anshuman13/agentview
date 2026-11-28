@@ -1,5 +1,6 @@
 package no.pradhan.agentview.nativeapp.app
 
+import no.pradhan.agentview.nativeapp.ui.codeFontSize
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.launch
 import no.pradhan.agentview.nativeapp.chat.ACCOUNT_LABEL
@@ -95,6 +96,12 @@ fun Hub.setTranscriptView(value: String) {
 fun Hub.setTranscriptWidth(value: String) {
     transcriptWidth.value = value
     prefs.edit().putString("transcriptWidth", value).apply()
+}
+
+fun Hub.setCodeFont(value: Int) {
+    codeFont.value = value
+    codeFontSize = value
+    prefs.edit().putInt("codeFont", value).apply()
 }
 
 fun Hub.setTheme(value: String) {

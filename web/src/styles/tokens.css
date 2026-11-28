@@ -71,6 +71,7 @@
   --fs-caption: 12px;
   --fs-caption2: 11px;
   --fs-2xs: 10px;
+  --code-fs: 13px; /* Settings > Appearance > Code font size */
   --fs-xs: var(--fs-caption2);
   --fs-sm: var(--fs-caption);
   --fs-md: var(--fs-footnote);

@@ -17,6 +17,7 @@ import { VIEWS } from './ActivityBar';
 import { TRANSCRIPT_VIEWS } from '../../chat/transcript/steps';
 import { setTranscriptView, transcriptView } from '../../chat/transcript/transcriptView';
 import { setTranscriptWidth, TRANSCRIPT_WIDTHS, transcriptWidth } from '../../chat/transcript/transcriptWidth';
+import { CODE_FONT_SIZES, codeFontSize, setCodeFontSize } from '../../ui/codeFont';
 import { canHideView, hiddenViews, toggleHiddenView } from './hiddenViews';
 
 const webSha = typeof __APP_SHA__ === 'string' ? __APP_SHA__ : '';
@@ -98,6 +99,15 @@ function TranscriptWidthSwitch() {
   );
 }
 
+function CodeFontSizeSwitch() {
+  const size = codeFontSize.use();
+  return (
+    <div className="view-seg" role="radiogroup" aria-label="Code font size">
+      {CODE_FONT_SIZES.map((px) => <button key={px} role="radio" aria-checked={size === px} className={size === px ? 'on' : ''} title={px === 13 ? 'Default' : undefined} onClick={() => setCodeFontSize(px)}>{px}</button>)}
+    </div>
+  );
+}
+
 export function SettingsView({ showDesign, phoneVersion }: { showDesign?: boolean; phoneVersion?: string }) {
   const [theme, toggleTheme] = useTheme();
   return (
@@ -112,6 +122,7 @@ export function SettingsView({ showDesign, phoneVersion }: { showDesign?: boolea
         <Row title="Theme" meta={THEME_NAMES[theme]} onClick={toggleTheme} />
         <Row plain title="Transcript view" trailing={<TranscriptViewSwitch />} />
         <Row plain title="Transcript width" trailing={<TranscriptWidthSwitch />} />
+        <Row plain title="Code font size" trailing={<CodeFontSizeSwitch />} />
       </div>
       <ActivityBarSettings />
       <ModelsSettings />
