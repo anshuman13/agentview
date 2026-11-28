@@ -10,6 +10,8 @@ class GitLogicTest {
 
     @Test fun aBlankBranchNamesTheBase() = assertEquals("Committed since main", committedLabel(null, "main"))
 
+    @Test fun theUncommittedScopeNamesItself() = assertEquals("Uncommitted changes", committedLabel("main", "HEAD", UNCOMMITTED))
+
     @Test fun toggledOpenAddsAndRemovesAPath() {
         assertEquals(listOf("a", "b"), toggledOpen(listOf("a"), "b"))
         assertEquals(emptyList<String>(), toggledOpen(listOf("a"), "a"))

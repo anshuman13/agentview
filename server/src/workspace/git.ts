@@ -176,7 +176,8 @@ async function branchList(cwd: string) {
 }
 
 // What this branch committed since it left the base (the default branch unless one is picked), for review before a PR.
-async function branchDiff(cwd: string, picked: string | null = null, ws = true) {
+async function branchDiff(cwd: string, picked: string | null = null, ws = true, scope: string | null = null) {
+  if (scope === 'uncommitted') return { base: 'HEAD', scope, ...(await workingDiff(cwd, 'HEAD', undefined, ws)), commits: [] };
   const chosen = await pickedBase(cwd, picked);
   const base = chosen ?? (await defaultBase(cwd));
   const label = chosen ?? base.replace(/^origin\//, '');
@@ -223,6 +224,11 @@ async function withLoose<T>(cwd: string, loose: string[], env: Record<string, st
 export async function reviewDiff(cwd: string, env?: Record<string, string>) {
   const base = await defaultBase(cwd, env);
   const since = (await mergeBase(cwd, base, env)) || 'HEAD';
+  return { base: base.replace(/^origin\//, ''), ...(await workingDiff(cwd, since, env)) };
+}
+
+// The working tree, untracked files included, against a commit.
+async function workingDiff(cwd: string, since: string, env?: Record<string, string>, ws = true) {
   const listed = (await safeGit(cwd, ['ls-files', '-z', '--others', '--exclude-standard'], undefined, env)).split('\0').filter(Boolean);
   // A pipe or socket would block the diff, and a nested repo is not a file.
   const loose: string[] = [];
@@ -230,7 +236,7 @@ export async function reviewDiff(cwd: string, env?: Record<string, string>) {
     const st = await lstat(path.join(cwd, p)).catch(() => null);
     if (st && (st.isFile() || st.isSymbolicLink())) loose.push(p);
   }
-  return { base: base.replace(/^origin\//, ''), ...(await withLoose(cwd, loose.slice(0, MAX_LOOSE), env, (e) => diffSince(cwd, since, [], e))) };
+  return withLoose(cwd, loose.slice(0, MAX_LOOSE), env, (e) => diffSince(cwd, since, [], e, ws));
 }
 
 const MAX_COMMITS = 20;
@@ -246,7 +252,7 @@ export function parseLog(out: string): GitCommit[] {
 
 export async function gitRoute(cwd: string, route: string, query: URLSearchParams, body: Record<string, unknown> | null) {
   if (route === 'status') return gitStatus(cwd);
-  if (route === 'branch') return branchDiff(cwd, query.get('base'), query.get('ws') !== '0');
+  if (route === 'branch') return branchDiff(cwd, query.get('base'), query.get('ws') !== '0', query.get('scope'));
   if (route === 'branches') return branchList(cwd);
   if (route === 'log') {
     const since = Number(query.get('since'));

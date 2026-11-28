@@ -91,7 +91,8 @@ fun ChangesScreen(hub: Hub, onBack: () -> Unit) {
     val message = rememberSaveable(chat) { mutableStateOf("") }
     val shownPatch = rememberSaveable(chat) { mutableStateOf(listOf<String>()) }
     var hideWs by remember { mutableStateOf(hub.prefs.getBoolean(HIDE_WS_KEY, false)) }
-    val diffMenu = DiffMenu(hideWs, { hideWs = it; hub.prefs.edit().putBoolean(HIDE_WS_KEY, it).apply() })
+    var diffScope by remember { mutableStateOf(hub.prefs.getString(SCOPE_KEY, null)) }
+    val diffMenu = DiffMenu(hideWs, { hideWs = it; hub.prefs.edit().putBoolean(HIDE_WS_KEY, it).apply() }, diffScope) { diffScope = it; hub.prefs.edit().putString(SCOPE_KEY, it).apply() }
     var ask by androidx.compose.runtime.remember { mutableStateOf<List<GitFile>?>(null) }
     val o = open
     if (o != null) { FileScreen(hub, o, onBack = { open = null; openLine = null }, line = openLine); return }
@@ -106,7 +107,7 @@ fun ChangesScreen(hub: Hub, onBack: () -> Unit) {
         }, onBack = { pager = null; reload() })
         return
     }
-    val (branchLoad, reloadBranch) = rememberLoad(chat, base, hideWs) { hub.branchDiff(base, hideWs) }
+    val (branchLoad, reloadBranch) = rememberLoad(chat, base, hideWs, diffScope) { hub.branchDiff(base, hideWs, diffScope) }
     val scope = androidx.compose.runtime.rememberCoroutineScope()
     val openBases = { scope.launch { basePick = runCatching { hub.branches() }.getOrElse { BranchList() } }; Unit }
     val pick = rememberSaveable(chat) { mutableStateOf<String?>(null) }
@@ -173,7 +174,7 @@ private fun ChangesList(hub: Hub, load: Loaded<GitStatus>, branch: BranchDiff?, 
         stagedSection(staged, ops)
         changesSection(changes, ops)
         if (status != null && files.isEmpty()) item { EmptyState("No changes", icon = "source-control", small = false) }
-        branch?.takeIf { it.files.isNotEmpty() || basePicked }?.let { committedSection(it, status?.branch, onBases, picked, shownPatch, diffMenu) }
+        branch?.takeIf { it.files.isNotEmpty() || basePicked || diffMenu.scope != null }?.let { committedSection(it, status?.branch, onBases, picked, shownPatch, diffMenu) }
         item { Column { Findings(hub, "local", onOpenFinding) } }
         item { Spacer(Modifier.padding(bottom = Tokens.sp16)) }
     }
@@ -210,16 +211,19 @@ private fun LazyListScope.changesSection(changes: List<GitFile>, ops: GitOps) {
 // The commit picked in "Committed since <base>" and its loaded files; null shows all of the branch.
 private class Picked(val hash: MutableState<String?>, val load: Loaded<BranchDiff?>)
 
-private class DiffMenu(val hideWs: Boolean, val setHideWs: (Boolean) -> Unit)
+private class DiffMenu(val hideWs: Boolean, val setHideWs: (Boolean) -> Unit, val scope: String?, val setScope: (String?) -> Unit)
 
 // Claude Code's Commits list: "All changes", then each commit with its sha and age; a picked commit shows only its files.
 private fun LazyListScope.committedSection(b: BranchDiff, branch: String?, onBases: () -> Unit, picked: Picked, shownPatch: MutableState<List<String>>, menu: DiffMenu) {
     val pick = picked.hash.value?.takeIf { h -> b.commits.any { it.hash == h } }
     val shown = if (pick == null) b else picked.load.data
     item {
-        SectionHeader(committedLabel(branch, b.base), b.files.size.toString(), action = {
-            if (branch != b.base) IconBtn("git-branch", "Compare against", onBases, iconSize = Tokens.icon)
+        SectionHeader(committedLabel(branch, b.base, b.scope), b.files.size.toString(), action = {
+            if (branch != b.base && b.scope != UNCOMMITTED) IconBtn("git-branch", "Compare against", onBases, iconSize = Tokens.icon)
             MoreButton { close ->
+                MenuItem("All changes", "", { close(); menu.setScope(null) }, checked = menu.scope == null)
+                MenuItem("Uncommitted changes", "", { close(); menu.setScope(UNCOMMITTED) }, checked = menu.scope == UNCOMMITTED)
+                MenuSeparator()
                 MenuItem("Collapse all files", "collapse-all", { close(); shownPatch.value = emptyList() })
                 MenuItem("Expand all files", "expand-all", { close(); shownPatch.value = (if (pick == null) b else picked.load.data)?.files?.map { it.path } ?: emptyList() })
                 MenuSeparator()

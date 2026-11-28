@@ -159,6 +159,12 @@ describe('branch commits and one commit', () => {
         expect(back.base).toBe('main');
         expect(back.files).toHaveLength(2);
       }
+      writeFileSync(path.join(dir, 'two.txt'), '2\n3\n');
+      writeFileSync(path.join(dir, 'new.txt'), 'n\n');
+      const work = (await gitRoute(dir, 'branch', new URLSearchParams({ scope: 'uncommitted' }), null)) as { scope: string; files: { path: string }[]; commits: unknown[] };
+      expect(work.scope).toBe('uncommitted');
+      expect(work.files.map((f) => f.path)).toEqual(['new.txt', 'two.txt']);
+      expect(work.commits).toEqual([]);
     } finally {
       rmSync(root, { recursive: true, force: true });
     }

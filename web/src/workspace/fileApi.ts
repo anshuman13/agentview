@@ -1,7 +1,7 @@
 import type { GitCommit } from '../../../shared/protocol';
 import { api } from '../app/store';
 import { apiUrl, fetchJson } from '../app/api';
-import { diffPath } from './diffView';
+import { diffPath, type DiffScope } from './diffView';
 
 export const fileRequest = (path: string, init?: RequestInit, chat?: string) => {
   const url = `/api/file?path=${encodeURIComponent(path)}`;
@@ -16,9 +16,10 @@ export const fetchGitStatus = () => fetch(api('/api/git/status'));
 
 export type DiffFiles = { files: { path: string; additions: number; deletions: number }[]; diff: string };
 
-export type BranchDiff = DiffFiles & { base: string; commits?: GitCommit[] };
+export type BranchDiff = DiffFiles & { base: string; scope?: DiffScope; commits?: GitCommit[] };
 
-export const fetchBranchDiff = (base?: string, hideWs = false) => fetchJson<BranchDiff>(api(diffPath('branch', { base }, hideWs)));
+export const fetchBranchDiff = (base?: string, hideWs = false, scope: DiffScope = 'all') =>
+  fetchJson<BranchDiff>(api(diffPath('branch', { base, scope: scope === 'all' ? undefined : scope }, hideWs)));
 
 export const fetchBranches = () => fetchJson<{ branches: string[]; base: string }>(api('/api/git/branches'));
 

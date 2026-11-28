@@ -19,7 +19,7 @@ import { askChat, insertText } from '../chat/chatActions';
 import { Menu, MenuItem, MenuSeparator } from '../ui/Menu';
 import { CopyPathItems } from './CopyPathItems';
 import { mentionOf } from './copyPathLogic';
-import { HIDE_WS_KEY } from './diffView';
+import { HIDE_WS_KEY, SCOPE_KEY, type DiffScope } from './diffView';
 import { providerLabel } from '../../../shared/providers';
 import { rowKey, viewedAfter } from '../../../shared/viewed';
 import '../styles/features/changes.css';
@@ -181,7 +181,8 @@ const patches = (d: DiffFiles) => (d.diff ? splitDiff(d.diff) : new Map(d.files.
 // What the branch committed since it left the default branch, on the default branch itself what it has not pushed; rows expand to their patch.
 // With more than one commit, a list above the files picks "All changes" or one commit, whose files are loaded on their own.
 // The ⋯ menu beside the Committed header, like Claude.app's diff pane menu.
-function DiffMenu({ onFold, hideWs, onHideWs }: { onFold: (open: boolean) => void; hideWs: boolean; onHideWs: (on: boolean) => void }) {
+type DiffOpts = { hideWs: boolean; onHideWs: (on: boolean) => void; scope: DiffScope; onScope: (s: DiffScope) => void };
+function DiffMenu({ onFold, hideWs, onHideWs, scope, onScope }: DiffOpts & { onFold: (open: boolean) => void }) {
   const more = useRef<HTMLButtonElement>(null);
   const [open, setOpen] = useState(false);
   const close = () => setOpen(false);
@@ -190,6 +191,9 @@ function DiffMenu({ onFold, hideWs, onHideWs }: { onFold: (open: boolean) => voi
       <IconButton ref={more} icon="ellipsis" small label="Diff options" aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen(!open)} />
       {open && (
         <Menu trigger={more} onClose={close}>
+          <MenuItem icon={scope === 'all' ? 'check' : 'blank'} aria-checked={scope === 'all'} onClick={() => { close(); onScope('all'); }}>All changes</MenuItem>
+          <MenuItem icon={scope === 'uncommitted' ? 'check' : 'blank'} aria-checked={scope === 'uncommitted'} onClick={() => { close(); onScope('uncommitted'); }}>Uncommitted changes</MenuItem>
+          <MenuSeparator />
           <MenuItem icon="collapse-all" onClick={() => { close(); onFold(false); }}>Collapse all files</MenuItem>
           <MenuItem icon="expand-all" onClick={() => { close(); onFold(true); }}>Expand all files</MenuItem>
           <MenuSeparator />
@@ -200,7 +204,8 @@ function DiffMenu({ onFold, hideWs, onHideWs }: { onFold: (open: boolean) => voi
   );
 }
 
-function Committed({ branch, current, onBase, hideWs, onHideWs }: { branch: BranchDiff; current?: string; onBase: (base: string | null) => void; hideWs: boolean; onHideWs: (on: boolean) => void }) {
+function Committed({ branch, current, onBase, ...opts }: DiffOpts & { branch: BranchDiff; current?: string; onBase: (base: string | null) => void }) {
+  const { hideWs } = opts;
   const commits = branch.commits ?? [];
   const [pick, setPick] = useState<string | null>(null);
   const [fold, setFold] = useState<{ open: boolean; n: number } | undefined>();
@@ -219,7 +224,7 @@ function Committed({ branch, current, onBase, hideWs, onHideWs }: { branch: Bran
   const diffs = useMemo(() => (shown ? patches(shown) : new Map<string, string>()), [shown]);
   return (
     <>
-      <ListSection label={current === branch.base ? 'Not pushed' : <BasePick base={branch.base} onPick={onBase} />} count={branch.files.length} action={<DiffMenu onFold={(open) => setFold({ open, n: (fold?.n ?? 0) + 1 })} hideWs={hideWs} onHideWs={onHideWs} />} />
+      <ListSection label={branch.scope === 'uncommitted' ? 'Uncommitted changes' : current === branch.base ? 'Not pushed' : <BasePick base={branch.base} onPick={onBase} />} count={branch.files.length} action={<DiffMenu onFold={(open) => setFold({ open, n: (fold?.n ?? 0) + 1 })} {...opts} />} />
       {commits.length > 1 && (
         <div className="as-group scm-commits" aria-label="Commits">
           <Row title="All changes" lines={1} aria-current={!pick} trailing={<span className="muted">{commits.length} commits</span>} onClick={() => setPick(null)} />
@@ -244,6 +249,7 @@ export function Changes() {
   const cwd = useStore((s) => s.session.cwd);
   const [base, setBase] = useState(() => savedBase(cwd));
   const [hideWs, setHideWs] = useState(() => stored(HIDE_WS_KEY, false));
+  const [scope, setScope] = useState<DiffScope>(() => stored(SCOPE_KEY, 'all'));
   const label = useStore((s) => providerLabel(s.session.provider));
   const [failed, setFailed] = useState('');
   const [ask, setAsk] = useState<ConfirmRequest | null>(null);
@@ -257,7 +263,7 @@ export function Changes() {
   const reload = () => {
     void refresh();
     const n = ++branchSeq.current;
-    fetchBranchDiff(base, hideWs).then((b) => n === branchSeq.current && setBranch(b), () => {});
+    fetchBranchDiff(base, hideWs, scope).then((b) => n === branchSeq.current && setBranch(b), () => {});
   };
 
   useEffect(() => {
@@ -267,7 +273,7 @@ export function Changes() {
   useEffect(() => {
     setBranch(null);
     reload();
-  }, [id, base, hideWs]);
+  }, [id, base, hideWs, scope]);
   const pickBase = (b: string | null) => {
     saveBase(cwd, b);
     setBase(b ?? undefined);
@@ -391,7 +397,9 @@ export function Changes() {
           )}
         />
         {status && !files.length && <EmptyState size="sm" title="No changes" />}
-        {branch && (branch.files.length > 0 || base) && <Committed branch={branch} current={status?.branch} onBase={pickBase} hideWs={hideWs} onHideWs={(on) => { save(HIDE_WS_KEY, on); setHideWs(on); }} />}
+        {branch && (branch.files.length > 0 || base || scope !== 'all') && (
+          <Committed branch={branch} current={status?.branch} onBase={pickBase} hideWs={hideWs} onHideWs={(on) => { save(HIDE_WS_KEY, on); setHideWs(on); }} scope={scope} onScope={(s) => { save(SCOPE_KEY, s); setScope(s); }} />
+        )}
         <Findings target="local" />
       </div>
       {ask && <Confirm {...ask} onClose={() => setAsk(null)} />}

@@ -146,7 +146,7 @@ fun commentPrompt(path: String, row: DiffRow, comment: String): String {
 fun appendPrompt(draft: String, prompt: String) = if (draft.isBlank()) prompt else draft.trimEnd() + "\n\n" + prompt
 
 // shared: server/src/workspace/git.ts branchDiff, the commits this branch made since the default branch.
-@Serializable data class BranchDiff(val base: String = "", val files: List<PrFile> = emptyList(), val diff: String = "", val commits: List<GitCommit> = emptyList())
+@Serializable data class BranchDiff(val base: String = "", val scope: String = "", val files: List<PrFile> = emptyList(), val diff: String = "", val commits: List<GitCommit> = emptyList())
 
 fun parseBranchDiff(body: String): BranchDiff = protocolJson.decodeFromString(BranchDiff.serializer(), body)
 
@@ -184,5 +184,8 @@ fun diffPath(route: String, params: Map<String, String?>, hideWs: Boolean): Stri
     return "/api/git/$route" + if (q.isEmpty()) "" else "?" + q.joinToString("&")
 }
 const val HIDE_WS_KEY = "hideWhitespace"
+// All changes is the branch against its base, "uncommitted" the working tree against HEAD.
+const val SCOPE_KEY = "diffScope"
+const val UNCOMMITTED = "uncommitted"
 
-fun committedLabel(branch: String?, base: String) = if (branch == base) "Not pushed" else "Committed since $base"
+fun committedLabel(branch: String?, base: String, scope: String = "") = if (scope == UNCOMMITTED) "Uncommitted changes" else if (branch == base) "Not pushed" else "Committed since $base"

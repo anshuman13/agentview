@@ -11,3 +11,7 @@ export const diffPath = (route: 'branch' | 'show', params: Record<string, string
 };
 
 export const HIDE_WS_KEY = 'agentview.hideWhitespace';
+
+// All changes is the branch against its base; Uncommitted changes is the working tree against HEAD.
+export type DiffScope = 'all' | 'uncommitted';
+export const SCOPE_KEY = 'agentview.diffScope';
