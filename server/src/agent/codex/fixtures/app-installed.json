@@ -1,0 +1,7 @@
+{
+  "apps": [
+    { "id": "asdk_app_gmail", "enabled": true, "callable": true, "runtimeName": "gmail" },
+    { "id": "asdk_app_github", "enabled": false, "callable": false, "runtimeName": "github" },
+    { "id": "asdk_app_drive", "enabled": true, "callable": false, "runtimeName": "drive" }
+  ]
+}

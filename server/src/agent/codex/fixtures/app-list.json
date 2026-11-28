@@ -1,0 +1,8 @@
+{
+  "data": [
+    { "id": "asdk_app_gmail", "name": "Gmail", "isAccessible": true, "isEnabled": true, "installUrl": "https://chatgpt.com/apps/gmail/asdk_app_gmail", "logoUrl": "https://cdn.example/gmail.png" },
+    { "id": "asdk_app_linear", "name": "Linear", "isAccessible": false, "isEnabled": true, "installUrl": "https://chatgpt.com/apps/linear/asdk_app_linear", "logoUrl": null },
+    { "id": "asdk_app_github", "name": "GitHub", "isAccessible": true, "isEnabled": false, "installUrl": "https://chatgpt.com/apps/github/asdk_app_github" }
+  ],
+  "nextCursor": "page2"
+}
