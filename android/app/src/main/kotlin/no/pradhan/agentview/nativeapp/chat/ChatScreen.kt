@@ -135,7 +135,7 @@ fun ChatScreen(hub: Hub, onOpenAgent: (String) -> Unit, onOpenWork: (String) -> 
                 Transcript(hub, view, earlier, settled, live.id, cwd, running, panels.find, onOpenAgent, onOpenWork, Modifier.fillMaxSize(), remember(queued, live.id) { queued.filter { it.chat == live.id } }, failed, live.sessionId, subFind)
             }
         }
-        PendingList(pending, session?.permissionMode ?: "default", hub)
+        PendingList(pending, session?.permissionMode ?: "default", hub, live.provider)
         if (live.stalled) Row(Modifier.fillMaxWidth().padding(horizontal = Tokens.listPad, vertical = Tokens.sp3), horizontalArrangement = Arrangement.End) {
             Button("Resume", { hub.submit("continue", true) {} }, variant = ButtonVariant.Tinted, icon = "debug-continue")
         }

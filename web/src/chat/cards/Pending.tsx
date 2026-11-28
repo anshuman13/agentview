@@ -1,7 +1,8 @@
 import { useContext, useEffect, useMemo, useRef, useState, type ReactNode, type RefObject } from 'react';
 import { useStore } from '../../app/store';
-import { allowBlocked, answerPermission, steer } from '../chatActions';
-import { Button, ShowToggle } from '../../ui/Button';
+import { allowBlocked, answerPermission, setMode, steer } from '../chatActions';
+import { Button, IconButton, ShowToggle } from '../../ui/Button';
+import { Menu, MenuItem } from '../../ui/Menu';
 import { Icon } from '../../ui/Icon';
 import { Panel } from '../../ui/Panel';
 import { pressable, useOnUnmount } from '../../ui/util';
@@ -10,7 +11,7 @@ import { Markdown } from '../Chat';
 import { str } from '../transcript/steps';
 import type { ChatEvent, PendingPermission, PendingRequest } from '../../../../shared/protocol';
 import { lineDiff } from '../../../../shared/lineDiff';
-import { blockedRule, MODE_HINTS, planFeedback, planParagraphs } from './pendingLogic';
+import { blockedRule, canSwitchToAuto, MODE_HINTS, planFeedback, planParagraphs } from './pendingLogic';
 import { QuestionCard } from './QuestionCard';
 import { useCardKeys } from './useCardKeys';
 import { CardChat } from './cardChat';
@@ -19,6 +20,7 @@ import { editPairs } from '../../../../shared/edits';
 export function Pending() {
   const pending = useStore((s) => s.pending);
   const mode = useStore((s) => s.session.permissionMode) ?? 'default';
+  const provider = useStore((s) => s.session.provider);
   const list = useRef<HTMLDivElement>(null);
   const count = useRef(pending.length);
   // A card that is answered leaves; focus moves to the next card, or to the composer after the last.
@@ -31,15 +33,15 @@ export function Pending() {
   if (!pending.length) return null;
   return (
     <div className="pd-list" ref={list}>
-      {pending.map((p, n) => <PendingCard key={p.id} p={p} mode={mode} first={n === 0} />)}
+      {pending.map((p, n) => <PendingCard key={p.id} p={p} mode={mode} first={n === 0} auto={canSwitchToAuto(p.kind === 'question' ? '' : p.toolName, mode, provider)} />)}
     </div>
   );
 }
 
-export function PendingCard({ p, mode, first }: { p: PendingRequest; mode: string; first: boolean }) {
+export function PendingCard({ p, mode, first, auto }: { p: PendingRequest; mode: string; first: boolean; auto?: boolean }) {
   if (p.kind === 'question') return <QuestionCard q={p} first={first} />;
   if (p.toolName === 'ExitPlanMode') return <PlanCard p={p} mode={mode} first={first} />;
-  return <PermissionCard p={p} mode={mode} first={first} />;
+  return <PermissionCard p={p} mode={mode} first={first} auto={auto} />;
 }
 
 const ICONS: Record<string, string> = {
@@ -48,7 +50,7 @@ const ICONS: Record<string, string> = {
 
 type CardProps = { p: PendingPermission; mode: string; first: boolean };
 
-function PermissionCard({ p, mode, first }: CardProps) {
+function PermissionCard({ p, mode, first, auto }: CardProps & { auto?: boolean }) {
   const ref = useRef<HTMLElement>(null);
   const Body = BODIES[p.toolName] ?? RowsBody;
   return (
@@ -59,7 +61,7 @@ function PermissionCard({ p, mode, first }: CardProps) {
       </div>
       <Body tool={p.toolName} input={p.input} title={p.title} />
       {p.detail && <div className="pd-desc">{p.detail}</div>}
-      <Decision p={p} mode={mode} first={first} cardRef={ref} yes="Allow" no="Deny" />
+      <Decision p={p} mode={mode} first={first} cardRef={ref} yes="Allow" no="Deny" auto={auto} />
     </Panel>
   );
 }
@@ -114,7 +116,7 @@ function PlanCard({ p, mode, first }: CardProps) {
   );
 }
 
-function Decision({ p, mode, first, cardRef, yes, no, onNo }: CardProps & { cardRef: RefObject<HTMLElement | null>; yes: string; no: string; onNo?: () => void }) {
+function Decision({ p, mode, first, cardRef, yes, no, onNo, auto }: CardProps & { cardRef: RefObject<HTMLElement | null>; yes: string; no: string; onNo?: () => void; auto?: boolean }) {
   const always = p.canAlwaysAllow && p.toolName !== 'ExitPlanMode';
   const keys = !p.confirmFirst;
   const chat = useContext(CardChat);
@@ -131,10 +133,26 @@ function Decision({ p, mode, first, cardRef, yes, no, onNo }: CardProps & { card
     <>
       <div className="pd-actions">
         <Button size="sm" variant="filled" onClick={() => reply(true)}>{yes}{keys && <kbd>Y</kbd>}</Button>
+        {auto && <AutoMenu onPick={() => { setMode({ mode: 'auto', review: null }); reply(true); }} />}
         {always && <Button size="sm" onClick={() => reply(true, true)}>Always allow{keys && <kbd>A</kbd>}</Button>}
         <Button size="sm" autoFocus={p.confirmFirst} onClick={decline}>{no}<kbd>N</kbd></Button>
       </div>
       {MODE_HINTS[mode] && <div className="pd-hint">{MODE_HINTS[mode]}</div>}
+    </>
+  );
+}
+
+function AutoMenu({ onPick }: { onPick: () => void }) {
+  const [open, setOpen] = useState(false);
+  const trigger = useRef<HTMLButtonElement>(null);
+  return (
+    <>
+      <IconButton ref={trigger} icon="chevron-down" label="More ways to allow" size="sm" small aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen((v) => !v)} />
+      {open && (
+        <Menu trigger={trigger} onClose={() => setOpen(false)}>
+          <MenuItem icon="zap" onClick={() => { setOpen(false); onPick(); }}>Allow and switch to Auto</MenuItem>
+        </Menu>
+      )}
     </>
   );
 }

@@ -1,5 +1,7 @@
 package no.pradhan.agentview.nativeapp.chat
 
+import no.pradhan.agentview.nativeapp.net.providerModes
+
 private const val QUOTE_MAX = 80
 
 // web chat/cards/pendingLogic.ts planParagraphs: the plan's blocks split at blank lines, leaving fenced code whole.
@@ -32,3 +34,7 @@ fun planFeedback(paragraphs: List<String>, notes: Map<Int, String>): String {
 // web blockedRule: the command of a blocked Bash rule, unescaped; any other rule as it is.
 fun blockedRule(rule: String): String =
     if (rule.startsWith("Bash(")) rule.removePrefix("Bash(").removeSuffix(")").replace(Regex("\\\\([\\\\()])"), "$1") else rule
+
+// "Allow and switch to Auto" (web canSwitchToAuto): not for plan approval, not when the mode is unknown (the session list's cards) or already auto, and only where the provider has auto.
+fun canSwitchToAuto(tool: String, mode: String, provider: String?) =
+    tool != "ExitPlanMode" && mode.isNotEmpty() && mode != "auto" && providerModes(provider).any { it.value == "auto" }

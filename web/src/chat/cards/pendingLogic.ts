@@ -1,9 +1,16 @@
+import type { Provider } from '../../../../shared/protocol';
+import { providerModes } from '../../../../shared/providers';
+
 export const MODE_HINTS: Record<string, string> = {
   auto: 'Auto mode asks only for risky actions',
   default: 'Default mode asks before edits and commands',
   acceptEdits: 'Accept edits mode asks before commands, not file edits',
   plan: 'Plan mode asks before it starts building',
 };
+
+// "Allow and switch to Auto" (Android canSwitchToAuto): not for plan approval, not when the mode is unknown (the session list's cards) or already auto, and only where the provider has auto.
+export const canSwitchToAuto = (tool: string, mode: string, provider?: Provider) =>
+  tool !== 'ExitPlanMode' && !!mode && mode !== 'auto' && providerModes(provider).some((m) => m.value === 'auto');
 
 const QUOTE_MAX = 80;
 

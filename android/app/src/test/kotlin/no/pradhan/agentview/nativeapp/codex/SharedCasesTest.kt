@@ -43,6 +43,7 @@ import no.pradhan.agentview.nativeapp.chat.duration
 import no.pradhan.agentview.nativeapp.chat.dayDividers
 import no.pradhan.agentview.nativeapp.chat.needsEarlier
 import no.pradhan.agentview.nativeapp.chat.blockedRule
+import no.pradhan.agentview.nativeapp.chat.canSwitchToAuto
 import no.pradhan.agentview.nativeapp.chat.planFeedback
 import no.pradhan.agentview.nativeapp.chat.planParagraphs
 import no.pradhan.agentview.nativeapp.chat.newMarker
@@ -406,6 +407,7 @@ class SharedCasesTest {
             assertEquals(c.str("name"), c.str("expected"), planFeedback(strings(c.getValue("paragraphs")), notes))
         }
         for (c in f.getValue("blocked").jsonArray.map { it.jsonObject }) assertEquals(c.str("rule"), c.str("expected"), blockedRule(c.str("rule")))
+        for (c in f.getValue("switchToAuto").jsonArray.map { it.jsonObject }) assertEquals(c.str("name"), c.getValue("expected").jsonPrimitive.boolean, canSwitchToAuto(c.str("tool"), c.str("mode"), c.str("provider")))
     }
 
     @Test fun needsEarlierCases() {

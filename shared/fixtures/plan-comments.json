@@ -72,5 +72,42 @@
    "rule": "Bash(ls",
    "expected": "ls"
   }
+ ],
+ "switchToAuto": [
+  {
+   "name": "default mode on Claude",
+   "tool": "Bash",
+   "mode": "default",
+   "provider": "claude",
+   "expected": true
+  },
+  {
+   "name": "accept edits on Codex",
+   "tool": "Edit",
+   "mode": "acceptEdits",
+   "provider": "codex",
+   "expected": true
+  },
+  {
+   "name": "already auto",
+   "tool": "Bash",
+   "mode": "auto",
+   "provider": "claude",
+   "expected": false
+  },
+  {
+   "name": "plan approval",
+   "tool": "ExitPlanMode",
+   "mode": "plan",
+   "provider": "claude",
+   "expected": false
+  },
+  {
+   "name": "unknown mode on the session list",
+   "tool": "Bash",
+   "mode": "",
+   "provider": "claude",
+   "expected": false
+  }
  ]
 }

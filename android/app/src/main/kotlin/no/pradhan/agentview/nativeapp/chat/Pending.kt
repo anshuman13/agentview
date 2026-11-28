@@ -40,6 +40,9 @@ import no.pradhan.agentview.nativeapp.net.Pending
 import no.pradhan.agentview.nativeapp.app.allowBlocked
 import no.pradhan.agentview.nativeapp.app.answer
 import no.pradhan.agentview.nativeapp.app.permission
+import no.pradhan.agentview.nativeapp.app.setMode
+import no.pradhan.agentview.nativeapp.ui.MenuItem
+import no.pradhan.agentview.nativeapp.ui.MoreButton
 import no.pradhan.agentview.nativeapp.app.submit
 import no.pradhan.agentview.nativeapp.app.post
 import no.pradhan.agentview.nativeapp.net.steerCmd
@@ -63,10 +66,10 @@ import no.pradhan.agentview.nativeapp.ui.MAX_DIFF_LINES
 import no.pradhan.agentview.nativeapp.ui.lineDiff
 
 @Composable
-fun PendingList(pending: List<Pending>, mode: String, hub: Hub) {
+fun PendingList(pending: List<Pending>, mode: String, hub: Hub, provider: String? = null) {
     if (pending.isEmpty()) return
     Column(Modifier.heightIn(max = Tokens.scrollMax).verticalScroll(rememberScrollState()).padding(horizontal = Tokens.sp4, vertical = Tokens.sp2), verticalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
-        for (p in pending) PendingCard(p, mode, hub)
+        for (p in pending) PendingCard(p, mode, hub, p is Pending.Permission && canSwitchToAuto(p.toolName, mode, provider))
     }
 }
 
@@ -74,11 +77,11 @@ fun PendingList(pending: List<Pending>, mode: String, hub: Hub) {
 val LocalCardChat = staticCompositionLocalOf<String?> { null }
 
 @Composable
-fun PendingCard(p: Pending, mode: String, hub: Hub) {
+fun PendingCard(p: Pending, mode: String, hub: Hub, auto: Boolean = false) {
     when {
         p is Pending.Question -> QuestionCard(p, hub)
         p is Pending.Permission && p.toolName == "ExitPlanMode" -> PlanCard(p, mode, hub)
-        p is Pending.Permission -> PermissionCard(p, mode, hub)
+        p is Pending.Permission -> PermissionCard(p, mode, hub, auto)
     }
 }
 
@@ -104,9 +107,14 @@ private fun Secondary(text: String, enabled: Boolean = true, onClick: () -> Unit
 }
 
 @Composable
-fun PermissionCard(p: Pending.Permission, mode: String, hub: Hub) {
+fun PermissionCard(p: Pending.Permission, mode: String, hub: Hub, auto: Boolean = false) {
     Panel {
-        Title(p.title)
+        if (auto) Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.weight(1f)) { Title(p.title) }
+            MoreButton("More ways to allow") { close ->
+                MenuItem("Allow and switch to Auto", "zap", { close(); hub.setMode("auto"); hub.permission(p.id, true) })
+            }
+        } else Title(p.title)
         PermissionBody(p)
         if (p.detail.isNotEmpty()) Desc(p.detail)
         Decision(p, mode, hub, "Allow", "Deny")
