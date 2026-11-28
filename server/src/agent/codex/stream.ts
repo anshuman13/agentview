@@ -1,9 +1,9 @@
 import path from 'node:path';
 import type { AgentHost } from '../types.js';
-import { finishedEvents, startedEvents } from './events.js';
+import { finishedEvents, planEvents, startedEvents } from './events.js';
 import { limitUntil } from './usage.js';
 import { LiveText } from '../liveText.js';
-import type { FileUpdateChange, ThreadItem, TokenUsage, Turn } from './protocol.js';
+import type { FileUpdateChange, ThreadItem, TokenUsage, Turn, TurnPlanUpdatedNotification } from './protocol.js';
 
 type Sink = Pick<AgentHost, 'cwd' | 'state' | 'limit' | 'pushEvent' | 'emit' | 'system' | 'setSession' | 'turnResult' | 'compacted' | 'noteFile' | 'captureEdit'>;
 
@@ -13,6 +13,7 @@ export class CodexStream {
   private lastText = '';
   private context = 0;
   private compactedTurn: string | null = null;
+  private plans = 0;
   // The files each file change item announced, for its approval card.
   readonly files = new Map<string, FileUpdateChange[]>();
 
@@ -26,6 +27,7 @@ export class CodexStream {
       case 'item/agentMessage/delta': return this.text.delta(params.itemId, params.delta);
       case 'item/completed': return this.completed(params.item, params.turnId);
       case 'turn/completed': return this.turnDone(params.turn);
+      case 'turn/plan/updated': return this.plan(params);
       case 'thread/tokenUsage/updated': return this.usage(params.tokenUsage);
       case 'thread/compacted': return this.compacted(params.turnId);
       case 'error': return params.willRetry ? undefined : this.failed(params.error);
@@ -57,6 +59,10 @@ export class CodexStream {
     for (const ev of finishedEvents(item, Date.now())) this.host.pushEvent(ev);
     if (item.type === 'fileChange') this.files.delete(item.id);
     if (item.type === 'fileChange' && item.status === 'completed') for (const c of item.changes) this.host.noteFile(path.relative(this.host.cwd, this.abs(c.path)), 'tool');
+  }
+
+  private plan(p: TurnPlanUpdatedNotification) {
+    for (const ev of planEvents(p.turnId, this.plans++, p.plan, Date.now())) this.host.pushEvent(ev);
   }
 
   private usage(u: TokenUsage) {

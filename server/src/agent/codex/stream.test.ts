@@ -94,6 +94,24 @@ describe('historyEvents', () => {
     expect(events[0]).toMatchObject({ text: 'add a greeting', at: 1794249400000 });
     expect(events.at(-1)).toMatchObject({ id: 'turn1:result', text: 'Added the greeting.' });
   });
+
+  it('skips Plan-mode plan items, which carry no checklist', () => {
+    const items = [{ type: 'plan', id: 'p1', text: '1. Read\n2. Write' }] as ThreadItem[];
+    expect(historyEvents([{ id: 't', items, status: 'completed', startedAt: 1, error: null }], 0).map((e) => e.kind)).toEqual(['result']);
+  });
+});
+
+describe('turn/plan/updated', () => {
+  it('pushes each plan update as its own TodoWrite step', () => {
+    const { events, stream } = run();
+    const before = events.length;
+    const plan = (status: string) => stream.handle('turn/plan/updated', { threadId: 'th', turnId: 'turn2', explanation: null, plan: [{ step: 'Write the code', status }] });
+    plan('inProgress');
+    plan('completed');
+    const steps = events.slice(before).filter((e) => e.kind === 'tool_use');
+    expect(steps.map((e) => e.id)).toEqual(['turn2:plan:0', 'turn2:plan:1']);
+    expect(steps[1]).toMatchObject({ name: 'TodoWrite', input: { todos: [{ content: 'Write the code', status: 'completed' }] } });
+  });
 });
 
 describe('splitDiff', () => {
