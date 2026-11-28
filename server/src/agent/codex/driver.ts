@@ -37,7 +37,7 @@ export class CodexDriver implements AgentDriver {
   readonly provider: Provider = 'codex';
   readonly compactEndsTurn = true;
   readonly joinsTurn = true;
-  readonly capabilities: Capabilities = { rewind: false, mcp: true, mcpEdit: false, connectors: false, effort: true, stopTask: false, subagents: false, forkAt: false, contextUsage: false, addDir: false };
+  readonly capabilities: Capabilities = { rewind: false, mcp: true, mcpEdit: false, connectors: false, effort: true, stopTask: false, subagents: false, forkAt: true, contextUsage: false, addDir: false };
   readonly account: Account = 'main';
   readonly instructionFiles: string[];
 
@@ -367,8 +367,20 @@ export class CodexDriver implements AgentDriver {
     return { canRewind: false, error: 'Codex chats cannot rewind files' };
   }
 
-  async forkAt(): Promise<string> {
-    throw new Error('Codex chats cannot fork from a reply');
+  // A new thread holding this one through the turn with the reply, or all of it without one; returns its id.
+  async forkAt(sessionId: string, reply: { id: string } | null, title?: string): Promise<string> {
+    this.start();
+    await this.ready;
+    const rpc = this.rpc!;
+    let lastTurnId: string | undefined;
+    if (reply) {
+      const { thread } = await rpc.request<{ thread: Thread }>('thread/read', { threadId: sessionId, includeTurns: true });
+      lastTurnId = thread.turns.find((t) => t.items.some((i) => i.id === reply.id))?.id;
+      if (!lastTurnId) throw new Error('That reply is not saved yet');
+    }
+    const res = await rpc.request<{ thread: Thread }>('thread/fork', { threadId: sessionId, ...(lastTurnId && { lastTurnId }), excludeTurns: true });
+    await noteThread(res.thread.id, { cwd: this.host.cwd, ...(title && { summary: title }), ...(res.thread.path && { path: res.thread.path }) });
+    return res.thread.id;
   }
 
   async stopTask() {

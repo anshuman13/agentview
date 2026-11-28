@@ -160,3 +160,22 @@ describe('clear', () => {
     expect(results).toMatchObject([{ ok: true, isError: false }]);
   });
 });
+
+describe('forkAt', () => {
+  it('forks through the turn holding the reply, or the whole thread', async () => {
+    const { d, calls } = setup(false, () => Promise.resolve());
+    d.start = () => undefined;
+    d.rpc.request = async (method: string, params: any) => {
+      calls.push({ method, params });
+      if (method === 'thread/read') return { thread: { turns: [{ id: 'u1', items: [{ id: 'a1' }] }, { id: 'u2', items: [{ id: 'a2' }] }] } };
+      return { thread: { id: 'f1', path: null } };
+    };
+    expect(await d.forkAt('t1', { id: 'a1', text: 'One' }, 'Plan (fork)')).toBe('f1');
+    expect(calls.map((c) => c.method)).toEqual(['thread/read', 'thread/fork']);
+    expect(calls[1].params).toMatchObject({ threadId: 't1', lastTurnId: 'u1' });
+    expect((await codexThread('f1'))?.summary).toBe('Plan (fork)');
+    await d.forkAt('t1', null);
+    expect(calls.at(-1)!.params.lastTurnId).toBeUndefined();
+    await expect(d.forkAt('t1', { id: 'zz', text: '' })).rejects.toThrow('not saved yet');
+  });
+});

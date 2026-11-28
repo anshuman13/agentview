@@ -459,7 +459,7 @@ repo's git folder, so commits work. Approval cards work as for Claude (Always al
 (shown as edits with diffs) and MCP calls appear as steps; Codex's plan fills the checklist and its reasoning summaries
 show as thinking rows. /clear starts a new Codex thread and links the old one as a sub-chat, so /build runs task by task.
 A message sent while a turn runs joins that turn (`turn/steer`) instead of stopping it, and pasted images go to Codex as
-images. The usage bar shows the plan's 5-hour and weekly windows; there is no cost. No rewind or stop task. Codex chats are listed with the sessions (marked Codex), reopen with their
+images. Fork from a reply and /subtask copy the thread (`thread/fork`, through the reply's turn). The usage bar shows the plan's 5-hour and weekly windows; there is no cost. No rewind or stop task. Codex chats are listed with the sessions (marked Codex), reopen with their
 transcript, and are kept in `~/.agentview/codex-chats.json`. Codex chats get the same AgentView tools as Claude ones
 (status, wiki, data, chat search, report findings; not run code, which only Claude chats get) from a stdio MCP server the host starts for the chat, and the same
 instructions; the review buttons send a prompt that ends in report findings, and a plan change reaches the agent

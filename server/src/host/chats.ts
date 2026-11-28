@@ -163,7 +163,7 @@ export async function newChat(cwd: string, from: AgentSession | undefined, fork?
 // Fork from here: a new chat holding the conversation up to and with one reply (all of it without one), with a line that opens the parent.
 export async function forkFrom(from: AgentSession, replyId: string | null, title = from.title ? `${from.title} (fork)` : '') {
   const sessionId = await from.forkAt(replyId, title || undefined);
-  const chat = await createChat(from.cwd, sessionId, title);
+  const chat = await createChat(from.cwd, sessionId, title, false, from.driver.provider);
   chat.system(`Forked from ${from.title || 'this chat'}`, false, undefined, from.state.session.sessionId ?? undefined);
   return chat;
 }
