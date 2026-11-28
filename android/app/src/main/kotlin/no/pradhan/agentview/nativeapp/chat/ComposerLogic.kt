@@ -34,6 +34,11 @@ fun usageText(u: PlanUsage?) = listOfNotNull(u?.week?.let { "Week ${it.pct.toInt
 fun reviewLabel(running: Boolean, hasChanges: Boolean) =
     if (running) "Review changes · Agent is working" else if (hasChanges) "Review changes" else "Review changes · No changes"
 
+// shared/chatMenu.ts OUTPUT_STYLES: Claude's output styles as Claude.app lists them; Default is the CLI's "default".
+val OUTPUT_STYLES = listOf("Default", "Proactive", "Concise", "Explanatory", "Learning")
+fun outputStyleValue(label: String) = if (label == "Default") "default" else label
+fun outputStyleLabel(value: String?) = OUTPUT_STYLES.find { outputStyleValue(it) == value } ?: "Default"
+
 fun usageHigh(u: PlanUsage?) = maxOf(u?.week?.pct ?: 0.0, u?.fiveHour?.pct ?: 0.0) >= 80
 
 val EFFORT_LABEL = mapOf("low" to "Low", "medium" to "Medium", "high" to "High", "xhigh" to "Extra high", "max" to "Max")

@@ -242,6 +242,8 @@ export class ClaudeDriver implements AgentDriver {
       if (model) void this.q.setModel(cliModel(model)).catch(() => {});
       if (permissionMode) void this.q.setPermissionMode(permissionMode as PermissionMode).catch(() => {});
     }
+    const style = this.state.session.outputStyle;
+    if (style) void this.q.applyFlagSettings({ outputStyle: style }).catch(() => {});
     if (this.allowed.length) void this.q.applyFlagSettings({ permissions: { allow: this.allowed } }).catch(() => {});
     void this.consume();
     void this.loadMeta();
@@ -315,6 +317,11 @@ export class ClaudeDriver implements AgentDriver {
     if (!this.q) return;
     this.restart();
     this.host.restarted('Claude restarted to change its folders');
+  }
+
+  async setOutputStyle(style: string) {
+    this.start();
+    await this.q?.applyFlagSettings({ outputStyle: style });
   }
 
   async setEffort(level: Effort) {

@@ -242,6 +242,10 @@ export class AgentSession implements AgentHost {
     return this.settings.setEffort(level);
   }
 
+  setOutputStyle(style: string) {
+    return this.settings.setOutputStyle(style);
+  }
+
   setAccount(a: string) {
     this.settings.setAccount(a);
   }

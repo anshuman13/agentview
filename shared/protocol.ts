@@ -112,6 +112,8 @@ export type SessionInfo = {
   permissionMode: string | null;
   // Changed files are reviewed after each turn.
   review?: boolean;
+  // The Claude output style the next turn uses; unset is Default.
+  outputStyle?: string;
   apiKeySource: string | null;
   models: Array<{ value: string; displayName: string; description?: string; efforts?: string[]; defaultEffort?: string }>;
   commands: Array<{ name: string; description: string }>;
@@ -426,6 +428,7 @@ export type ClientMessage =
   | { type: 'allow_blocked'; id: string }
   | { type: 'set_model'; model: string }
   | { type: 'set_effort'; effort: string }
+  | { type: 'set_output_style'; style: string }
   | { type: 'set_account'; account: string }
   | { type: 'set_permission_mode'; mode: string }
   | { type: 'set_review'; on: boolean }

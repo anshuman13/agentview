@@ -1,4 +1,5 @@
 import { ACCOUNT_LABEL, ACCOUNT_NOTE, EFFORT_LEVELS, type Account, type Effort } from '../../../shared/protocol.js';
+import { OUTPUT_STYLES, outputStyleLabel, outputStyleValue } from '../../../shared/chatMenu.js';
 import { providerLabel, startModeFor } from '../../../shared/providers.js';
 import os from 'node:os';
 import path from 'node:path';
@@ -30,6 +31,15 @@ export class SessionSettings {
     await this.s.driver.setEffort(level as Effort);
     this.s.setSession({ effort: level as Effort });
     this.s.system(`Effort set to ${level}`);
+  }
+
+  async setOutputStyle(style: string) {
+    const { driver } = this.s;
+    if (!driver.setOutputStyle) return this.s.system(`${providerLabel(driver.provider)} chats have no output styles`, true);
+    if (!OUTPUT_STYLES.some((l) => outputStyleValue(l) === style)) return;
+    await driver.setOutputStyle(style);
+    this.s.setSession({ outputStyle: style });
+    this.s.system(`Output style set to ${outputStyleLabel(style)}`);
   }
 
   setAccount(a: string) {

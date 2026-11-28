@@ -237,6 +237,7 @@ data class SessionInfo(
     val accounts: List<String> = emptyList(),
     val usage: PlanUsage? = null,
     val review: Boolean = false,
+    val outputStyle: String? = null,
     val provider: String? = null,
     val capabilities: Capabilities = Capabilities(),
     val instructionFiles: List<String> = emptyList(),
@@ -415,6 +416,7 @@ fun allowBlockedCmd(id: String) = cmd("allow_blocked") { put("id", id) }
 fun sendNowCmd(id: String) = cmd("send_now") { put("id", id) }
 fun setModelCmd(model: String) = cmd("set_model") { put("model", model) }
 fun setEffortCmd(effort: String) = cmd("set_effort") { put("effort", effort) }
+fun setOutputStyleCmd(style: String) = cmd("set_output_style") { put("style", style) }
 fun usageCmd() = cmd("usage")
 fun contextUsageCmd() = cmd("context_usage")
 fun setAccountCmd(account: String) = cmd("set_account") { put("account", account) }

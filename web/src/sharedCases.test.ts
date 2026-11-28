@@ -3,7 +3,7 @@ process.env.TZ = 'UTC';
 import { readFileSync } from 'node:fs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'bun:test';
 import { barHidden, barIdle, barState, type BarEvent } from '../../shared/bottomBar';
-import { reviewLabel } from '../../shared/chatMenu';
+import { outputStyleLabel, outputStyleValue, reviewLabel } from '../../shared/chatMenu';
 import { chatNotices, type ChatNotice } from '../../shared/notices';
 import { appCounts } from '../../shared/counts';
 import { TABLES } from '../../shared/tables';
@@ -775,6 +775,10 @@ describe('cases shared with the Android app', () => {
 
   for (const c of cases<{ name: string; view: string; thinking: boolean; step: boolean }>('transcript-view')) {
     it(`foldOpen: ${c.name}`, () => expect({ thinking: foldOpen(c.view, 'thinking'), step: foldOpen(c.view, 'step') }).toEqual({ thinking: c.thinking, step: c.step }));
+  }
+
+  for (const c of cases<{ name: string; value: string | null; label: string; back: string }>('output-style')) {
+    it(`outputStyle: ${c.name}`, () => expect([outputStyleLabel(c.value), outputStyleValue(outputStyleLabel(c.value))]).toEqual([c.label, c.back]));
   }
 
   for (const c of cases<{ name: string; events: ChatEvent[]; prompt: string; expected: string | null }>('reply-before')) {

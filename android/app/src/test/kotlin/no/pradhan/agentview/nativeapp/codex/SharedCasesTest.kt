@@ -39,6 +39,8 @@ import no.pradhan.agentview.nativeapp.app.SeenMark
 import no.pradhan.agentview.nativeapp.app.mergeSeen
 import no.pradhan.agentview.nativeapp.chat.Item
 import no.pradhan.agentview.nativeapp.chat.openAtNew
+import no.pradhan.agentview.nativeapp.chat.outputStyleLabel
+import no.pradhan.agentview.nativeapp.chat.outputStyleValue
 import no.pradhan.agentview.nativeapp.chat.duration
 import no.pradhan.agentview.nativeapp.chat.dayDividers
 import no.pradhan.agentview.nativeapp.chat.sentAt
@@ -736,6 +738,13 @@ class SharedCasesTest {
         for (c in cases("transcript-view")) {
             val bool = { k: String -> c.getValue(k).jsonPrimitive.boolean }
             assertEquals(c.str("name"), bool("thinking") to bool("step"), foldOpen(c.str("view"), "thinking") to foldOpen(c.str("view"), "step"))
+        }
+    }
+
+    @Test fun outputStyleCases() {
+        for (c in cases("output-style")) {
+            val label = outputStyleLabel(c["value"]?.jsonPrimitive?.contentOrNull)
+            assertEquals(c.str("name"), c.str("label") to c.str("back"), label to outputStyleValue(label))
         }
     }
 

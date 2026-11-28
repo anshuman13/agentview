@@ -1,0 +1,6 @@
+[
+  { "name": "unset reads as Default", "value": null, "label": "Default", "back": "default" },
+  { "name": "the CLI default is Default", "value": "default", "label": "Default", "back": "default" },
+  { "name": "a known style keeps its name", "value": "Concise", "label": "Concise", "back": "Concise" },
+  { "name": "an unknown style reads as Default", "value": "Pirate", "label": "Default", "back": "default" }
+]

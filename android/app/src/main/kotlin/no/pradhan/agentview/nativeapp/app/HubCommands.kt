@@ -20,6 +20,7 @@ import no.pradhan.agentview.nativeapp.net.runCmd
 import no.pradhan.agentview.nativeapp.net.sendNowCmd
 import no.pradhan.agentview.nativeapp.net.setAccountCmd
 import no.pradhan.agentview.nativeapp.net.setEffortCmd
+import no.pradhan.agentview.nativeapp.net.setOutputStyleCmd
 import no.pradhan.agentview.nativeapp.net.setModeCmd
 import no.pradhan.agentview.nativeapp.net.setModelCmd
 import no.pradhan.agentview.nativeapp.net.setReviewCmd
@@ -181,6 +182,7 @@ fun Hub.clearShells() = post(clearShellsCmd(), store.wanted)
 fun Hub.setModel(model: String) { setLastModel(modelGroup(store.state.value.session?.provider, providers.value), model); post(setModelCmd(model), store.wanted) }
 
 fun Hub.setEffort(effort: String) = post(setEffortCmd(effort), store.wanted)
+fun Hub.setOutputStyle(style: String) = post(setOutputStyleCmd(style), store.wanted)
 
 fun Hub.setAccount(account: String) = post(setAccountCmd(account), store.wanted)
 

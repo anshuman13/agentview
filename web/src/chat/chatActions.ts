@@ -94,6 +94,7 @@ export const allowBlocked = (id: string) => send({ type: 'allow_blocked', id });
 export const reviewChange = (id: string, action: 'keep' | 'undo', file?: string, hunk?: number) => send({ type: 'review', id, action, file, hunk });
 export const setModel = (model: string) => send({ type: 'set_model', model });
 export const setEffort = (effort: string) => send({ type: 'set_effort', effort });
+export const setOutputStyle = (style: string) => send({ type: 'set_output_style', style });
 export const setAccount = (account: string) => send({ type: 'set_account', account });
 
 export function setMode(step: { mode: string | null; review: boolean | null }) {

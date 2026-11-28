@@ -77,6 +77,8 @@ export function command(chat: AgentSession, msg: ClientMessage): Promise<unknown
       return setModelCommand(chat, msg);
     case 'set_effort':
       return chat.setEffort(String(msg.effort));
+    case 'set_output_style':
+      return chat.setOutputStyle(String(msg.style));
     case 'set_account':
       return void chat.setAccount(String(msg.account));
     case 'set_permission_mode':

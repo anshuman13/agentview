@@ -36,6 +36,7 @@ import no.pradhan.agentview.nativeapp.net.SessionInfo
 import no.pradhan.agentview.nativeapp.app.archive
 import no.pradhan.agentview.nativeapp.net.billing
 import no.pradhan.agentview.nativeapp.app.closeChat
+import no.pradhan.agentview.nativeapp.app.setOutputStyle
 import no.pradhan.agentview.nativeapp.app.rename
 import no.pradhan.agentview.nativeapp.ui.IconBtn
 import androidx.compose.foundation.clickable
@@ -134,6 +135,12 @@ private fun ChatMenu(hub: Hub, live: LiveChat, session: SessionInfo?, panels: Ch
     val sessionId = live.sessionId ?: session?.sessionId
     MoreButton { close ->
         MenuItem(reviewLabel(false, canReview), "source-control", { close(); onReview() }, enabled = canReview)
+        if (live.provider != "codex") {
+            val style = outputStyleLabel(session?.outputStyle)
+            var styles by remember { mutableStateOf(false) }
+            MenuItem("Output style \u00b7 $style", "comment", { styles = !styles })
+            if (styles) OUTPUT_STYLES.forEach { l -> MenuItem(l, "", { close(); hub.setOutputStyle(outputStyleValue(l)) }, checked = l == style) }
+        }
         MenuItem("Find in chat", "search", { close(); panels.find = true })
         MenuItem("Rename", "edit", { close(); panels.dialog = "rename" }, enabled = sessionId != null)
         MenuItem("Tools\u2026", "tools", { close(); panels.tools = true })
