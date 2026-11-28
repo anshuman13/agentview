@@ -31,7 +31,10 @@ export function callRow(account: Account, chat: string | null, message: CallMess
 
 export function recordCall(account: Account, chat: string | null, message: CallMessage, at = Date.now()) {
   const row = callRow(account, chat, message, at);
-  if (!row) return false;
+  return row ? storeCall(row) : false;
+}
+
+export function storeCall(row: CallRow) {
   try {
     return saveCall(row);
   } catch (e) {

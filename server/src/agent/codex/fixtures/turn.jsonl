@@ -9,5 +9,5 @@
 {"method":"item/agentMessage/delta","params":{"threadId":"t1","turnId":"turn1","itemId":"a1","delta":"Added "}}
 {"method":"item/agentMessage/delta","params":{"threadId":"t1","turnId":"turn1","itemId":"a1","delta":"the greeting."}}
 {"method":"item/completed","params":{"threadId":"t1","turnId":"turn1","completedAtMs":1794249405000,"item":{"type":"agentMessage","id":"a1","text":"Added the greeting.","phase":null}}}
-{"method":"thread/tokenUsage/updated","params":{"threadId":"t1","turnId":"turn1","tokenUsage":{"total":{"totalTokens":5000},"last":{"totalTokens":1234},"modelContextWindow":200000}}}
+{"method":"thread/tokenUsage/updated","params":{"threadId":"t1","turnId":"turn1","tokenUsage":{"total":{"totalTokens":5000,"inputTokens":4200,"cachedInputTokens":3000,"cacheWriteInputTokens":40,"outputTokens":800,"reasoningOutputTokens":300},"last":{"totalTokens":1234,"inputTokens":1000,"cachedInputTokens":600,"cacheWriteInputTokens":40,"outputTokens":234,"reasoningOutputTokens":120},"modelContextWindow":200000}}}
 {"method":"turn/completed","params":{"threadId":"t1","turn":{"id":"turn1","items":[],"status":"completed","startedAt":1794249400,"error":null}}}

@@ -1,5 +1,6 @@
 import type { PlanUsage, UsageWindow } from '../../../../shared/protocol.js';
-import type { RateLimitWindow, RateLimits } from './protocol.js';
+import type { CallRow } from '../../usage/store.js';
+import type { RateLimitWindow, RateLimits, TokenUsageBreakdown } from './protocol.js';
 
 const FIVE_HOURS = 300;
 const WEEK = 10_080;
@@ -19,4 +20,33 @@ export function limitUntil(u: PlanUsage | null | undefined, now = Date.now()) {
   const windows = [u?.fiveHour, u?.week].filter((w): w is UsageWindow => Boolean(w?.resetsAt));
   const fullest = windows.sort((a, b) => b.pct - a.pct)[0];
   return fullest?.resetsAt ?? now + FIVE_HOURS * 60_000;
+}
+
+// A turn's tokens as one calls row; Codex counts cached input inside input, the table keeps it apart.
+export function turnCall(turnId: string, chat: string | null, model: string | null, t: TokenUsageBreakdown, at = Date.now()): CallRow {
+  return {
+    id: `codex:${turnId}`,
+    at,
+    account: 'codex',
+    provider: 'codex',
+    chat,
+    model,
+    input: t.inputTokens - t.cachedInputTokens,
+    output: t.outputTokens,
+    cacheWrite: t.cacheWriteInputTokens ?? 0,
+    cacheRead: t.cachedInputTokens,
+    reasoning: t.reasoningOutputTokens,
+  };
+}
+
+export function addUsage(sum: TokenUsageBreakdown | null, t: TokenUsageBreakdown): TokenUsageBreakdown {
+  if (!sum) return { ...t };
+  return {
+    totalTokens: sum.totalTokens + t.totalTokens,
+    inputTokens: sum.inputTokens + t.inputTokens,
+    cachedInputTokens: sum.cachedInputTokens + t.cachedInputTokens,
+    cacheWriteInputTokens: (sum.cacheWriteInputTokens ?? 0) + (t.cacheWriteInputTokens ?? 0),
+    outputTokens: sum.outputTokens + t.outputTokens,
+    reasoningOutputTokens: sum.reasoningOutputTokens + t.reasoningOutputTokens,
+  };
 }

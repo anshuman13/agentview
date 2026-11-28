@@ -1,9 +1,10 @@
 import path from 'node:path';
 import type { AgentHost } from '../types.js';
 import { finishedEvents, planEvents, reasoningEvent, startedEvents } from './events.js';
-import { limitUntil } from './usage.js';
+import { storeCall } from '../../usage/calls.js';
+import { addUsage, limitUntil, turnCall } from './usage.js';
 import { LiveText } from '../liveText.js';
-import type { FileUpdateChange, ReasoningDeltaNotification, ThreadItem, TokenUsage, Turn, TurnPlanUpdatedNotification } from './protocol.js';
+import type { FileUpdateChange, ReasoningDeltaNotification, ThreadItem, TokenUsage, TokenUsageBreakdown, Turn, TurnPlanUpdatedNotification } from './protocol.js';
 
 type Sink = Pick<AgentHost, 'cwd' | 'state' | 'limit' | 'pushEvent' | 'emit' | 'system' | 'setSession' | 'turnResult' | 'compacted' | 'noteFile' | 'captureEdit'>;
 
@@ -14,6 +15,10 @@ export class CodexStream {
   private context = 0;
   private compactedTurn: string | null = null;
   private plans = 0;
+  // The turn's tokens so far, and the thread's running total that tells a new request from a repeated report.
+  private tokens: TokenUsageBreakdown | null = null;
+  private total = -1;
+  private threadId: string | null = null;
   // Reasoning text streamed so far per item, summary and raw kept apart so the summary wins.
   private summaries = new Map<string, string>();
   private raw = new Map<string, string>();
@@ -33,7 +38,7 @@ export class CodexStream {
       case 'item/completed': return this.completed(params.item, params.turnId);
       case 'turn/completed': return this.turnDone(params.turn);
       case 'turn/plan/updated': return this.plan(params);
-      case 'thread/tokenUsage/updated': return this.usage(params.tokenUsage);
+      case 'thread/tokenUsage/updated': return this.usage(params.threadId, params.tokenUsage);
       case 'thread/compacted': return this.compacted(params.turnId);
       case 'error': return params.willRetry ? undefined : this.failed(params.error);
     }
@@ -84,7 +89,10 @@ export class CodexStream {
     for (const ev of planEvents(p.turnId, this.plans++, p.plan, Date.now())) this.host.pushEvent(ev);
   }
 
-  private usage(u: TokenUsage) {
+  private usage(threadId: string, u: TokenUsage) {
+    this.threadId = threadId;
+    if (u.total.totalTokens !== this.total) this.tokens = addUsage(this.tokens, u.last);
+    this.total = u.total.totalTokens;
     this.context = u.last.totalTokens;
     this.host.setSession({ context: this.context || null, contextWindow: u.modelContextWindow });
   }
@@ -111,6 +119,8 @@ export class CodexStream {
     const ok = turn.status === 'completed';
     const text = ok ? this.lastText : turn.error?.message ?? `Turn ended: ${turn.status}`;
     this.lastText = '';
+    if (this.tokens) storeCall(turnCall(turn.id, this.threadId, this.host.state.session.model ?? null, this.tokens));
+    this.tokens = null;
     this.host.turnResult({ id: `${turn.id}:result`, ok, text, costUsd: 0, isError: turn.status === 'failed' });
   }
 }

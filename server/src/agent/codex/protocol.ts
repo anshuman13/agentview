@@ -40,7 +40,8 @@ export type ThreadListResponse = { data: Thread[]; nextCursor: string | null };
 export type RateLimitWindow = { usedPercent: number; windowDurationMins: number | null; resetsAt: number | null };
 export type RateLimits = { primary: RateLimitWindow | null; secondary: RateLimitWindow | null };
 
-export type TokenUsage = { last: { totalTokens: number }; modelContextWindow: number | null };
+export type TokenUsageBreakdown = { totalTokens: number; inputTokens: number; cachedInputTokens: number; cacheWriteInputTokens?: number; outputTokens: number; reasoningOutputTokens: number };
+export type TokenUsage = { total: TokenUsageBreakdown; last: TokenUsageBreakdown; modelContextWindow: number | null };
 
 export type McpServerStatus = {
   name: string;

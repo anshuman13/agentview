@@ -5,6 +5,8 @@ import path from 'node:path';
 import { CodexDriver, userInput } from './driver.js';
 import { CodexRpc } from './rpc.js';
 import { codexThread } from './threads.js';
+import { STATE_DIR } from '../claude/accounts.js';
+import { callsSince, closeStore } from '../../usage/store.js';
 import { waitFor } from '../../../../testing.js';
 
 function setup(running: boolean, steer: () => Promise<unknown>) {
@@ -232,5 +234,27 @@ describe('rewind', () => {
     await d.rewind('p1');
     expect(readFileSync(a, 'utf8')).toBe('one\n');
     rmSync(dir, { recursive: true });
+  });
+});
+
+describe('token usage', () => {
+  const resetDb = () => {
+    closeStore();
+    for (const f of ['usage.db', 'usage.db-wal', 'usage.db-shm']) rmSync(path.join(STATE_DIR, f), { force: true });
+  };
+  it('records one codex calls row per turn from the last usage, once per request', () => {
+    resetDb();
+    const lines = readFileSync(new URL('./fixtures/turn.jsonl', import.meta.url), 'utf8').trim().split('\n').map((l) => JSON.parse(l) as { method: string; params: any });
+    const noop = () => undefined;
+    const host: any = { cwd: '/tmp/proj', state: { session: { running: true, permissionMode: 'default', model: 'gpt-5.1-codex' } }, pushEvent: noop, emit: noop, system: noop, setSession: noop, turnResult: noop, compacted: noop, noteFile: noop, captureEdit: noop, limit: noop };
+    const d: any = new CodexDriver(host);
+    for (const l of lines) {
+      d.onNotification(l.method, l.params);
+      if (l.method === 'thread/tokenUsage/updated') d.onNotification(l.method, l.params);
+    }
+    expect(callsSince('codex', 0)).toMatchObject([
+      { id: 'codex:turn1', account: 'codex', provider: 'codex', chat: 't1', model: 'gpt-5.1-codex', input: 400, cacheRead: 600, cacheWrite: 40, output: 234, reasoning: 120, guessed: false },
+    ]);
+    resetDb();
   });
 });
