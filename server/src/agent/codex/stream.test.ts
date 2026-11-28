@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'bun:test';
 import type { ChatEvent, ServerMessage } from '../../../../shared/protocol.js';
-import { historyEvents, planEvents, splitDiff } from './events.js';
+import { historyEvents, planEvents, rolloutPlan, splitDiff } from './events.js';
 import type { ThreadItem } from './protocol.js';
 import { CodexStream } from './stream.js';
 
@@ -98,6 +98,17 @@ describe('historyEvents', () => {
   it('skips Plan-mode plan items, which carry no checklist', () => {
     const items = [{ type: 'plan', id: 'p1', text: '1. Read\n2. Write' }] as ThreadItem[];
     expect(historyEvents([{ id: 't', items, status: 'completed', startedAt: 1, error: null }], 0).map((e) => e.kind)).toEqual(['result']);
+  });
+
+  it('rebuilds the checklist from the last update_plan call in the rollout file', () => {
+    const saved = rolloutPlan(readFileSync(new URL('./fixtures/rollout.jsonl', import.meta.url), 'utf8'));
+    expect(saved).toEqual({ turnId: 'turn2', plan: [{ step: 'Create x.txt', status: 'completed' }, { step: 'List "all" files', status: 'inProgress' }] });
+    const turn = (id: string) => ({ id, items: [], status: 'completed' as const, startedAt: 1, error: null });
+    const events = historyEvents([turn('turn1'), turn('turn2'), turn('turn3')], 0, saved);
+    expect(events.map((e) => e.id)).toEqual(['turn1:result', 'turn2:plan:saved', 'turn2:plan:saved:result', 'turn2:result', 'turn3:result']);
+    expect(events[1]).toMatchObject({ kind: 'tool_use', name: 'TodoWrite', input: { todos: [{ content: 'Create x.txt', status: 'completed' }, { content: 'List "all" files', status: 'in_progress' }] } });
+    expect(historyEvents([turn('other')], 0, saved).map((e) => e.id)).toEqual(['other:plan:saved', 'other:plan:saved:result', 'other:result']);
+    expect(rolloutPlan('{"type":"response_item","payload":{"type":"message","text":"update_plan"}}')).toBeNull();
   });
 });
 

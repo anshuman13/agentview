@@ -22,7 +22,7 @@ export type ThreadItem =
   | { type: 'plan'; id: string; text: string }
   | { type: 'other'; id: string };
 
-// `turn/plan/updated`: the whole update_plan checklist each time. Plans are not thread items, so a reloaded thread has none.
+// `turn/plan/updated`: the whole update_plan checklist each time. Plans are not thread items; a reloaded thread reads the last one from its rollout file.
 export type TurnPlanStepStatus = 'pending' | 'inProgress' | 'completed';
 export type TurnPlanUpdatedNotification = { threadId: string; turnId: string; explanation: string | null; plan: Array<{ step: string; status: TurnPlanStepStatus }> };
 
