@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test';
-import { typeAhead } from './Menu';
+import { letterItem, typeAhead } from './Menu';
 
 describe('typeAhead', () => {
   const labels = ['Open', 'Skip', 'Snooze 1 hour', 'Snooze 1 day', 'Done'];
@@ -35,5 +35,16 @@ describe('typeAhead', () => {
   it('returns -1 without a match or items', () => {
     expect(typeAhead(labels, 0, 'x')).toBe(-1);
     expect(typeAhead([], -1, 's')).toBe(-1);
+  });
+});
+
+describe('letterItem', () => {
+  it('finds the item with the key, ignoring case', () => {
+    expect(letterItem(['R', undefined, 'F'], 'f')).toBe(2);
+    expect(letterItem(['R', undefined, 'F'], 'R')).toBe(0);
+  });
+
+  it('returns -1 when no item has the key', () => {
+    expect(letterItem(['R', null], 'x')).toBe(-1);
   });
 });

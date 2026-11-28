@@ -22,6 +22,7 @@
 .ui-menu-item.danger:is(:focus-visible, :active):not(:disabled) { --state: 10%; }
 .ui-menu-item:disabled { opacity: 0.5; cursor: default; }
 .ui-menu-item.danger { color: var(--danger); }
+.ui-menu-key { margin-left: auto; padding-left: var(--sp-6); color: var(--fg-muted); font: inherit; font-size: var(--type-caption-size); }
 .ui-menu-sep { height: 0; margin: var(--sp-2) 0; border-top: var(--hairline); }
 @media (pointer: coarse) { .ui-menu-item { min-height: var(--touch); } }
 .ui-menu-backdrop { position: fixed; inset: 0; z-index: var(--z-sheet); background-color: var(--scrim); }

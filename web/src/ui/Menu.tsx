@@ -28,6 +28,12 @@ export function typeAhead(labels: string[], from: number, buffer: string): numbe
   return -1;
 }
 
+// The item whose letter key matches, like Claude.app's title dropdown; letter keys win over type-ahead.
+export function letterItem(keys: (string | null | undefined)[], key: string): number {
+  const k = key.toLowerCase();
+  return keys.findIndex(x => !!x && x.toLowerCase() === k);
+}
+
 const menuClass = (phone: boolean, className?: string) => cx('ui-menu', phone && 'sheet', className);
 
 export function Menu({ trigger, onClose, className, children }: {
@@ -79,6 +85,8 @@ export function Menu({ trigger, onClose, className, children }: {
     const items = [...(box.current?.querySelectorAll<HTMLElement>(FOCUSABLE) ?? [])];
     if (!items.length) return;
     e.preventDefault();
+    const hit = letterItem(items.map(i => i.dataset.key), e.key);
+    if (hit >= 0) return items[hit].click();
     const pending = typed.current;
     clearTimeout(pending.timer);
     pending.text += e.key;
@@ -120,19 +128,21 @@ type Item = {
   spin?: boolean;
   danger?: boolean;
   href?: string;
+  shortcut?: string;
   children?: ReactNode;
 };
 
-export function MenuItem({ icon, spin, danger, href, className, children, ...rest }: Item & Omit<ComponentPropsWithoutRef<'button'>, 'children'>) {
+export function MenuItem({ icon, spin, danger, href, shortcut, className, children, ...rest }: Item & Omit<ComponentPropsWithoutRef<'button'>, 'children'>) {
   const content = (
     <>
       {icon && <Icon name={icon} small spin={spin} />}
       {children}
+      {shortcut && <kbd className="ui-menu-key">{shortcut}</kbd>}
     </>
   );
   const cls = cx('ui-menu-item', danger && 'danger', className);
   if (href) return <a role="menuitem" className={cls} href={href} target="_blank" rel="noreferrer" onClick={rest.onClick as never}>{content}</a>;
-  return <button type="button" role="menuitem" className={cls} {...rest}>{content}</button>;
+  return <button type="button" role="menuitem" className={cls} data-key={shortcut} {...rest}>{content}</button>;
 }
 
 export const MenuSeparator = () => <div role="separator" className="ui-menu-sep" />;
