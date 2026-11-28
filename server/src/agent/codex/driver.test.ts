@@ -116,7 +116,8 @@ describe('userInput', () => {
 describe('start', () => {
   it('takes over the process that read the history instead of starting another', async () => {
     const calls: string[] = [];
-    const host: any = { cwd: '/tmp', state: { session: { id: 'c1', running: false, permissionMode: 'default' } }, setSession: () => undefined, system: () => undefined };
+    const sessions: any[] = [];
+    const host: any = { cwd: '/tmp', state: { session: { id: 'c1', running: false, permissionMode: 'default' } }, setSession: (s: unknown) => void sessions.push(s), system: () => undefined };
     const d: any = new CodexDriver(host);
     d.threadId = 't1';
     const spare: any = {
@@ -136,6 +137,7 @@ describe('start', () => {
     expect(d.rpc).toBe(spare);
     expect(calls).not.toContain('initialize');
     expect(calls.slice(0, 2)).toEqual(['account/read', 'thread/resume']);
+    expect(sessions[0].commands.map((c: { name: string }) => c.name)).toEqual(['clear']);
     d.close();
   });
 });

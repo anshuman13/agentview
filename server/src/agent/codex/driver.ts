@@ -26,6 +26,8 @@ export function userInput(text: string): UserInput[] {
 let lastRead: { at: number; read: Promise<{ rateLimits: RateLimits }> } | null = null;
 // How long the process that read the history waits for the chat to start.
 const SPARE_MS = 5_000;
+// The commands the driver runs itself; the session adds its own.
+export const CODEX_COMMANDS = [{ name: 'clear', description: 'Start a new conversation; the old one becomes a sub-chat' }];
 const MCP_STATUS: Record<string, string> = { connected: 'connected', authenticationRequired: 'needs-auth', failed: 'failed', disabled: 'disabled' };
 
 export const codexDriver = (resume?: string, fork = false): DriverFactory => (host) => new CodexDriver(host, resume, fork);
@@ -107,7 +109,7 @@ export class CodexDriver implements AgentDriver {
     if (this.fork) this.host.system('Forked into a new chat');
     this.fork = false;
     this.threadId = res.thread.id;
-    this.host.setSession({ sessionId: res.thread.id, model: res.model, permissionMode: this.mode, commands: [] });
+    this.host.setSession({ sessionId: res.thread.id, model: res.model, permissionMode: this.mode, commands: CODEX_COMMANDS });
     void noteThread(res.thread.id, { cwd: this.host.cwd, ...(res.thread.path && { path: res.thread.path }) });
     void this.loadModels(rpc);
     void this.loadUsage();
