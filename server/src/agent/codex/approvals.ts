@@ -4,14 +4,14 @@ import type { ApprovalDecision, ApprovalMethod, AskForApproval, ElicitationParam
 
 export type Policy = { approvalPolicy: AskForApproval; sandbox: SandboxMode; sandboxPolicy: SandboxPolicy };
 
-const workspace = (networkAccess: boolean): Policy => ({ approvalPolicy: 'on-request', sandbox: 'workspace-write', sandboxPolicy: { type: 'workspaceWrite', writableRoots: [], networkAccess, excludeTmpdirEnvVar: false, excludeSlashTmp: false } });
+const workspace = (approvalPolicy: AskForApproval, networkAccess: boolean): Policy => ({ approvalPolicy, sandbox: 'workspace-write', sandboxPolicy: { type: 'workspaceWrite', writableRoots: [], networkAccess, excludeTmpdirEnvVar: false, excludeSlashTmp: false } });
 
-// Default asks before what leaves the workspace sandbox, Auto never asks and has network, Read only, Plan and Don't ask can only read.
+// Default asks before every file edit and every command Codex does not trust as read-only, Auto never asks and has network, Read only, Plan and Don't ask can only read.
 export function policyFor(mode: string | null): Policy {
   switch (mode) {
-    case 'auto': return { ...workspace(true), approvalPolicy: 'never' };
+    case 'auto': return workspace('never', true);
     case 'readOnly': case 'plan': case 'dontAsk': return { approvalPolicy: 'never', sandbox: 'read-only', sandboxPolicy: { type: 'readOnly', networkAccess: false } };
-    default: return workspace(false);
+    default: return workspace('untrusted', false);
   }
 }
 

@@ -3,8 +3,8 @@ import { answersFor, askFor, decisionFor, elicitationFor, hasFields, permissions
 import { planUsage } from './usage.js';
 
 describe('policyFor', () => {
-  it('asks in the workspace sandbox by default, never asks in Auto, and only reads in Plan', () => {
-    expect(policyFor('default')).toMatchObject({ approvalPolicy: 'on-request', sandbox: 'workspace-write' });
+  it('asks for edits and untrusted commands by default, never asks in Auto, and only reads in Plan', () => {
+    expect(policyFor('default')).toMatchObject({ approvalPolicy: 'untrusted', sandbox: 'workspace-write', sandboxPolicy: { type: 'workspaceWrite' } });
     expect(policyFor('auto')).toMatchObject({ approvalPolicy: 'never', sandbox: 'workspace-write', sandboxPolicy: { type: 'workspaceWrite' } });
     expect(policyFor('plan')).toMatchObject({ approvalPolicy: 'never', sandbox: 'read-only', sandboxPolicy: { type: 'readOnly' } });
     expect(policyFor('readOnly')).toMatchObject({ approvalPolicy: 'never', sandbox: 'read-only' });
