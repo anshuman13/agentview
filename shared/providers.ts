@@ -17,7 +17,7 @@ const CLAUDE_MODES: Record<(typeof PERMISSION_MODES)[number], Omit<ModeOption, '
 };
 
 const CODEX_MODES: ModeOption[] = [
-  { value: 'default', label: 'Default', detail: 'Ask before edits and commands' },
+  { value: 'default', label: 'Default', detail: 'Ask before every edit and command, network off' },
   { value: 'auto', label: 'Auto', detail: 'Edit and run commands, network on' },
   { value: 'readOnly', label: 'Read only', detail: 'Read files, no edits' },
 ];
