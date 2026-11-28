@@ -58,7 +58,7 @@ fun UsageScreen(hub: Hub, onBack: () -> Unit) {
             LazyColumn(Modifier.fillMaxSize()) {
                 item { ErrorHint(load.error) }
                 if (load.data == null) { if (load.error.isEmpty()) item { Loading("Loading usage…") } }
-                else if (accounts.isEmpty()) item { EmptyState("No Claude accounts are logged in", icon = "graph", small = false) }
+                else if (accounts.isEmpty()) item { EmptyState("No Claude accounts or Codex are signed in", icon = "graph", small = false) }
                 items(accounts, key = { it.account }) { a ->
                     SectionHeader(a.name)
                     Group { Column(Modifier.padding(Tokens.listPad), verticalArrangement = Arrangement.spacedBy(Tokens.sp8)) { UsageCard(a, now) } }

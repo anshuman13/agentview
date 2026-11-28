@@ -44,6 +44,7 @@ const { createRoutes } = await import('./routes.js');
 const accounts = await import('../agent/claude/accounts.js');
 const registry = await import('../agent/registry.js');
 const store = await import('../usage/store.js');
+const codexBinary = await import('../agent/codex/binary.js');
 
 const chat = { id: 'c1', cwd: '/tmp/x' } as LiveChat;
 
@@ -279,9 +280,11 @@ describe('routes', () => {
 
   it('serves the usage report for logged-in accounts', async () => {
     const logged = vi.spyOn(accounts, 'loggedInAccounts').mockReturnValue(['main']);
+    const codex = vi.spyOn(codexBinary, 'codexSignedIn').mockResolvedValue(false);
     const r = await call('GET', '/api/usage?days=3');
     const bad = await call('GET', '/api/usage?days=0');
     logged.mockRestore();
+    codex.mockRestore();
     expect(r.code).toBe(200);
     expect(r.json.accounts.map((a: { account: string; name: string; days: unknown[] }) => [a.account, a.name, a.days.length])).toEqual([['main', 'Personal', 3]]);
     expect(bad.code).toBe(400);

@@ -37,7 +37,7 @@ const call = (account: Account, at: number, input: number) =>
   saveCall({ id: `msg_${n++}`, at, account, chat: 's1', model: 'claude-opus-5-5', input, output: 10, cacheWrite: 100, cacheRead: 1000 });
 
 describe('usage report', () => {
-  it('returns one entry per account with latest values, the 7-day series and day totals', () => {
+  it('returns one entry per account with latest values, the 7-day series and day totals', async () => {
     saveSample('main', max(5, 40), now - 8 * DAY);
     saveSample('main', max(20, 50), now - H);
     saveSample('main', max(30, 55), now);
@@ -51,7 +51,7 @@ describe('usage report', () => {
     call('main', now - 40 * DAY, 8);
     call('alt2', now, 16);
 
-    const { accounts } = usageReport(30, now);
+    const { accounts } = await usageReport(30, now, false);
     expect(accounts.map((a) => [a.account, a.name])).toEqual([
       ['main', 'Personal'],
       ['alt', 'Work'],
@@ -84,23 +84,34 @@ describe('usage report', () => {
     expect(ent.days.at(-1)!.input).toBe(16);
   });
 
-  it('returns null latest and an empty series for an account without samples', () => {
-    const { accounts } = usageReport(7, now);
+  it('adds a Codex section with its limits and tokens when Codex is signed in', async () => {
+    saveSample('codex', max(12, 34), now);
+    saveCall({ id: 'codex:t1', at: now, account: 'codex', provider: 'codex', chat: 's2', model: 'gpt-5.5', input: 5, output: 7, cacheWrite: 0, cacheRead: 50 });
+    const signedIn = await usageReport(3, now, true);
+    const codex = signedIn.accounts.at(-1)!;
+    expect([codex.account, codex.name]).toEqual(['codex', 'Codex']);
+    expect(codex.latest).toMatchObject({ fiveHour: { pct: 12 }, week: { pct: 34 } });
+    expect(codex.days.at(-1)).toEqual({ day: '2026-11-26', input: 5, output: 7, cacheWrite: 0, cacheRead: 50 });
+    expect((await usageReport(3, now, false)).accounts.map((a) => a.account)).not.toContain('codex');
+  });
+
+  it('returns null latest and an empty series for an account without samples', async () => {
+    const { accounts } = await usageReport(7, now, false);
     expect(accounts).toHaveLength(3);
     expect(accounts[0].latest).toBe(null);
     expect(accounts[0].series).toEqual([]);
     expect(accounts[0].days).toHaveLength(7);
   });
 
-  it('matches the shape of the shared fixture', () => {
+  it('matches the shape of the shared fixture', async () => {
     const fixture = JSON.parse(readFileSync(new URL('../../../shared/fixtures/usage.json', import.meta.url), 'utf8')) as { report: UsageReport };
     saveSample('main', max(30, 55), now);
     call('main', now, 1);
-    const real = usageReport(3, now).accounts[0];
+    const real = (await usageReport(3, now, false)).accounts[0];
     const keys = (o: object) => Object.keys(o).sort();
     for (const a of fixture.report.accounts) {
       expect(keys(a)).toEqual(keys(real));
-      expect(a.name).toBe(ACCOUNT_NAME[a.account]);
+      expect(a.name).toBe(a.account === 'codex' ? 'Codex' : ACCOUNT_NAME[a.account]);
       for (const d of a.days) expect(keys(d)).toEqual(keys(real.days[0]));
     }
     expect(keys(fixture.report.accounts[0].latest!)).toEqual(keys(real.latest!));

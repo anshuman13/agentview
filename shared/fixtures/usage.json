@@ -117,6 +117,57 @@
             "cacheRead": 0
           }
         ]
+      },
+      {
+        "account": "codex",
+        "name": "Codex",
+        "latest": {
+          "at": 1795694400000,
+          "fiveHour": {
+            "pct": 12,
+            "resetsAt": 1795701600000
+          },
+          "week": {
+            "pct": 34,
+            "resetsAt": 1795953600000
+          },
+          "models": []
+        },
+        "series": [
+          {
+            "at": 1795690800000,
+            "fiveHour": 8,
+            "week": 33
+          },
+          {
+            "at": 1795694400000,
+            "fiveHour": 12,
+            "week": 34
+          }
+        ],
+        "days": [
+          {
+            "day": "2026-11-24",
+            "input": 0,
+            "output": 0,
+            "cacheWrite": 0,
+            "cacheRead": 0
+          },
+          {
+            "day": "2026-11-25",
+            "input": 4200,
+            "output": 2100,
+            "cacheWrite": 0,
+            "cacheRead": 88000
+          },
+          {
+            "day": "2026-11-26",
+            "input": 900,
+            "output": 300,
+            "cacheWrite": 0,
+            "cacheRead": 12000
+          }
+        ]
       }
     ]
   },
@@ -270,6 +321,84 @@
         "output": "700",
         "cacheWrite": "10k",
         "cacheRead": "150k"
+      }
+    },
+    {
+      "account": "codex",
+      "limits": [
+        {
+          "label": "5-hour",
+          "pct": 12,
+          "text": "resets in 2h 0m"
+        },
+        {
+          "label": "Weekly",
+          "pct": 34,
+          "text": "resets in 3d 0h"
+        }
+      ],
+      "lines": {
+        "fiveHour": [
+          {
+            "x": 0.994,
+            "y": 8
+          },
+          {
+            "x": 1,
+            "y": 12
+          }
+        ],
+        "week": [
+          {
+            "x": 0.994,
+            "y": 33
+          },
+          {
+            "x": 1,
+            "y": 34
+          }
+        ]
+      },
+      "bars": [
+        {
+          "day": "2026-11-24",
+          "label": "24",
+          "total": 0,
+          "parts": [
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        {
+          "day": "2026-11-25",
+          "label": "25",
+          "total": 94300,
+          "parts": [
+            0.0445,
+            0.0223,
+            0,
+            0.9332
+          ]
+        },
+        {
+          "day": "2026-11-26",
+          "label": "26",
+          "total": 13200,
+          "parts": [
+            0.0095,
+            0.0032,
+            0,
+            0.1273
+          ]
+        }
+      ],
+      "totals": {
+        "input": "5.1k",
+        "output": "2.4k",
+        "cacheWrite": "0",
+        "cacheRead": "100k"
       }
     }
   ]

@@ -85,7 +85,7 @@ export const ACCOUNT_NAME: Record<Account, string> = { main: 'Personal', alt: 'W
 export type UsageExtra = { enabled: boolean; limit: number | null; used: number | null; pct: number | null; currency: string | null };
 export type UsageLatest = { at: number; fiveHour?: UsageWindow; week?: UsageWindow; models: (UsageWindow & { name: string })[]; extra?: UsageExtra };
 export type UsageDay = { day: string; input: number; output: number; cacheWrite: number; cacheRead: number };
-export type UsageAccount = { account: Account; name: string; latest: UsageLatest | null; series: { at: number; fiveHour?: number; week?: number }[]; days: UsageDay[] };
+export type UsageAccount = { account: Account | 'codex'; name: string; latest: UsageLatest | null; series: { at: number; fiveHour?: number; week?: number }[]; days: UsageDay[] };
 export type UsageReport = { accounts: UsageAccount[] };
 // The account each hub profile runs on.
 export const PROFILE_ACCOUNT = { work: 'alt', personal: 'main' } as const;

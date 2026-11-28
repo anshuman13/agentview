@@ -82,7 +82,7 @@ export function Usage() {
   if (load.busy) return <Loading />;
   if (load.error) return <EmptyState icon="graph" title="Usage could not be loaded" hint={load.error} />;
   const accounts = load.data?.accounts ?? [];
-  if (!accounts.length) return <EmptyState icon="graph" title="No Claude accounts are logged in" />;
+  if (!accounts.length) return <EmptyState icon="graph" title="No Claude accounts or Codex are signed in" />;
   const now = Date.now();
   return (
     <div className="usage">

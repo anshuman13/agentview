@@ -1,19 +1,22 @@
-import { ACCOUNT_NAME, type Provider, type UsageReport } from '../../../shared/protocol.js';
+import { ACCOUNT_NAME, type Provider, type UsageAccount, type UsageReport } from '../../../shared/protocol.js';
 import { burnRate, helperAdvice } from '../../../shared/build.js';
 import { chatAccount, loggedInAccounts } from '../agent/claude/accounts.js';
+import { codexSignedIn } from '../agent/codex/binary.js';
 import { providerOf } from '../agent/registry.js';
 import { latestSample, localDays, samplesSince, tokensByDay, type UsageKey } from './store.js';
 
 const WEEK = 7 * 24 * 3600_000;
 
-export function usageReport(days = 30, now = Date.now()): UsageReport {
+// Each logged-in Claude account, then Codex when it is signed in.
+export async function usageReport(days = 30, now = Date.now(), codex = codexSignedIn()): Promise<UsageReport> {
   const { list, since } = localDays(days, now);
+  const keys: UsageAccount['account'][] = [...loggedInAccounts(), ...((await codex) ? (['codex'] as const) : [])];
   return {
-    accounts: loggedInAccounts().map((account) => {
+    accounts: keys.map((account) => {
       const byDay = new Map(tokensByDay(account, since).map((d) => [d.day, d]));
       return {
         account,
-        name: ACCOUNT_NAME[account],
+        name: account === 'codex' ? 'Codex' : ACCOUNT_NAME[account],
         latest: latestSample(account),
         series: samplesSince(account, now - WEEK),
         days: list.map((day) => byDay.get(day) ?? { day, input: 0, output: 0, cacheWrite: 0, cacheRead: 0 }),
