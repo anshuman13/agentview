@@ -47,7 +47,7 @@ function RewindDialog({ rewind: { id, prompt, before }, preview, onClose }: { re
           {preview && 'files' in preview && plan.files && <RewindFiles {...preview} />}
         </>
       }
-      {...(preview && 'error' in preview && plan.files && { warning: preview.error })}
+      {...(preview && plan.files && ('error' in preview ? { warning: preview.error } : preview.note && { warning: preview.note }))}
       action="Rewind"
       icon="discard"
       run={async () => {

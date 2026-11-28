@@ -354,5 +354,6 @@ private fun RewindFiles(p: RewindPreview) {
             append(" ")
             withStyle(SpanStyle(color = av.diffDel)) { append("\u2212${p.deletions}") }
         }, style = Type.footnote, color = av.fgMuted, modifier = Modifier.padding(top = Tokens.sp2))
+        p.note?.let { Text(it, style = Type.footnote, color = av.fgMuted, modifier = Modifier.padding(top = Tokens.sp2)) }
     }
 }

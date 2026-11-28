@@ -1,4 +1,7 @@
 import { describe, expect, it, spyOn } from 'bun:test';
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
 import { CodexDriver, userInput } from './driver.js';
 import { CodexRpc } from './rpc.js';
 import { codexThread } from './threads.js';
@@ -198,5 +201,36 @@ describe('forkAt', () => {
     await expect(d.forkAt('t1', { id: 'zz', text: '' })).rejects.toThrow('not saved yet');
     expect(closed).toBe(3);
     open.mockRestore();
+  });
+});
+
+describe('rewind', () => {
+  it('restores the files changed by a prompt and the ones after it', async () => {
+    const dir = mkdtempSync(path.join(tmpdir(), 'cxrw-'));
+    const a = path.join(dir, 'a.txt');
+    writeFileSync(a, 'one\n');
+    const { d } = setup(false, () => Promise.resolve());
+    d.host.cwd = dir;
+    const change = (p: string) => d.onNotification('item/started', { item: { type: 'fileChange', id: p, status: 'inProgress', changes: [{ path: p, kind: { type: 'update', move_path: null }, diff: '' }] } });
+    d.stream = { handle: () => undefined };
+    await d.deliver('first', false, false, d.stops, 'p1');
+    change('a.txt');
+    writeFileSync(a, 'one\ntwo\n');
+    await d.deliver('second', false, false, d.stops, 'p2');
+    change('a.txt');
+    change('b.txt');
+    writeFileSync(a, 'three\n');
+    writeFileSync(path.join(dir, 'b.txt'), 'new\n');
+    const dry = await d.rewind('p1', true);
+    expect(dry).toMatchObject({ canRewind: true, filesChanged: [a, path.join(dir, 'b.txt')], insertions: 2, deletions: 1 });
+    expect(dry.note).toContain('shell');
+    expect(readFileSync(a, 'utf8')).toBe('three\n');
+    await d.rewind('p2');
+    expect(readFileSync(a, 'utf8')).toBe('one\ntwo\n');
+    expect(existsSync(path.join(dir, 'b.txt'))).toBe(false);
+    expect(await d.rewind('p2')).toMatchObject({ canRewind: false });
+    await d.rewind('p1');
+    expect(readFileSync(a, 'utf8')).toBe('one\n');
+    rmSync(dir, { recursive: true });
   });
 });

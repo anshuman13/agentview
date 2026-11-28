@@ -6,6 +6,7 @@ import { errText } from '../../../../shared/util.js';
 import type { AgentDriver, AgentHost, Decision, DriverFactory, History } from '../types.js';
 import { answersFor, askFor, decisionFor, elicitationAsk, elicitationFor, hasFields, permissionsAsk, permissionsFor, policyFor, questionsAsk, readOnlyCommand, type Ask } from './approvals.js';
 import { NOT_SIGNED_IN } from './binary.js';
+import { Checkpoints } from './checkpoints.js';
 import { historyEvents, rolloutPlan } from './events.js';
 import { addedDirs, saveAddedDirs } from '../claude/addedDirs.js';
 import { codexInstructionFiles } from './instructions.js';
@@ -38,7 +39,7 @@ export class CodexDriver implements AgentDriver {
   readonly provider: Provider = 'codex';
   readonly compactEndsTurn = true;
   readonly joinsTurn = true;
-  readonly capabilities: Capabilities = { rewind: false, mcp: true, mcpEdit: false, connectors: false, effort: true, stopTask: false, subagents: false, forkAt: true, contextUsage: false, addDir: true };
+  readonly capabilities: Capabilities = { rewind: true, mcp: true, mcpEdit: false, connectors: false, effort: true, stopTask: false, subagents: false, forkAt: true, contextUsage: false, addDir: true };
   readonly account: Account = 'main';
   readonly instructionFiles: string[];
 
@@ -56,6 +57,7 @@ export class CodexDriver implements AgentDriver {
   private git: string[] | null = null;
   dirs: string[];
   private steered = new Set<string>();
+  private checkpoints = new Checkpoints();
   private models: CodexModel[] = [];
   private asks = new Set<AbortController>();
   private usageTimer: ReturnType<typeof setInterval> | undefined;
@@ -173,6 +175,7 @@ export class CodexDriver implements AgentDriver {
   private onNotification(method: string, params: any) {
     if (method === 'turn/started') this.turnId = params.turn.id;
     else if (method === 'turn/completed' && params.turn?.id === this.turnId) this.turnId = null;
+    else if (method === 'item/started' && params.item?.type === 'fileChange') this.checkpoints.keep(this.host.cwd, params.item.changes);
     else if (method === 'account/rateLimits/updated') return this.host.setSession({ usage: planUsage(params.rateLimits) });
     try {
       this.stream.handle(method, params);
@@ -268,9 +271,13 @@ export class CodexDriver implements AgentDriver {
       if (stops !== this.stops) return this.host.turnResult({ id: randomUUID(), ok: false, text: 'Stopped', costUsd: 0, isError: true });
       // A steer that misses because the turn ended starts a new turn with the text.
       if (steer && (await this.steer(rpc, input))) {
-        if (id) this.steered.add(id);
+        if (id) {
+          this.steered.add(id);
+          this.checkpoints.begin(id);
+        }
         return void (id && this.host.taken(id));
       }
+      if (id) this.checkpoints.begin(id);
       const { approvalPolicy, sandboxPolicy } = policyFor(this.mode, [...this.gitDirs(), ...this.dirs]);
       const { turn } = await rpc.request<{ turn: { id: string } }>('turn/start', { threadId: this.threadId, input, approvalPolicy, sandboxPolicy, ...this.modelParams() });
       this.turnId = turn.id;
@@ -374,8 +381,9 @@ export class CodexDriver implements AgentDriver {
     return false;
   }
 
-  async rewind() {
-    return { canRewind: false, error: 'Codex chats cannot rewind files' };
+  // Only the edits Codex made as file changes, while the server ran.
+  rewind(id: string, dryRun = false) {
+    return this.checkpoints.rewind(id, dryRun);
   }
 
   // A new thread holding this one through the turn with the reply, or all of it without one; returns its id.

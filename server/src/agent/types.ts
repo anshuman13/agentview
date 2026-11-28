@@ -61,7 +61,7 @@ export interface AgentDriver {
   setDirs?(dirs: string[]): void;
   setPermissionMode(mode: string): Promise<void>;
   allow(rule: string): Promise<boolean>;
-  rewind(promptId: string, dryRun?: boolean): Promise<{ canRewind: boolean; error?: string; filesChanged?: string[]; insertions?: number; deletions?: number }>;
+  rewind(promptId: string, dryRun?: boolean): Promise<{ canRewind: boolean; error?: string; filesChanged?: string[]; insertions?: number; deletions?: number; note?: string }>;
   // Copies the session up to and with a reply, or all of it when reply is null, into a new session; returns its id.
   forkAt(sessionId: string, reply: { id: string; text: string } | null, title?: string): Promise<string>;
   stopTask(toolUseId: string): Promise<boolean>;

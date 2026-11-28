@@ -356,7 +356,7 @@ export class AgentSession implements AgentHost {
   async rewindPreview(id: string): Promise<RewindPreview> {
     const r = await this.driver.rewind(id, true);
     if (!r.canRewind) return { error: r.error ?? 'No checkpoint for that prompt' };
-    return { files: (r.filesChanged ?? []).map((f) => path.relative(this.cwd, f)), insertions: r.insertions ?? 0, deletions: r.deletions ?? 0 };
+    return { files: (r.filesChanged ?? []).map((f) => path.relative(this.cwd, f)), insertions: r.insertions ?? 0, deletions: r.deletions ?? 0, ...(r.note && { note: r.note }) };
   }
 
   // A new session holding this chat up to and with one reply, or the whole chat without one.

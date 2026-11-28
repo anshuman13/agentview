@@ -158,7 +158,7 @@ export type SessionUpdate = Omit<SessionInfo, 'commands' | 'mcp'> & Partial<Pick
 export type Capabilities = { rewind: boolean; mcp: boolean; mcpEdit: boolean; connectors: boolean; effort: boolean; stopTask: boolean; subagents: boolean; forkAt: boolean; contextUsage: boolean; addDir: boolean };
 
 // What a file rewind to before a prompt would change, paths relative to the chat folder.
-export type RewindPreview = { files: string[]; insertions: number; deletions: number } | { error: string };
+export type RewindPreview = { files: string[]; insertions: number; deletions: number; note?: string } | { error: string };
 
 export const BIG_BRO = 'big-bro';
 
