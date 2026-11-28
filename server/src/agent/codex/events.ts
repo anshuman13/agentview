@@ -1,6 +1,6 @@
 import type { ChatEvent } from '../../../../shared/protocol.js';
 import { clipResult, toolUseEvent } from '../steps.js';
-import type { FileUpdateChange, ThreadItem, Turn } from './protocol.js';
+import type { FileUpdateChange, ThreadItem, Turn, TurnPlanUpdatedNotification } from './protocol.js';
 
 const DENIED = 'User denied this action in the AgentView UI.';
 
@@ -62,6 +62,15 @@ export function finishedEvents(item: ThreadItem, at: number): ChatEvent[] {
     case 'webSearch': return [result(item.id, 'completed', '', at)];
     default: return [];
   }
+}
+
+const TODO_STATUS = { pending: 'pending', inProgress: 'in_progress', completed: 'completed' } as const;
+
+// An update_plan checklist as a TodoWrite step, so the chat's checklist shows it. Each update gets its own id and the checklist takes the latest.
+export function planEvents(turnId: string, n: number, plan: TurnPlanUpdatedNotification['plan'], at: number): ChatEvent[] {
+  const id = `${turnId}:plan:${n}`;
+  const todos = plan.map((p) => ({ content: p.step, activeForm: p.step, status: TODO_STATUS[p.status] ?? 'pending' }));
+  return [toolUseEvent(id, 'TodoWrite', { todos }, at), result(id, 'completed', 'Plan updated', at)];
 }
 
 const userText = (item: Extract<ThreadItem, { type: 'userMessage' }>) => item.content.map((c) => c.text ?? '').join('\n').trim();

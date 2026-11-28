@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'bun:test';
 import type { ChatEvent, ServerMessage } from '../../../../shared/protocol.js';
-import { historyEvents, splitDiff } from './events.js';
+import { historyEvents, planEvents, splitDiff } from './events.js';
 import type { ThreadItem } from './protocol.js';
 import { CodexStream } from './stream.js';
 
@@ -99,5 +99,28 @@ describe('historyEvents', () => {
 describe('splitDiff', () => {
   it('ignores the context lines and file headers', () => {
     expect(splitDiff('--- a\n+++ b\n@@ -1,2 +1,2 @@\n keep\n-old\n+new\n')).toEqual({ before: 'old', after: 'new' });
+  });
+});
+
+describe('planEvents', () => {
+  it('maps an update_plan checklist onto a TodoWrite step with its result', () => {
+    const events = planEvents('t1', 2, [
+      { step: 'Read the spec', status: 'completed' },
+      { step: 'Write the code', status: 'inProgress' },
+      { step: 'Run the checks', status: 'pending' },
+    ], 5);
+    expect(events[0]).toMatchObject({
+      kind: 'tool_use',
+      id: 't1:plan:2',
+      name: 'TodoWrite',
+      input: {
+        todos: [
+          { content: 'Read the spec', activeForm: 'Read the spec', status: 'completed' },
+          { content: 'Write the code', activeForm: 'Write the code', status: 'in_progress' },
+          { content: 'Run the checks', activeForm: 'Run the checks', status: 'pending' },
+        ],
+      },
+    });
+    expect(events[1]).toMatchObject({ kind: 'tool_result', toolUseId: 't1:plan:2', isError: false });
   });
 });
