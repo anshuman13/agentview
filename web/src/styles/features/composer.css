@@ -140,7 +140,7 @@
 
 .cp-under { position: relative; }
 .cp-under > .ctx-panel:not(.sheet) { top: auto; bottom: 100%; left: auto; right: 0; width: min(320px, 90vw); }
-.ctx-panel { padding: var(--sp-3); font-size: var(--fs-sm); line-height: var(--line-sm); font-variant-numeric: tabular-nums; }
+.ctx-panel { font-size: var(--fs-sm); line-height: var(--line-sm); font-variant-numeric: tabular-nums; }
 .ctx-head { display: flex; gap: var(--sp-2); color: var(--fg); }
 .ctx-head > :first-child { font-weight: 600; flex: 1; }
 .ctx-amount { color: var(--fg-muted); }
@@ -151,8 +151,10 @@
 .ctx-row > i { width: 8px; height: 8px; border-radius: 2px; }
 .ctx-row > :nth-child(n + 3) { text-align: right; }
 .ctx-row.gap { margin-top: var(--sp-2); }
+.ctx-panel > :not(.ui-menu-item) { margin-inline: var(--sp-6); }
+.ctx-head { margin-top: var(--sp-3); }
 .ctx-panel > .ui-menu-item { margin-top: var(--sp-2); }
-.ui-menu.sheet.ctx-panel { padding: var(--sp-6) var(--sp-8) calc(var(--sp-6) + var(--safe-bottom, 0px)); }
+.ui-menu.sheet.ctx-panel { padding-top: var(--sp-6); }
 
 /* A page element picked in the browser pane, with its crop on hover or focus. */
 .cp-el { position: relative; display: inline-flex; }
