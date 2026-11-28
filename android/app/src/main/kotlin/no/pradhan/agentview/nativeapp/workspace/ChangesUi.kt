@@ -58,12 +58,13 @@ import no.pradhan.agentview.nativeapp.ui.Tokens
 import no.pradhan.agentview.nativeapp.ui.WhileStarted
 import no.pradhan.agentview.nativeapp.ui.agoShort
 import no.pradhan.agentview.nativeapp.ui.av
+import no.pradhan.agentview.nativeapp.ui.MenuSeparator
 import no.pradhan.agentview.nativeapp.ui.plural
 import no.pradhan.agentview.nativeapp.ui.select
 import no.pradhan.agentview.nativeapp.ui.Loaded
 import no.pradhan.agentview.nativeapp.ui.rememberLoad
 
-private class GitOps(private val hub: Hub, private val reload: () -> Unit, val onDiscard: (List<GitFile>) -> Unit, val onReview: (GitFile) -> Unit) {
+private class GitOps(val hub: Hub, val cwd: String, private val reload: () -> Unit, val onDiscard: (List<GitFile>) -> Unit, val onReview: (GitFile) -> Unit) {
     fun run(action: String, body: String, done: () -> Unit = {}) = hub.git(action, body, "Could not $action") { if (it) done(); reload() }
 }
 
@@ -111,7 +112,7 @@ fun ChangesScreen(hub: Hub, onBack: () -> Unit) {
     val files = load.data?.files ?: emptyList()
     val review = files.map { it.path }.distinct()
     val label = providerLabel(provider)
-    val ops = GitOps(hub, reload, { ask = it }) { f -> pager = listOf(review.indexOf(f.path).toString()) + review }
+    val ops = GitOps(hub, cwd, reload, { ask = it }) { f -> pager = listOf(review.indexOf(f.path).toString()) + review }
 
     Column(Modifier.fillMaxSize()) {
         WorkspaceHeader(hub, "Source control", onBack) {
@@ -175,7 +176,7 @@ private fun LazyListScope.stagedSection(staged: List<GitFile>, ops: GitOps) {
             MoreButton { close -> MenuItem("Unstage All Changes", "remove", { close(); ops.run("unstage", pathsBody(staged)) }) }
         })
     }
-    item { FileGroup(staged, onOpen = ops.onReview) { f, close -> MenuItem("Unstage Changes", "remove", { close(); ops.run("unstage", pathsBody(listOf(f))) }) } }
+    item { FileGroup(staged, ops) { f, close -> MenuItem("Unstage Changes", "remove", { close(); ops.run("unstage", pathsBody(listOf(f))) }) } }
 }
 
 private fun LazyListScope.changesSection(changes: List<GitFile>, ops: GitOps) {
@@ -189,7 +190,7 @@ private fun LazyListScope.changesSection(changes: List<GitFile>, ops: GitOps) {
         })
     }
     item {
-        FileGroup(changes, onOpen = ops.onReview) { f, close ->
+        FileGroup(changes, ops) { f, close ->
             MenuItem("Stage Changes", "add", { close(); ops.run("stage", pathsBody(listOf(f))) })
             MenuItem("Discard Changes", "discard", { close(); ops.onDiscard(listOf(f)) }, danger = true)
         }
@@ -240,7 +241,7 @@ private fun letterColor(letter: String): Color = when (letter) {
 }
 
 @Composable
-private fun FileGroup(files: List<GitFile>, onOpen: (GitFile) -> Unit, menu: @Composable androidx.compose.foundation.layout.ColumnScope.(GitFile, () -> Unit) -> Unit) {
+private fun FileGroup(files: List<GitFile>, ops: GitOps, menu: @Composable androidx.compose.foundation.layout.ColumnScope.(GitFile, () -> Unit) -> Unit) {
     val haptic = LocalHapticFeedback.current
     Group {
         files.forEachIndexed { i, f ->
@@ -254,11 +255,14 @@ private fun FileGroup(files: List<GitFile>, onOpen: (GitFile) -> Unit, menu: @Co
                 trailing = {
                     RowLabel(letter, letterColor(letter))
                     MoreButton(expanded = open) { close ->
-                        MenuItem("Open File", "go-to-file", { close(); onOpen(f) })
+                        MenuItem("Attach as context", "mention", { close(); ops.hub.draftPrompt(mentionOf(f.path, ops.cwd) + " ") })
+                        MenuItem("Open File", "go-to-file", { close(); ops.onReview(f) })
                         menu(f, close)
+                        MenuSeparator()
+                        CopyPathItems(ops.hub, f.path, ops.cwd, close)
                     }
                 },
-                onClick = { onOpen(f) },
+                onClick = { ops.onReview(f) },
                 onLongClick = { haptic.performHapticFeedback(HapticFeedbackType.LongPress); open.value = true },
             )
         }

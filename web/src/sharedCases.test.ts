@@ -25,7 +25,7 @@ import { setupPrompt, type SetupKind } from '../../shared/setupPrompt';
 import { composerConnectors } from '../../shared/composerConnectors';
 import { appendRule } from '../../shared/steering';
 import { isSpecPath, specProgress, specPrompt, specSlug, specTasks, startTaskPrompt, withoutOpenTasks, type SpecTask } from '../../shared/specTasks';
-import { pathCopies } from './workspace/copyPathLogic';
+import { mentionOf, pathCopies } from './workspace/copyPathLogic';
 import { isSketchPath, sketchDoc, sketchMatches, sketchRename, type SketchTheme } from '../../shared/sketches';
 import { taskChatPrompt } from '../../shared/taskChat';
 import { findInChat, findStart } from '../../shared/findInChat';
@@ -316,6 +316,7 @@ describe('cases shared with the Android app', () => {
 
   for (const c of cases<{ name: string; path: string; cwd: string; absolute: string; relative: string | null; base: string }>('copy-path')) {
     it(`pathCopies: ${c.name}`, () => expect(pathCopies(c.path, c.cwd)).toEqual({ absolute: c.absolute, relative: c.relative, name: c.base }));
+    it(`mentionOf: ${c.name}`, () => expect(mentionOf(c.path, c.cwd)).toBe(`@${c.relative ?? c.absolute}`));
   }
 
   for (const c of cases<{ name: string; path: string; sketch: boolean }>('sketch-path')) {

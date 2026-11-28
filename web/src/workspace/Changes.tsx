@@ -13,9 +13,12 @@ import { Confirm, type ConfirmRequest } from '../ui/Confirm';
 import { FileIcon } from './FileIcon';
 import { refresh, useGit } from './gitStatus';
 import { Findings, REVIEW_LOCAL } from '../ops/Findings';
-import { ago, clickOnKey, save, stored, usePoll } from '../ui/util';
+import { ago, clickOnKey, save, showChat, stored, usePoll } from '../ui/util';
 import { QuickPick } from '../ui/QuickPick';
-import { askChat } from '../chat/chatActions';
+import { askChat, insertText } from '../chat/chatActions';
+import { Menu, MenuItem, MenuSeparator } from '../ui/Menu';
+import { CopyPathItems } from './CopyPathItems';
+import { mentionOf } from './copyPathLogic';
 import { providerLabel } from '../../../shared/providers';
 import '../styles/features/changes.css';
 
@@ -65,6 +68,31 @@ function CommitBox({ branch, staged, onCommit }: { branch: string; staged: numbe
         <Button variant="quiet" icon="sparkle" className="scm-claude" disabled={staged === 0} title={staged ? 'Ask the agent in the chat for a commit subject' : 'Stage changes first'} onClick={() => askChat(DRAFT_PROMPT)}>Write message with {label}</Button>
       </div>
     </div>
+  );
+}
+
+// The row's ⋯ menu, like Claude.app's per-file menu in its diff pane.
+function RowMenu({ file, cwd, onOpen }: { file: GitFile; cwd: string; onOpen: () => void }) {
+  const more = useRef<HTMLButtonElement>(null);
+  const [open, setOpen] = useState(false);
+  const close = () => setOpen(false);
+  const attach = () => {
+    close();
+    showChat();
+    insertText(`${mentionOf(file.path, cwd)} `);
+  };
+  return (
+    <>
+      <IconButton ref={more} icon="kebab-vertical" small label="More Actions" aria-haspopup="menu" aria-expanded={open} onClick={(e) => { e.stopPropagation(); setOpen(!open); }} />
+      {open && (
+        <Menu trigger={more} onClose={close}>
+          <MenuItem icon="mention" onClick={attach}>Attach as context</MenuItem>
+          <MenuItem icon="go-to-file" onClick={() => { close(); onOpen(); }}>Open file</MenuItem>
+          <MenuSeparator />
+          <CopyPathItems path={file.path} cwd={cwd} onDone={close} />
+        </Menu>
+      )}
+    </>
   );
 }
 
@@ -287,6 +315,7 @@ export function Changes() {
             <>
               <Action icon="go-to-file" title="Open File" onClick={() => open(f)} />
               <Action icon="remove" title="Unstage Changes" onClick={() => run('unstage', paths(targets(f, staged)))} />
+              <RowMenu file={f} cwd={cwd} onOpen={() => open(f)} />
             </>
           )}
         />
@@ -306,6 +335,7 @@ export function Changes() {
               <Action icon="go-to-file" title="Open File" onClick={() => open(f)} />
               <Action icon="discard" title="Discard Changes" onClick={() => discard(targets(f, changes))} />
               <Action icon="add" title="Stage Changes" onClick={() => run('stage', paths(targets(f, changes)))} />
+              <RowMenu file={f} cwd={cwd} onOpen={() => open(f)} />
             </>
           )}
         />

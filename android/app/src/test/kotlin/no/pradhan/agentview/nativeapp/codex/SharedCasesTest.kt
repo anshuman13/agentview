@@ -245,6 +245,7 @@ import no.pradhan.agentview.nativeapp.workspace.findingFixPrompt
 import no.pradhan.agentview.nativeapp.workspace.findingsFixPrompt
 import no.pradhan.agentview.nativeapp.workspace.isSketchPath
 import no.pradhan.agentview.nativeapp.workspace.pathCopies
+import no.pradhan.agentview.nativeapp.workspace.mentionOf
 import no.pradhan.agentview.nativeapp.workspace.isSpecPath
 import no.pradhan.agentview.nativeapp.workspace.sketchDoc
 import no.pradhan.agentview.nativeapp.workspace.sketchMatches
@@ -961,6 +962,7 @@ class SharedCasesTest {
             assertEquals(c.str("name"), c.str("absolute"), got.absolute)
             assertEquals(c.str("name"), (c["relative"] as? JsonPrimitive)?.contentOrNull, got.relative)
             assertEquals(c.str("name"), c.str("base"), got.name)
+            assertEquals(c.str("name"), "@" + ((c["relative"] as? JsonPrimitive)?.contentOrNull ?: c.str("absolute")), mentionOf(c.str("path"), c.str("cwd")))
         }
     }
 

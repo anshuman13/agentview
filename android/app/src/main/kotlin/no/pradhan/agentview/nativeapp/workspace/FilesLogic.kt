@@ -184,3 +184,6 @@ fun linesQuote(path: String, start: Int, end: Int, text: String): String {
     val lines = text.trimEnd('\n').split('\n').map { if (it.isBlank()) ">" else "> ${it.trimEnd()}" }
     return "`$path:$where`\n" + lines.joinToString("\n")
 }
+
+// web/src/workspace/copyPathLogic.ts mentionOf: the path as an @ mention for the composer, relative to the chat's folder when it can be.
+fun mentionOf(path: String, cwd: String): String = pathCopies(path, cwd).let { "@" + (it.relative ?: it.absolute) }
