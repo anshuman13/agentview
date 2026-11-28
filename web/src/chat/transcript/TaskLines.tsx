@@ -6,7 +6,7 @@ import { MemoryPick } from '../cards/Memory';
 import { proposalState, usedClaimState, type Claim, type FoldRow, type Proposal } from './workFold';
 import { shownWork, toggleWork } from '../chatActions';
 import { foldOpen, runningStep } from './steps';
-import { transcriptView } from './transcriptView';
+import { useChatTranscriptView } from './transcriptView';
 import { EditMarks } from './StepRows';
 import { useAssistantTable } from '../../codex/data';
 import { setView } from '../../codex/view';
@@ -28,7 +28,7 @@ export const Tasks = memo(function Tasks({ row: { id, hidden, steps: all, now, t
   const current = live ? steps.find((s) => !s.done) : undefined;
   const spin = <span className="tr-dots" aria-hidden="true"><i /><i /></span>;
   const doing = live ? runningStep(hidden, cwd) : '';
-  const view = transcriptView.use();
+  const view = useChatTranscriptView();
   const thinking = live || foldOpen(view, 'thinking') ? thought : '';
   if (!tools && !steps.length && !claims.length && !proposed.length && !remembered.length && !thinking) return null;
   return (

@@ -3,6 +3,10 @@ package no.pradhan.agentview.nativeapp.app
 import no.pradhan.agentview.nativeapp.ui.codeFontSize
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.launch
+import kotlinx.serialization.builtins.MapSerializer
+import kotlinx.serialization.builtins.serializer
+import no.pradhan.agentview.nativeapp.chat.chatTranscriptView
+import no.pradhan.agentview.nativeapp.net.protocolJson
 import no.pradhan.agentview.nativeapp.chat.ACCOUNT_LABEL
 import no.pradhan.agentview.nativeapp.sessions.Workspace
 import no.pradhan.agentview.nativeapp.sessions.personalRoot
@@ -92,6 +96,15 @@ fun Hub.setTranscriptView(value: String) {
     transcriptView.value = value
     prefs.edit().putString("transcriptView", value).apply()
 }
+
+fun Hub.setChatTranscriptView(chat: String, value: String) {
+    chatViews.value = chatViews.value + (chat to value)
+    prefs.edit().putString("chatTranscriptViews", protocolJson.encodeToString(chatViewsSer, chatViews.value)).apply()
+}
+
+fun Hub.chatView(chat: String = store.wanted) = chatTranscriptView(chatViews.value, chat, transcriptView.value)
+
+internal val chatViewsSer = MapSerializer(String.serializer(), String.serializer())
 
 fun Hub.setTranscriptWidth(value: String) {
     transcriptWidth.value = value

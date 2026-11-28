@@ -62,6 +62,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 import no.pradhan.agentview.nativeapp.app.Hub
+import no.pradhan.agentview.nativeapp.app.chatView
 import no.pradhan.agentview.nativeapp.net.Queued
 import no.pradhan.agentview.nativeapp.net.billing
 import no.pradhan.agentview.nativeapp.app.forkReply
@@ -277,7 +278,7 @@ internal fun ItemRow(hub: Hub, it: Item, chat: String, cwd: String, settled: Boo
         is Item.Step -> when (it.use.name) {
             ALARM_TOOL -> AlarmCard(it, !settled)
             BUILD_TOOL -> BuildCard(hub, it)
-            else -> StepRow(it, cwd, settled, foldOpen(hub.transcriptView.value, "step"))
+            else -> StepRow(it, cwd, settled, foldOpen(hub.chatView(chat), "step"))
         }
         is Item.File -> if (it.error != null) FileCard(hub, it, cwd)
             else if (card && isDocFile(it.path)) DocCard(hub, it, cwd)

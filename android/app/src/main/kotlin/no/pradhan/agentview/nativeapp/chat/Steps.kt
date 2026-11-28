@@ -325,6 +325,13 @@ val TRANSCRIPT_VIEWS = listOf("normal" to "Normal", "thinking" to "Thinking", "v
 fun foldOpen(view: String, fold: String): Boolean =
     if (fold == "thinking") view == "thinking" || view == "verbose" else view == "verbose"
 
+// The transcript view a chat shows (web steps.ts chatTranscriptView): its own pick from the chat menu, else the Settings default.
+fun chatTranscriptView(picks: Map<String, String>, chat: String, fallback: String): String {
+    val known = TRANSCRIPT_VIEWS.map { it.first }
+    val pick = picks[chat]?.takeIf { it in known } ?: fallback
+    return if (pick in known) pick else "normal"
+}
+
 data class RestorePlan(val choices: List<String>, val files: Boolean, val fork: Boolean)
 
 // What the Rewind confirm offers and does (web steps.ts restorePlan): the conversation options fork from the reply before the prompt, so they need a provider that forks and a reply to fork from.

@@ -3,6 +3,7 @@ package no.pradhan.agentview.nativeapp.app
 import no.pradhan.agentview.nativeapp.ui.codeFontSize
 import no.pradhan.agentview.nativeapp.net.LiveChat
 import no.pradhan.agentview.nativeapp.net.Api
+import no.pradhan.agentview.nativeapp.net.protocolJson
 import no.pradhan.agentview.nativeapp.net.ChatTitles
 import no.pradhan.agentview.nativeapp.net.Drafts
 import no.pradhan.agentview.nativeapp.net.SavedPrompts
@@ -231,6 +232,7 @@ class Hub(internal val app: Application, private val saved: SavedStateHandle) : 
 
     val theme = MutableStateFlow(prefs.getString("theme", null) ?: "")
     val transcriptView = MutableStateFlow(prefs.getString("transcriptView", null) ?: "normal")
+    val chatViews = MutableStateFlow(runCatching { protocolJson.decodeFromString(chatViewsSer, prefs.getString("chatTranscriptViews", null) ?: "{}") }.getOrDefault(emptyMap()))
     val transcriptWidth = MutableStateFlow(prefs.getString("transcriptWidth", null) ?: "narrow")
     val codeFont = MutableStateFlow(prefs.getInt("codeFont", 13).also { codeFontSize = it })
 

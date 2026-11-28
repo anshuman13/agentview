@@ -294,6 +294,13 @@ export function foldOpen(view: string, fold: 'thinking' | 'step') {
   return fold === 'thinking' ? view === 'thinking' || view === 'verbose' : view === 'verbose';
 }
 
+// The transcript view a chat shows (Android Steps.kt chatTranscriptView): its own pick from the chat menu, else the Settings default.
+export function chatTranscriptView(picks: Record<string, string>, chat: string, fallback: string): TranscriptView {
+  const own = picks[chat];
+  const pick = (TRANSCRIPT_VIEWS as readonly string[]).includes(own) ? own : fallback;
+  return (TRANSCRIPT_VIEWS as readonly string[]).includes(pick) ? (pick as TranscriptView) : 'normal';
+}
+
 // What the Rewind confirm offers and does (Android Steps.kt restorePlan): the conversation options fork from the reply before the prompt, so they need a provider that forks and a reply to fork from.
 export function restorePlan(choice: RestoreChoice, canFork: boolean, hasBefore: boolean) {
   const choices: RestoreChoice[] = canFork && hasBefore ? ['code', 'conversation', 'both'] : ['code'];

@@ -57,6 +57,7 @@ import kotlinx.serialization.json.Json
 import no.pradhan.agentview.nativeapp.app.DeepLink
 import no.pradhan.agentview.nativeapp.net.ChatEvent
 import no.pradhan.agentview.nativeapp.app.Hub
+import no.pradhan.agentview.nativeapp.app.chatView
 import no.pradhan.agentview.nativeapp.app.image
 import no.pradhan.agentview.nativeapp.app.stopTask
 import no.pradhan.agentview.nativeapp.ops.Agent
@@ -127,8 +128,8 @@ private fun stepIcon(t: Tone) = when (t) {
 
 @Composable
 internal fun ExploredRow(hub: Hub, id: String, steps: List<Item.Step>, cwd: String, settled: Boolean) {
-    TranscriptBox(hub, "explore:$id", "Explored ${exploreLabel(steps)}", defaultOpen = foldOpen(hub.transcriptView.value, "step")) {
-        Column(Modifier.padding(horizontal = Tokens.listPad).padding(bottom = Tokens.sp3)) { steps.forEach { StepRow(it, cwd, settled, foldOpen(hub.transcriptView.value, "step")) } }
+    TranscriptBox(hub, "explore:$id", "Explored ${exploreLabel(steps)}", defaultOpen = foldOpen(hub.chatView(), "step")) {
+        Column(Modifier.padding(horizontal = Tokens.listPad).padding(bottom = Tokens.sp3)) { steps.forEach { StepRow(it, cwd, settled, foldOpen(hub.chatView(), "step")) } }
     }
 }
 

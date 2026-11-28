@@ -1,0 +1,7 @@
+[
+  { "name": "no pick uses the Settings default", "picks": {}, "chat": "a", "fallback": "thinking", "view": "thinking" },
+  { "name": "the chat's own pick wins", "picks": { "a": "verbose" }, "chat": "a", "fallback": "normal", "view": "verbose" },
+  { "name": "another chat's pick does not apply", "picks": { "b": "verbose" }, "chat": "a", "fallback": "normal", "view": "normal" },
+  { "name": "an unknown pick falls back", "picks": { "a": "loud" }, "chat": "a", "fallback": "thinking", "view": "thinking" },
+  { "name": "an unknown default reads as normal", "picks": {}, "chat": "a", "fallback": "loud", "view": "normal" }
+]

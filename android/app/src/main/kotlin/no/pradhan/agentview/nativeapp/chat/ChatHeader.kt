@@ -31,6 +31,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import no.pradhan.agentview.nativeapp.app.Hub
+import no.pradhan.agentview.nativeapp.app.chatView
+import no.pradhan.agentview.nativeapp.app.setChatTranscriptView
 import no.pradhan.agentview.nativeapp.net.LiveChat
 import no.pradhan.agentview.nativeapp.net.SessionInfo
 import no.pradhan.agentview.nativeapp.app.archive
@@ -141,6 +143,10 @@ private fun ChatMenu(hub: Hub, live: LiveChat, session: SessionInfo?, panels: Ch
             MenuItem("Output style \u00b7 $style", "comment", { styles = !styles })
             if (styles) OUTPUT_STYLES.forEach { l -> MenuItem(l, "", { close(); hub.setOutputStyle(outputStyleValue(l)) }, checked = l == style) }
         }
+        val view = run { hub.transcriptView.collectAsState().value; hub.chatViews.collectAsState().value; hub.chatView(live.id) }
+        var views by remember { mutableStateOf(false) }
+        MenuItem("Transcript view \u00b7 ${TRANSCRIPT_VIEWS.first { it.first == view }.second}", "eye", { views = !views })
+        if (views) TRANSCRIPT_VIEWS.forEach { (v, label) -> MenuItem(label, "", { close(); hub.setChatTranscriptView(live.id, v) }, checked = v == view) }
         MenuItem("Find in chat", "search", { close(); panels.find = true })
         MenuItem("Rename", "edit", { close(); panels.dialog = "rename" }, enabled = sessionId != null)
         MenuItem("Tools\u2026", "tools", { close(); panels.tools = true })

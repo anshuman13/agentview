@@ -38,6 +38,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import no.pradhan.agentview.nativeapp.app.DeepLink
 import no.pradhan.agentview.nativeapp.app.Hub
+import no.pradhan.agentview.nativeapp.app.chatView
 import no.pradhan.agentview.nativeapp.app.claimRoute
 import no.pradhan.agentview.nativeapp.codex.wiki.replaceTarget
 import no.pradhan.agentview.nativeapp.ui.AvIcon
@@ -62,7 +63,9 @@ internal fun TaskLines(hub: Hub, fold: FoldRow.Fold, cwd: String, live: Boolean,
     val current = if (live) steps.firstOrNull { !it.done } else null
     val spin = @Composable { WorkDots() }
     val doing = if (live) runningStep(fold.hidden, cwd) else ""
-    val view by hub.transcriptView.collectAsState()
+    hub.transcriptView.collectAsState().value
+    hub.chatViews.collectAsState().value
+    val view = hub.chatView()
     val thinking = if (live || foldOpen(view, "thinking")) fold.thought else ""
     if (fold.work.tools == 0 && steps.isEmpty() && fold.claims.isEmpty() && fold.proposed.isEmpty() && fold.remembered.isEmpty() && thinking.isEmpty()) return
     var reading by remember { mutableStateOf(false) }
