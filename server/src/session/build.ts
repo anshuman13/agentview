@@ -4,6 +4,7 @@ import path from 'node:path';
 import { APPROVE, BLOCKED, BUILD_USAGE, FAILED, PAUSED_BY_YOU, WAITING_RESET, buildHelpers, buildSpecPrompt, burnRate, hhmm, moreBrief, nextStep, recapBrief, taskBrief, untilAt, type BuildArgs, type BuildStep, type BuildUsage } from '../../../shared/build.js';
 import type { ChatRun, RoundOutcome } from '../../../shared/protocol.js';
 import { specTasks } from '../../../shared/specTasks.js';
+import { errText } from '../../../shared/util.js';
 import { samplesSince } from '../usage/store.js';
 import { after } from './wakeups.js';
 import { ROUND_INSTRUCTION, STOPPED_BY_YOU, firstSentence } from './runs.js';
@@ -168,7 +169,13 @@ export class BuildLoop {
     if (!usage?.fiveHour) return null;
     if (!capabilities?.subagents) return { pct: usage.fiveHour.pct, resetsAt: usage.fiveHour.resetsAt, perAgent: null, weekPct: usage.week?.pct ?? null, solo: true };
     const now = Date.now();
-    const rate = burnRate(samplesSince(account, now - 15 * 60_000));
+    // A usage database error must not stall the run.
+    let rate: number | null = null;
+    try {
+      rate = burnRate(samplesSince(account, now - 15 * 60_000));
+    } catch (err) {
+      console.error('build usage:', errText(err));
+    }
     const perAgent = rate === null ? null : rate / (1 + (run.helpers ?? 0));
     return { pct: usage.fiveHour.pct, resetsAt: usage.fiveHour.resetsAt, perAgent, weekPct: usage.week?.pct ?? null };
   }
