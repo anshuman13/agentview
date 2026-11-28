@@ -33,6 +33,7 @@ export const codexDriver = (resume?: string, fork = false): DriverFactory => (ho
 export class CodexDriver implements AgentDriver {
   readonly provider: Provider = 'codex';
   readonly compactEndsTurn = true;
+  readonly joinsTurn = true;
   readonly capabilities: Capabilities = { rewind: false, mcp: true, mcpEdit: false, connectors: false, effort: true, stopTask: false, subagents: false, forkAt: false, contextUsage: false, addDir: false };
   readonly account: Account = 'main';
   readonly instructionFiles: string[];
@@ -48,6 +49,7 @@ export class CodexDriver implements AgentDriver {
   private titled: boolean;
   // Bumped by Stop, so a prompt still waiting for the process is dropped.
   private stops = 0;
+  private steered = new Set<string>();
   private models: CodexModel[] = [];
   private asks = new Set<AbortController>();
   private usageTimer: ReturnType<typeof setInterval> | undefined;
@@ -229,16 +231,16 @@ export class CodexDriver implements AgentDriver {
     if (!this.closed) this.host.exited();
   }
 
-  send(text: string, _id?: string, priority?: 'next') {
+  send(text: string, id?: string, priority?: 'next') {
     this.start();
     const title = !this.titled;
     this.titled = true;
     const stops = this.stops;
-    this.queue = this.queue.then(() => this.deliver(text, priority === 'next', title, stops));
+    this.queue = this.queue.then(() => this.deliver(text, priority === 'next', title, stops, id));
   }
 
   // A message sent mid-turn joins the running turn; otherwise it starts one.
-  private async deliver(text: string, steer: boolean, title = false, stops = this.stops) {
+  private async deliver(text: string, steer: boolean, title = false, stops = this.stops, id?: string) {
     const input = userInput(text);
     try {
       await this.ready;
@@ -248,7 +250,10 @@ export class CodexDriver implements AgentDriver {
       if (title && this.threadId) void noteThread(this.threadId, { cwd: this.host.cwd, summary: text.replace(/\s+/g, ' ').trim().slice(0, 80) });
       if (stops !== this.stops) return this.host.turnResult({ id: randomUUID(), ok: false, text: 'Stopped', costUsd: 0, isError: true });
       // A steer that misses because the turn ended starts a new turn with the text.
-      if (steer && (await this.steer(rpc, input))) return;
+      if (steer && (await this.steer(rpc, input))) {
+        if (id) this.steered.add(id);
+        return void (id && this.host.taken(id));
+      }
       const { approvalPolicy, sandboxPolicy } = policyFor(this.mode);
       const { turn } = await rpc.request<{ turn: { id: string } }>('turn/start', { threadId: this.threadId, input, approvalPolicy, sandboxPolicy, ...this.modelParams() });
       this.turnId = turn.id;
@@ -279,6 +284,10 @@ export class CodexDriver implements AgentDriver {
 
   dropInput() {
     return 0;
+  }
+
+  read(id: string) {
+    return this.steered.has(id);
   }
 
   compact() {

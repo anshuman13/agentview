@@ -276,6 +276,22 @@ describe('AgentSession turns', () => {
     expect(s.state.events.at(-1)).toMatchObject({ text: 'after compact', queued: true });
   });
 
+  it('steer on a driver that joins turns sends the message into the running turn and shows it once', async () => {
+    const { s, interrupt, result } = fakeSession();
+    s.sendPrompt('long task');
+    const send = vi.fn();
+    Object.assign(s.driver, { joinsTurn: true, send });
+    Object.defineProperty(s.driver, 'attached', { value: true });
+    await s.steer('change of plan', 'm1');
+    expect(interrupt).not.toHaveBeenCalled();
+    expect(send).toHaveBeenCalledWith('change of plan', 'm1', 'next');
+    expect(s.state.events.filter((e) => e.id === 'm1')).toMatchObject([{ kind: 'user', queued: true }]);
+    s.taken('m1');
+    expect(s.state.events.filter((e) => e.id === 'm1')).toMatchObject([{ kind: 'user', queued: false }]);
+    expect(s.waiting.pending).toEqual([]);
+    result('r1');
+  });
+
   it('steer shows the message before the interrupt finishes', async () => {
     const { s, interrupt } = fakeSession();
     let finish = () => {};

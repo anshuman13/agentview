@@ -30,6 +30,16 @@ describe('deliver', () => {
     expect(calls[1].params.input[0].text).toBe('hello');
     expect(results).toEqual([]);
   });
+  it('marks a steered message as taken once the steer is accepted', async () => {
+    const { d, calls } = setup(true, () => Promise.resolve({}));
+    const taken: string[] = [];
+    d.host.taken = (id: string) => void taken.push(id);
+    await d.deliver('hello', true, false, d.stops, 'm1');
+    expect(calls.map((c) => c.method)).toEqual(['turn/steer']);
+    expect(taken).toEqual(['m1']);
+    expect(d.read('m1')).toBe(true);
+    expect(d.read('m2')).toBe(false);
+  });
   it('reports the turn only when it started one while the chat was idle', async () => {
     const idle = setup(false, () => Promise.reject(new Error('gone')));
     await idle.d.deliver('hi', true);

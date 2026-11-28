@@ -436,6 +436,10 @@ export class AgentSession implements AgentHost {
     return this.usage.note(until);
   }
 
+  taken() {
+    this.waiting.release();
+  }
+
   turnResult(r: TurnResult) {
     this.turn.result(r);
   }

@@ -38,7 +38,7 @@ export class Prompts {
     return this.prompt(last.text);
   }
 
-  // The composer's Enter while Claude works: Claude reads it at its next step and keeps going.
+  // The composer's Enter while the agent works: it reads the message at its next step and keeps going.
   async queueNext(text: string, id: string = randomUUID(), voice = false) {
     if (this.known(id)) return;
     const { running, compacting } = this.s.state.session;
@@ -67,6 +67,8 @@ export class Prompts {
     if (this.known(id)) return;
     if (state.session.compacting) return waiting.queue(text, id);
     const running = state.session.running;
+    // Codex takes the message into the running turn, so nothing needs stopping.
+    if (running && driver.joinsTurn) return this.queueNext(text, id, voice);
     const ev: UserEvent = { id, kind: 'user', text, at: Date.now(), stopping: running, ...(voice && { voice }) };
     this.s.pushEvent(ev);
     if (running) {

@@ -39,6 +39,8 @@ export interface AgentDriver {
   dropInput(): number;
   // True once Claude has read a message sent with that id.
   read?(id: string): boolean;
+  // True when a message sent with 'next' joins the running turn, so a steer need not stop it.
+  readonly joinsTurn?: boolean;
   // Compacts the conversation; the driver reports the end through host.compacted or host.compactFailed.
   compact(instructions?: string): void;
   // True when the driver's compaction ends with a turn result, which sends the held messages; otherwise the session sends them when it ends.
@@ -105,6 +107,8 @@ export interface AgentHost {
   turnStarted(why?: string): void;
   turnEnded(): void;
   turnResult(r: TurnResult): void;
+  // The agent took a message sent with 'next' into the running turn; it no longer shows as waiting.
+  taken(id: string): void;
   // The account is out of usage until then; a driver parses its own limit notice.
   limit(until: number): boolean;
   startCompacting(): void;
