@@ -5,6 +5,7 @@ import '@xterm/xterm/css/xterm.css';
 import { touch } from '../app/touch/touch';
 import { wsUrl } from '../app/api';
 import { backoff, closeKind } from './termReconnect';
+import { onTermSettings, termSettings } from './termSettings';
 
 // ANSI colours come from the theme tokens, so the terminal matches the app.
 function termTheme() {
@@ -36,9 +37,14 @@ export function Pane({ id, on, focus, clears, inputs, onGone }: { id: string; on
   useEffect(() => {
     const el = host.current!;
     const mono = getComputedStyle(document.documentElement).getPropertyValue('--mono').trim();
-    const xt = new XTerm({ fontFamily: mono || "'SF Mono', Menlo, Monaco, monospace", fontSize: 13, scrollback: 5000, cursorBlink: true, theme: termTheme() });
+    const xt = new XTerm({ fontFamily: mono || "'SF Mono', Menlo, Monaco, monospace", fontSize: 13, scrollback: termSettings().scrollback, cursorBlink: true, theme: termTheme() });
     const retheme = () => (xt.options.theme = termTheme());
     window.addEventListener('agentview:theme', retheme);
+    const offSettings = onTermSettings(() => (xt.options.scrollback = termSettings().scrollback));
+    const copySelection = () => {
+      if (termSettings().copyOnSelect && xt.hasSelection()) navigator.clipboard?.writeText(xt.getSelection()).catch(() => {});
+    };
+    el.addEventListener('mouseup', copySelection);
     const fit = new FitAddon();
     xt.loadAddon(fit);
     term.current = xt;
@@ -95,6 +101,8 @@ export function Pane({ id, on, focus, clears, inputs, onGone }: { id: string; on
       ws.onclose = null;
       ws.close();
       window.removeEventListener('agentview:theme', retheme);
+      offSettings();
+      el.removeEventListener('mouseup', copySelection);
       clears.delete(id);
       inputs.delete(id);
       xt.dispose();

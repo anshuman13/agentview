@@ -1,6 +1,8 @@
 import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { Icon } from '../ui/Icon';
 import { IconButton } from '../ui/Button';
+import { Menu, MenuItem, MenuSeparator } from '../ui/Menu';
+import { SCROLLBACKS, setTermSettings, termSettings } from './termSettings';
 import { closeTerm, createTerm, listTerms } from './termApi';
 import { notice } from '../app/store';
 import { ariaKeys, keyText, MAC } from '../app/shell/keys';
@@ -35,7 +37,32 @@ function TermBar({ tabs, active, pick, close, add, clear, max, toggleMax }: BarP
       ))}
       <IconButton icon="add" small label="New terminal" onClick={() => add().catch(() => notice('Terminal unavailable'))} />
       <IconButton icon="clear-all" small label="Clear" title={MAC ? 'Clear (⌘K)' : 'Clear'} aria-keyshortcuts={MAC ? 'Meta+K' : undefined} onClick={clear} />
+      <TermMenu />
       <IconButton icon={max ? 'screen-normal' : 'screen-full'} small label={max ? 'Restore panel size' : 'Maximize panel size'} onClick={toggleMax} />
+    </span>
+  );
+}
+
+function TermMenu() {
+  const [open, setOpen] = useState(false);
+  const trigger = useRef<HTMLSpanElement>(null);
+  const { copyOnSelect, scrollback } = termSettings();
+  const set = (change: Parameters<typeof setTermSettings>[0]) => {
+    setTermSettings(change);
+    setOpen(false);
+  };
+  return (
+    <span className="term-menu" ref={trigger}>
+      <IconButton icon="ellipsis" small label="Terminal settings" aria-expanded={open} onClick={() => setOpen((v) => !v)} />
+      {open && (
+        <Menu trigger={trigger} onClose={() => setOpen(false)}>
+          <MenuItem icon={copyOnSelect ? 'check' : 'blank'} aria-checked={copyOnSelect} onClick={() => set({ copyOnSelect: !copyOnSelect })}>Copy on select</MenuItem>
+          <MenuSeparator />
+          {SCROLLBACKS.map((n) => (
+            <MenuItem key={n} icon={n === scrollback ? 'check' : 'blank'} onClick={() => set({ scrollback: n })}>Scrollback {n.toLocaleString('en-US')} lines</MenuItem>
+          ))}
+        </Menu>
+      )}
     </span>
   );
 }

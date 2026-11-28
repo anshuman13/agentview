@@ -45,3 +45,5 @@
     color: var(--fg); background: var(--raised); border: 1px solid var(--border); border-radius: var(--radius-sm);
   }
 }
+.term-menu { display: inline-flex; position: relative; }
+.term-menu .ui-menu { white-space: nowrap; }
