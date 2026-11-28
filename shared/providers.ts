@@ -31,8 +31,12 @@ export const providerMark = (p?: Provider) => (p && p !== 'claude' ? LABEL[p] : 
 
 export const providerModes = (p?: Provider): ModeOption[] => (p === 'codex' ? CODEX_MODES : PERMISSION_MODES.map((value) => ({ value, ...CLAUDE_MODES[value] })));
 
-// A start mode the provider does not offer (Plan on Codex) starts in Default (Android startModeFor).
-export const startModeFor = (mode: string | null, p?: Provider) => (mode !== null && !providerModes(p).some((m) => m.value === mode) ? 'default' : mode);
+// A start mode the provider does not offer starts in Default, except Plan, which starts in Read only where the provider has it (Codex) (Android startModeFor).
+export function startModeFor(mode: string | null, p?: Provider) {
+  const offered = providerModes(p).map((m) => m.value);
+  if (mode === null || offered.includes(mode)) return mode;
+  return mode === 'plan' && offered.includes('readOnly') ? 'readOnly' : 'default';
+}
 
 // The "Start as" choices of the new chat sheet (Android START_MODES): no mode keeps the chat's default; the others are set once the chat opens, and Build puts /build and the request in the composer.
 export type StartMode = { label: string; mode: string | null; build?: boolean };

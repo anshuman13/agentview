@@ -41,5 +41,9 @@ fun startTexts(m: StartMode, text: String?): Pair<String?, String?> = m.draft?.l
 fun recentInRepo(saved: List<SavedSession>, openIds: Collection<String?>, cwd: String?, n: Int = 3) =
     saved.filter { it.cwd == cwd && it.sessionId !in openIds }.sortedByDescending { it.lastModified }.take(n)
 
-// A start mode the provider does not offer (Plan on Codex) starts in Default.
-fun startModeFor(mode: String?, provider: String?) = if (mode != null && providerModes(provider).none { it.value == mode }) "default" else mode
+// A start mode the provider does not offer starts in Default, except Plan, which starts in Read only where the provider has it (Codex).
+fun startModeFor(mode: String?, provider: String?): String? {
+    val offered = providerModes(provider).map { it.value }
+    if (mode == null || mode in offered) return mode
+    return if (mode == "plan" && "readOnly" in offered) "readOnly" else "default"
+}

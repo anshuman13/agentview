@@ -93,8 +93,9 @@ class ComposerLogicTest {
         assertTrue(effortChoices(models, "b").all { it.detail.isEmpty() })
     }
 
-    @Test fun planStartsInDefaultWhereTheProviderHasNone() {
-        assertEquals("default", startModeFor("plan", "codex"))
+    @Test fun planStartsReadOnlyWhereTheProviderHasNone() {
+        assertEquals("readOnly", startModeFor("plan", "codex"))
+        assertEquals("default", startModeFor("acceptEdits", "codex"))
         assertEquals("plan", startModeFor("plan", "claude"))
         assertNull(startModeFor(null, "codex"))
     }
