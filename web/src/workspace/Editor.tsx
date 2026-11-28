@@ -13,6 +13,7 @@ import { Menu, MenuItem } from '../ui/Menu';
 import { Button } from '../ui/Button';
 import { linesQuote } from '../../../shared/linesQuote';
 import { blockAt, blockAtOld, revertBlock } from './revertBlock';
+import { lineComments } from './lineComment';
 
 async function lang(path: string): Promise<Extension> {
   const ext = path.split('.').pop()?.toLowerCase() ?? '';
@@ -144,11 +145,11 @@ export function Editor({ file, diff, split = false, wrap, changesOnly, line, vie
         syntaxHighlighting(dark ? oneDarkHighlightStyle : defaultHighlightStyle),
         language,
         wrap ? EditorView.lineWrapping : [],
-        diff && !split ? unifiedMergeView({ original: file.original, mergeControls: false, collapseUnchanged: collapse }) : [],
+        diff && !split ? [unifiedMergeView({ original: file.original, mergeControls: false, collapseUnchanged: collapse }), edit ? [] : lineComments(file.path)] : [],
         EditorState.phrases.of({ '$ unchanged lines': '⋯ $ unchanged lines' }),
       ];
       if (diff && split) {
-        merge.current = new MergeView({ a: { doc: file.original, extensions }, b: { doc: file.content, extensions }, parent, collapseUnchanged: collapse });
+        merge.current = new MergeView({ a: { doc: file.original, extensions }, b: { doc: file.content, extensions: [extensions, lineComments(file.path)] }, parent, collapseUnchanged: collapse });
         view = merge.current.b;
         scroller = merge.current.dom;
       } else {

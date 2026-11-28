@@ -29,6 +29,7 @@ import { QUICK_REPLIES, quickReplies } from '../../../../shared/quickReplies';
 import type { ChatEvent } from '../../../../shared/protocol';
 import { Chip } from '../../ui/Button';
 import { withElements, type PickedElement } from '../../../../shared/elementPick';
+import { withComments, type LineComment } from '../../../../shared/lineComment';
 
 function placeholderFor(label: string, running: boolean, waiting: boolean, compacting: boolean, narrow: boolean) {
   const state = waiting ? 'waiting' : compacting ? 'compacting' : running ? 'running' : 'idle';
@@ -81,6 +82,12 @@ export const Composer = memo(function Composer() {
     window.addEventListener('agentview:element', add);
     return () => window.removeEventListener('agentview:element', add);
   }, []);
+  const [comments, setComments] = useState<LineComment[]>([]);
+  useEffect(() => {
+    const add = (e: Event) => setComments((l) => [...l, (e as CustomEvent<LineComment>).detail]);
+    window.addEventListener('agentview:comment', add);
+    return () => window.removeEventListener('agentview:comment', add);
+  }, []);
   useEffect(() => {
     const add = (e: Event) => void attach((e as CustomEvent<File[]>).detail);
     window.addEventListener('agentview:attach', add);
@@ -88,7 +95,7 @@ export const Composer = memo(function Composer() {
   }, [attach]);
 
   const ghost = !ac.open && !ac.shell && ac.at === text.length ? ghostFor(text, h.history) : '';
-  const typed = full.trim().length > 0 || elements.length > 0;
+  const typed = full.trim().length > 0 || elements.length > 0 || comments.length > 0;
   const multi = useAutoHeight(ta, mirror, wantCaret, setCaret, [text, ghost]);
   useBarHidden(ta, typed);
 
@@ -102,8 +109,8 @@ export const Composer = memo(function Composer() {
     setFull(next);
   };
   const { submit } = useSubmit({
-    text: elements.length && !ac.shell ? withElements(full, elements) : full, setText: setFull, shell: ac.shell, uploading,
-    clear: () => { wantCaret.current = 0; setFull(''); setElements([]); },
+    text: (elements.length || comments.length) && !ac.shell ? withComments(withElements(full, elements), comments) : full, setText: setFull, shell: ac.shell, uploading,
+    clear: () => { wantCaret.current = 0; setFull(''); setElements([]); setComments([]); },
     sentHistory: h.sentHistory, setSentHistory: h.setSentHistory, clearHistoryStep: () => h.setHist(null),
   });
 
@@ -134,7 +141,7 @@ export const Composer = memo(function Composer() {
         onDragOver={(e) => e.dataTransfer.types.includes('Files') && e.preventDefault()}
         onDrop={(e) => { if (e.dataTransfer.files.length) { e.preventDefault(); void attach([...e.dataTransfer.files]); } }}
       >
-        <AttachmentsBar marks={marks} remove={(i) => setMarks((l) => l.filter((_, j) => j !== i))} elements={elements} drop={(i) => setElements((l) => l.filter((_, j) => j !== i))} />
+        <AttachmentsBar marks={marks} remove={(i) => setMarks((l) => l.filter((_, j) => j !== i))} elements={elements} drop={(i) => setElements((l) => l.filter((_, j) => j !== i))} comments={comments} dropComment={(i) => setComments((l) => l.filter((_, j) => j !== i))} />
         <div className={narrow ? 'cp-row' : undefined}>
         {narrow && <AddMenu uploading={uploading} setPick={setPick} attach={attach} />}
         <div className="cp-text">

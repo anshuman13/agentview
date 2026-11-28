@@ -2,8 +2,9 @@ import { Chip } from '../../ui/Button';
 import { Icon } from '../../ui/Icon';
 import { markChip } from './composerLogic';
 import { elementChip, type PickedElement } from '../../../../shared/elementPick';
+import { commentChip, type LineComment } from '../../../../shared/lineComment';
 
-type Props = { marks: string[]; remove: (i: number) => void; elements: PickedElement[]; drop: (i: number) => void };
+type Props = { marks: string[]; remove: (i: number) => void; elements: PickedElement[]; drop: (i: number) => void; comments: LineComment[]; dropComment: (i: number) => void };
 
 // A picked page element: hovering or focusing the chip shows the crop of the page, the selector and the text.
 function ElementChip({ el, drop }: { el: PickedElement; drop: () => void }) {
@@ -21,11 +22,16 @@ function ElementChip({ el, drop }: { el: PickedElement; drop: () => void }) {
   );
 }
 
-export function AttachmentsBar({ marks, remove, elements, drop }: Props) {
-  if (marks.length === 0 && elements.length === 0) return null;
+export function AttachmentsBar({ marks, remove, elements, drop, comments, dropComment }: Props) {
+  if (marks.length === 0 && elements.length === 0 && comments.length === 0) return null;
   return (
     <div className="cp-uses">
       {elements.map((el, i) => <ElementChip key={`el${i}${el.selector}`} el={el} drop={() => drop(i)} />)}
+      {comments.map((c, i) => (
+        <Chip key={`c${i}${c.path}${c.line}`} size="sm" icon="comment" title={c.text} aria-label={`Remove comment on ${c.path}:${c.line}`} onClick={() => dropComment(i)}>
+          {commentChip(c)}<Icon name="close" small />
+        </Chip>
+      ))}
       {marks.map((m, i) => {
         const { kind, path, name } = markChip(m);
         return (

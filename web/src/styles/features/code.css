@@ -27,6 +27,13 @@
 .cd-editor .cm-editor ::selection { background: color-mix(in srgb, var(--accent) 40%, transparent); }
 .cd-editor .cm-editor .cm-gutters { background: var(--bg); border-right: 0; color: var(--fg-faint); }
 .cd-editor .cm-editor .cm-lineNumbers .cm-gutterElement { min-width: 44px; padding: 0 var(--sp-5) 0 var(--sp-8); }
+.cd-editor .cm-editor .cd-comment-gutter .cm-gutterElement { width: var(--sp-8); cursor: pointer; text-align: center; }
+.cd-comment-plus { display: inline-block; width: 16px; line-height: 16px; border-radius: var(--radius-xs); color: var(--on-accent); background: var(--accent); font-family: var(--font); opacity: 0; }
+@media (hover: hover) { .cd-editor .cd-comment-gutter .cm-gutterElement:hover .cd-comment-plus { opacity: 1; } }
+.cd-comment { margin: var(--sp-2) var(--sp-12) var(--sp-2) var(--sp-8); padding: var(--sp-4) var(--sp-6); border: 1px solid var(--accent); border-radius: var(--radius-md); background: var(--bg); font-family: var(--font); font-size: var(--fs-md); white-space: normal; }
+.cd-comment.staged { border-color: var(--border); }
+.cd-comment-head { color: var(--fg-muted); font-size: var(--fs-sm); margin-bottom: var(--sp-2); }
+.cd-comment input { width: 100%; border: 0; outline: none; padding: 0; background: transparent; color: var(--fg); font: inherit; }
 .cd-editor .cm-editor .cm-changeGutter { width: var(--icon-sm); padding: 0; }
 .cd-editor .cm-editor :is(.cm-changedLineGutter, .cm-deletedLineGutter) { background: transparent; text-align: center; }
 .cd-editor .cm-editor .cm-changedLineGutter::before { content: '+'; color: var(--diff-add); }
