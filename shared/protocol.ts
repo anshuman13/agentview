@@ -150,7 +150,7 @@ export type ContextUsage = { total: number; max: number; rows: Array<{ id: strin
 export type TurnMeter = { startedAt: number; tokens: number };
 
 // endedAt is set once the command has finished; command and output (its last lines) come with it.
-export type BackgroundShell = { toolUseId: string; label: string; startedAt: number; endedAt?: number; command?: string; output?: string; failed?: boolean };
+export type BackgroundShell = { toolUseId: string; label: string; startedAt: number; endedAt?: number; command?: string; output?: string; failed?: boolean; exitCode?: number };
 
 export type SessionUpdate = Omit<SessionInfo, 'commands' | 'mcp'> & Partial<Pick<SessionInfo, 'commands' | 'mcp'>>;
 

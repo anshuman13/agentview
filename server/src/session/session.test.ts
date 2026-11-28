@@ -1068,6 +1068,16 @@ describe('restart resume', () => {
     expect(s.state.events.slice(-2)).toMatchObject([{ kind: 'tool_result', toolUseId: 'tu1', stopped: true }, { kind: 'system', text: 'Background task stopped · Sleep a minute' }]);
   });
 
+  it('keeps a failed background shell with its exit code', () => {
+    const { s, handle, result } = fakeSession();
+    handle({ type: 'assistant', parent_tool_use_id: null, message: { content: [{ type: 'tool_use', id: 'tu1', name: 'Bash', input: { command: 'exit 3', run_in_background: true } }] } });
+    handle({ type: 'system', subtype: 'task_started', task_id: 't1', tool_use_id: 'tu1', task_type: 'local_bash', description: 'Fail', is_backgrounded: true });
+    result('r1');
+    handle({ type: 'system', subtype: 'task_updated', task_id: 't1', patch: { status: 'failed' } });
+    handle({ type: 'system', subtype: 'task_notification', task_id: 't1', tool_use_id: 'tu1', status: 'failed', summary: 'Background command "Fail" failed with exit code 3' });
+    expect(s.state.session.shells).toMatchObject([{ toolUseId: 'tu1', failed: true, exitCode: 3 }]);
+  });
+
   it('shows a running background shell its output so far', async () => {
     const file = `${require('node:os').tmpdir()}/bg-live-${Date.now()}.out`;
     await Bun.write(file, 'line 1\n');

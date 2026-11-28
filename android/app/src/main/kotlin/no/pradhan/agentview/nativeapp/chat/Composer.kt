@@ -177,7 +177,7 @@ private fun BackgroundShells(hub: Hub) {
         Row(Modifier.fillMaxWidth().heightIn(min = Tokens.touch).clickable { open = if (expanded) null else t.toolUseId }.padding(start = Tokens.sp4, end = if (stop) Tokens.sp2 else Tokens.sp4).semantics { contentDescription = "${t.label}, ${t.time}" }, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Tokens.sp3)) {
             AvIcon(if (t.failed) "error" else "terminal", tint = if (t.failed) av.danger else av.fgMuted)
             Text(t.label, Modifier.weight(1f), style = Type.footnote, color = av.fg, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Text(t.time, style = Type.footnote, color = av.fgMuted)
+            Text(t.time, style = Type.footnote, color = if (t.failed) av.danger else av.fgMuted)
             AvIcon("chevron-right", null, Tokens.icon, Modifier.rotate(if (expanded) 90f else 0f), tint = av.fgMuted)
             if (stop) IconBtn("debug-stop", "Stop ${t.label}", { hub.stopTask(t.toolUseId) }, enabled = !hub.readOnly, iconSize = Tokens.icon)
         }

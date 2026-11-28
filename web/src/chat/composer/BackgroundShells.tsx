@@ -22,7 +22,7 @@ export function BackgroundShells() {
         <button type="button" className="cp-bg-done" aria-expanded={open === t.toolUseId} onClick={() => setOpen(open === t.toolUseId ? null : t.toolUseId)}>
           <Icon name={t.failed ? 'error' : 'terminal'} small color={t.failed ? 'var(--danger)' : undefined} />
           <span className="cp-bg-label" title={t.label}>{t.label}</span>
-          <span className="cp-bg-time">{t.time}</span>
+          <span className={t.failed ? 'cp-bg-time cp-bg-failed' : 'cp-bg-time'}>{t.time}</span>
           <Icon name={open === t.toolUseId ? 'chevron-down' : 'chevron-right'} small />
         </button>
         {stop && <IconButton icon="debug-stop" label={`Stop ${t.label}`} size="sm" onClick={() => stopTask(t.toolUseId)} />}

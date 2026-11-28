@@ -131,6 +131,7 @@
 .cp-bg-row { display: flex; align-items: center; gap: var(--sp-3); min-height: 30px; padding: 0 var(--sp-2) 0 var(--sp-4); color: var(--fg-muted); font-size: var(--fs-sm); }
 .cp-bg-label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--fg); }
 .cp-bg-time { font-variant-numeric: tabular-nums; }
+.cp-bg-failed { color: var(--danger); }
 .cp-bg-head .cp-bg-label { color: var(--fg-muted); }
 .cp-bg-row:has(> .cp-bg-done) { padding: 0 var(--sp-2) 0 0; }
 .cp-bg-done { flex: 1; min-width: 0; display: flex; align-items: center; gap: var(--sp-3); min-height: 30px; padding: 0 var(--sp-2) 0 var(--sp-4); border: 0; background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; border-radius: var(--radius-sm); }
