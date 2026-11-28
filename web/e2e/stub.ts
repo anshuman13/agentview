@@ -43,6 +43,11 @@ function events() {
 
 const json = (body: unknown) => Response.json(body);
 
+const branchDiff = {
+  files: [{ path: 'src/login.ts', additions: 3, deletions: 1 }],
+  diff: 'diff --git a/src/login.ts b/src/login.ts\n--- a/src/login.ts\n+++ b/src/login.ts\n@@ -1,3 +1,5 @@\n-const ttl = 60;\n+const ttl = 3600;\n+const user = find(id);\n+return user;\n',
+};
+
 const GET: Record<string, (u: URL) => unknown> = {
   '/api/chat/events': () => ({ ...earlier, events: shift(earlier.events, Date.now() - 60_000) }),
   '/api/chat/spawned': (u) => (u.searchParams.get('session') === 's1' ? spawned : []),
@@ -51,7 +56,13 @@ const GET: Record<string, (u: URL) => unknown> = {
   '/api/sessions/seen': () => ({}),
   '/api/sessions': () => sessions.chats.map((c) => ({ ...c, lastModified: Date.now() - 3_600_000 })),
   '/api/repos': () => sessions.repos,
-  '/api/git/status': () => ({ branch: 'main', ahead: 0, behind: 0, files: [] }),
+  '/api/git/status': () => ({
+    branch: 'fix-login', ahead: 2, behind: 0, hashes: { 'w:src/login.ts': 'a1', 's:src/session/a-rather-long-folder-name/store.ts': 'b2' },
+    files: [{ path: 'src/login.ts', status: 'M', staged: false }, { path: 'src/session/a-rather-long-folder-name/store.ts', status: 'A', staged: true }],
+  }),
+  '/api/git/branches': () => ({ branches: ['main', 'fix-login'], base: 'main' }),
+  '/api/git/branch': () => ({ ...branchDiff, base: 'main', commits: [{ hash: 'abc1234', subject: 'Keep the user signed in for an hour after login', at: Date.now() - 3_600_000 }, { hash: 'def5678', subject: 'Add a test', at: Date.now() - 7_200_000 }] }),
+  '/api/git/show': () => branchDiff,
   '/api/gh/prs': () => [{ number: 6, title: 'Test PR', author: 'me', branch: 'fix-login', draft: true, review: '', checks: 'failure', updatedAt: '', url: 'https://github.com/o/r/pull/6', sha: '', additions: 3, deletions: 2, mine: true, reviewRequested: false }],
   '/api/settings': () => ({ deploy: false, accountLabels: { main: 'Account 1', alt: 'Account 2', alt2: 'Account 3' } }),
 };

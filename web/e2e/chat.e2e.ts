@@ -100,6 +100,14 @@ test('code block and edit counts stay inside the reply column', async () => {
   expect(c.x + c.width).toBeLessThanOrEqual(col.x + col.width + 1);
 });
 
+test('reply code blocks use the code font size at a code line height', async () => {
+  const code = tr().locator('[id="turn-a1"] pre code').first();
+  const [size, pre, line] = await code.evaluate((n) => [parseFloat(getComputedStyle(n).fontSize), parseFloat(getComputedStyle(n.parentElement!).fontSize), parseFloat(getComputedStyle(n.parentElement!).lineHeight)]);
+  expect(size).toBe(pre);
+  expect(size).toBeGreaterThanOrEqual(12);
+  expect(line).toBeLessThanOrEqual(size * 1.7);
+});
+
 test('jump to latest shows after scrolling up and returns to the end', async () => {
   const jump = page.locator('.tr-jump');
   await tr().evaluate((el) => el.scrollTo(0, 0));
@@ -163,8 +171,73 @@ test('session list rows stay one line each with the chat branch only', async () 
     const b = (await row.boundingBox())!;
     expect(b.x + b.width).toBeLessThanOrEqual(list.x + list.width + 1);
   }
+  // A build row under a chat keeps its state in the chat's column and its title no smaller than its meta.
+  const state = async (row: Locator) => { const b = (await row.locator('.ui-row-state').first().boundingBox())!; return b.x + b.width; };
+  const parent = rows.filter({ hasText: 'Fix the login bug' }).first();
+  const child = page.locator('.chats .chat-build').filter({ hasText: 'e2e suite' }).first();
+  expect(Math.abs((await state(parent)) - (await state(child)))).toBeLessThanOrEqual(1);
+  const sizes = await child.evaluate((n) => ['.ui-row-title', '.ui-row-meta'].map((s) => parseFloat(getComputedStyle(n.querySelector(s)!).fontSize)));
+  expect(sizes[0]).toBeGreaterThanOrEqual(sizes[1]);
   await expect(page.locator('.chats')).not.toContainText('worktree-agent');
   await expect(page.locator('.chats')).not.toContainText('HEAD');
   await expect(page.locator('.chats .chat-row .dot.idle').first()).toBeVisible();
   await expect(page.locator('.chats .chat-build .chat-run').filter({ hasText: 'Running' }).locator('.codicon, svg, i').first()).toBeVisible();
+});
+
+test('the activity bar menu lists each view on one line inside the menu', async () => {
+  if (phone) return;
+  await page.getByRole('button', { name: 'Explorer', exact: true }).click({ button: 'right' });
+  const menu = page.getByRole('menu');
+  await inViewport(menu);
+  const box = (await menu.boundingBox())!;
+  for (const item of await menu.getByRole('menuitem').all()) {
+    const b = (await item.boundingBox())!;
+    expect(b.height).toBeLessThanOrEqual(40);
+    const icon = (await item.locator('.codicon').boundingBox())!;
+    expect(icon.x).toBeGreaterThanOrEqual(box.x);
+  }
+  await page.keyboard.press('Escape');
+  await expect(menu).toBeHidden();
+});
+
+test('Changes menus open beside their button without scrolling the page', async ({ browser }, info) => {
+  const p = await browser.newPage(info.project.use);
+  await p.goto('/?chat=c1');
+  if (phone) {
+    await p.getByRole('button', { name: 'More', exact: true }).last().click();
+    await p.getByRole('button', { name: /Source control/ }).first().click();
+  } else {
+    await p.getByRole('button', { name: 'Source control', exact: true }).click();
+  }
+  const row = p.locator('.scm-row').filter({ hasText: 'login.ts' }).first();
+  await expect(row).toBeVisible();
+  const vw = p.viewportSize()!;
+  const near = async (trigger: Locator) => {
+    const menu = p.getByRole('menu');
+    await expect(menu).toBeVisible();
+    await menu.evaluate((n) => Promise.all(n.getAnimations().map((a) => a.finished)));
+    const m = (await menu.boundingBox())!;
+    const t = (await trigger.boundingBox())!;
+    expect(m.x).toBeGreaterThanOrEqual(0);
+    expect(m.x + m.width).toBeLessThanOrEqual(vw.width);
+    expect(m.y + m.height).toBeLessThanOrEqual(vw.height);
+    if (!phone) expect(Math.abs(m.y - (t.y + t.height))).toBeLessThanOrEqual(8);
+    expect(await p.evaluate(() => [scrollY, document.documentElement.scrollTop, document.body.scrollTop])).toEqual([0, 0, 0]);
+    await p.keyboard.press('Escape');
+    await expect(menu).toBeHidden();
+  };
+  await row.hover();
+  const more = row.getByRole('button', { name: 'More Actions' });
+  await more.click();
+  await near(more);
+  const opts = p.getByRole('button', { name: 'Diff options' });
+  await opts.click();
+  await near(opts);
+  // Touch rows keep their own actions and More; Open file and Mark as viewed are in More.
+  if (phone) await expect(row.getByRole('button', { name: 'Open File' })).toBeHidden();
+  const commits = (await p.locator('.scm-commits').boundingBox())!;
+  const files = (await p.locator('.scm-commits + .gh-group').boundingBox())!;
+  expect(Math.abs(commits.x - files.x)).toBeLessThanOrEqual(1);
+  expect(Math.abs(commits.width - files.width)).toBeLessThanOrEqual(1);
+  await p.close();
 });
