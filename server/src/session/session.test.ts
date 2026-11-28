@@ -417,6 +417,17 @@ describe('sub-chat links', () => {
     expect(calls).toEqual([['b', 'a', 'build']]);
   });
 
+  it('hands /clear to a driver that clears and does not send it', () => {
+    const { s } = fakeSession();
+    const clear = vi.fn();
+    const send = vi.spyOn(s.driver, 'send');
+    Object.assign(s.driver, { clear });
+    s.enqueue('/clear');
+    expect(clear).toHaveBeenCalledTimes(1);
+    expect(send).not.toHaveBeenCalled();
+    expect(s.state.session.running).toBe(true);
+  });
+
   it('records nothing for a fork, a resume or a new chat', () => {
     const { s, handle } = fakeSession();
     const calls = linked(s);

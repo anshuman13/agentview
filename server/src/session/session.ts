@@ -311,7 +311,13 @@ export class AgentSession implements AgentHost {
   enqueue(text: string, id?: string) {
     const [, name, args = ''] = /^\/([\w-]+)(?:\s+(.*))?$/s.exec(text.trim()) ?? [];
     if (name === 'compact') return this.compact(args);
-    if (name === 'clear') this.clearing = this.runs.buildFor(this.id)?.clearing ? 'build' : 'clear';
+    if (name === 'clear') {
+      this.clearing = this.runs.buildFor(this.id)?.clearing ? 'build' : 'clear';
+      if (this.driver.clear) {
+        this.begin();
+        return this.driver.clear();
+      }
+    }
     const specReview = name === SPEC_REVIEW_COMMAND && /^\S+$/.test(args);
     const asPrompt = name === 'code-review' || name === SKETCH_COMMAND.name || specReview;
     if (name && !asPrompt && this.driver.command(name, args)) return;

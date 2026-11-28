@@ -43,6 +43,8 @@ export interface AgentDriver {
   compact(instructions?: string): void;
   // True when the driver's compaction ends with a turn result, which sends the held messages; otherwise the session sends them when it ends.
   readonly compactEndsTurn: boolean;
+  // Starts a fresh conversation for /clear and ends with a turn result; without it /clear goes to the agent as a prompt.
+  clear?(): void;
   // A /x the session does not own. False means the session sends the text as a prompt; true means the driver handled or refused it.
   command(name: string, args: string): boolean;
   // Starts a code review of the working tree or a PR; the findings reach host.reportFindings.
