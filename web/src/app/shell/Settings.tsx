@@ -13,6 +13,8 @@ import { hubDebug } from '../runtime/hubDebug';
 import { THEME_NAMES, useTheme } from '../theme';
 import { FeatureUseSheet } from './FeatureUseSheet';
 import { ModelsSettings } from './ModelsSettings';
+import { VIEWS } from './ActivityBar';
+import { canHideView, hiddenViews, toggleHiddenView } from './hiddenViews';
 
 const webSha = typeof __APP_SHA__ === 'string' ? __APP_SHA__ : '';
 
@@ -61,6 +63,18 @@ function PrivacySettings() {
   );
 }
 
+function ActivityBarSettings() {
+  const hidden = hiddenViews.use();
+  return (
+    <div className="desktop-only">
+      <Section label="Activity bar" />
+      <div className="ui-group">
+        {VIEWS.filter((v) => canHideView(v.id)).map((v) => <Row key={v.id} title={v.title} meta={hidden.includes(v.id) ? 'Hidden' : 'Shown'} onClick={() => toggleHiddenView(v.id)} />)}
+      </div>
+    </div>
+  );
+}
+
 export function SettingsView({ showDesign, phoneVersion }: { showDesign?: boolean; phoneVersion?: string }) {
   const [theme, toggleTheme] = useTheme();
   return (
@@ -74,6 +88,7 @@ export function SettingsView({ showDesign, phoneVersion }: { showDesign?: boolea
       <div className="ui-group">
         <Row title="Theme" meta={THEME_NAMES[theme]} onClick={toggleTheme} />
       </div>
+      <ActivityBarSettings />
       <ModelsSettings />
       <PrivacySettings />
       {phoneVersion && (
