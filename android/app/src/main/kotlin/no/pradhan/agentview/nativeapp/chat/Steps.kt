@@ -317,6 +317,27 @@ fun dayOfRows(items: List<Item>, days: Map<String, String>): Map<String, String>
 // The count line under a rewind's file list (web steps.ts rewindTotal).
 fun rewindTotal(n: Int) = if (n == 0) "No file changes" else "$n ${if (n == 1) "file" else "files"} changed"
 
+val RESTORE_LABEL = mapOf("code" to "Code only", "conversation" to "Conversation only", "both" to "Code and conversation")
+
+data class RestorePlan(val choices: List<String>, val files: Boolean, val fork: Boolean)
+
+// What the Rewind confirm offers and does (web steps.ts restorePlan): the conversation options fork from the reply before the prompt, so they need a provider that forks and a reply to fork from.
+fun restorePlan(choice: String, canFork: Boolean, hasBefore: Boolean): RestorePlan {
+    val choices = if (canFork && hasBefore) listOf("code", "conversation", "both") else listOf("code")
+    val picked = if (choice in choices) choice else "code"
+    return RestorePlan(choices, picked != "conversation", picked != "code")
+}
+
+// The last reply before a prompt, where a conversation rewind forks from (web steps.ts replyBefore).
+fun replyBefore(items: List<Item>, promptId: String): String? {
+    var reply: String? = null
+    for (it in items) {
+        if (it.id == promptId) return reply
+        if (it is Item.Assistant) reply = it.id
+    }
+    return null
+}
+
 // The last reply of each prompt that changed files, with the prompt a rewind goes back to (web steps.ts rewindReplies).
 fun rewindReplies(items: List<Item>): Map<String, Item.User> {
     val out = HashMap<String, Item.User>()

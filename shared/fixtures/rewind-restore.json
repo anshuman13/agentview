@@ -1,0 +1,7 @@
+[
+  { "name": "code only by default", "canFork": true, "hasBefore": true, "choice": "code", "choices": ["code", "conversation", "both"], "files": true, "fork": false },
+  { "name": "conversation only forks and keeps files", "canFork": true, "hasBefore": true, "choice": "conversation", "choices": ["code", "conversation", "both"], "files": false, "fork": true },
+  { "name": "both rewinds and forks", "canFork": true, "hasBefore": true, "choice": "both", "choices": ["code", "conversation", "both"], "files": true, "fork": true },
+  { "name": "provider cannot fork", "canFork": false, "hasBefore": true, "choice": "both", "choices": ["code"], "files": true, "fork": false },
+  { "name": "first prompt has no reply before it", "canFork": true, "hasBefore": false, "choice": "conversation", "choices": ["code"], "files": true, "fork": false }
+]

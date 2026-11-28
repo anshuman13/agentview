@@ -37,7 +37,7 @@ import { attachMark } from '../../shared/attachMark';
 import { chatSessionOf } from '../../shared/chatLink';
 import { latestTodos, todoCount, todoCurrent, todoProgress, type TodoItem } from '../../shared/todos';
 import { mergeTail, trimHeld } from './app/runtime/pageEvents';
-import { alarmCard, buildTranscript, dayDividers, duration, newMarker, newReplies, openAtNew, rewindReplies, planStep, rewindTotal, sentAt, shipStep, stepLabel, stepTone, turnAnswers, type Item } from './chat/transcript/steps';
+import { alarmCard, buildTranscript, dayDividers, duration, newMarker, newReplies, openAtNew, rewindReplies, planStep, replyBefore, restorePlan, rewindTotal, sentAt, type RestoreChoice, shipStep, stepLabel, stepTone, turnAnswers, type Item } from './chat/transcript/steps';
 import { filePath } from './chat/transcript/md';
 import { buildCard, buildRows, type BuildCardInput } from './chat/transcript/buildCardLogic';
 import { foldTurns, proposalState, rememberedOf, usedClaimState, workTitle } from './chat/transcript/workFold';
@@ -767,6 +767,14 @@ describe('cases shared with the Android app', () => {
 
   for (const c of cases<{ name: string; events: ChatEvent[]; expected: Record<string, string> }>('rewind-replies')) {
     it(`rewindReplies: ${c.name}`, () => expect(Object.fromEntries([...rewindReplies(buildTranscript(c.events))].map(([reply, r]) => [reply, r.id]))).toEqual(c.expected));
+  }
+
+  for (const c of cases<{ name: string; canFork: boolean; hasBefore: boolean; choice: RestoreChoice; choices: RestoreChoice[]; files: boolean; fork: boolean }>('rewind-restore')) {
+    it(`restorePlan: ${c.name}`, () => expect(restorePlan(c.choice, c.canFork, c.hasBefore)).toEqual({ choices: c.choices, files: c.files, fork: c.fork }));
+  }
+
+  for (const c of cases<{ name: string; events: ChatEvent[]; prompt: string; expected: string | null }>('reply-before')) {
+    it(`replyBefore: ${c.name}`, () => expect(replyBefore(buildTranscript(c.events), c.prompt)).toBe(c.expected));
   }
 
   for (const c of cases<{ name: string; n: number; expected: string }>('rewind-total')) {

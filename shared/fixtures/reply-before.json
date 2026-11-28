@@ -1,0 +1,5 @@
+[
+  { "name": "first prompt", "events": [{ "id": "u1", "kind": "user", "text": "edit", "at": 1 }, { "id": "a1", "kind": "assistant", "text": "done", "streaming": false, "at": 2 }], "prompt": "u1", "expected": null },
+  { "name": "last reply before the prompt", "events": [{ "id": "u1", "kind": "user", "text": "look", "at": 1 }, { "id": "a1", "kind": "assistant", "text": "one", "streaming": false, "at": 2 }, { "id": "a2", "kind": "assistant", "text": "two", "streaming": false, "at": 3 }, { "id": "u2", "kind": "user", "text": "edit", "at": 4 }, { "id": "a3", "kind": "assistant", "text": "done", "streaming": false, "at": 5 }], "prompt": "u2", "expected": "a2" },
+  { "name": "unknown prompt", "events": [{ "id": "u1", "kind": "user", "text": "look", "at": 1 }, { "id": "a1", "kind": "assistant", "text": "ok", "streaming": false, "at": 2 }], "prompt": "u9", "expected": null }
+]

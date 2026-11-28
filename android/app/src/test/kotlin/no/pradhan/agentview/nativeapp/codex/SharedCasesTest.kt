@@ -80,6 +80,9 @@ import no.pradhan.agentview.nativeapp.chat.rememberPrompt
 import no.pradhan.agentview.nativeapp.chat.turnAnswers
 import no.pradhan.agentview.nativeapp.chat.rewindReplies
 import no.pradhan.agentview.nativeapp.chat.rewindTotal
+import no.pradhan.agentview.nativeapp.chat.RestorePlan
+import no.pradhan.agentview.nativeapp.chat.restorePlan
+import no.pradhan.agentview.nativeapp.chat.replyBefore
 import no.pradhan.agentview.nativeapp.chat.proposalState
 import no.pradhan.agentview.nativeapp.chat.usedClaimState
 import no.pradhan.agentview.nativeapp.chat.shortModel
@@ -717,6 +720,21 @@ class SharedCasesTest {
         for (c in cases("rewind-replies")) {
             val events = c.getValue("events").jsonArray.map { it.decode<ChatEvent>() }
             assertEquals(c.str("name"), c.getValue("expected").jsonObject.mapValues { it.value.jsonPrimitive.content }, rewindReplies(buildTranscript(events)).mapValues { it.value.id })
+        }
+    }
+
+    @Test fun restorePlanCases() {
+        for (c in cases("rewind-restore")) {
+            val strs = { k: String -> c.getValue(k).jsonArray.map { it.jsonPrimitive.content } }
+            val bool = { k: String -> c.getValue(k).jsonPrimitive.boolean }
+            assertEquals(c.str("name"), RestorePlan(strs("choices"), bool("files"), bool("fork")), restorePlan(c.str("choice"), bool("canFork"), bool("hasBefore")))
+        }
+    }
+
+    @Test fun replyBeforeCases() {
+        for (c in cases("reply-before")) {
+            val events = c.getValue("events").jsonArray.map { it.decode<ChatEvent>() }
+            assertEquals(c.str("name"), c["expected"]?.jsonPrimitive?.contentOrNull, replyBefore(buildTranscript(events), c.str("prompt")))
         }
     }
 

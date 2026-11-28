@@ -64,6 +64,7 @@ import no.pradhan.agentview.nativeapp.app.Hub
 import no.pradhan.agentview.nativeapp.net.Queued
 import no.pradhan.agentview.nativeapp.net.billing
 import no.pradhan.agentview.nativeapp.app.forkReply
+import no.pradhan.agentview.nativeapp.ui.ChoiceRow
 import no.pradhan.agentview.nativeapp.app.loadEarlier
 import no.pradhan.agentview.nativeapp.net.providerLabel
 import no.pradhan.agentview.nativeapp.app.retryTurn
@@ -293,18 +294,42 @@ private fun ReplyActions(hub: Hub, chat: String, copy: String?, rewind: Item.Use
     val scope = rememberCoroutineScope()
     var ask by remember { mutableStateOf(false) }
     var preview by remember { mutableStateOf<RewindPreview?>(null) }
-    if (ask && rewind != null) ConfirmDialog(
-        "Rewind to this message?",
-        "Puts every file ${providerLabel(hub.store.state.value.session?.provider)} changed back to how it was before \"${rewind.text.lineSequence().first().take(80)}\" and puts that prompt back in the composer. Edits from later turns are undone too; the conversation stays.",
-        "Rewind", { ask = false; hub.rewind(rewind.id); hub.useAgain(chat, rewind.text) }, onDismiss = { ask = false },
-        extra = preview?.let { p -> { RewindFiles(p) } },
-    )
+    var before by remember { mutableStateOf<String?>(null) }
+    var choice by remember { mutableStateOf("code") }
+    if (ask && rewind != null) {
+        val canFork = hub.store.state.value.session?.capabilities?.forkAt ?: true
+        val plan = restorePlan(choice, canFork, before != null)
+        val label = providerLabel(hub.store.state.value.session?.provider)
+        val first = rewind.text.lineSequence().first().take(80)
+        ConfirmDialog(
+            "Rewind to this message?",
+            when {
+                !plan.fork -> "Puts every file $label changed back to how it was before \"$first\" and puts that prompt back in the composer. Edits from later turns are undone too; the conversation stays."
+                !plan.files -> "Opens a new chat from before \"$first\" with that prompt in its composer. Files stay as they are and this chat stays as it is."
+                else -> "Puts every file $label changed back to how it was before \"$first\" and opens a new chat from before that prompt with it in the composer. This chat stays as it is."
+            },
+            "Rewind", {
+                ask = false
+                if (plan.files) hub.rewind(rewind.id)
+                val from = before
+                if (plan.fork && from != null) hub.forkReply(from, rewind.text) else hub.useAgain(chat, rewind.text)
+            }, onDismiss = { ask = false },
+            extra = {
+                Column {
+                    if (plan.choices.size > 1) plan.choices.forEach { c -> ChoiceRow(RESTORE_LABEL.getValue(c), checked = choice == c, onClick = { choice = c }) }
+                    if (plan.files) preview?.let { RewindFiles(it) }
+                }
+            },
+        )
+    }
     Row(Modifier.offset(x = -Tokens.sp4)) {
         if (copy != null) IconBtn("copy", "Copy", { clip.setText(AnnotatedString(copy)); hub.notice.value = "Reply copied" }, iconSize = Tokens.icon)
         if (fork != null) IconBtn("repo-forked", "Fork from here", { hub.forkReply(fork) }, iconSize = Tokens.icon)
         if (rewind != null) IconBtn("discard", "Rewind files", {
             scope.launch {
                 preview = runCatching { hub.api.rewindPreview(chat, rewind.id) }.getOrNull()
+                before = replyBefore(hub.transcript.view.value.items, rewind.id)
+                choice = "code"
                 ask = true
             }
         }, iconSize = Tokens.icon)

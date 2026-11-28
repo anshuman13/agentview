@@ -374,7 +374,12 @@ cost so far. The status bar usage tooltip adds a Spend block with today's and th
   agent is idle. It puts the files back to how they were before that prompt (later turns' edits go too); the conversation itself
   stays. Its confirm ("Rewind to this message?") names the chat's provider and the prompt's first line and lists the files it
   will change with a +/- total, from a dry run (`/api/rewind/preview`; the SDK gives totals only, not per-file counts). After a
-  rewind the prompt goes back in the composer and the transcript gets a muted "Rewound files to here · N files" line
+  rewind the prompt goes back in the composer and the transcript gets a muted "Rewound files to here · N files" line.
+  Like Claude.app, the confirm has a Restore choice (a segmented control on web, check rows on the phone): Code only (the
+  default, the file rewind above), Conversation only (forks a new chat from the reply before the prompt, with the prompt in
+  its composer; files stay) and Code and conversation (both). The conversation options show only when the provider can fork
+  and a reply comes before the prompt (`restorePlan` and `replyBefore` in steps.ts and Steps.kt, cases in
+  `shared/fixtures/rewind-restore.json` and `reply-before.json`)
 
 ## Review findings
 

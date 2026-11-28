@@ -39,26 +39,37 @@ export function newChat(msg: NewSession = {}) {
   send({ type: 'new_session', ...msg, ...(model && { model }) });
 }
 
-// A chat from the New chat sheet (Android Hub.newChat): the start mode is set once the new chat is in view, then Spec puts the spec prompt in the composer and the others send the first text.
-// A chat that was already open when the sheet sent its request is one the user switched to, not the new one.
-export function startChat({ text, ...msg }: NewSession, start: StartMode) {
-  const { draft, first } = startTexts(start, text);
-  const mode = startModeFor(start.mode, msg.provider);
-  if (!mode) return newChat({ ...msg, text: first ?? undefined });
+// Runs once the chat a request opens is in view. A chat that was already open when the request went out is one the user switched to, not the new one.
+function whenOpened(request: () => void, failed: string, then: () => void) {
   const known = new Set([getState().session.id, ...getState().live.map((c) => c.id)]);
-  const timer = setTimeout(() => { stop(); notice('The chat did not open'); }, 30_000);
-  newChat(msg);
+  const timer = setTimeout(() => { stop(); notice(failed); }, 30_000);
+  request();
   const stop = subscribe(() => {
     const now = getState().session.id;
     if (!now || known.has(now)) return;
     stop();
     clearTimeout(timer);
+    then();
+  });
+}
+
+// After the composer has loaded the new chat's draft, so the insert is not overwritten.
+const insertLater = (text: string) => setTimeout(() => window.dispatchEvent(new CustomEvent('agentview:insert', { detail: { text } })));
+
+// A chat from the New chat sheet (Android Hub.newChat): the start mode is set once the new chat is in view, then Spec puts the spec prompt in the composer and the others send the first text.
+export function startChat({ text, ...msg }: NewSession, start: StartMode) {
+  const { draft, first } = startTexts(start, text);
+  const mode = startModeFor(start.mode, msg.provider);
+  if (!mode) return newChat({ ...msg, text: first ?? undefined });
+  whenOpened(() => newChat(msg), 'The chat did not open', () => {
     send({ type: 'set_permission_mode', mode });
-    // After the composer has loaded the new chat's draft, so the insert is not overwritten.
-    if (draft) setTimeout(() => window.dispatchEvent(new CustomEvent('agentview:insert', { detail: { text: draft } })));
+    if (draft) insertLater(draft);
     if (first) prompt(first, () => notice('The message was not sent'));
   });
 }
+
+// Fork from a reply with a prompt waiting in the new chat's composer (Android Hub.forkReply with a draft).
+export const forkWithDraft = (upTo: string, draft: string) => whenOpened(() => send({ type: 'new_session', upTo }), 'The fork did not open', () => insertLater(draft));
 
 // The saved chats of a repo that are not open, newest first, for the Continue section of the New chat sheet (Android recentInRepo).
 export const recentInRepo = (saved: SavedSession[], openIds: (string | null)[], cwd: string | undefined, n = 3) =>

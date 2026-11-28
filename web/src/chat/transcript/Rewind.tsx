@@ -1,25 +1,20 @@
 import { useState } from 'react';
 import { useStore } from '../../app/store';
+import { forkWithDraft } from '../../app/newChat';
 import { insertText, rewindFiles } from '../chatActions';
 import { fetchRewindPreview } from '../chatApi';
+import { useCan } from '../useCan';
 import { IconButton } from '../../ui/Button';
-import { Confirm, type ConfirmRequest } from '../../ui/Confirm';
+import { Confirm } from '../../ui/Confirm';
 import { providerLabel } from '../../../../shared/providers';
 import type { RewindPreview } from '../../../../shared/protocol';
-import { rewindTotal, type Rewind } from './steps';
+import { RESTORE_LABEL, restorePlan, rewindTotal, type RestoreChoice, type Rewind } from './steps';
 
-const request = ({ id, prompt }: Rewind, label: string, preview: RewindPreview | null): ConfirmRequest => ({
-  title: 'Rewind to this message?',
-  detail: `Puts every file ${label} changed back to how it was before "${prompt.split('\n')[0].slice(0, 80)}" and puts that prompt back in the composer. Edits from later turns are undone too; the conversation stays.`,
-  ...(preview && 'files' in preview && { body: <RewindFiles {...preview} /> }),
-  ...(preview && 'error' in preview && { warning: preview.error }),
-  action: 'Rewind',
-  icon: 'discard',
-  run: async () => {
-    rewindFiles(id);
-    insertText(prompt);
-  },
-});
+const DETAIL: Record<RestoreChoice, (label: string, first: string) => string> = {
+  code: (label, first) => `Puts every file ${label} changed back to how it was before "${first}" and puts that prompt back in the composer. Edits from later turns are undone too; the conversation stays.`,
+  conversation: (_, first) => `Opens a new chat from before "${first}" with that prompt in its composer. Files stay as they are and this chat stays as it is.`,
+  both: (label, first) => `Puts every file ${label} changed back to how it was before "${first}" and opens a new chat from before that prompt with it in the composer. This chat stays as it is.`,
+};
 
 function RewindFiles({ files, insertions, deletions }: { files: string[]; insertions: number; deletions: number }) {
   return (
@@ -32,14 +27,46 @@ function RewindFiles({ files, insertions, deletions }: { files: string[]; insert
   );
 }
 
-export function RewindLink({ rewind }: { rewind: Rewind }) {
+function RewindDialog({ rewind: { id, prompt, before }, preview, onClose }: { rewind: Rewind; preview: RewindPreview | null; onClose: () => void }) {
   const label = useStore((s) => providerLabel(s.session.provider));
-  const [ask, setAsk] = useState<ConfirmRequest | null>(null);
-  const open = async () => setAsk(request(rewind, label, await fetchRewindPreview(rewind.id).catch(() => null)));
+  const canFork = useCan('forkAt');
+  const [choice, setChoice] = useState<RestoreChoice>('code');
+  const plan = restorePlan(choice, canFork, !!before);
+  const first = prompt.split('\n')[0].slice(0, 80);
+  return (
+    <Confirm
+      title="Rewind to this message?"
+      detail={DETAIL[plan.fork ? (plan.files ? 'both' : 'conversation') : 'code'](label, first)}
+      body={
+        <>
+          {plan.choices.length > 1 && (
+            <div className="rewind-restore" role="radiogroup" aria-label="Restore">
+              {plan.choices.map((c) => <button key={c} role="radio" aria-checked={choice === c} className={choice === c ? 'on' : ''} onClick={() => setChoice(c)}>{RESTORE_LABEL[c]}</button>)}
+            </div>
+          )}
+          {preview && 'files' in preview && plan.files && <RewindFiles {...preview} />}
+        </>
+      }
+      {...(preview && 'error' in preview && plan.files && { warning: preview.error })}
+      action="Rewind"
+      icon="discard"
+      run={async () => {
+        if (plan.files) rewindFiles(id);
+        if (plan.fork && before) forkWithDraft(before, prompt);
+        else insertText(prompt);
+      }}
+      onClose={onClose}
+    />
+  );
+}
+
+export function RewindLink({ rewind }: { rewind: Rewind }) {
+  const [preview, setPreview] = useState<RewindPreview | null | undefined>(undefined);
+  const open = async () => setPreview(await fetchRewindPreview(rewind.id).catch(() => null));
   return (
     <>
       <IconButton icon="discard" label="Rewind files" title="Put the files back to how they were before this prompt" onClick={() => void open()} />
-      {ask && <Confirm {...ask} onClose={() => setAsk(null)} />}
+      {preview !== undefined && <RewindDialog rewind={rewind} preview={preview} onClose={() => setPreview(undefined)} />}
     </>
   );
 }

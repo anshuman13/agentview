@@ -17,7 +17,7 @@ import { FindBar, findPending, markHit, takeFind, type FindRequest } from './Fin
 import { showTurn, turnPending } from '../../sessions/openChat';
 import { RewindLink } from './Rewind';
 import { createFoldBuilder, type FoldRow } from './workFold';
-import { ALARM_TOOL, BUILD_TOOL, createTranscriptBuilder, exploreRuns, dayDividers, newMarker, newReplies, openAtNew, rewindReplies, turnAnswers, docCards, isDocFile, fileMeta, sameItem, type Item, type Rewind } from './steps';
+import { ALARM_TOOL, BUILD_TOOL, createTranscriptBuilder, exploreRuns, dayDividers, newMarker, newReplies, openAtNew, replyBefore, rewindReplies, turnAnswers, docCards, isDocFile, fileMeta, sameItem, type Item, type Rewind } from './steps';
 import { pressable, useTick } from '../../ui/util';
 import { turnMeter } from '../../sessions/agents';
 import { useCan } from '../useCan';
@@ -69,7 +69,7 @@ function TranscriptView({ loaded, sessionId, events, earlier, cwd, running, bill
   const { box, rows, stuck, behind, onScroll, jump } = scroll;
   const canRewind = useCan('rewind');
   const canFork = useCan('forkAt');
-  const rewinds = useMemo(() => rewindReplies(items), [items]);
+  const rewinds = useMemo(() => new Map([...rewindReplies(items)].map(([reply, r]) => [reply, { ...r, before: replyBefore(items, r.id) }])), [items]);
   const answers = useMemo(() => turnAnswers(items, running), [items, running]);
   const replyCount = useMemo(() => items.filter((it) => it.kind === 'assistant').length, [items]);
   const cards = useMemo(() => docCards(items), [items]);

@@ -87,12 +87,15 @@ fun Hub.newChat(cwd: String? = null, model: String? = null, fork: String? = null
     }
 }
 
-// Fork from here: a new chat holding this one up to and with the reply (web chatActions.ts forkReply).
-fun Hub.forkReply(replyId: String) {
+// Fork from here: a new chat holding this one up to and with the reply (web chatActions.ts forkReply), with an optional prompt waiting in its composer (web newChat.ts forkWithDraft).
+fun Hub.forkReply(replyId: String, draft: String? = null) {
     if (readOnly) { notice.value = READ_ONLY_SENT; return }
     viewModelScope.launch {
         val id = switchTo(newSessionCmd(upTo = replyId))
-        if (id == null) notice.value = "The fork did not open" else link.value = DeepLink(chat = id)
+        if (id == null) notice.value = "The fork did not open" else {
+            if (draft != null) setDraft(id, draft)
+            link.value = DeepLink(chat = id)
+        }
     }
 }
 

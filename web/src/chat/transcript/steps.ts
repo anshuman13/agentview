@@ -278,10 +278,30 @@ export function docCards(items: Item[]) {
 // Replies that arrived after the reader scrolled up, for the Jump to latest button.
 export const newReplies = (items: Item[], lastSeenId: string) => items.slice(items.findIndex((it) => it.id === lastSeenId) + 1 || items.length).filter((it) => it.kind === 'assistant' && !it.streaming).length;
 
-export type Rewind = { id: string; prompt: string };
+export type Rewind = { id: string; prompt: string; before?: string | null };
 
 // The count line under a rewind's file list (Android Steps.kt rewindTotal).
 export const rewindTotal = (n: number) => (n ? `${n} ${n === 1 ? 'file' : 'files'} changed` : 'No file changes');
+
+export type RestoreChoice = 'code' | 'conversation' | 'both';
+export const RESTORE_LABEL: Record<RestoreChoice, string> = { code: 'Code only', conversation: 'Conversation only', both: 'Code and conversation' };
+
+// What the Rewind confirm offers and does (Android Steps.kt restorePlan): the conversation options fork from the reply before the prompt, so they need a provider that forks and a reply to fork from.
+export function restorePlan(choice: RestoreChoice, canFork: boolean, hasBefore: boolean) {
+  const choices: RestoreChoice[] = canFork && hasBefore ? ['code', 'conversation', 'both'] : ['code'];
+  const picked = choices.includes(choice) ? choice : 'code';
+  return { choices, files: picked !== 'conversation', fork: picked !== 'code' };
+}
+
+// The last reply before a prompt, where a conversation rewind forks from (Android Steps.kt replyBefore).
+export function replyBefore(items: Item[], promptId: string) {
+  let reply: string | null = null;
+  for (const it of items) {
+    if (it.id === promptId) return reply;
+    if (it.kind === 'assistant') reply = it.id;
+  }
+  return null;
+}
 
 // The last reply of each prompt that changed files, with the prompt a rewind goes back to.
 export function rewindReplies(items: Item[]) {
