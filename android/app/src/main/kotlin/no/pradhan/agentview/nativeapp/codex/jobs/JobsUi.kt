@@ -216,6 +216,7 @@ private fun JobMenu(hub: Hub, actions: TaskActions, j: Row, canRun: Boolean, clo
     MenuItem("Delete", "trash", { close(); deleteJob(actions, j) }, danger = true)
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun JobsListPage(hub: Hub, st: CodexState, profile: String?, now: Long, actions: TaskActions, onAutopilot: () -> Unit, onNew: (Row) -> Unit, onOpen: (Row) -> Unit) {
     val haptic = LocalHapticFeedback.current
@@ -228,7 +229,11 @@ fun JobsListPage(hub: Hub, st: CodexState, profile: String?, now: Long, actions:
         item { AutopilotRow(hub, waiting, onAutopilot) }
         if (jobs.isEmpty()) {
             item { EmptyState("No jobs yet", "A job runs a prompt on a schedule, can add tasks, and sends you the result", icon = "history", small = false) }
-            if (!hub.readOnly) item { Button("Weekly digest", { add(WEEKLY_DIGEST) }, Modifier.padding(start = Tokens.listPad), size = ButtonSize.Sm, icon = "sparkle") }
+            if (!hub.readOnly) item {
+                FlowRow(Modifier.padding(horizontal = Tokens.listPad), horizontalArrangement = Arrangement.spacedBy(Tokens.sp3), verticalArrangement = Arrangement.spacedBy(Tokens.sp3)) {
+                    JOB_PRESETS.values.forEach { p -> Button(p.name, { add(p) }, size = ButtonSize.Sm, icon = "sparkle") }
+                }
+            }
         } else item {
             Group {
                 jobs.forEachIndexed { i, j ->

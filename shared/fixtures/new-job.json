@@ -1,6 +1,28 @@
 [
-  { "name": "default", "profile": "work", "preset": null, "expected": { "name": "New job", "schedule": "weekdays 08:00", "prompt": "", "enabled": 1, "profile": "work" } },
-  { "name": "personal default", "profile": "personal", "preset": null, "expected": { "name": "New job", "schedule": "weekdays 08:00", "prompt": "", "enabled": 1, "profile": "personal" } },
+  {
+    "name": "default",
+    "profile": "work",
+    "preset": null,
+    "expected": {
+      "name": "New job",
+      "schedule": "weekdays 08:00",
+      "prompt": "",
+      "enabled": 1,
+      "profile": "work"
+    }
+  },
+  {
+    "name": "personal default",
+    "profile": "personal",
+    "preset": null,
+    "expected": {
+      "name": "New job",
+      "schedule": "weekdays 08:00",
+      "prompt": "",
+      "enabled": 1,
+      "profile": "personal"
+    }
+  },
   {
     "name": "weekly digest",
     "profile": "work",
@@ -9,6 +31,42 @@
       "name": "Weekly digest",
       "schedule": "weekly fri 16:00",
       "prompt": "Use mcp__agentview__data_find to read this past week: meetings (with their summary and decisions) and items (tasks opened, tasks done, and tasks still open). Write a digest with these sections: Meetings this week, Decisions, Tasks opened, Tasks closed, Stale tasks (open over 14 days). Keep each section to a few short lines and skip a section that has nothing. Save it with mcp__agentview__data_write as a new item with status note and the title \"Weekly digest\".",
+      "enabled": 1,
+      "profile": "work"
+    }
+  },
+  {
+    "name": "morning briefing",
+    "profile": "work",
+    "preset": "morning-briefing",
+    "expected": {
+      "name": "Morning briefing",
+      "schedule": "weekdays 07:30",
+      "prompt": "Use mcp__agentview__data_find to read today's meetings and my open tasks that are due today or overdue. Write a short briefing with these sections: Meetings today (time and title), Due today, Overdue. Skip a section that has nothing. Send it to me with notify.",
+      "enabled": 1,
+      "profile": "work"
+    }
+  },
+  {
+    "name": "pr review digest",
+    "profile": "work",
+    "preset": "pr-review-digest",
+    "expected": {
+      "name": "PR review digest",
+      "schedule": "weekdays 08:00",
+      "prompt": "List the open pull requests that wait on my review and the ones I opened that have new review comments, using the GitHub tools this job allows. For each one give the repo, the title, the author and how long it has waited, oldest first. Add a task for each pull request that waited over 2 days. Send me the list with notify, or reply NOTHING NEW when there is none.",
+      "enabled": 1,
+      "profile": "work"
+    }
+  },
+  {
+    "name": "dependency check",
+    "profile": "work",
+    "preset": "dependency-check",
+    "expected": {
+      "name": "Dependency check",
+      "schedule": "weekly mon 09:00",
+      "prompt": "Check the repo for outdated and vulnerable dependencies with its package manager's own commands (for example bun outdated, npm audit or pip list --outdated). List the security fixes first, then major version updates, each with the current and latest version. Do not change any files. Reply NOTHING NEW when everything is up to date.",
       "enabled": 1,
       "profile": "work"
     }

@@ -200,7 +200,7 @@ import no.pradhan.agentview.nativeapp.net.providerMark
 import no.pradhan.agentview.nativeapp.net.providerModes
 import no.pradhan.agentview.nativeapp.codex.jobs.failedJobs
 import no.pradhan.agentview.nativeapp.codex.jobs.heldUntil
-import no.pradhan.agentview.nativeapp.codex.jobs.WEEKLY_DIGEST
+import no.pradhan.agentview.nativeapp.codex.jobs.JOB_PRESETS
 import no.pradhan.agentview.nativeapp.codex.jobs.jobEdits
 import no.pradhan.agentview.nativeapp.codex.jobs.newJob
 import no.pradhan.agentview.nativeapp.codex.jobs.parseSchedule
@@ -926,7 +926,7 @@ class SharedCasesTest {
 
     @Test fun newJobRule() {
         for (c in cases("new-job")) {
-            val job = newJob(c.str("profile"), if (c.prim("preset") != null) WEEKLY_DIGEST else null, 1000L)
+            val job = newJob(c.str("profile"), c.prim("preset")?.content?.let { JOB_PRESETS.getValue(it) }, 1000L)
             val expected = c.getValue("expected").jsonObject
             assertEquals(c.str("name"), listOf("name", "schedule", "prompt").map { expected.str(it) } + listOf(1L, expected.str("profile")), listOf(job.str("name"), job.str("schedule"), job.str("prompt"), job.long("enabled"), job.profile))
         }

@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 import { useAssistantData } from '../data';
-import { WEEKLY_DIGEST, type JobPreset } from '../data/tasks/presets';
+import { JOB_PRESETS, type JobPreset } from '../data/tasks/presets';
 import { rowKey } from '../data/sync';
 import type { Job, Run } from '../data/wiki/wiki';
 import { EmptyState } from '../../ui/Panel';
@@ -77,7 +77,7 @@ function JobsList({ onMenu }: { onMenu: () => void }) {
             </div>
           )}
           {!jobs.length && <EmptyState size="md" icon="history" title="No jobs yet" hint="A job runs a prompt on a schedule, can add tasks, and sends you the result" />}
-          {!jobs.length && <div className="jb-presets"><Button size="sm" icon="sparkle" onClick={() => add(WEEKLY_DIGEST)}>Weekly digest</Button></div>}
+          {!jobs.length && <div className="jb-presets">{Object.values(JOB_PRESETS).map((p) => <Button key={p.name} size="sm" icon="sparkle" onClick={() => add(p)}>{p.name}</Button>)}</div>}
         </div>
       </div>
     </div>

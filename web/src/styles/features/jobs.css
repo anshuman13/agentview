@@ -1,4 +1,4 @@
-.jb-presets { display: flex; gap: var(--sp-4); margin-top: var(--sp-6); }
+.jb-presets { display: flex; flex-wrap: wrap; gap: var(--sp-4); margin-top: var(--sp-6); }
 .ui-empty + .jb-presets { justify-content: center; margin-top: 0; }
 .ui-row-wrap.off .ui-row-title { color: var(--fg-muted); }
 .jb-actions { flex: none; display: inline-flex; align-items: center; gap: var(--sp-2); }

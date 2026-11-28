@@ -70,7 +70,7 @@ import type { Profile } from './codex/data/sync';
 import { approveAllChanges, memoryClaim, pageClaims, rejectChanges, restatedClaim, reviewList, staleFacts, type Fact, type Job, type Meeting, type Page, type Run } from './codex/data/wiki/wiki';
 import { hasLiveClaims, wikiMarkdown } from './codex/data/wiki/wikiMarkdown';
 import { heldUntil, jobEdits, newJob, tasksOf } from './codex/jobs/schedule';
-import { WEEKLY_DIGEST } from './codex/data/tasks/presets';
+import { JOB_PRESETS } from './codex/data/tasks/presets';
 import { sourceLink } from './codex/tasks/taskSource';
 import { taskMetaParts } from './codex/tasks/taskMeta';
 import type { ItemRow } from './codex/data/sync';
@@ -481,9 +481,9 @@ describe('cases shared with the Android app', () => {
     it(`jobEdits: ${c.name}`, () => expect(jobEdits(c.job, c.name_in, c.prompt_in)).toEqual(c.expected));
   }
 
-  for (const c of cases<{ name: string; profile: Profile; preset: 'weekly-digest' | null; expected: object }>('new-job')) {
+  for (const c of cases<{ name: string; profile: Profile; preset: keyof typeof JOB_PRESETS | null; expected: object }>('new-job')) {
     it(`newJob: ${c.name}`, () => {
-      const { name, schedule, prompt, enabled, profile } = newJob(c.profile, c.preset ? WEEKLY_DIGEST : undefined);
+      const { name, schedule, prompt, enabled, profile } = newJob(c.profile, c.preset ? JOB_PRESETS[c.preset] : undefined);
       expect({ name, schedule, prompt, enabled, profile }).toEqual(c.expected);
     });
   }

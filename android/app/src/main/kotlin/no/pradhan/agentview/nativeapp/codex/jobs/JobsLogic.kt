@@ -67,6 +67,26 @@ val WEEKLY_DIGEST = JobPreset(
     "Use mcp__agentview__data_find to read this past week: meetings (with their summary and decisions) and items (tasks opened, tasks done, and tasks still open). Write a digest with these sections: Meetings this week, Decisions, Tasks opened, Tasks closed, Stale tasks (open over 14 days). Keep each section to a few short lines and skip a section that has nothing. Save it with mcp__agentview__data_write as a new item with status note and the title \"Weekly digest\".",
 )
 
+val MORNING_BRIEFING = JobPreset(
+    "Morning briefing",
+    "weekdays 07:30",
+    "Use mcp__agentview__data_find to read today's meetings and my open tasks that are due today or overdue. Write a short briefing with these sections: Meetings today (time and title), Due today, Overdue. Skip a section that has nothing. Send it to me with notify.",
+)
+
+val PR_REVIEW_DIGEST = JobPreset(
+    "PR review digest",
+    "weekdays 08:00",
+    "List the open pull requests that wait on my review and the ones I opened that have new review comments, using the GitHub tools this job allows. For each one give the repo, the title, the author and how long it has waited, oldest first. Add a task for each pull request that waited over 2 days. Send me the list with notify, or reply NOTHING NEW when there is none.",
+)
+
+val DEPENDENCY_CHECK = JobPreset(
+    "Dependency check",
+    "weekly mon 09:00",
+    "Check the repo for outdated and vulnerable dependencies with its package manager's own commands (for example bun outdated, npm audit or pip list --outdated). List the security fixes first, then major version updates, each with the current and latest version. Do not change any files. Reply NOTHING NEW when everything is up to date.",
+)
+
+val JOB_PRESETS = mapOf("weekly-digest" to WEEKLY_DIGEST, "morning-briefing" to MORNING_BRIEFING, "pr-review-digest" to PR_REVIEW_DIGEST, "dependency-check" to DEPENDENCY_CHECK)
+
 // newJob of web/src/codex/jobs/schedule.tsx: the preset's name, schedule and prompt, else a blank weekday 08:00 job.
 fun newJob(profile: String, preset: JobPreset?, now: Long, id: String = UUID.randomUUID().toString()): Row {
     val blank = Row("jobs", id, profile, updatedAt = now, f = SYNCED_FIELDS.getValue("jobs").associateWith { JsonNull })
