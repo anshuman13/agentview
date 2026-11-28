@@ -15,6 +15,7 @@ import { byUrgency, chatFinder, chatState, doneChats, findHere, flip, folderBadg
 import { FilterInput } from './FilterInput';
 import { LiveRow, SavedRow, chatActions, metaLine } from './ChatRows';
 import { nestedRows, withoutNested } from '../../../shared/nest';
+import { sectionGroups } from '../../../shared/sections';
 import { searchMessages } from './sessionApi';
 import { searchHitRows } from '../../../shared/subChats';
 import { NeedsYou } from './NeedsYou';
@@ -117,7 +118,10 @@ export function OpenChats() {
   const [newIn, setNewIn] = useState<{ repo?: string } | null>(null);
   const actions = chatActions(setChats, setAsk);
   const { pins, setPin } = usePins();
-  const pinSet = useMemo(() => new Set(pins.map(root)), [pins, root]);
+  const pinned = useMemo(() => new Set(pins.map(root)), [pins, root]);
+  const sections = useMemo(() => sectionGroups(chats.filter((c) => !pinned.has(c.sessionId))), [chats, pinned]);
+  // Rows shown above the folder groups (pinned and sectioned) stay out of them.
+  const pinSet = useMemo(() => new Set([...pinned, ...sections.flatMap((g) => g.chats.map((c) => c.sessionId))]), [pinned, sections]);
   const allGroups = useMemo(() => groupByRepo(live, chats, folders, '', pinSet), [live, chats, folders, pinSet]);
   const shown = useShownCount();
   const snapshot = useRef<HeldOrder | null>(null);
@@ -126,26 +130,34 @@ export function OpenChats() {
   const groups = useMemo(() => orderGroups(groupByRepo(live, chats, folders, filter, pinSet, held.chats), held.groups), [live, chats, folders, filter, pinSet, held]);
   const pinnedRows = useMemo(() => {
     const find = chatFinder(filter, chats);
-    return [...pinSet].flatMap((id) => {
+    return [...pinned].flatMap((id) => {
       const c = [...live].sort(byUrgency).find((x) => root(x.sessionId) === id);
       const s = c ? undefined : chats.find((x) => x.sessionId === id);
       const item = c ? { c, title: c.title, repo: repoName(folders, c.cwd) } : s ? { s, title: s.title, repo: repoName(folders, s.cwd) } : null;
       return item && (!find.active || find.match(item.title, id, item.repo)) ? [item] : [];
     });
-  }, [live, chats, folders, filter, pinSet, root]);
+  }, [live, chats, folders, filter, pinned, root]);
+  const sectionRows = useMemo(() => {
+    const find = chatFinder(filter, chats);
+    return sections.map((g) => ({ name: g.name, count: g.chats.length, rows: g.chats.flatMap((s) => {
+      const c = [...live].sort(byUrgency).find((x) => root(x.sessionId) === s.sessionId);
+      const repo = repoName(folders, s.cwd);
+      return !find.active || find.match(s.title, s.sessionId, repo) ? [{ c, s, repo }] : [];
+    }) })).filter((g) => g.rows.length);
+  }, [sections, live, chats, folders, filter, root]);
   const waiting = live.filter((c) => c.pending).sort(byUrgency);
   const shownWaiting = useMemo(() => waitingChats(live, chats, folders, filter), [live, chats, folders, filter]);
   const order = useMemo(() => {
-    const pinned = [...pinSet].flatMap((id) => [...live].sort(byUrgency).find((c) => root(c.sessionId) === id) ?? []);
-    return chatOrder(waiting, pinned, orderGroups(groupByRepo(live, chats, folders, '', pinSet, held.chats), held.groups));
+    const top = [...pinSet].flatMap((id) => [...live].sort(byUrgency).find((c) => root(c.sessionId) === id) ?? []);
+    return chatOrder(waiting, top, orderGroups(groupByRepo(live, chats, folders, '', pinSet, held.chats), held.groups));
   }, [live, chats, folders, root, pinSet, held]);
   const seen = useStore((s) => s.seen);
   const done = useMemo(() => doneChats(
-    [...groups.flatMap((g) => g.open), ...pinnedRows.flatMap((p) => (p.c ? [p.c] : []))],
-    [...groups.flatMap((g) => g.recent), ...pinnedRows.flatMap((p) => (p.s ? [p.s] : []))],
+    [...groups.flatMap((g) => g.open), ...pinnedRows.flatMap((p) => (p.c ? [p.c] : [])), ...sectionRows.flatMap((g) => g.rows.flatMap((r) => (r.c ? [r.c] : [])))],
+    [...groups.flatMap((g) => g.recent), ...pinnedRows.flatMap((p) => (p.s ? [p.s] : [])), ...sectionRows.flatMap((g) => g.rows.flatMap((r) => (r.c ? [] : [r.s])))],
     seen,
     savedById,
-  ), [groups, pinnedRows, seen, savedById]);
+  ), [groups, pinnedRows, sectionRows, seen, savedById]);
   const markAllRead = () => {
     done.forEach(markSeen);
     showSnack(`Marked ${plural(done.length, 'chat')} as read`, () => done.forEach(markUnread));
@@ -164,10 +176,10 @@ export function OpenChats() {
     setCollapsed(next);
     save(KEY, next);
   };
-  const row = (c: LiveChat, repo?: string) => <LiveRow key={c.id} c={c} saved={savedById.get(c.sessionId ?? '')} repo={repo} branch={findHere(folders, c.cwd).folder?.repo?.branch} selected={c.id === viewing} actions={actions} ask={setAsk} nested={under.get(root(c.sessionId) ?? '')} pinned={pinSet.has(root(c.sessionId) ?? '')} onPin={(on) => setPin(root(c.sessionId)!, on)} onBeside={c.id === viewing || embedded ? undefined : () => setUi({ beside: c.id })} />;
+  const row = (c: LiveChat, repo?: string) => <LiveRow key={c.id} c={c} saved={savedById.get(c.sessionId ?? '')} repo={repo} branch={findHere(folders, c.cwd).folder?.repo?.branch} selected={c.id === viewing} actions={actions} ask={setAsk} nested={under.get(root(c.sessionId) ?? '')} pinned={pinned.has(root(c.sessionId) ?? '')} onPin={(on) => setPin(root(c.sessionId)!, on)} onBeside={c.id === viewing || embedded ? undefined : () => setUi({ beside: c.id })} />;
 
   const savedRow = (s: ChatSession, repo?: string) => (
-    <SavedRow key={s.sessionId} s={s} repo={repo} branch={findHere(folders, s.cwd).folder?.repo?.branch} opening={opening === s.sessionId} pinned={pinSet.has(s.sessionId)} onOpen={() => { setOpening(s.sessionId); send({ type: 'open_session', sessionId: s.sessionId }); }} actions={actions} nested={under.get(s.sessionId)} onPin={(on) => setPin(s.sessionId, on)} />
+    <SavedRow key={s.sessionId} s={s} repo={repo} branch={findHere(folders, s.cwd).folder?.repo?.branch} opening={opening === s.sessionId} pinned={pinned.has(s.sessionId)} onOpen={() => { setOpening(s.sessionId); send({ type: 'open_session', sessionId: s.sessionId }); }} actions={actions} nested={under.get(s.sessionId)} onPin={(on) => setPin(s.sessionId, on)} />
   );
 
   // A hit in a sub-chat opens its chat (the latest session) with that sub-chat expanded at the hit.
@@ -204,6 +216,12 @@ export function OpenChats() {
           {pinnedRows.map((p) => (p.c ? row(p.c, p.repo) : savedRow(p.s!, p.repo)))}
         </div>
       )}
+      {sectionRows.map((g) => (
+        <div key={`section:${g.name}`} className="tree needs">
+          <div className="group">{g.name}<span className="count">{g.count}</span></div>
+          {g.rows.map((r) => (r.c ? row(r.c, r.repo) : savedRow(r.s, r.repo)))}
+        </div>
+      ))}
       <div className="tree">
         {groups.map((g) => (
           <div key={g.key}>

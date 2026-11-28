@@ -24,6 +24,7 @@ data class SavedSession(
     val startedAt: Long? = null,
     val spawnedBy: String? = null,
     val nestedIn: String? = null,
+    val section: String? = null,
     val subs: String? = null,
     val members: List<String>? = null,
     val buildMembers: List<String>? = null,
@@ -342,6 +343,34 @@ fun pinnedRows(live: List<LiveChat>, ws: Workspace, filter: String): List<ChatIt
         val repo = folderName(folderKey(cwd, ws.repos, ws.trees))
         if (words.isNotEmpty() && !chatMatches(words, title, saved[id], repo)) null else ChatItem(c, s, repo)
     }
+}
+
+// shared/sections.ts sectionName: a typed section name, trimmed and single-spaced.
+fun sectionName(name: String) = name.trim().replace(Regex("\\s+"), " ").take(60)
+
+// shared/sections.ts sectionList: the sections in use with their chat counts, by name.
+fun sectionList(chats: List<SavedSession>) = chats.mapNotNull { it.section }.groupingBy { it }.eachCount().toSortedMap().map { (name, n) -> name to n }
+
+// shared/sections.ts sectionChoices: the other sections, and a new name when the typed one is unused.
+fun sectionChoices(chats: List<SavedSession>, current: String?, typed: String): Pair<List<Pair<String, Int>>, String?> {
+    val all = sectionList(chats)
+    val name = sectionName(typed)
+    return all.filter { it.first != current } to name.takeIf { n -> n.isNotEmpty() && all.none { it.first.equals(n, ignoreCase = true) } }
+}
+
+// Move to section: the sectioned chats that match the filter, newest first, sections by name; pinned and nested chats stay out.
+fun sectionRows(live: List<LiveChat>, ws: Workspace, filter: String): List<Pair<String, List<ChatItem>>> {
+    val words = queryWords(filter)
+    val saved = rowsById(ws.saved)
+    val pins = rowPins(ws, saved).toSet()
+    val nested = nestedRows(ws.saved).values.flatten().map { it.sessionId }.toSet()
+    return ws.saved.filter { it.section != null && it.sessionId !in pins && it.sessionId !in nested }.sortedByDescending { it.lastModified }.groupBy { it.section!! }.toSortedMap().map { (name, chats) ->
+        name to chats.mapNotNull { s ->
+            val c = live.sortedWith(byUrgency).firstOrNull { saved.rowId(it.sessionId) == s.sessionId }
+            val repo = folderName(folderKey(s.cwd, ws.repos, ws.trees))
+            if (words.isNotEmpty() && !chatMatches(words, s.title, s, repo)) null else ChatItem(c, if (c == null) s else null, repo)
+        }
+    }.filter { it.second.isNotEmpty() }
 }
 
 // Chats waiting on the user that match the filter, most urgent first.

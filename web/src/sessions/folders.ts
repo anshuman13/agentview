@@ -213,8 +213,8 @@ export const archiveChat = (s: { sessionId: string; title: string }, onDone: () 
   run: removeRequest(s.sessionId, '&archive', onDone, onError),
 });
 
-export const chatMenuItems = ({ failed, stalled, canPin, beside, ownWindow = false, closable, unread = false, nested = false }: { failed: boolean; stalled: boolean; canPin: boolean; beside: boolean; ownWindow?: boolean; closable: boolean; unread?: boolean; nested?: boolean }) =>
-  [stalled && !failed && 'resume', failed && 'retry', canPin && 'pin', unread && 'unread', canPin && 'mute', canPin && 'link', 'rename', canPin && 'nest', nested && 'unnest', beside && 'beside', ownWindow && 'window', closable && 'close', 'separator', 'archive'].filter(Boolean) as ('resume' | 'retry' | 'pin' | 'unread' | 'mute' | 'link' | 'rename' | 'nest' | 'unnest' | 'beside' | 'window' | 'close' | 'separator' | 'archive')[];
+export const chatMenuItems = ({ failed, stalled, canPin, beside, ownWindow = false, closable, unread = false, nested = false, inSection = false }: { failed: boolean; stalled: boolean; canPin: boolean; beside: boolean; ownWindow?: boolean; closable: boolean; unread?: boolean; nested?: boolean; inSection?: boolean }) =>
+  [stalled && !failed && 'resume', failed && 'retry', canPin && 'pin', unread && 'unread', canPin && 'mute', canPin && 'link', 'rename', canPin && 'nest', nested && 'unnest', canPin && 'section', inSection && 'unsection', beside && 'beside', ownWindow && 'window', closable && 'close', 'separator', 'archive'].filter(Boolean) as ('resume' | 'retry' | 'pin' | 'unread' | 'mute' | 'link' | 'rename' | 'nest' | 'unnest' | 'section' | 'unsection' | 'beside' | 'window' | 'close' | 'separator' | 'archive')[];
 
 export const chatWindowUrl = (id: string) => `/?chat=${encodeURIComponent(id)}&alone=1`;
 export const openChatWindow = (id: string) => window.open(chatWindowUrl(id), `chat-${id}`, 'popup,width=760,height=900');
@@ -250,6 +250,14 @@ export async function nestChat(sessionId: string, parent: string) {
   const r = await fetch(apiUrl(`/api/sessions/nest?id=${encodeURIComponent(sessionId)}&parent=${encodeURIComponent(parent)}`), { method: 'POST' }).catch(() => null);
   if (!r?.ok) return void notice(parent ? 'Could not nest the chat.' : 'Could not un-nest the chat.');
   cached.chats = cached.chats.map((x) => (x.sessionId === sessionId ? { ...x, nestedIn: parent || undefined } : x));
+  listeners.forEach((on) => on('chats', cached.chats));
+}
+
+// Move to section: puts the chat in the named section, or takes it out when name is empty.
+export async function sectionChat(sessionId: string, name: string) {
+  const r = await fetch(apiUrl(`/api/sessions/section?id=${encodeURIComponent(sessionId)}&name=${encodeURIComponent(name)}`), { method: 'POST' }).catch(() => null);
+  if (!r?.ok) return void notice('Could not move the chat.');
+  cached.chats = cached.chats.map((x) => (x.sessionId === sessionId ? { ...x, section: name || undefined } : x));
   listeners.forEach((on) => on('chats', cached.chats));
 }
 

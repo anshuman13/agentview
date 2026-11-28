@@ -41,6 +41,7 @@
 }
 .sessions .group { height: var(--size-row); line-height: var(--size-row); padding: 0 var(--sp-6) 0 var(--sp-4); margin-top: var(--sp-2); }
 .sessions .row.group-row { margin-top: var(--sp-3); }
+.sessions .group .count { margin-left: auto; font-weight: 400; color: var(--fg-muted); }
 .sessions .row.group-row .count { margin-left: auto; padding-right: var(--sp-5); font-weight: 400; text-transform: none; }
 
 

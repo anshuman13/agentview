@@ -394,6 +394,12 @@ describe('chatMenuItems', () => {
     expect(items(false, false)[0]).toBe('pin');
   });
 
+  it('offers Move to section, and Remove from section for a chat in one', () => {
+    expect(items(false, false)).toContain('section');
+    expect(items(false, false)).not.toContain('unsection');
+    expect(chatMenuItems({ failed: false, stalled: false, canPin: true, beside: false, closable: false, inSection: true })).toContain('unsection');
+  });
+
   it('offers its own window after Open beside', () => {
     const keys = chatMenuItems({ failed: false, stalled: false, canPin: true, beside: true, ownWindow: true, closable: true });
     expect(keys.slice(keys.indexOf('beside'), keys.indexOf('beside') + 3)).toEqual(['beside', 'window', 'close']);

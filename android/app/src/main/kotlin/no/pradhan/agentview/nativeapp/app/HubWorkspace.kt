@@ -118,6 +118,11 @@ fun Hub.nest(sessionId: String, parent: String) = write(if (parent.isEmpty()) "C
     workspace.value = workspace.value.let { w -> w.copy(saved = w.saved.map { if (it.sessionId == sessionId) it.copy(nestedIn = parent.ifEmpty { null }) else it }) }
 }
 
+fun Hub.section(sessionId: String, name: String) = write("Could not move the chat.") {
+    api.section(sessionId, name)
+    workspace.value = workspace.value.let { w -> w.copy(saved = w.saved.map { if (it.sessionId == sessionId) it.copy(section = name.ifEmpty { null }) else it }) }
+}
+
 fun Hub.archive(sessionId: String) = write("Could not archive the chat. It is still in the list.") {
     val row = workspace.value.saved.firstOrNull { it.sessionId == sessionId }
     val pinned = sessionId in workspace.value.pins

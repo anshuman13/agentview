@@ -3,6 +3,7 @@ package no.pradhan.agentview.nativeapp.sessions
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import no.pradhan.agentview.nativeapp.app.nest
+import no.pradhan.agentview.nativeapp.app.section
 import no.pradhan.agentview.nativeapp.ui.SearchField
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.Column
@@ -111,10 +112,12 @@ class SessionDialogs {
     var archiving by mutableStateOf<Pair<String, String>?>(null)
     var closing by mutableStateOf<LiveChat?>(null)
     var nesting by mutableStateOf<String?>(null)
+    var sectioning by mutableStateOf<String?>(null)
 
     @Composable
     fun Show(hub: Hub) {
         nesting?.let { id -> NestSheet(hub, id) { nesting = null } }
+        sectioning?.let { id -> SectionSheet(hub, id) { sectioning = null } }
         renaming?.let { (id, title) -> RenameDialog(title, onSave = { hub.rename(id, it) }, onDismiss = { renaming = null }) }
         archiving?.let { (id, title) -> ConfirmDialog("Archive this chat?", "$title\n\nYou can restore it from the bin for 7 days.", "Archive", { hub.archive(id) }) { archiving = null } }
         closing?.let { c -> ConfirmDialog("Close this chat?", "${c.title}\n\nThe agent is still working on it and will stop. The transcript is kept.", "Close", { hub.closeChat(c.id) }) { closing = null } }
@@ -131,6 +134,21 @@ private fun NestSheet(hub: Hub, id: String, onDismiss: () -> Unit) {
         nestTargets(chats.saved, id, query).take(50).forEach { c ->
             ListRow(c.title.ifBlank { "Untitled" }, AnnotatedString(c.cwd.substringAfterLast('/')), lines = 1, metaLines = 1, onClick = { hub.nest(id, c.sessionId); onDismiss() })
         }
+    }
+}
+
+// Move to section: the other sections with counts, and New section from the typed name.
+@Composable
+private fun SectionSheet(hub: Hub, id: String, onDismiss: () -> Unit) {
+    var query by remember { mutableStateOf("") }
+    val chats by hub.workspace.collectAsState()
+    val (list, fresh) = sectionChoices(chats.saved, chats.saved.firstOrNull { it.sessionId == id }?.section, query)
+    Sheet(onDismiss, "Move to section") {
+        SearchField(query, { query = it }, "Section name")
+        list.filter { query.isBlank() || it.first.contains(query.trim(), ignoreCase = true) }.forEach { (name, n) ->
+            ListRow(name, AnnotatedString(n.toString()), lines = 1, metaLines = 1, onClick = { hub.section(id, name); onDismiss() })
+        }
+        fresh?.let { n -> ListRow("New section \"$n\"", leading = { AvIcon("add", tint = av.fgMuted) }, onClick = { hub.section(id, n); onDismiss() }) }
     }
 }
 
@@ -162,6 +180,8 @@ class ChatRows(
             onRename = { sessionId?.let { dialogs.renaming = it to title } },
             onNest = { sessionId?.let { dialogs.nesting = it } },
             onUnnest = sessionId?.takeIf { saved[it]?.nestedIn != null }?.let { id -> { hub.nest(id, "") } },
+            onSection = { sessionId?.let { dialogs.sectioning = it } },
+            onUnsection = sessionId?.takeIf { saved[it]?.section != null }?.let { id -> { hub.section(id, "") } },
             onClose = liveChat?.let { c -> { if (busy) dialogs.closing = c else hub.closeChat(c.id) } },
             onArchive = { sessionId?.let { dialogs.archiving = it to title } },
             canPin = sessionId != null,
@@ -278,7 +298,7 @@ private fun draftMeta(draft: String) = buildAnnotatedString {
     append(draft)
 }
 
-class RowActions(val pinned: Boolean, val canPin: Boolean, val onPin: () -> Unit, val onRename: () -> Unit, val onClose: (() -> Unit)?, val onArchive: () -> Unit, val onUnread: () -> Unit = {}, val muted: Boolean = false, val onMute: () -> Unit = {}, val onLink: () -> Unit = {}, val onRetry: (() -> Unit)? = null, val onSwipePin: (() -> Unit)? = null, val onSwipeArchive: (() -> Unit)? = null, val onNest: () -> Unit = {}, val onUnnest: (() -> Unit)? = null)
+class RowActions(val pinned: Boolean, val canPin: Boolean, val onPin: () -> Unit, val onRename: () -> Unit, val onClose: (() -> Unit)?, val onArchive: () -> Unit, val onUnread: () -> Unit = {}, val muted: Boolean = false, val onMute: () -> Unit = {}, val onLink: () -> Unit = {}, val onRetry: (() -> Unit)? = null, val onSwipePin: (() -> Unit)? = null, val onSwipeArchive: (() -> Unit)? = null, val onNest: () -> Unit = {}, val onUnnest: (() -> Unit)? = null, val onSection: () -> Unit = {}, val onUnsection: (() -> Unit)? = null)
 
 @Composable
 fun RepoRow(g: RepoGroup, seen: Map<String, Long>, live: List<LiveChat>, onClick: () -> Unit) {
@@ -372,8 +392,10 @@ internal fun ChatListRow(title: String, meta: AnnotatedString, shown: ChatState?
             if (actions.canPin) MenuItem(if (actions.muted) "Unmute" else "Mute", if (actions.muted) "bell" else "bell-slash", { close(); actions.onMute() })
             if (actions.canPin) MenuItem("Copy link", "link", { close(); actions.onLink() })
             if (actions.canPin) MenuItem("Rename", "edit", { close(); actions.onRename() })
-            if (actions.canPin && !false) MenuItem("Nest under…", "indent", { close(); actions.onNest() })
+            if (actions.canPin) MenuItem("Nest under…", "indent", { close(); actions.onNest() })
             actions.onUnnest?.let { u -> MenuItem("Un-nest", "debug-step-out", { close(); u() }) }
+            if (actions.canPin) MenuItem("Move to section…", "list-tree", { close(); actions.onSection() })
+            actions.onUnsection?.let { u -> MenuItem("Remove from section", "close", { close(); u() }) }
             actions.onClose?.let { c -> MenuItem("Close chat", "close", { close(); c() }) }
             if (actions.canPin) { MenuSeparator(); MenuItem("Archive", "archive", { close(); actions.onArchive() }, danger = true) }
         },

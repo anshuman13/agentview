@@ -33,6 +33,7 @@ const realSub = await import('../session/subChats.js');
 vi.mock('../session/subChats.js', () => ({ listLinks: mocks.listLinks, groupOf: mocks.groupOf, latestOf: async (id: string) => (await mocks.groupOf(id)).at(-1), roundOf: realSub.roundOf }));
 vi.mock('../session/spawned.js', () => ({ listSpawned: mocks.listSpawned, rowOf: (id: string) => mocks.groupOf(id) }));
 vi.mock('../session/nested.js', () => ({ listNests: async () => ({}), setNest: async () => true }));
+vi.mock('../session/sections.js', () => ({ listSections: async () => ({}), setSection: async () => ({}) }));
 vi.mock('../agent/claude/savedChat.js', () => ({ savedEvents: mocks.savedEvents, firstCommit: mocks.firstCommit }));
 vi.mock('../agent/claude/search.js', () => ({ searchMessages: mocks.searchMessages }));
 vi.mock('../workspace/terminal.js', () => ({ listTerminals: mocks.listTerminals, createTerminal: vi.fn(), closeTerminal: vi.fn() }));

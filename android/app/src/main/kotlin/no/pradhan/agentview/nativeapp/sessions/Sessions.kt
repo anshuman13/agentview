@@ -185,6 +185,7 @@ private fun AllSessions(rows: ChatRows, filters: SessionsFilters, hits: List<Mes
     val all = remember(live, ws, filter, held) { groupByRepo(live, ws, filter, held) }
     val groups = remember(all, segment) { all.filter { segmentOf(it.key) == segment } }
     val pinned = remember(live, ws, filter) { pinnedRows(live, ws, filter) }
+    val sections = remember(live, ws, filter) { sectionRows(live, ws, filter) }
     val waiting = remember(live, ws, filter) { waitingRows(live, ws, filter) }
     val waitingForServer = !connected && live.isEmpty() && ws.saved.isEmpty() && ws.repos.isEmpty()
     val done = remember(live, ws, segment) {
@@ -216,7 +217,7 @@ private fun AllSessions(rows: ChatRows, filters: SessionsFilters, hits: List<Mes
                         val empty = if (groups.isEmpty() && pinned.isEmpty() && waiting.isEmpty() && hits.isEmpty()) {
                             if (filter.isNotBlank()) "No repo or chat matches" else "No ${profileLabel(segment).lowercase()} chats yet"
                         } else null
-                        SessionsList(rows, filters, groups, pinned, waiting, hits, held, empty)
+                        SessionsList(rows, filters, groups, pinned, sections, waiting, hits, held, empty)
                     }
                 }
             }
@@ -239,11 +240,11 @@ private fun OfflineSessions(rows: ChatRows) {
 }
 
 @Composable
-private fun SessionsList(rows: ChatRows, filters: SessionsFilters, groups: List<RepoGroup>, pinned: List<ChatItem>, waiting: List<LiveChat>, hits: List<MessageHit>, held: HeldOrder, empty: String?) {
+private fun SessionsList(rows: ChatRows, filters: SessionsFilters, groups: List<RepoGroup>, pinned: List<ChatItem>, sections: List<Pair<String, List<ChatItem>>>, waiting: List<LiveChat>, hits: List<MessageHit>, held: HeldOrder, empty: String?) {
     val ws = rows.ws
     val filter = filters.filter
     val (busy, idle) = remember(groups) { groups.partition { it.open.isNotEmpty() || it.recent.isNotEmpty() } }
-    val recentRows = remember(groups, filter, ws.pins, held) { recentRows(groups, filter, rowPins(ws, rows.saved).toSet(), saved = rows.saved, held = held, live = rows.live) }
+    val recentRows = remember(groups, filter, ws.pins, ws.saved, held) { recentRows(groups, filter, rowPins(ws, rows.saved).toSet() + ws.saved.filter { it.section != null }.map { it.sessionId }, saved = rows.saved, held = held, live = rows.live) }
     val bin by rows.hub.bin.collectAsState()
     var binOpen by remember { mutableStateOf(false) }
     var emptying by remember { mutableStateOf(false) }
@@ -262,6 +263,10 @@ private fun SessionsList(rows: ChatRows, filters: SessionsFilters, groups: List<
         if (pinned.isNotEmpty()) {
             item(key = "pinned-head") { SectionHeader("Pinned", pinned.size.toString()) }
             lazyGroup(pinned, { "pin-${it.key}" }) { rows.Row(it) }
+        }
+        for ((name, items) in sections) {
+            item(key = "sec-head-$name") { SectionHeader(name, items.size.toString()) }
+            lazyGroup(items, { "sec-$name-${it.key}" }) { rows.Row(it) }
         }
         if (recentRows.isNotEmpty()) {
             item(key = "recent-head") { SectionHeader(if (filter.isBlank()) "Recent" else "Chats") }

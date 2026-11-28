@@ -86,6 +86,7 @@ class Api(private val origin: () -> String, private val http: OkHttpClient = sha
         call(url("/api/sessions/rename?id=${enc(sessionId)}").post(body))
     }
 
+    suspend fun section(sessionId: String, name: String) { call(url("/api/sessions/section?id=${enc(sessionId)}&name=${enc(name)}").post("".toRequestBody(json))) }
     suspend fun nest(sessionId: String, parent: String) { call(url("/api/sessions/nest?id=${enc(sessionId)}&parent=${enc(parent)}").post("".toRequestBody(json))) }
 
     suspend fun archive(sessionId: String) { call(url("/api/sessions?id=${enc(sessionId)}&archive").delete()) }
