@@ -1,6 +1,6 @@
 import type { McpServerDef } from '../integrations/mcpClient.js';
 import type { MemoryFile } from './memory.js';
-import type { Account, AgentEvent, CacheInfo, Capabilities, ChatEvent, Effort, McpServer, Provider, ServerMessage, ServerState, SessionInfo } from '../../../shared/protocol.js';
+import type { Account, AgentEvent, SavedSession, CacheInfo, Capabilities, ChatEvent, Effort, McpServer, Provider, ServerMessage, ServerState, SessionInfo } from '../../../shared/protocol.js';
 
 export type Decision = { behavior: 'allow'; updatedInput: Record<string, unknown>; updatedPermissions?: unknown[] } | { behavior: 'deny'; message: string };
 
@@ -127,16 +127,28 @@ export interface AgentHost {
 export type DriverFactory = (host: AgentHost) => AgentDriver;
 
 // What a chat feature asks a provider for; registry.ts holds one per provider.
+export type MessageHit = { sessionId: string; role: 'user' | 'assistant'; text: string; at: string };
+
+// The chats a provider has saved, read without starting the agent.
+export type Transcripts = {
+  // The file that holds a chat's transcript, or null when this provider has no such chat.
+  path(id: string): string | null;
+  list(): Promise<SavedSession[]>;
+  // A saved chat's events; null when the provider cannot read it.
+  read(id: string): Promise<ChatEvent[] | null>;
+  // The end of a chat's transcript as raw text, empty when there is none.
+  tail(id: string): Promise<string>;
+  // Prompts and replies that hold every word, newest first.
+  search(words: string[], max: number): Promise<MessageHit[]>;
+  firstCommit(id: string): Promise<{ hash: string; subject: string } | null>;
+};
+
 export type ProviderStrategy = {
   // A picked account is pinned: the chat stays on it at its usage limit.
   driver(cwd: string, resume?: string, fork?: boolean, unattended?: boolean, account?: Account): DriverFactory;
   // Clears a limit mark the provider no longer deserves, so a chat does not start on a wrong one.
   verifyLimits(): Promise<unknown>;
-  // The file that holds a chat's transcript, or null when this provider has no such chat.
-  transcriptPath(id: string): string | null;
-  // A saved chat's events and the first commit it made, read without starting the agent; null when the provider cannot.
-  savedEvents(id: string): Promise<ChatEvent[] | null>;
-  firstCommit(id: string): Promise<{ hash: string; subject: string } | null>;
+  transcripts: Transcripts;
   // The instruction files the Memory list shows for a folder.
   memory(cwd: string): Promise<MemoryFile[]>;
   // The folders the provider writes memory files in for a folder, where a removed one may be restored.

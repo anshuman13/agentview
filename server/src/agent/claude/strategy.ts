@@ -5,6 +5,8 @@ import { claudeDriver } from './driver.js';
 import { allowedServers, mcpProbe } from './mcp.js';
 import { chatMemory, memoryDirs } from './memory.js';
 import { firstCommit, savedEvents } from './savedChat.js';
+import { searchMessages } from './search.js';
+import { fileTail, listSessions, savedSession } from './sessions.js';
 import { claudeResume } from '../resume.js';
 
 // Claude, or OpenRouter through the same Claude Code driver and transcript store.
@@ -14,9 +16,14 @@ export function claudeStrategy({ openrouter = false } = {}): ProviderStrategy {
       ? (cwd, resume, fork, unattended) => claudeDriver(cwd, { resume, fork, openrouter: true, unattended })
       : (cwd, resume, fork, unattended, account) => claudeDriver(cwd, { resume, fork, unattended, account, pinned: account != null }),
     verifyLimits: openrouter ? () => Promise.resolve() : () => Promise.all(loggedInAccounts().map((a) => verifyLimit(a))),
-    transcriptPath: claudeTranscript,
-    savedEvents,
-    firstCommit,
+    transcripts: {
+      path: claudeTranscript,
+      list: async () => (await listSessions({ limit: 1000 })).map((x) => savedSession(x)),
+      read: savedEvents,
+      tail: (id) => fileTail(claudeTranscript(id)),
+      search: (words, max) => searchMessages(words.join(' '), undefined, max),
+      firstCommit,
+    },
     memory: (cwd) => chatMemory(cwd),
     memoryDirs: (cwd) => memoryDirs(cwd),
     resume: openrouter ? () => null : claudeResume,

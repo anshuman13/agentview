@@ -46,4 +46,4 @@ export function providerOf(sessionId: string | undefined): Provider {
   return p && p in PROVIDERS ? p : 'claude';
 }
 
-export const transcriptPath = (id: string) => provider(providerOf(id)).transcriptPath(id);
+export const transcriptPath = (id: string) => provider(providerOf(id)).transcripts.path(id);

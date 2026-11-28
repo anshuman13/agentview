@@ -4,14 +4,19 @@ import { codexResume } from '../resume.js';
 import { codexDriver } from './driver.js';
 import { codexInstructionFiles } from './instructions.js';
 import { codexMcpProbe, readCodexServers } from './mcp.js';
-import { codexTranscript } from './threads.js';
+import { codexSessions, codexTranscript } from './threads.js';
 
 export const codexStrategy: ProviderStrategy = {
   driver: (_cwd, resume, fork) => codexDriver(resume, fork),
   verifyLimits: () => Promise.resolve(),
-  transcriptPath: codexTranscript,
-  savedEvents: async () => null,
-  firstCommit: async () => null,
+  transcripts: {
+    path: codexTranscript,
+    list: codexSessions,
+    read: async () => null,
+    tail: async () => '',
+    search: async () => [],
+    firstCommit: async () => null,
+  },
   memory: (cwd) => readMemory(codexInstructionFiles(cwd)),
   memoryDirs: () => [],
   resume: (cwd, sessionId) => codexResume(cwd, sessionId),

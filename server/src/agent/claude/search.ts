@@ -7,8 +7,9 @@ import { CLAUDE_DIR } from './history.js';
 import { listSessions } from './sessions.js';
 import { readSummaries, type Summaries } from './summaryStore.js';
 import { homeRelative } from '../../settings.js';
+import type { MessageHit } from '../types.js';
 
-export type MessageHit = { sessionId: string; role: 'user' | 'assistant'; text: string; at: string };
+export type { MessageHit } from '../types.js';
 
 function messageText(o: { type?: string; isMeta?: boolean; isCompactSummary?: boolean; message?: { content?: unknown } }) {
   if ((o.type !== 'user' && o.type !== 'assistant') || o.isMeta || o.isCompactSummary) return '';

@@ -56,9 +56,10 @@ export function lastMessageTime(tail: string) {
 
 const TAIL = 256 * 1024;
 
-export async function readTail(x: SDKSessionInfo) {
-  if (!x.cwd) return '';
-  const file = await open(path.join(projectDir(x.cwd), `${x.sessionId}.jsonl`)).catch(() => null);
+export const readTail = (x: SDKSessionInfo) => (x.cwd ? fileTail(path.join(projectDir(x.cwd), `${x.sessionId}.jsonl`)) : Promise.resolve(''));
+
+export async function fileTail(name: string | null) {
+  const file = name && (await open(name).catch(() => null));
   if (!file) return '';
   try {
     const { size } = await file.stat();

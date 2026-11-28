@@ -102,7 +102,7 @@ export function sessionRoutes(d: RouteDeps): Record<string, Entry<Ctx>> {
         const s = byId.get(sessionId);
         const saved = s && savedSession(s);
         const round = roundOf(sessionId, members, rounds);
-        const commit = await provider(providerOf(sessionId)).firstCommit(sessionId);
+        const commit = await provider(providerOf(sessionId)).transcripts.firstCommit(sessionId);
         return { sessionId, title: saved?.firstPrompt ?? saved?.title ?? '', startedAt, ...(round && { round }), ...(commit && { commit }) };
       }));
     }),
@@ -125,7 +125,7 @@ export function sessionRoutes(d: RouteDeps): Record<string, Entry<Ctx>> {
     // A saved sub-chat's events, read-only and paged like /api/chat/events, without starting the agent.
     'ANY /api/chat/subchat-events': entry(async ({ url }) => {
       const id = url.searchParams.get('session') ?? '';
-      const events = id ? await provider(providerOf(id)).savedEvents(id) : null;
+      const events = id ? await provider(providerOf(id)).transcripts.read(id) : null;
       if (!events) return failed(404, 'That chat has no saved transcript');
       const limit = parseInt(url.searchParams.get('limit') ?? '', 10);
       try {
