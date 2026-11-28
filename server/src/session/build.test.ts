@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, test, vi } from 'bun:test';
+import { buildHelpers, taskBrief, type BuildUsage } from '../../../shared/build.js';
 import type { ChatRun } from '../../../shared/protocol.js';
 import { BuildLoop } from './build.js';
 import type { AgentSession } from './session.js';
@@ -58,5 +59,17 @@ describe('build at the 5-hour limit', () => {
     const { loop, run } = fake(null);
     await loop.record('done', false);
     expect(run.state).toBe('running');
+  });
+});
+
+describe('build round usage', () => {
+  test('a driver without subagents works alone and ignores the burn samples', () => {
+    vi.useFakeTimers({ now: T0 });
+    const { loop, run, s } = fake(null);
+    Object.assign(s.state.session, { capabilities: { subagents: false }, usage: { fiveHour: { pct: 10, resetsAt: RESET } } });
+    const usage = (loop as unknown as { usage(r: ChatRun): BuildUsage }).usage(run);
+    expect(usage).toMatchObject({ pct: 10, perAgent: null, solo: true });
+    expect(buildHelpers(usage, T0)).toBe(0);
+    expect(taskBrief('.claude/specs/x.md', 1, 2, true, usage, T0)).toContain('work alone, without helper agents.');
   });
 });

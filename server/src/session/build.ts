@@ -164,8 +164,9 @@ export class BuildLoop {
 
   // The plan's 5-hour numbers, with the burn of the last 15 minutes split over the build chat and the helpers it allowed.
   private usage(run: ChatRun): BuildUsage | null {
-    const { usage, account } = this.s.state.session;
+    const { usage, account, capabilities } = this.s.state.session;
     if (!usage?.fiveHour) return null;
+    if (!capabilities?.subagents) return { pct: usage.fiveHour.pct, resetsAt: usage.fiveHour.resetsAt, perAgent: null, weekPct: usage.week?.pct ?? null, solo: true };
     const now = Date.now();
     const rate = burnRate(samplesSince(account, now - 15 * 60_000));
     const perAgent = rate === null ? null : rate / (1 + (run.helpers ?? 0));

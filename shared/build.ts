@@ -60,7 +60,8 @@ export function burnRate(samples: { at: number; fiveHour?: number }[]) {
 }
 
 // The 5-hour pct and reset, the measured points per minute per running agent (null without samples) and the weekly pct.
-export type BuildUsage = { pct: number; resetsAt: number | null; perAgent: number | null; weekPct: number | null };
+// solo: the driver has no subagents, so the round works alone.
+export type BuildUsage = { pct: number; resetsAt: number | null; perAgent: number | null; weekPct: number | null; solo?: boolean };
 
 // How many helper agents a build round may start (0 to 3): the most for which the 5-hour pct projected to the reset,
 // with the build chat as one agent, stays at or under HELPER_TARGET_PCT. Without a measured rate it tries 1 at the default.
@@ -86,12 +87,12 @@ export function helperAdvice(o: { pct: number; resetsAt: number | null; rate: nu
 
 const minsTo = (u: BuildUsage, now: number) => (u.resetsAt === null ? null : Math.max(0, (u.resetsAt - now) / 60_000));
 
-export const buildHelpers = (u: BuildUsage | null | undefined, now = Date.now()) => (u ? helperCount({ ...u, mins: minsTo(u, now) }) : 0);
+export const buildHelpers = (u: BuildUsage | null | undefined, now = Date.now()) => (u && !u.solo ? helperCount({ ...u, mins: minsTo(u, now) }) : 0);
 
 function usageBrief(u: BuildUsage, now: number) {
   const mins = minsTo(u, now);
   const reset = u.resetsAt === null || mins === null ? '' : `, resets ${hhmm(u.resetsAt)} (${Math.round(mins)} min)`;
-  const rate = u.perAgent === null ? `no measured rate yet, assuming ${DEFAULT_AGENT_RATE} pts/min per agent` : `about ${u.perAgent.toFixed(1)} pts/min per agent`;
+  const rate = u.solo ? 'no helper agents on this provider' : u.perAgent === null ? `no measured rate yet, assuming ${DEFAULT_AGENT_RATE} pts/min per agent` : `about ${u.perAgent.toFixed(1)} pts/min per agent`;
   const week = u.weekPct === null ? '' : `, weekly ${u.weekPct}%`;
   const head = ` 5-hour usage ${u.pct}%${reset}, ${rate}${week}:`;
   const n = buildHelpers(u, now);
