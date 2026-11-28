@@ -13,6 +13,7 @@ export const threadParams = (chatId: string, cwd: string) => ({
   developerInstructions: [TOOL_INSTRUCTIONS, preferencesText(cwd)].filter(Boolean).join(' '),
   config: {
     project_doc_fallback_filenames: ['CLAUDE.md'],
+    'tools.update_plan': { enabled: true },
     'mcp_servers.agentview': { ...agentviewServer(chatId), default_tools_approval_mode: 'approve' },
   },
 });
