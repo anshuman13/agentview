@@ -38,7 +38,7 @@ export class CodexDriver implements AgentDriver {
   readonly provider: Provider = 'codex';
   readonly compactEndsTurn = true;
   readonly joinsTurn = true;
-  readonly capabilities: Capabilities = { rewind: true, mcp: true, mcpEdit: false, connectors: false, effort: true, stopTask: false, subagents: false, forkAt: true, contextUsage: false, addDir: true };
+  readonly capabilities: Capabilities = { rewind: true, mcp: true, mcpEdit: false, connectors: true, effort: true, stopTask: false, subagents: false, forkAt: true, contextUsage: false, addDir: true };
   readonly account: Account = 'main';
   readonly instructionFiles: string[];
 

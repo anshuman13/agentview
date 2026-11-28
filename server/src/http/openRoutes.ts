@@ -211,11 +211,31 @@ export function workspaceRoutes(d: RouteDeps): Record<string, Entry<Ctx>> {
 }
 
 
+const connectorProvider = (url: URL) => {
+  const chat = url.searchParams.get('chat');
+  return chat ? providerOf(chat) : url.searchParams.get('provider');
+};
+
 export function systemRoutes(d: RouteDeps): Record<string, Entry<Ctx>> {
   return {
     'ANY /api/link-title': entry(({ url }) => linkTitleRoute(url)),
     'ANY /api/mcp/icon': entry(({ url }) => mcpIconRoute(url)),
-    'ANY /api/mcp/connectors': entry(({ url }) => connectorStatus(url.searchParams.has('refresh'))),
+    // With chat or provider: the provider's ConnectorGroup[]. Without: the Claude map the panels read until they switch.
+    'GET /api/mcp/connectors': entry(async ({ url }) => {
+      const refresh = url.searchParams.has('refresh');
+      const p = connectorProvider(url);
+      if (p === null) return connectorStatus(refresh);
+      if (!isProvider(p)) return failed(400, 'provider must be claude, openrouter or codex');
+      return (await provider(p).connectors?.list(refresh)) ?? [];
+    }),
+    'POST /api/mcp/connectors': entry(async ({ url, body }) => {
+      const p = connectorProvider(url) ?? 'claude';
+      if (!isProvider(p)) return failed(400, 'provider must be claude, openrouter or codex');
+      const id = String(body.id ?? '');
+      if (!id || typeof body.enabled !== 'boolean') return failed(400, 'id and enabled are required');
+      const c = provider(p).connectors;
+      return { ok: c ? await c.toggle(id, body.enabled) : false };
+    }, true),
     'POST /api/mcp/groups': entry(async ({ body }) => {
       const service = String(body.service ?? '').trim();
       if (!service) return failed(400, 'service is required');

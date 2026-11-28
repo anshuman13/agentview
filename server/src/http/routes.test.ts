@@ -278,6 +278,35 @@ describe('routes', () => {
     expect(r.openrouter.json).toEqual({ helpers: 0, why: 'no helper agents on this provider' });
   });
 
+  it('serves and toggles connectors through the chat provider strategy', async () => {
+    const chats: Record<string, 'claude' | 'codex' | 'openrouter'> = { cx: 'codex', or: 'openrouter' };
+    const of = vi.spyOn(registry, 'providerOf').mockImplementation((id) => chats[id!] ?? 'claude');
+    const groups = [{ label: 'ChatGPT apps', connectors: [{ id: 'gh', name: 'GitHub', status: 'connected', enabled: true }] }];
+    const codex = registry.provider('codex').connectors!;
+    const list = vi.spyOn(codex, 'list').mockResolvedValue(groups as never);
+    const toggle = vi.spyOn(codex, 'toggle').mockResolvedValue(true);
+    const r = {
+      codex: await call('GET', '/api/mcp/connectors?chat=cx&refresh=1'),
+      openrouter: await call('GET', '/api/mcp/connectors?chat=or'),
+      bad: await call('GET', '/api/mcp/connectors?provider=gpt'),
+      toggled: await call('POST', '/api/mcp/connectors?chat=cx', JSON.stringify({ id: 'gh', enabled: false })),
+      noId: await call('POST', '/api/mcp/connectors?chat=cx', JSON.stringify({ enabled: false })),
+      orToggle: await call('POST', '/api/mcp/connectors?chat=or', JSON.stringify({ id: 'x', enabled: true })),
+    };
+    const calls = { list: list.mock.calls, toggle: toggle.mock.calls };
+    of.mockRestore();
+    list.mockRestore();
+    toggle.mockRestore();
+    expect(r.codex.json).toEqual(groups);
+    expect(calls.list).toEqual([[true]]);
+    expect(r.openrouter.json).toEqual([]);
+    expect(r.bad.code).toBe(400);
+    expect(r.toggled.json).toEqual({ ok: true });
+    expect(calls.toggle).toEqual([['gh', false]]);
+    expect(r.noId.code).toBe(400);
+    expect(r.orToggle.json).toEqual({ ok: false });
+  });
+
   it('serves the usage report for logged-in accounts', async () => {
     const logged = vi.spyOn(accounts, 'loggedInAccounts').mockReturnValue(['main']);
     const codex = vi.spyOn(codexBinary, 'codexSignedIn').mockResolvedValue(false);
