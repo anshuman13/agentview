@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
@@ -40,10 +41,13 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -316,6 +320,11 @@ fun App(hub: Hub) {
     val rail = width >= RAIL_MIN_DP
     val navHidden by hub.shell.navHidden.collectAsState()
     val composing by hub.shell.composing.collectAsState()
+    val ime = WindowInsets.ime.getBottom(LocalDensity.current)
+    var barHeight by remember { mutableIntStateOf(0) }
+    var barUnderKeyboard by remember { mutableStateOf(false) }
+    val writing = composing && route == Tab.Chat.route
+    LaunchedEffect(writing, ime >= barHeight) { barUnderKeyboard = writing && (barUnderKeyboard || ime >= barHeight) }
     val shownId by hub.store.state.select { it.shownId }
     LaunchedEffect(route, shownId) { hub.shell.navHidden.value = false }
     val dests = rememberDests(hub, nav, route, more) { more = it }
@@ -326,8 +335,11 @@ fun App(hub: Hub) {
             contentColor = av.fg,
             snackbarHost = { SnackHost(snack) },
             bottomBar = {
-                if (!rail) AnimatedVisibility(
-                    visible = !navHidden && !(composing && route == Tab.Chat.route) && !isAgent(route),
+                // While writing in a chat the bar goes without animating once the keyboard covers it, and comes back the same way,
+                // so the chat's bottom edge follows the keyboard alone instead of the bar and the keyboard moving it in turn.
+                if (!rail && !barUnderKeyboard) AnimatedVisibility(
+                    visible = !navHidden && !isAgent(route),
+                    modifier = Modifier.onSizeChanged { barHeight = it.height },
                     enter = slideInVertically(tween(Tokens.dur * 2)) { it } + expandVertically(tween(Tokens.dur * 2)),
                     exit = slideOutVertically(tween(Tokens.dur * 2)) { it } + shrinkVertically(tween(Tokens.dur * 2)),
                 ) { PillTabBar(dests) }
