@@ -97,6 +97,19 @@ describe('deliver', () => {
   });
 });
 
+describe('setDirs', () => {
+  it('gives the next turn the added folders as writable roots', async () => {
+    const { d, calls } = setup(false, () => Promise.resolve());
+    d.git = ['/r/.git'];
+    d.threadId = undefined;
+    d.setDirs(['/other']);
+    d.threadId = 't1';
+    await d.deliver('hi', false);
+    expect(calls[0].params.sandboxPolicy.writableRoots).toEqual(['/r/.git', '/other']);
+    expect(d.capabilities.addDir).toBe(true);
+  });
+});
+
 describe('userInput', () => {
   it('sends image markers as local images in order', () => {
     expect(userInput('look [Image: /tmp/a.png]\n[Image: /tmp/b.png] and this')).toEqual([

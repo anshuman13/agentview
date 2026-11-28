@@ -7,6 +7,7 @@ import type { AgentDriver, AgentHost, Decision, DriverFactory, History } from '.
 import { answersFor, askFor, decisionFor, elicitationAsk, elicitationFor, hasFields, permissionsAsk, permissionsFor, policyFor, questionsAsk, readOnlyCommand, type Ask } from './approvals.js';
 import { NOT_SIGNED_IN } from './binary.js';
 import { historyEvents, rolloutPlan } from './events.js';
+import { addedDirs, saveAddedDirs } from '../claude/addedDirs.js';
 import { codexInstructionFiles } from './instructions.js';
 import { threadParams } from './options.js';
 import type { ApprovalMethod, CodexModel, ElicitationParams, McpServerStatus, PermissionProfile, RateLimits, Thread, UserInput, UserInputQuestion } from './protocol.js';
@@ -37,7 +38,7 @@ export class CodexDriver implements AgentDriver {
   readonly provider: Provider = 'codex';
   readonly compactEndsTurn = true;
   readonly joinsTurn = true;
-  readonly capabilities: Capabilities = { rewind: false, mcp: true, mcpEdit: false, connectors: false, effort: true, stopTask: false, subagents: false, forkAt: true, contextUsage: false, addDir: false };
+  readonly capabilities: Capabilities = { rewind: false, mcp: true, mcpEdit: false, connectors: false, effort: true, stopTask: false, subagents: false, forkAt: true, contextUsage: false, addDir: true };
   readonly account: Account = 'main';
   readonly instructionFiles: string[];
 
@@ -53,6 +54,7 @@ export class CodexDriver implements AgentDriver {
   // Bumped by Stop, so a prompt still waiting for the process is dropped.
   private stops = 0;
   private git: string[] | null = null;
+  dirs: string[];
   private steered = new Set<string>();
   private models: CodexModel[] = [];
   private asks = new Set<AbortController>();
@@ -60,6 +62,7 @@ export class CodexDriver implements AgentDriver {
 
   constructor(private host: AgentHost, resume?: string, private fork = false) {
     this.threadId = resume;
+    this.dirs = addedDirs(resume);
     this.instructionFiles = codexInstructionFiles(host.cwd);
     this.titled = Boolean(resume) && !fork;
     this.stream = new CodexStream(host);
@@ -108,6 +111,7 @@ export class CodexDriver implements AgentDriver {
     const res = await rpc.request<{ thread: Thread; model: string }>(method, this.threadId ? { threadId: this.threadId, ...params, ...(!this.fork && { excludeTurns: true }) } : params);
     if (this.fork) this.host.system('Forked into a new chat');
     this.fork = false;
+    if (this.dirs.length && res.thread.id !== this.threadId) void saveAddedDirs(res.thread.id, this.dirs);
     this.threadId = res.thread.id;
     this.host.setSession({ sessionId: res.thread.id, model: res.model, permissionMode: this.mode, commands: CODEX_COMMANDS });
     void noteThread(res.thread.id, { cwd: this.host.cwd, ...(res.thread.path && { path: res.thread.path }) });
@@ -267,7 +271,7 @@ export class CodexDriver implements AgentDriver {
         if (id) this.steered.add(id);
         return void (id && this.host.taken(id));
       }
-      const { approvalPolicy, sandboxPolicy } = policyFor(this.mode, this.gitDirs());
+      const { approvalPolicy, sandboxPolicy } = policyFor(this.mode, [...this.gitDirs(), ...this.dirs]);
       const { turn } = await rpc.request<{ turn: { id: string } }>('turn/start', { threadId: this.threadId, input, approvalPolicy, sandboxPolicy, ...this.modelParams() });
       this.turnId = turn.id;
       // Stop came while the turn was starting.
@@ -324,6 +328,7 @@ export class CodexDriver implements AgentDriver {
         await this.ready;
         const res = await this.rpc!.request<{ thread: Thread; model: string }>('thread/start', this.threadStart());
         this.threadId = res.thread.id;
+        if (this.dirs.length) void saveAddedDirs(res.thread.id, this.dirs);
         this.turnId = null;
         this.titled = false;
         this.host.setSession({ sessionId: res.thread.id });
@@ -333,6 +338,12 @@ export class CodexDriver implements AgentDriver {
         this.host.turnResult({ id: randomUUID(), ok: false, text: errText(err), costUsd: 0, isError: true });
       }
     });
+  }
+
+  // Each turn carries its sandbox, so the next turn can write to the new folders.
+  setDirs(dirs: string[]) {
+    this.dirs = dirs;
+    if (this.threadId) void saveAddedDirs(this.threadId, dirs);
   }
 
   command(name: string) {
