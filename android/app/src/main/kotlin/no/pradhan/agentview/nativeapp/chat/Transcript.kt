@@ -9,6 +9,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -91,6 +92,8 @@ import no.pradhan.agentview.nativeapp.ui.plural
 
 internal fun Modifier.gap(d: Dp?) = if (d == null) this else padding(top = d)
 
+private val WIDE_MAX = 1200.dp
+
 @Composable
 fun Transcript(hub: Hub, view: ChatView, earlier: Int, settled: Boolean, chatId: String, cwd: String, running: Boolean, finding: Boolean, onOpenAgent: (String) -> Unit, onOpenWork: (String) -> Unit, modifier: Modifier = Modifier, queued: List<Queued> = emptyList(), failed: String? = null, sessionId: String? = null, subFind: FindRequest? = null) {
     val subChats = rememberSubChats(hub, sessionId, chatId)
@@ -142,12 +145,14 @@ fun Transcript(hub: Hub, view: ChatView, earlier: Int, settled: Boolean, chatId:
         listState.scrollToItem(index, size - (y?.toInt() ?: 0) - (info.viewportSize.height - info.beforeContentPadding - info.afterContentPadding) + margin)
     }
 
-    Box(modifier) {
+    val width by hub.transcriptWidth.collectAsState()
+    BoxWithConstraints(modifier) {
+        val side = maxOf(Tokens.listPad, (maxWidth - if (width == "wide") WIDE_MAX else Tokens.pageMax) / 2)
         LazyColumn(
             Modifier.fillMaxSize(),
             state = listState,
             reverseLayout = true,
-            contentPadding = PaddingValues(horizontal = Tokens.listPad, vertical = Tokens.sp8),
+            contentPadding = PaddingValues(horizontal = side, vertical = Tokens.sp8),
         ) {
             lazyItems(queued.asReversed(), key = { "out-${it.id}" }) { q ->
                 Box(Modifier.padding(bottom = Tokens.sp4)) { QueuedRow(hub, q) }

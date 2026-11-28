@@ -33,6 +33,7 @@ import { UnsentRows, UserRow } from './UserRow';
 import { Tasks } from './TaskLines';
 import { AgentRow, Explored, FileCard, Step } from './StepRows';
 import { freshReplies, knownIds } from './streamFade';
+import './transcriptWidth';
 
 export const Transcript = memo(function Transcript() {
   const events = useStore((s) => s.events);

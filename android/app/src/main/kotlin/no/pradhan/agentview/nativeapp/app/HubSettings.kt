@@ -92,6 +92,11 @@ fun Hub.setTranscriptView(value: String) {
     prefs.edit().putString("transcriptView", value).apply()
 }
 
+fun Hub.setTranscriptWidth(value: String) {
+    transcriptWidth.value = value
+    prefs.edit().putString("transcriptWidth", value).apply()
+}
+
 fun Hub.setTheme(value: String) {
     theme.value = value
     prefs.edit().putString("theme", value).apply()

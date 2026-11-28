@@ -16,6 +16,7 @@ import { ModelsSettings } from './ModelsSettings';
 import { VIEWS } from './ActivityBar';
 import { TRANSCRIPT_VIEWS } from '../../chat/transcript/steps';
 import { setTranscriptView, transcriptView } from '../../chat/transcript/transcriptView';
+import { setTranscriptWidth, TRANSCRIPT_WIDTHS, transcriptWidth } from '../../chat/transcript/transcriptWidth';
 import { canHideView, hiddenViews, toggleHiddenView } from './hiddenViews';
 
 const webSha = typeof __APP_SHA__ === 'string' ? __APP_SHA__ : '';
@@ -88,6 +89,15 @@ function TranscriptViewSwitch() {
   );
 }
 
+function TranscriptWidthSwitch() {
+  const width = transcriptWidth.use();
+  return (
+    <div className="view-seg" role="radiogroup" aria-label="Transcript width">
+      {TRANSCRIPT_WIDTHS.map((w) => <button key={w} role="radio" aria-checked={width === w} className={width === w ? 'on' : ''} onClick={() => setTranscriptWidth(w)}>{w === 'wide' ? 'Wide' : 'Narrow'}</button>)}
+    </div>
+  );
+}
+
 export function SettingsView({ showDesign, phoneVersion }: { showDesign?: boolean; phoneVersion?: string }) {
   const [theme, toggleTheme] = useTheme();
   return (
@@ -101,6 +111,7 @@ export function SettingsView({ showDesign, phoneVersion }: { showDesign?: boolea
       <div className="ui-group">
         <Row title="Theme" meta={THEME_NAMES[theme]} onClick={toggleTheme} />
         <Row plain title="Transcript view" trailing={<TranscriptViewSwitch />} />
+        <Row plain title="Transcript width" trailing={<TranscriptWidthSwitch />} />
       </div>
       <ActivityBarSettings />
       <ModelsSettings />

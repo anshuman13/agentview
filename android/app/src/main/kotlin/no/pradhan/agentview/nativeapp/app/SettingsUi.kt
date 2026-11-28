@@ -46,6 +46,7 @@ private val VIEW_META = mapOf("normal" to "Thinking and tool steps start shut", 
 fun SettingsScreen(hub: Hub, onBack: () -> Unit, onOrigin: () -> Unit) {
     val theme by hub.theme.collectAsState()
     val transcriptView by hub.transcriptView.collectAsState()
+    val transcriptWidth by hub.transcriptWidth.collectAsState()
     val origin by hub.origin.collectAsState()
     val notify by hub.notifyOn.collectAsState()
     val quiet = hub.quietHours.collectAsState().value.takeIf { it in QUIET_HOURS } ?: ""
@@ -82,6 +83,12 @@ fun SettingsScreen(hub: Hub, onBack: () -> Unit, onOrigin: () -> Unit) {
                         if (i > 0) Hairline()
                         ChoiceRow(label, VIEW_META[v], checked = transcriptView == v, onClick = { hub.setTranscriptView(v) })
                     }
+                }
+                SectionHeader("Transcript width", color = av.fg)
+                Group {
+                    ChoiceRow("Narrow", "Messages keep a reading width on tablets", checked = transcriptWidth != "wide", onClick = { hub.setTranscriptWidth("narrow") })
+                    Hairline()
+                    ChoiceRow("Wide", "Messages fill more of a tablet or landscape screen", checked = transcriptWidth == "wide", onClick = { hub.setTranscriptWidth("wide") })
                 }
                 if (providers.size > 1) {
                     SectionHeader("Providers", color = av.fg)

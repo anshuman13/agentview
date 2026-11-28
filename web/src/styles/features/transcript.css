@@ -38,7 +38,7 @@
 @keyframes md-new { from { opacity: 0; } }
 .tr-assistant .tr-acts { display: flex; gap: var(--sp-1); margin-top: var(--sp-2); margin-left: calc(-1 * var(--sp-3)); color: var(--fg-muted); }
 .tr-rows > .tr-acts { display: flex; margin-top: var(--sp-2); padding-left: var(--sp-5); font-size: var(--fs-xs); }
-@media (min-width: 901px) { .tr-rows { max-width: 90ch; margin-inline: auto; } }
+@media (min-width: 901px) { .tr-rows { max-width: var(--tr-width, 90ch); margin-inline: auto; } }
 .tr-assistant .md { color: var(--fg); font-family: var(--font); font-size: var(--type-reading-size); font-weight: var(--type-reading-weight); line-height: var(--type-reading-line); }
 .tr-assistant .md :is(h1, h2, h3, h4) { font-size: 1em; font-weight: 700; }
 .tr-assistant .md h1 { font-size: 1.25em; }
