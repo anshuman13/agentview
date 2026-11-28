@@ -3,8 +3,7 @@ import type { ChatEvent } from '../../../../shared/protocol.js';
 import { claudeTranscript } from './chatMentions.js';
 import { sessionMessages, subagentMessages, workflowAgents } from './history.js';
 import { historyFrom, toolResultText } from './transcript.js';
-
-const COMMIT = /^\[[^\]\s]+(?: \([^)]*\))? ([0-9a-f]{7,40})\] (.+)$/m;
+import { commitOf, type Commit } from '../transcriptText.js';
 
 async function entries(id: string) {
   const file = claudeTranscript(id);
@@ -29,7 +28,6 @@ export async function savedEvents(id: string): Promise<ChatEvent[] | null> {
   return historyFrom(msgs, sub.subs, wf.runs).events;
 }
 
-type Commit = { hash: string; subject: string };
 const commits = new Map<string, { sig: string; commit: Commit | null }>();
 
 // The first commit the chat made. Kept until the transcript changes.
@@ -44,10 +42,6 @@ export async function firstCommit(id: string) {
   return commit;
 }
 
-// A Bash step that ran git commit: its result holds the `[branch abc1234] subject` line git prints, or with -q the
-// `abc1234 subject` line of a git log --oneline after it.
-const ONELINE = /^([0-9a-f]{7,40}) (.+)$/m;
-
 export function commitIn(raw: any[]): Commit | null {
   const commits = new Set<string>();
   for (const e of raw) {
@@ -55,9 +49,8 @@ export function commitIn(raw: any[]): Commit | null {
     for (const b of e.message.content) {
       if (e.type === 'assistant' && b?.type === 'tool_use' && /\bgit\b[^\n]*\bcommit\b/.test(String(b.input?.command ?? ''))) commits.add(b.id);
       if (e.type !== 'user' || b?.type !== 'tool_result' || !commits.has(b.tool_use_id) || b.is_error) continue;
-      const text = toolResultText(b);
-      const m = text.match(COMMIT) ?? text.match(ONELINE);
-      if (m) return { hash: m[1].slice(0, 7), subject: m[2].trim() };
+      const c = commitOf(toolResultText(b));
+      if (c) return c;
     }
   }
   return null;

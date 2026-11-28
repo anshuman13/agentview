@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import type { SavedSession } from '../../../../shared/protocol.js';
 import type { Thread, ThreadItem } from './protocol.js';
-import { listThreads, mergeThreads, readThread } from './transcripts.js';
+import { codexFirstCommit, listThreads, mergeThreads, readThread, rolloutCommit, searchRollouts } from './transcripts.js';
 
 const fixture = (name: string) => new URL(`./fixtures/${name}`, import.meta.url);
 const list = JSON.parse(readFileSync(fixture('thread-list.json'), 'utf8'));
@@ -52,5 +52,26 @@ describe('codex transcripts', () => {
 
   it('returns null for a thread the app-server cannot read', async () => {
     expect(await readThread(stub({}).rpc, 'missing')).toBeNull();
+  });
+});
+
+describe('codex rollout search and first commit', () => {
+  const dir = fileURLToPath(fixture('sessions'));
+  const id = '01a22194-a972-74d1-af1a-f70debb05035';
+
+  it('finds a word that only a Codex message holds, newest first, tagged with the thread id', async () => {
+    const hits = await searchRollouts(['ZANZIBAR', 'helper'], 10, dir);
+    expect(hits.map((h) => [h.sessionId, h.role, h.at])).toEqual([
+      [id, 'assistant', '2026-11-28T10:00:05.000Z'],
+      [id, 'user', '2026-11-28T10:00:02.000Z'],
+    ]);
+    expect(hits[1].text).toBe('Rename the zanzibar helper and commit it');
+    expect(await searchRollouts(['proj'], 10, dir)).toEqual([]);
+  });
+
+  it('returns the first git commit the thread ran, or null', async () => {
+    expect(await codexFirstCommit(id, dir)).toEqual({ hash: '1a2b3c4', subject: 'Rename the helper' });
+    expect(await codexFirstCommit('missing', dir)).toBeNull();
+    expect(rolloutCommit('{"type":"event_msg","payload":{"type":"item_completed","item":{"type":"CommandExecution","command":["git commit"],"aggregated_output":"nothing to commit","exit_code":1}}}')).toBeNull();
   });
 });

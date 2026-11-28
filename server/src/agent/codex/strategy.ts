@@ -5,7 +5,7 @@ import { codexDriver } from './driver.js';
 import { codexInstructionFiles } from './instructions.js';
 import { codexMcpProbe, readCodexServers } from './mcp.js';
 import { codexTranscript } from './threads.js';
-import { codexList, codexRead } from './transcripts.js';
+import { codexFirstCommit, codexList, codexRead, searchRollouts } from './transcripts.js';
 
 export const codexStrategy: ProviderStrategy = {
   driver: (_cwd, resume, fork) => codexDriver(resume, fork),
@@ -15,8 +15,8 @@ export const codexStrategy: ProviderStrategy = {
     list: codexList,
     read: codexRead,
     tail: async () => '',
-    search: async () => [],
-    firstCommit: async () => null,
+    search: (words, max) => searchRollouts(words, max),
+    firstCommit: (id) => codexFirstCommit(id),
   },
   memory: (cwd) => readMemory(codexInstructionFiles(cwd)),
   memoryDirs: () => [],

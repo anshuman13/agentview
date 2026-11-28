@@ -7,6 +7,7 @@ import { CLAUDE_DIR } from './history.js';
 import { listSessions } from './sessions.js';
 import { readSummaries, type Summaries } from './summaryStore.js';
 import { homeRelative } from '../../settings.js';
+import { snippetAround } from '../transcriptText.js';
 import type { MessageHit } from '../types.js';
 
 export type { MessageHit } from '../types.js';
@@ -26,16 +27,6 @@ export function messageLine(line: string) {
   const text = messageText(o).replace(/\s+/g, ' ').trim();
   if (!text || text.startsWith('<') || !o.sessionId) return null;
   return { sessionId: o.sessionId as string, role: o.type as 'user' | 'assistant', text, at: (o.timestamp ?? '') as string };
-}
-
-// The part of the text around the word at index i, cut at word boundaries.
-function snippetAround(text: string, i: number) {
-  const from = Math.max(0, i - 40);
-  const space = text.indexOf(' ', from);
-  const start = from > 0 && space >= 0 && space < i ? space + 1 : from;
-  const cut = text.lastIndexOf(' ', start + 160);
-  const end = start + 160 >= text.length ? text.length : cut > i ? cut : start + 160;
-  return (start > 0 ? '…' : '') + text.slice(start, end) + (end < text.length ? '…' : '');
 }
 
 // One transcript line as a hit when its prompt or reply text holds every word; the text is cut to the part around the first word.
