@@ -14,7 +14,7 @@ private val CLAUDE_MODES = listOf(
 )
 
 private val CODEX_MODES = listOf(
-    ModeOption("default", "Default", "Ask before every edit and command, network off"),
+    ModeOption("default", "Default", "Ask before edits and commands that write, network off"),
     ModeOption("auto", "Auto", "Edit and run commands, network on"),
     ModeOption("readOnly", "Read only", "Read files, no edits"),
 )

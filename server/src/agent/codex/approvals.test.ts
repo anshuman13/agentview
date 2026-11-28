@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test';
-import { answersFor, askFor, decisionFor, elicitationFor, hasFields, permissionsAsk, permissionsFor, policyFor, questionsAsk } from './approvals.js';
+import { answersFor, askFor, decisionFor, elicitationFor, hasFields, permissionsAsk, permissionsFor, policyFor, questionsAsk, readOnlyCommand, unwrapShell } from './approvals.js';
 import { planUsage } from './usage.js';
 
 describe('policyFor', () => {
@@ -20,6 +20,20 @@ describe('policyFor', () => {
   });
 });
 
+describe('readOnlyCommand', () => {
+  it('unwraps the login shell Codex runs commands in', () => {
+    expect(unwrapShell("/bin/zsh -lc 'git status'")).toBe('git status');
+    expect(unwrapShell('/bin/zsh -lc ls')).toBe('ls');
+    expect(unwrapShell('make build')).toBe('make build');
+  });
+  it('accepts reads on the list, piped into other reads', () => {
+    for (const c of ['/bin/zsh -lc ls', "/bin/zsh -lc 'git status'", "/bin/zsh -lc 'git diff --stat'", `/bin/zsh -lc "rg -n 'a|b' src | head -20"`, "/bin/zsh -lc \"sed -n '1,40p' a.ts\"", 'cat *.md']) expect(readOnlyCommand(c)).toBe(true);
+  });
+  it('refuses writers, redirects, substitutions and risky flags', () => {
+    for (const c of ['touch x', "/bin/zsh -lc 'cat a > b'", "/bin/zsh -lc 'ls; rm x'", 'ls && rm x', 'cat $(ls)', 'ls | xargs rm', "sed -i '' s/a/b/ f", "sed -n '1w out' f", 'git commit -m x', 'git diff --output=x', 'rg --pre sh x', 'ls |']) expect(readOnlyCommand(c)).toBe(false);
+  });
+});
+
 describe('decisionFor', () => {
   const allow = { behavior: 'allow' as const, updatedInput: {} };
   it('maps Allow, Always and Deny to accept, acceptForSession and decline', () => {
@@ -34,7 +48,7 @@ describe('decisionFor', () => {
 
 describe('askFor', () => {
   it('shows a command with the reason as its description', () => {
-    expect(askFor('item/commandExecution/requestApproval', { itemId: 'c1', command: 'rm -rf out', reason: 'outside the sandbox' }, new Map())).toEqual({ tool: 'Bash', input: { command: 'rm -rf out', description: 'outside the sandbox' }, detail: 'outside the sandbox' });
+    expect(askFor('item/commandExecution/requestApproval', { itemId: 'c1', command: "/bin/zsh -lc 'rm -rf out'", reason: 'outside the sandbox' }, new Map())).toEqual({ tool: 'Bash', input: { command: 'rm -rf out', description: 'outside the sandbox' }, detail: 'outside the sandbox' });
   });
   it('names the files of the announced file change', () => {
     const files = new Map([['f1', [{ path: 'a.ts', kind: { type: 'add' as const }, diff: '' }, { path: 'b.ts', kind: { type: 'add' as const }, diff: '' }]]]);

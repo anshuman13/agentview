@@ -4,7 +4,7 @@ import type { Account, Capabilities, Effort, McpServer, Provider } from '../../.
 import { reviewPrompt } from '../../../../shared/reviewPrompt.js';
 import { errText } from '../../../../shared/util.js';
 import type { AgentDriver, AgentHost, Decision, DriverFactory, History } from '../types.js';
-import { answersFor, askFor, decisionFor, elicitationAsk, elicitationFor, hasFields, permissionsAsk, permissionsFor, policyFor, questionsAsk, type Ask } from './approvals.js';
+import { answersFor, askFor, decisionFor, elicitationAsk, elicitationFor, hasFields, permissionsAsk, permissionsFor, policyFor, questionsAsk, readOnlyCommand, type Ask } from './approvals.js';
 import { NOT_SIGNED_IN } from './binary.js';
 import { historyEvents, rolloutPlan } from './events.js';
 import { codexInstructionFiles } from './instructions.js';
@@ -198,6 +198,7 @@ export class CodexDriver implements AgentDriver {
   }
 
   private async approve(method: ApprovalMethod, params: any) {
+    if (method === 'item/commandExecution/requestApproval' && this.mode === 'default' && readOnlyCommand(params.command ?? '')) return { decision: 'accept' };
     const { d, cancelled } = await this.prompt(askFor(method, params, this.stream.files), true);
     return { decision: decisionFor(d, cancelled) };
   }

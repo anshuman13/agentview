@@ -6,7 +6,7 @@ export type Policy = { approvalPolicy: AskForApproval; sandbox: SandboxMode; san
 
 const workspace = (approvalPolicy: AskForApproval, networkAccess: boolean, writableRoots: string[]): Policy => ({ approvalPolicy, sandbox: 'workspace-write', sandboxPolicy: { type: 'workspaceWrite', writableRoots, networkAccess, excludeTmpdirEnvVar: false, excludeSlashTmp: false } });
 
-// Default asks before every file edit and every command Codex does not trust as read-only, Auto never asks and has network, Read only, Plan and Don't ask can only read.
+// Default asks before every file edit and every command Codex does not trust (read-only commands are accepted in the driver), Auto never asks and has network, Read only, Plan and Don't ask can only read.
 // The sandbox keeps .git read-only inside the workspace, so the repo's git folders come in as writable roots and commits work.
 export function policyFor(mode: string | null, gitDirs: string[] = []): Policy {
   switch (mode) {
@@ -21,10 +21,75 @@ export type Ask = { tool: string; input: Record<string, unknown>; title?: string
 type CommandParams = { command?: string | null; reason?: string | null };
 type FileParams = { itemId: string; reason?: string | null };
 
+// Codex runs every command through the login shell, as `/bin/zsh -lc 'git status'`; this gives back the inner command.
+export function unwrapShell(command: string) {
+  const m = /^(?:\/(?:usr\/)?bin\/)?(?:ba|z)?sh -lc (.+)$/s.exec(command.trim());
+  if (!m) return command;
+  const words = shellWords(m[1]);
+  return words?.length === 1 && typeof words[0] === 'string' ? words[0] : command;
+}
+
+// Splits a command into words and `|` pipes; null when it uses anything else the shell would interpret.
+function shellWords(s: string): (string | { pipe: true })[] | null {
+  const out: (string | { pipe: true })[] = [];
+  let word: string | null = null;
+  for (let i = 0; i < s.length; i++) {
+    const c = s[i];
+    if (c === "'") {
+      const end = s.indexOf("'", i + 1);
+      if (end < 0) return null;
+      word = (word ?? '') + s.slice(i + 1, end);
+      i = end;
+    } else if (c === '"') {
+      const end = s.indexOf('"', i + 1);
+      if (end < 0) return null;
+      const inner = s.slice(i + 1, end);
+      if (/[$`\\]/.test(inner)) return null;
+      word = (word ?? '') + inner;
+      i = end;
+    } else if (c === ' ' || c === '\t') {
+      if (word !== null) out.push(word);
+      word = null;
+    } else if (c === '|') {
+      if (word !== null) out.push(word);
+      word = null;
+      out.push({ pipe: true });
+    } else if (/[;&<>$`\\\n(){}!~]/.test(c)) {
+      return null;
+    } else word = (word ?? '') + c;
+  }
+  if (word !== null) out.push(word);
+  return out;
+}
+
+const GIT_READ = new Set(['status', 'diff', 'log', 'show']);
+
+function readOnlyStep([cmd, ...args]: string[]) {
+  switch (cmd) {
+    case 'ls': case 'cat': case 'grep': case 'head': case 'tail': case 'wc': return true;
+    case 'rg': return !args.some((a) => a.startsWith('--pre'));
+    case 'sed': return args[0] === '-n' && args.length >= 2 && /^\d*(,\d*)?p$/.test(args[1]) && !args.slice(2).some((a) => a.startsWith('-'));
+    case 'git': return GIT_READ.has(args[0]) && !args.some((a) => a.startsWith('--output') || a.startsWith('--ext-diff') || a === '-o');
+    default: return false;
+  }
+}
+
+// A command Codex Default runs without a card: every step of the pipe is on the read-only list, with no redirects or substitutions.
+export function readOnlyCommand(command: string) {
+  const words = shellWords(unwrapShell(command));
+  if (!words?.length) return false;
+  const steps: string[][] = [[]];
+  for (const w of words) {
+    if (typeof w === 'string') steps[steps.length - 1].push(w);
+    else steps.push([]);
+  }
+  return steps.every((s) => s.length > 0 && readOnlyStep(s));
+}
+
 // The approval card for a request from the app-server; a file change names its files from the item it announced earlier.
 export function askFor(method: ApprovalMethod, params: CommandParams & FileParams, files: Map<string, FileUpdateChange[]>): Ask {
   const detail = params.reason ?? undefined;
-  if (method === 'item/commandExecution/requestApproval') return { tool: 'Bash', input: { command: params.command ?? '', ...(detail && { description: detail }) }, detail };
+  if (method === 'item/commandExecution/requestApproval') return { tool: 'Bash', input: { command: unwrapShell(params.command ?? ''), ...(detail && { description: detail }) }, detail };
   const changes = files.get(params.itemId) ?? [];
   const edits = changes.map((c) => {
     const { before, after } = changeText(c);
