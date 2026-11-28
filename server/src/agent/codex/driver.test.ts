@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test';
-import { CodexDriver } from './driver.js';
+import { CodexDriver, userInput } from './driver.js';
 import { codexThread } from './threads.js';
 import { waitFor } from '../../../../testing.js';
 
@@ -83,6 +83,23 @@ describe('deliver', () => {
     expect(d.turnId).toBe('turn1');
     d.onNotification('turn/completed', { turn: { id: 'turn1' } });
     expect(d.turnId).toBe(null);
+  });
+});
+
+describe('userInput', () => {
+  it('sends image markers as local images in order', () => {
+    expect(userInput('look [Image: /tmp/a.png]\n[Image: /tmp/b.png] and this')).toEqual([
+      { type: 'text', text: 'look ', text_elements: [] },
+      { type: 'localImage', path: '/tmp/a.png' },
+      { type: 'localImage', path: '/tmp/b.png' },
+      { type: 'text', text: ' and this', text_elements: [] },
+    ]);
+    expect(userInput('plain')).toEqual([{ type: 'text', text: 'plain', text_elements: [] }]);
+  });
+  it('steers with the same input', async () => {
+    const { d, calls } = setup(true, () => Promise.resolve());
+    await d.deliver('[Image: /tmp/a.png]', true);
+    expect(calls[0].params.input).toEqual([{ type: 'localImage', path: '/tmp/a.png' }]);
   });
 });
 

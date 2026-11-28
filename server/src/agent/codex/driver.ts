@@ -17,6 +17,11 @@ import { planUsage } from './usage.js';
 const USAGE_EVERY = 10 * 60_000;
 // The rate limits are the Codex account's, so the chats share one read a minute.
 const USAGE_TTL = 60_000;
+export function userInput(text: string): UserInput[] {
+  const parts = text.split(/\[Image: ([^\]]+)\]/).flatMap((s, i): UserInput[] => (i % 2 ? [{ type: 'localImage', path: s }] : s.trim() ? [{ type: 'text', text: s, text_elements: [] }] : []));
+  return parts.length ? parts : [{ type: 'text', text, text_elements: [] }];
+}
+
 let lastRead: { at: number; read: Promise<{ rateLimits: RateLimits }> } | null = null;
 // How long the process that read the history waits for the chat to start.
 const SPARE_MS = 5_000;
@@ -234,7 +239,7 @@ export class CodexDriver implements AgentDriver {
 
   // A message sent mid-turn joins the running turn; otherwise it starts one.
   private async deliver(text: string, steer: boolean, title = false, stops = this.stops) {
-    const input: UserInput[] = [{ type: 'text', text, text_elements: [] }];
+    const input = userInput(text);
     try {
       await this.ready;
       const rpc = this.rpc;
