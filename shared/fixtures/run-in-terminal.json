@@ -1,0 +1,9 @@
+[
+  { "name": "bash", "lang": "bash", "run": true },
+  { "name": "sh", "lang": "sh", "run": true },
+  { "name": "zsh upper case", "lang": "ZSH", "run": true },
+  { "name": "shell", "lang": "shell", "run": true },
+  { "name": "typescript", "lang": "ts", "run": false },
+  { "name": "no language", "lang": "", "run": false },
+  { "name": "console output", "lang": "console", "run": false }
+]

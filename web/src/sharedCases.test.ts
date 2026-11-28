@@ -15,6 +15,7 @@ import { START_MODES, billing, checkedModel, menuModes, modeSteps, modelRow, new
 import { recentInRepo } from './app/newChat';
 import { blockedRule, canSwitchToAuto, planApproveModes, planFeedback, planParagraphs } from './chat/cards/pendingLogic';
 import { needsEarlier } from './chat/transcript/window';
+import { runsInTerminal } from './chat/transcript/md';
 import { binLeft, buildFolders, chatBranch, chatPlace, folderBadge, since } from './sessions/folders';
 import { findingFixPrompt, findingsFixPrompt } from '../../shared/reviewPrompt';
 import { linesQuote } from '../../shared/linesQuote';
@@ -780,6 +781,10 @@ describe('cases shared with the Android app', () => {
 
   for (const c of cases<{ name: string; picks: Record<string, string>; chat: string; fallback: string; view: string }>('transcript-view-chat')) {
     it(`chatTranscriptView: ${c.name}`, () => expect(chatTranscriptView(c.picks, c.chat, c.fallback)).toBe(c.view));
+  }
+
+  for (const c of cases<{ name: string; lang: string; run: boolean }>('run-in-terminal')) {
+    it(`runsInTerminal: ${c.name}`, () => expect(runsInTerminal(c.lang)).toBe(c.run));
   }
 
   for (const c of cases<{ name: string; value: string | null; label: string; back: string }>('output-style')) {

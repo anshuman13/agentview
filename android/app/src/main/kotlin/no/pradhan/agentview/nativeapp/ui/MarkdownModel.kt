@@ -28,6 +28,9 @@ import org.commonmark.node.StrongEmphasis
 import org.commonmark.node.ThematicBreak
 import org.commonmark.parser.Parser
 
+// A fenced block in one of these runs in the chat's terminal from its Run button.
+fun runsInTerminal(lang: String) = lang.lowercase() in setOf("sh", "bash", "zsh", "shell")
+
 sealed interface Inline {
     data class Text(val text: String) : Inline
     data class Code(val text: String) : Inline

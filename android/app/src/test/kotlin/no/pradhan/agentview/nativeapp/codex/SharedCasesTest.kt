@@ -737,6 +737,10 @@ class SharedCasesTest {
         }
     }
 
+    @Test fun runsInTerminalCases() {
+        for (c in cases("run-in-terminal")) assertEquals(c.str("name"), c.getValue("run").jsonPrimitive.boolean, no.pradhan.agentview.nativeapp.ui.runsInTerminal(c.str("lang")))
+    }
+
     @Test fun chatTranscriptViewCases() {
         for (c in cases("transcript-view-chat")) {
             val picks = c.getValue("picks").jsonObject.mapValues { it.value.jsonPrimitive.content }

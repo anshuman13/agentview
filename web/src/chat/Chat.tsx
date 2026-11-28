@@ -1,7 +1,8 @@
 import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState, type MouseEvent } from 'react';
 import type { Token } from './transcript/md';
 import { copyText } from '../codex/view';
-import { getState, setUi } from '../app/store';
+import { getState, notice, setUi } from '../app/store';
+import { runInTerminal } from './chatApi';
 import { CopyPathMenu, type MenuPoint } from '../workspace/CopyPathItems';
 import { cachedHtml, mdKey, storeHtml } from './transcript/mdCache';
 import { fadeRanges, nextTails, wrapRanges, type Tail } from './transcript/streamFade';
@@ -27,9 +28,10 @@ function onCopy(e: MouseEvent<HTMLDivElement>) {
     e.preventDefault();
     return setUi({ openFile: link.dataset.open!, openLine: Number(link.dataset.line) || null, follow: false });
   }
-  const btn = (e.target as HTMLElement).closest<HTMLElement>('[data-copy]');
+  const btn = (e.target as HTMLElement).closest<HTMLElement>('[data-copy], [data-run]');
   if (!btn) return;
   const code = btn.closest('.md-code')?.querySelector('code')?.textContent ?? '';
+  if (btn.dataset.run !== undefined) return void runInTerminal(code.trim()).catch(() => notice('Terminal unavailable'));
   copyText(code, 'Code copied');
 }
 

@@ -17,6 +17,9 @@ export function filePath(text: string, link = false): { path: string; line?: num
   return { path: m[1].replace(/^\.\//, ''), ...(line && { line }) };
 }
 
+// A fenced block in one of these runs in the chat's terminal from its Run button.
+export const runsInTerminal = (lang: string) => ['sh', 'bash', 'zsh', 'shell'].includes(lang.toLowerCase());
+
 const openAttrs = (f: { path: string; line?: number }) => `href="#" data-open="${escapeHtml(f.path)}"${f.line ? ` data-line="${f.line}"` : ''}`;
 
 const decoded = (href: string) => {
@@ -33,7 +36,7 @@ const markdown = (files: boolean) => new Marked({
   renderer: {
     html: ({ text }) => escapeHtml(text),
     code({ text, lang }) {
-      return `<div class="md-code"><div class="md-acts"><button class="md-copy" data-copy="">Copy</button></div>${lang ? `<span class="md-lang">${escapeHtml(lang)}</span>` : ''}<pre><code${lang ? ` data-lang="${escapeHtml(lang)}"` : ''}>${escapeHtml(text)}</code></pre></div>`;
+      return `<div class="md-code"><div class="md-acts">${files && lang && runsInTerminal(lang) ? '<button class="md-copy" data-run="" title="Run in terminal">Run</button>' : ''}<button class="md-copy" data-copy="">Copy</button></div>${lang ? `<span class="md-lang">${escapeHtml(lang)}</span>` : ''}<pre><code${lang ? ` data-lang="${escapeHtml(lang)}"` : ''}>${escapeHtml(text)}</code></pre></div>`;
     },
     codespan({ text }) {
       const f = files && filePath(text.replace(/&amp;/g, '&'));

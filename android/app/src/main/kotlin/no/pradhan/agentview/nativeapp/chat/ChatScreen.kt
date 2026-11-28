@@ -41,6 +41,8 @@ import no.pradhan.agentview.nativeapp.ui.ListRow
 import no.pradhan.agentview.nativeapp.ui.PageHeader
 import no.pradhan.agentview.nativeapp.ui.FilePath
 import no.pradhan.agentview.nativeapp.ui.LocalOpenFile
+import no.pradhan.agentview.nativeapp.ui.LocalRunShell
+import no.pradhan.agentview.nativeapp.app.runInTerminal
 import no.pradhan.agentview.nativeapp.ui.StatusDot
 import no.pradhan.agentview.nativeapp.ui.Tokens
 import no.pradhan.agentview.nativeapp.ui.Type
@@ -128,14 +130,15 @@ fun ChatScreen(hub: Hub, onOpenAgent: (String) -> Unit, onOpenWork: (String) -> 
             Hairline()
         }
         if (!connected && hasEvents) Text("Offline. Showing the saved transcript.", Modifier.fillMaxWidth().padding(horizontal = Tokens.listPad, vertical = Tokens.sp3), style = Type.footnote, color = av.fgMuted)
+        val runShell = if (hub.readOnly) null else remember(hub) { { cmd: String -> hub.runInTerminal(cmd); Unit } }
         SelectionContainer(Modifier.weight(1f).fillMaxWidth()) {
             val openFile = remember(panels) { { path: String, line: Int? -> panels.file = FilePath(path, line) } }
-            CompositionLocalProvider(LocalOpenFile provides openFile) {
+            CompositionLocalProvider(LocalOpenFile provides openFile, LocalRunShell provides runShell) {
                 val failed = if (live.failed && !running && !hub.readOnly) failedLine(view.events, providerLabel(live.provider)) else null
                 Transcript(hub, view, earlier, settled, live.id, cwd, running, panels.find, onOpenAgent, onOpenWork, Modifier.fillMaxSize(), remember(queued, live.id) { queued.filter { it.chat == live.id } }, failed, live.sessionId, subFind)
             }
         }
-        PendingList(pending, session?.permissionMode ?: "default", hub, live.provider)
+        CompositionLocalProvider(LocalRunShell provides runShell) { PendingList(pending, session?.permissionMode ?: "default", hub, live.provider) }
         if (live.stalled) Row(Modifier.fillMaxWidth().padding(horizontal = Tokens.listPad, vertical = Tokens.sp3), horizontalArrangement = Arrangement.End) {
             Button("Resume", { hub.submit("continue", true) {} }, variant = ButtonVariant.Tinted, icon = "debug-continue")
         }

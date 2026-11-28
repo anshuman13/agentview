@@ -58,7 +58,8 @@ import kotlinx.coroutines.withContext
 // Opens a file path named in inline code or a link, at its line; set by a chat, so file paths elsewhere stay plain.
 val LocalOpenFile = staticCompositionLocalOf<((String, Int?) -> Unit)?> { null }
 
-// Types a one-line shell command into the chat's terminal; set by a chat outside read-only mode, so code blocks elsewhere offer only Copy.
+// Types a shell command into the chat's terminal; set by a chat outside read-only mode, so code blocks elsewhere offer only Copy.
+val LocalRunShell = staticCompositionLocalOf<((String) -> Unit)?> { null }
 
 // Shows a snack naming what was done, such as "Code copied"; set once by the app shell.
 val LocalNotice = staticCompositionLocalOf<((String) -> Unit)?> { null }
@@ -156,11 +157,13 @@ private fun MdBlockView(b: MdBlock, reading: Boolean, muted: Boolean) {
 fun CodeBlock(text: String, lang: String = "", modifier: Modifier = Modifier) {
     val clip = LocalClipboardManager.current
     val notice = LocalNotice.current
+    val run = LocalRunShell.current?.takeIf { runsInTerminal(lang) }
     val shape = RoundedCornerShape(Tokens.shapeLg)
     val scroll = rememberScrollState()
     Column(modifier.fillMaxWidth().clip(shape).border(BorderStroke(Tokens.hairline, av.border), shape)) {
         Row(Modifier.fillMaxWidth().padding(start = Tokens.sp6, end = Tokens.sp2), verticalAlignment = Alignment.CenterVertically) {
             Text(lang, style = Type.caption, color = av.fgMuted, modifier = Modifier.weight(1f))
+            if (run != null) IconBtn("play", "Run in terminal", { run(text.trim()) })
             IconBtn("copy", "Copy code", { clip.setText(AnnotatedString(text)); notice?.invoke("Code copied") })
         }
         Text(
