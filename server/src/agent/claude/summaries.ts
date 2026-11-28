@@ -1,9 +1,9 @@
 import { query } from '@anthropic-ai/claude-agent-sdk';
-import type { Account } from '../../../../shared/protocol.js';
+import type { Account, ChatEvent } from '../../../../shared/protocol.js';
+import { listAll } from '../allChats.js';
+import { provider } from '../registry.js';
 import { configDir, freshAccount, isLimited, stopOnOverage, verifyLimit } from './accounts.js';
 import { listBin } from './bin.js';
-import { messageLine } from './search.js';
-import { listSessions, readTail } from './sessions.js';
 import { readSummaries, saveSummaries, type Summaries } from './summaryStore.js';
 
 const EVERY = 30 * 60_000;
@@ -23,11 +23,11 @@ export function pickChats<T extends Chat>(chats: T[], summaries: Summaries, skip
     .slice(0, PER_PASS);
 }
 
-// The last EXCERPT characters of the prompts and replies in a transcript tail.
-export function excerptOf(tail: string) {
-  const lines = tail.split('\n').flatMap((l) => {
-    const m = messageLine(l);
-    return m ? [`${m.role === 'user' ? 'User' : 'Claude'}: ${m.text}`] : [];
+// The last EXCERPT characters of the prompts and top-level replies in a chat's events.
+export function excerptOf(events: ChatEvent[]) {
+  const lines = events.flatMap((e) => {
+    if (e.kind === 'user') return [`User: ${e.text}`];
+    return e.kind === 'assistant' && !e.parent ? [`Assistant: ${e.text}`] : [];
   });
   return lines.join('\n').slice(-EXCERPT);
 }
@@ -62,12 +62,13 @@ async function haiku(prompt: string, account: Account) {
 // An empty or failed answer is saved as an empty summary, so the chat is not retried until it changes.
 // Summaries are kept as each chat finishes, so an overage stop only leaves the rest for the next pass.
 async function summarisePass(running: Set<string>) {
-  const [list, bin, summaries] = await Promise.all([listSessions({ limit: 300 }), listBin(), readSummaries()]);
+  const [list, bin, summaries] = await Promise.all([listAll(), listBin(), readSummaries()]);
   const skip = new Set([...running, ...bin.map((b) => b.sessionId)]);
   for (const x of pickChats(list, summaries, skip)) {
     const account = x.cwd ? freshAccount(x.cwd) : 'main';
     if (await verifyLimit(account)) continue;
-    const text = oneLine(await haiku(summaryPrompt(x.firstPrompt ?? '', excerptOf(await readTail(x))), account).catch((err) => {
+    const events = await provider(x.provider ?? 'claude').transcripts.read(x.sessionId).catch(() => null);
+    const text = oneLine(await haiku(summaryPrompt(x.firstPrompt ?? '', excerptOf(events ?? [])), account).catch((err) => {
       if (isLimited(account)) throw err;
       return '';
     }));

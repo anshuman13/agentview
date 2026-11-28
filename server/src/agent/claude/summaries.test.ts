@@ -23,17 +23,15 @@ describe('pickChats', () => {
 });
 
 describe('excerptOf', () => {
-  const line = (o: object) => JSON.stringify(o);
-
-  it('keeps prompts and replies, drops tool output, and cuts to the last 4000 characters', () => {
-    const tail = [
-      line({ type: 'user', sessionId: 's', message: { content: 'x'.repeat(5000) } }),
-      line({ type: 'user', sessionId: 's', message: { content: [{ type: 'tool_result', content: 'noise' }] } }),
-      line({ type: 'assistant', sessionId: 's', message: { content: [{ type: 'text', text: 'Done, merged.' }, { type: 'tool_use', name: 'Bash' }] } }),
-    ].join('\n');
-    const out = excerptOf(tail);
+  it('keeps prompts and top-level replies, drops tools and subagents, and cuts to the last 4000 characters', () => {
+    const out = excerptOf([
+      { id: '1', kind: 'user', text: 'x'.repeat(5000), at: 1 },
+      { id: '2', kind: 'tool_result', toolUseId: 't', text: 'noise', isError: false, at: 2 },
+      { id: '3', kind: 'assistant', text: 'sub noise', streaming: false, at: 3, parent: 't' },
+      { id: '4', kind: 'assistant', text: 'Done, merged.', streaming: false, at: 4 },
+    ]);
     expect(out.length).toBe(4000);
-    expect(out.endsWith('\nClaude: Done, merged.')).toBe(true);
+    expect(out.endsWith('\nAssistant: Done, merged.')).toBe(true);
     expect(out).not.toContain('noise');
   });
 });
