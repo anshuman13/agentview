@@ -42,6 +42,8 @@ vi.mock('../workspace/terminal.js', () => ({ listTerminals: mocks.listTerminals,
 import type { RouteDeps } from './routes.js';
 const { createRoutes } = await import('./routes.js');
 const accounts = await import('../agent/claude/accounts.js');
+const registry = await import('../agent/registry.js');
+const store = await import('../usage/store.js');
 
 const chat = { id: 'c1', cwd: '/tmp/x' } as LiveChat;
 
@@ -252,6 +254,27 @@ describe('routes', () => {
 
   it('rejects a bad agents count for helper advice', async () => {
     expect((await call('GET', '/api/helpers?agents=0')).code).toBe(400);
+    expect((await call('GET', '/api/helpers?agents=1&provider=gpt')).code).toBe(400);
+  });
+
+  it('computes helper advice from the samples of the chat provider and account', async () => {
+    const now = Date.now();
+    const at = new Date(now + 3 * 3600_000).toISOString();
+    store.saveSample('alt', { rate_limits: { five_hour: { utilization: 20, resets_at: at } } }, now);
+    store.saveSample('codex', { rate_limits: { five_hour: { utilization: 70, resets_at: at } } }, now);
+    const chats: Record<string, 'claude' | 'codex' | 'openrouter'> = { cl: 'claude', cx: 'codex', or: 'openrouter' };
+    const of = vi.spyOn(registry, 'providerOf').mockImplementation((id) => chats[id!] ?? 'claude');
+    const acct = vi.spyOn(accounts, 'chatAccount').mockImplementation((id) => (id === 'cl' ? 'alt' : undefined));
+    const why = async (q: string) => (await call('GET', `/api/helpers?agents=1&${q}`)).json.why as string;
+    const r = { claude: await why('chat=cl'), codex: await why('chat=cx'), byProvider: await why('provider=codex'), openrouter: await call('GET', '/api/helpers?agents=1&chat=or') };
+    of.mockRestore();
+    acct.mockRestore();
+    store.closeStore();
+    for (const f of ['usage.db', 'usage.db-wal', 'usage.db-shm']) rmSync(path.join(accounts.STATE_DIR, f), { force: true });
+    expect(r.claude).toStartWith('5-hour 20%');
+    expect(r.codex).toStartWith('5-hour 70%');
+    expect(r.byProvider).toStartWith('5-hour 70%');
+    expect(r.openrouter.json).toEqual({ helpers: 0, why: 'no helper agents on this provider' });
   });
 
   it('serves the usage report for logged-in accounts', async () => {

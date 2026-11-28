@@ -35,7 +35,7 @@ import { savePaste } from './body.js';
 import { readBody, failed } from '../json.js';
 import { entry, type Ctx, type Entry, type Prefix, type RouteDeps } from './routeTypes.js';
 import { exec } from '../exec.js';
-import { helperReport, usageReport } from '../usage/report.js';
+import { helperReport, usageKey, usageReport } from '../usage/report.js';
 
 export function sessionRoutes(d: RouteDeps): Record<string, Entry<Ctx>> {
   return {
@@ -245,7 +245,10 @@ export function systemRoutes(d: RouteDeps): Record<string, Entry<Ctx>> {
     'GET /api/helpers': entry(({ url }) => {
       const agents = Number(url.searchParams.get('agents') ?? 1);
       if (!Number.isInteger(agents) || agents < 1 || agents > 20) return failed(400, 'agents must be a whole number from 1 to 20');
-      return helperReport(agents);
+      const chat = url.searchParams.get('chat') || undefined;
+      const p = url.searchParams.get('provider') || undefined;
+      if (p !== undefined && !isProvider(p)) return failed(400, 'provider must be claude, openrouter or codex');
+      return chat || p ? helperReport(agents, usageKey({ chat, provider: p })) : helperReport(agents);
     }),
     'POST /api/restart': entry(({ url }) => {
       d.restart(url.searchParams.has('now'), url.searchParams.has('full'));
