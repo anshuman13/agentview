@@ -270,7 +270,7 @@ cost so far. The status bar usage tooltip adds a Spend block with today's and th
   has a Tools… sheet with Memory and Continue in terminal
 - In the web and phone transcripts, 3 or more finished Read, Grep and Glob steps in a row fold into one row such as
   "Explored 4 files, 2 searches"; the header opens the steps, and the group keeps its choice like any transcript box
-- The New chat sheet (the phone's new chat buttons; on web the Sessions bar's New session in a repo and a repo's +) has Start as: Auto (the default for new chats), Plan first or Build (`/build ` and the request in the composer, nothing sent), for every provider (Plan first starts a Codex chat in Default), then Provider when more than one is enabled, Repo when none is given, and Model. Model checks the last model used when it is listed, else the first listed model, which the chat gets when none is sent (`checkedModel` in `shared/providers.ts` with `shared/fixtures/checked-model.json`, mirrored in `chat/NewChatLogic.kt`); Start sends a model only when one was used or picked. The mode is set right after the chat opens (`START_MODES` and `startTexts` in `shared/providers.ts` with `shared/fixtures/start-texts.json`, mirrored in `chat/NewChatLogic.kt`). After Repo, Continue lists up to 3 closed chats of that repo, newest first (`recentInRepo`, `shared/fixtures/recent-in-repo.json`; hidden in phone read-only mode); a tap opens the chat. ⌘O and the repo picker still start a chat in any folder or a new project
+- The New chat sheet (the phone's new chat buttons; on web the Sessions bar's New session in a repo and a repo's +) has Start as: Auto (the default for new chats), Plan first or Build (`/build ` and the request in the composer, nothing sent), for every provider (Plan first starts a Codex chat in Read only), then Provider when more than one is enabled, Repo when none is given, and Model. Model checks the last model used when it is listed, else the first listed model, which the chat gets when none is sent (`checkedModel` in `shared/providers.ts` with `shared/fixtures/checked-model.json`, mirrored in `chat/NewChatLogic.kt`); Start sends a model only when one was used or picked. The mode is set right after the chat opens (`START_MODES` and `startTexts` in `shared/providers.ts` with `shared/fixtures/start-texts.json`, mirrored in `chat/NewChatLogic.kt`). After Repo, Continue lists up to 3 closed chats of that repo, newest first (`recentInRepo`, `shared/fixtures/recent-in-repo.json`; hidden in phone read-only mode); a tap opens the chat. ⌘O and the repo picker still start a chat in any folder or a new project
 - Review each turn (the Supervised choice in the permission mode list of web and phone Chat settings, which sets Auto and turns review on; picking another mode turns it off; the Chat: Toggle Review Changes palette command and Shift+Tab leave it alone, so a chat can show "Plan · Review") lets Claude edit freely, and after a turn that changed files adds a
   Review N changes card with each changed file's hunks against the file as it was before the turn. Each hunk has Keep and
   Undo, each file Keep file and Undo file, the card Keep all; once everything is decided it shows "Kept 3, undid 1".
@@ -453,15 +453,18 @@ so. Start one from the command palette (Chat: New Codex Chat) or the Provider se
 "New chats" select in Settings (Models on web, Providers on the phone) sets the provider a chat starts on when none is picked
 (`defaultProvider` in settings.json); Fork chat and tries keep the parent's provider. The
 model menu lists Codex's models and the effort menu only the levels the chosen model lists. The permission menu and Shift+Tab
-offer the provider's own modes: Default (asks before leaving the workspace sandbox), Auto (never asks, network on) and
-Read only (only reads), with no Plan; Plan first on the new chat sheet starts in Default. Approval cards work as for Claude (Always allow lasts for the session). Commands, file changes
-(shown as edits with diffs) and MCP calls appear as steps. The usage bar shows the plan's 5-hour and weekly windows;
-there is no cost. No rewind, Build or stop task. Codex chats are listed with the sessions (marked Codex), reopen with their
+offer the provider's own modes: Default (asks before every edit and command, network off), Auto (never asks, network on) and
+Read only (only reads), with no Plan; Plan first on the new chat sheet starts in Read only. Default and Auto can also write the
+repo's git folder, so commits work. Approval cards work as for Claude (Always allow lasts for the session). Commands, file changes
+(shown as edits with diffs) and MCP calls appear as steps; Codex's plan fills the checklist and its reasoning summaries
+show as thinking rows. /clear starts a new Codex thread and links the old one as a sub-chat, so /build runs task by task.
+A message sent while a turn runs joins that turn (`turn/steer`) instead of stopping it, and pasted images go to Codex as
+images. The usage bar shows the plan's 5-hour and weekly windows; there is no cost. No rewind or stop task. Codex chats are listed with the sessions (marked Codex), reopen with their
 transcript, and are kept in `~/.agentview/codex-chats.json`. Codex chats get the same AgentView tools as Claude ones
 (status, wiki, data, chat search, report findings; not run code, which only Claude chats get) from a stdio MCP server the host starts for the chat, and the same
 instructions; the review buttons send a prompt that ends in report findings, and a plan change reaches the agent
 mid-turn. Continue in terminal copies `codex resume <id>` (an OpenRouter chat has no such row). The MCP page of a Codex
-chat probes the servers in `~/.codex/config.toml` (read through Codex's own `config/read`), has no Add, Disable or Log in
+chat probes the servers in `~/.codex/config.toml` (read through Codex's own `config/read`) plus `agentview`, has no Add, Disable or Log in
 and no claude.ai connector rows, and says "Edit ~/.codex/config.toml, then Reconnect". Not yet for Codex: chat search and @chat mentions.
 
 ## Workspace

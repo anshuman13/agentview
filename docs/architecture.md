@@ -128,8 +128,12 @@ them uses one mechanism, the first that fits; clients never branch on the provid
 3. Capabilities (`SessionInfo.capabilities`) name only the controls a provider cannot serve; the UI hides each and says so
    (`chat/capabilitiesLogic.ts`, Android `CapabilitiesLogic.kt`). `mcpEdit` is Add, toggle and Log in on MCP servers,
    `connectors` the claude.ai connectors.
-4. Driver methods (`AgentDriver` in `agent/types.ts`) are what the session asks of the agent: `compact`, `command`,
-   `review`, `roleModel`, `inject`. The session never writes a provider's slash command as text.
+4. Driver methods (`AgentDriver` in `agent/types.ts`) are what the session asks of the agent: `compact`, `clear`,
+   `command`, `review`, `roleModel`, `inject`. The session never writes a provider's slash command as text: `/clear`
+   calls `clear()` when the driver has it (Codex starts a new thread and ends with a turn result, so /build advances).
+   A driver with `joinsTurn` (Codex) takes a message sent mid-turn into the running turn: the steer goes to `queueNext`
+   and the driver calls `host.taken(id)` once `turn/steer` succeeds, releasing the held user event.
+   Start modes map through `startModeFor`: Plan first starts in `readOnly` on a provider without `plan`.
 5. `SessionInfo` fields hold what differs by chat or model: `contextWindow`, `models[].efforts`, `resumeCommand`,
    `instructionFiles`. The registry (`agent/registry.ts`) is the per-provider table on the server: driver, transcript,
    memory files, resume line, MCP servers.
