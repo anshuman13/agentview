@@ -127,14 +127,14 @@ private fun stepIcon(t: Tone) = when (t) {
 
 @Composable
 internal fun ExploredRow(hub: Hub, id: String, steps: List<Item.Step>, cwd: String, settled: Boolean) {
-    TranscriptBox(hub, "explore:$id", "Explored ${exploreLabel(steps)}") {
-        Column(Modifier.padding(horizontal = Tokens.listPad).padding(bottom = Tokens.sp3)) { steps.forEach { StepRow(it, cwd, settled) } }
+    TranscriptBox(hub, "explore:$id", "Explored ${exploreLabel(steps)}", defaultOpen = foldOpen(hub.transcriptView.value, "step")) {
+        Column(Modifier.padding(horizontal = Tokens.listPad).padding(bottom = Tokens.sp3)) { steps.forEach { StepRow(it, cwd, settled, foldOpen(hub.transcriptView.value, "step")) } }
     }
 }
 
 @Composable
-internal fun StepRow(it: Item.Step, cwd: String, settled: Boolean) {
-    var open by rememberSaveable(it.id) { mutableStateOf(false) }
+internal fun StepRow(it: Item.Step, cwd: String, settled: Boolean, startOpen: Boolean = false) {
+    var open by rememberSaveable(it.id) { mutableStateOf(startOpen) }
     val result = it.result
     val label = stepLabel(it.use.name, it.use.input, cwd, result)
     val uri = androidx.compose.ui.platform.LocalUriHandler.current

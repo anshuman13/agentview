@@ -14,6 +14,8 @@ import { THEME_NAMES, useTheme } from '../theme';
 import { FeatureUseSheet } from './FeatureUseSheet';
 import { ModelsSettings } from './ModelsSettings';
 import { VIEWS } from './ActivityBar';
+import { TRANSCRIPT_VIEWS } from '../../chat/transcript/steps';
+import { setTranscriptView, transcriptView } from '../../chat/transcript/transcriptView';
 import { canHideView, hiddenViews, toggleHiddenView } from './hiddenViews';
 
 const webSha = typeof __APP_SHA__ === 'string' ? __APP_SHA__ : '';
@@ -75,6 +77,17 @@ function ActivityBarSettings() {
   );
 }
 
+const VIEW_LABEL = { normal: 'Normal', thinking: 'Thinking', verbose: 'Verbose' } as const;
+
+function TranscriptViewSwitch() {
+  const view = transcriptView.use();
+  return (
+    <div className="view-seg" role="radiogroup" aria-label="Transcript view">
+      {TRANSCRIPT_VIEWS.map((v) => <button key={v} role="radio" aria-checked={view === v} className={view === v ? 'on' : ''} onClick={() => setTranscriptView(v)}>{VIEW_LABEL[v]}</button>)}
+    </div>
+  );
+}
+
 export function SettingsView({ showDesign, phoneVersion }: { showDesign?: boolean; phoneVersion?: string }) {
   const [theme, toggleTheme] = useTheme();
   return (
@@ -87,6 +100,7 @@ export function SettingsView({ showDesign, phoneVersion }: { showDesign?: boolea
       <Section label="Appearance" />
       <div className="ui-group">
         <Row title="Theme" meta={THEME_NAMES[theme]} onClick={toggleTheme} />
+        <Row plain title="Transcript view" trailing={<TranscriptViewSwitch />} />
       </div>
       <ActivityBarSettings />
       <ModelsSettings />

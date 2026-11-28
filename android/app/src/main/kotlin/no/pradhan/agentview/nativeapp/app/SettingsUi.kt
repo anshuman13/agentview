@@ -20,7 +20,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 
 import no.pradhan.agentview.nativeapp.codex.syncLine
+import no.pradhan.agentview.nativeapp.chat.TRANSCRIPT_VIEWS
 import no.pradhan.agentview.nativeapp.ui.Chevron
+import no.pradhan.agentview.nativeapp.ui.ChoiceRow
 import no.pradhan.agentview.nativeapp.ui.ConfirmDialog
 import no.pradhan.agentview.nativeapp.ui.Group
 import no.pradhan.agentview.nativeapp.ui.Hairline
@@ -37,10 +39,13 @@ import no.pradhan.agentview.nativeapp.ui.Tokens
 import no.pradhan.agentview.nativeapp.ui.rememberNow
 import no.pradhan.agentview.nativeapp.workspace.PageBody
 
+private val VIEW_META = mapOf("normal" to "Thinking and tool steps start shut", "thinking" to "The thought line stays after a turn", "verbose" to "Thinking and tool steps start open")
+
 // Settings (web/src/app/shell/Settings.tsx): Appearance, Phone, Privacy and About groups.
 @Composable
 fun SettingsScreen(hub: Hub, onBack: () -> Unit, onOrigin: () -> Unit) {
     val theme by hub.theme.collectAsState()
+    val transcriptView by hub.transcriptView.collectAsState()
     val origin by hub.origin.collectAsState()
     val notify by hub.notifyOn.collectAsState()
     val quiet = hub.quietHours.collectAsState().value.takeIf { it in QUIET_HOURS } ?: ""
@@ -70,6 +75,13 @@ fun SettingsScreen(hub: Hub, onBack: () -> Unit, onOrigin: () -> Unit) {
                             }
                         }
                     })
+                }
+                SectionHeader("Transcript view", color = av.fg)
+                Group {
+                    TRANSCRIPT_VIEWS.forEachIndexed { i, (v, label) ->
+                        if (i > 0) Hairline()
+                        ChoiceRow(label, VIEW_META[v], checked = transcriptView == v, onClick = { hub.setTranscriptView(v) })
+                    }
                 }
                 if (providers.size > 1) {
                     SectionHeader("Providers", color = av.fg)

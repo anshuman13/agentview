@@ -286,6 +286,14 @@ export const rewindTotal = (n: number) => (n ? `${n} ${n === 1 ? 'file' : 'files
 export type RestoreChoice = 'code' | 'conversation' | 'both';
 export const RESTORE_LABEL: Record<RestoreChoice, string> = { code: 'Code only', conversation: 'Conversation only', both: 'Code and conversation' };
 
+export const TRANSCRIPT_VIEWS = ['normal', 'thinking', 'verbose'] as const;
+export type TranscriptView = (typeof TRANSCRIPT_VIEWS)[number];
+
+// Whether a fold starts open under the Default transcript view (Android Steps.kt foldOpen): Thinking keeps the thought line after the turn ends, Verbose also opens each tool step.
+export function foldOpen(view: string, fold: 'thinking' | 'step') {
+  return fold === 'thinking' ? view === 'thinking' || view === 'verbose' : view === 'verbose';
+}
+
 // What the Rewind confirm offers and does (Android Steps.kt restorePlan): the conversation options fork from the reply before the prompt, so they need a provider that forks and a reply to fork from.
 export function restorePlan(choice: RestoreChoice, canFork: boolean, hasBefore: boolean) {
   const choices: RestoreChoice[] = canFork && hasBefore ? ['code', 'conversation', 'both'] : ['code'];

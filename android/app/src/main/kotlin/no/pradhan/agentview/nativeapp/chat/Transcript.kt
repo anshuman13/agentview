@@ -272,7 +272,7 @@ internal fun ItemRow(hub: Hub, it: Item, chat: String, cwd: String, settled: Boo
         is Item.Step -> when (it.use.name) {
             ALARM_TOOL -> AlarmCard(it, !settled)
             BUILD_TOOL -> BuildCard(hub, it)
-            else -> StepRow(it, cwd, settled)
+            else -> StepRow(it, cwd, settled, foldOpen(hub.transcriptView.value, "step"))
         }
         is Item.File -> if (it.error != null) FileCard(hub, it, cwd)
             else if (card && isDocFile(it.path)) DocCard(hub, it, cwd)

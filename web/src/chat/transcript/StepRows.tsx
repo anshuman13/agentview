@@ -12,15 +12,16 @@ import { Badge } from '../../ui/Badge';
 import { IconButton } from '../../ui/Button';
 import { copyText } from '../../codex/view';
 import { agentSummary } from '../../sessions/agents';
-import { denied, duration, exploreLabel, firstLine, relPath, stepLabel, stepTone, type Item, type StepItem, type ToolResult, type ToolUse } from './steps';
+import { denied, duration, exploreLabel, firstLine, foldOpen, relPath, stepLabel, stepTone, type Item, type StepItem, type ToolResult, type ToolUse } from './steps';
 import { clickOnKey, plural } from '../../ui/util';
 import { editMarks, type EditCount } from '../../../../shared/edits';
 import { useCan } from '../useCan';
 import { Row } from './Transcript';
+import { transcriptView } from './transcriptView';
 
 export function Explored({ id, run, cwd }: { id: string; run: StepItem[]; cwd: string }) {
   return (
-    <TranscriptBox id={`explore:${id}`} title={`Explored ${exploreLabel(run)}`}>
+    <TranscriptBox id={`explore:${id}`} title={`Explored ${exploreLabel(run)}`} defaultOpen={foldOpen(transcriptView.get(), 'step')}>
       <div className="tr-explored">{run.map((s) => <Row key={s.id} it={s} cwd={cwd} />)}</div>
     </TranscriptBox>
   );
@@ -29,7 +30,7 @@ export function Explored({ id, run, cwd }: { id: string; run: StepItem[]; cwd: s
 const STEP_ICONS = { read: 'eye', edit: 'edit', run: 'terminal', web: 'globe', mcp: 'plug', agent: 'sparkle', other: 'tools' } as const;
 
 export function Step({ use, result, cwd, settled }: { use: ToolUse; result?: ToolResult; cwd: string; settled?: boolean }) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(() => foldOpen(transcriptView.get(), 'step'));
   const { verb, object, mono, cmd, url, note } = stepLabel(use.name, use.input, cwd, result);
   const state = !result ? (settled ? 'idle' : 'pending') : note ? 'ok' : denied(result) ? 'denied' : result.isError ? 'err' : 'ok';
   const dur = result ? duration(result.at - use.at) : '';

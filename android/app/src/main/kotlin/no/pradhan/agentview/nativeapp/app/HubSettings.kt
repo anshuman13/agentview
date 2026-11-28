@@ -87,6 +87,11 @@ fun Hub.setCodexFilter(value: String) {
     prefs.edit().putString("codexFilter", value).apply()
 }
 
+fun Hub.setTranscriptView(value: String) {
+    transcriptView.value = value
+    prefs.edit().putString("transcriptView", value).apply()
+}
+
 fun Hub.setTheme(value: String) {
     theme.value = value
     prefs.edit().putString("theme", value).apply()

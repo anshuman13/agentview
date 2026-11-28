@@ -229,6 +229,7 @@ class Hub(internal val app: Application, private val saved: SavedStateHandle) : 
     val writes = Writes(viewModelScope, { readOnly }, { notice.value = it })
 
     val theme = MutableStateFlow(prefs.getString("theme", null) ?: "")
+    val transcriptView = MutableStateFlow(prefs.getString("transcriptView", null) ?: "normal")
 
     // When this phone last showed each chat, for the New line.
     fun leftAt(chat: String) = prefs.getLong("seen:$chat", 0L)

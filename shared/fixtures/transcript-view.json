@@ -1,0 +1,6 @@
+[
+  { "name": "normal keeps every fold shut", "view": "normal", "thinking": false, "step": false },
+  { "name": "thinking opens the thought", "view": "thinking", "thinking": true, "step": false },
+  { "name": "verbose opens thought and tool steps", "view": "verbose", "thinking": true, "step": true },
+  { "name": "unknown value reads as normal", "view": "loud", "thinking": false, "step": false }
+]

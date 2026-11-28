@@ -37,7 +37,7 @@ import { attachMark } from '../../shared/attachMark';
 import { chatSessionOf } from '../../shared/chatLink';
 import { latestTodos, todoCount, todoCurrent, todoProgress, type TodoItem } from '../../shared/todos';
 import { mergeTail, trimHeld } from './app/runtime/pageEvents';
-import { alarmCard, buildTranscript, dayDividers, duration, newMarker, newReplies, openAtNew, rewindReplies, planStep, replyBefore, restorePlan, rewindTotal, sentAt, type RestoreChoice, shipStep, stepLabel, stepTone, turnAnswers, type Item } from './chat/transcript/steps';
+import { alarmCard, buildTranscript, dayDividers, duration, foldOpen, newMarker, newReplies, openAtNew, rewindReplies, planStep, replyBefore, restorePlan, rewindTotal, sentAt, type RestoreChoice, shipStep, stepLabel, stepTone, turnAnswers, type Item } from './chat/transcript/steps';
 import { filePath } from './chat/transcript/md';
 import { buildCard, buildRows, type BuildCardInput } from './chat/transcript/buildCardLogic';
 import { foldTurns, proposalState, rememberedOf, usedClaimState, workTitle } from './chat/transcript/workFold';
@@ -771,6 +771,10 @@ describe('cases shared with the Android app', () => {
 
   for (const c of cases<{ name: string; canFork: boolean; hasBefore: boolean; choice: RestoreChoice; choices: RestoreChoice[]; files: boolean; fork: boolean }>('rewind-restore')) {
     it(`restorePlan: ${c.name}`, () => expect(restorePlan(c.choice, c.canFork, c.hasBefore)).toEqual({ choices: c.choices, files: c.files, fork: c.fork }));
+  }
+
+  for (const c of cases<{ name: string; view: string; thinking: boolean; step: boolean }>('transcript-view')) {
+    it(`foldOpen: ${c.name}`, () => expect({ thinking: foldOpen(c.view, 'thinking'), step: foldOpen(c.view, 'step') }).toEqual({ thinking: c.thinking, step: c.step }));
   }
 
   for (const c of cases<{ name: string; events: ChatEvent[]; prompt: string; expected: string | null }>('reply-before')) {

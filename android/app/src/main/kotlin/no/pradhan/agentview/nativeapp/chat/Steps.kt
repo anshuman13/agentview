@@ -319,6 +319,12 @@ fun rewindTotal(n: Int) = if (n == 0) "No file changes" else "$n ${if (n == 1) "
 
 val RESTORE_LABEL = mapOf("code" to "Code only", "conversation" to "Conversation only", "both" to "Code and conversation")
 
+val TRANSCRIPT_VIEWS = listOf("normal" to "Normal", "thinking" to "Thinking", "verbose" to "Verbose")
+
+// Whether a fold starts open under the Default transcript view (web steps.ts foldOpen): Thinking keeps the thought line after the turn ends, Verbose also opens each tool step.
+fun foldOpen(view: String, fold: String): Boolean =
+    if (fold == "thinking") view == "thinking" || view == "verbose" else view == "verbose"
+
 data class RestorePlan(val choices: List<String>, val files: Boolean, val fork: Boolean)
 
 // What the Rewind confirm offers and does (web steps.ts restorePlan): the conversation options fork from the reply before the prompt, so they need a provider that forks and a reply to fork from.

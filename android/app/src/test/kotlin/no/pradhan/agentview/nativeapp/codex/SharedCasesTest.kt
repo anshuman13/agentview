@@ -82,6 +82,7 @@ import no.pradhan.agentview.nativeapp.chat.rewindReplies
 import no.pradhan.agentview.nativeapp.chat.rewindTotal
 import no.pradhan.agentview.nativeapp.chat.RestorePlan
 import no.pradhan.agentview.nativeapp.chat.restorePlan
+import no.pradhan.agentview.nativeapp.chat.foldOpen
 import no.pradhan.agentview.nativeapp.chat.replyBefore
 import no.pradhan.agentview.nativeapp.chat.proposalState
 import no.pradhan.agentview.nativeapp.chat.usedClaimState
@@ -728,6 +729,13 @@ class SharedCasesTest {
             val strs = { k: String -> c.getValue(k).jsonArray.map { it.jsonPrimitive.content } }
             val bool = { k: String -> c.getValue(k).jsonPrimitive.boolean }
             assertEquals(c.str("name"), RestorePlan(strs("choices"), bool("files"), bool("fork")), restorePlan(c.str("choice"), bool("canFork"), bool("hasBefore")))
+        }
+    }
+
+    @Test fun foldOpenCases() {
+        for (c in cases("transcript-view")) {
+            val bool = { k: String -> c.getValue(k).jsonPrimitive.boolean }
+            assertEquals(c.str("name"), bool("thinking") to bool("step"), foldOpen(c.str("view"), "thinking") to foldOpen(c.str("view"), "step"))
         }
     }
 

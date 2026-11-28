@@ -1,5 +1,6 @@
 package no.pradhan.agentview.nativeapp.chat
 
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import android.provider.Settings
@@ -61,7 +62,8 @@ internal fun TaskLines(hub: Hub, fold: FoldRow.Fold, cwd: String, live: Boolean,
     val current = if (live) steps.firstOrNull { !it.done } else null
     val spin = @Composable { WorkDots() }
     val doing = if (live) runningStep(fold.hidden, cwd) else ""
-    val thinking = if (live) fold.thought else ""
+    val view by hub.transcriptView.collectAsState()
+    val thinking = if (live || foldOpen(view, "thinking")) fold.thought else ""
     if (fold.work.tools == 0 && steps.isEmpty() && fold.claims.isEmpty() && fold.proposed.isEmpty() && fold.remembered.isEmpty() && thinking.isEmpty()) return
     var reading by remember { mutableStateOf(false) }
     var proposing by remember { mutableStateOf(false) }

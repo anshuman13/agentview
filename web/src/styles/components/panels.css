@@ -80,7 +80,9 @@
 .ui-empty-hint { max-width: 320px; font-size: var(--fs-md); line-height: var(--type-subheadline-line); color: var(--on-surface-faint); }
 .ui-empty > :is(.btn, button):last-child { margin-top: var(--sp-4); }
 @media (pointer: coarse) { .ui-empty-hint { font-size: var(--type-subheadline-size); } }
-.rewind-restore { display: flex; gap: 2px; margin-top: var(--sp-4); padding: 2px; border-radius: var(--radius-md); background: var(--sunken); }
-.rewind-restore button { flex: 1; min-height: var(--size-xl); padding: 0 var(--sp-2); border-radius: calc(var(--radius-md) - 2px); color: var(--fg-muted); font-size: var(--fs-sm); }
-.rewind-restore button.on { background: var(--selected); color: var(--fg); }
-@media (hover: hover) { .rewind-restore button:not(.on):hover { background: color-mix(in srgb, currentColor var(--state-hover), transparent); } }
+/* also the Settings transcript view switch */
+.rewind-restore, .view-seg { display: flex; gap: 2px; margin-top: var(--sp-4); padding: 2px; border-radius: var(--radius-md); background: var(--sunken); }
+.rewind-restore button, .view-seg button { flex: 1; min-height: var(--size-xl); padding: 0 var(--sp-2); border-radius: calc(var(--radius-md) - 2px); color: var(--fg-muted); font-size: var(--fs-sm); }
+.rewind-restore button.on, .view-seg button.on { background: var(--selected); color: var(--fg); }
+@media (hover: hover) { .rewind-restore button:not(.on):hover, .view-seg button:not(.on):hover { background: color-mix(in srgb, currentColor var(--state-hover), transparent); } }
+.view-seg { margin-top: 0; }
