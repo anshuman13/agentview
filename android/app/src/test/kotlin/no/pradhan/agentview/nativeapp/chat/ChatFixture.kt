@@ -147,7 +147,7 @@ fun finishedTurn(e: Events = Events()): List<ChatEvent> {
 }
 
 // A turn still running after the finished one: two tasks done, a read and an edit done, a search without a result yet.
-fun runningTurn(e: Events = Events()): List<ChatEvent> {
+fun runningTurn(e: Events = Events(), pattern: String = "greet"): List<ChatEvent> {
     val first = finishedTurn(e)
     val prompt = e.user("Now add screen tests")
     val s1 = e.status("Read the chat screen", listOf("Write the fixture", "Record the images"), "Reading the chat screen")
@@ -156,7 +156,7 @@ fun runningTurn(e: Events = Events()): List<ChatEvent> {
     val edit = e.edit()
     val editDone = e.result(edit)
     val s2 = e.status("Write the fixture", listOf("Record the images"), "Writing the fixture")
-    val grep = e.use("Grep", "pattern" to "greet", "path" to "$CWD/src")
+    val grep = e.use("Grep", "pattern" to pattern, "path" to "$CWD/src")
     return first + listOf(prompt, s1, read, readDone, edit, editDone, s2, grep)
 }
 

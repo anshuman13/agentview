@@ -8,7 +8,9 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import com.github.takahirom.roborazzi.ExperimentalRoborazziApi
 import com.github.takahirom.roborazzi.captureScreenRoboImage
+import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import org.junit.After
+import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -57,6 +59,15 @@ class ChatScreenshotTest {
         start()
         rule.waitUntilAtLeastOneExists(hasText("Tasks · 2 of 3"))
         snap("running")
+    }
+
+    @Test fun longRunningStepStaysOnTheTaskLine() {
+        fx.show(runningTurn(pattern = "a very long search pattern that cannot fit beside the task count"), running = true)
+        start()
+        rule.waitUntilAtLeastOneExists(hasText("Tasks · 2 of 3"))
+        val tasks = rule.onNodeWithText("Tasks · 2 of 3").getUnclippedBoundsInRoot()
+        val step = rule.onNodeWithText("Searching", substring = true).getUnclippedBoundsInRoot()
+        assertEquals("$tasks", ((tasks.top + tasks.bottom) / 2).value, ((step.top + step.bottom) / 2).value, 4f)
     }
 
     @Test fun composerWithDraft() {

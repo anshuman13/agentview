@@ -80,7 +80,7 @@ internal fun TaskLines(hub: Hub, fold: FoldRow.Fold, cwd: String, live: Boolean,
             if (fold.proposed.isNotEmpty()) Chip("Proposed ${plural(fold.proposed.size, "claim")}", { proposing = !proposing }, on = proposing)
             if (fold.remembered.isNotEmpty()) Chip("Remembered ${plural(fold.remembered.size, "memory", "memories")}", { memory = true })
             if (fold.work.tools > 0) Row(
-                Modifier.heightIn(min = Tokens.touchSm).clickable { onOpenWork(fold.id) },
+                Modifier.weight(1f, fill = false).heightIn(min = Tokens.touchSm).clickable { onOpenWork(fold.id) },
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 if (doing.isNotEmpty()) {
