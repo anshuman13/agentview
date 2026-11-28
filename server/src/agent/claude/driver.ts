@@ -16,7 +16,7 @@ import { loadOpenRouter, openRouterModels, openRouterValue } from './openrouter.
 import { McpControl } from './mcpControl.js';
 import { loadContextUsage, loadMeta, loadUsage } from './queryInfo.js';
 import { configDir, loggedInAccounts, markLimited, otherAccount, overageUntil, reopenAccount } from './accounts.js';
-import { unattendedRules } from './unattended.js';
+import { claudeRules } from './unattended.js';
 import { loadSettings, unattendedLimits } from '../../settings.js';
 import { ToolHooks } from './toolHooks.js';
 import { continuedTurn } from './subagents.js';
@@ -211,7 +211,7 @@ export class ClaudeDriver implements AgentDriver {
     if (this.q || this.closed) return;
     const openrouter = this.openrouter ? loadOpenRouter() : null;
     if (this.openrouter && !openrouter) throw new Error('The OpenRouter key was removed in Settings');
-    const unattended = this.unattended ? unattendedRules(this.cwd, unattendedLimits(loadSettings().unattended), Object.keys(ACCOUNT_LABEL).map((a) => configDir(a as Account))) : undefined;
+    const unattended = this.unattended ? claudeRules(this.cwd, unattendedLimits(loadSettings().unattended)) : undefined;
     const options = agentOptions({
       cwd: this.cwd,
       dirs: this.dirs,

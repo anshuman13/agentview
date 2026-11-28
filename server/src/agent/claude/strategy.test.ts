@@ -31,3 +31,14 @@ describe('claude transcripts', () => {
     expect(await t.firstCommit(id)).toEqual({ hash: 'a1b2c3d', subject: 'Add the store' });
   });
 });
+
+describe('claude unattended', () => {
+  it('turns the limits into a sandbox on the worktree that keeps .git and the config folder closed', () => {
+    type Sandbox = { filesystem: { allowWrite: string[]; denyWrite: string[]; denyRead: string[] }; network: { allowedDomains: string[] } };
+    const { sandbox } = claudeStrategy().unattended.limits('/w/job', { allowWrite: ['/extra'], allowedDomains: ['pypi.org'] }) as { sandbox: Sandbox };
+    expect(sandbox.filesystem.allowWrite).toEqual(['/w/job', os.tmpdir(), '/extra']);
+    expect(sandbox.filesystem.denyWrite).toEqual(['/w/job/.git']);
+    expect(sandbox.filesystem.denyRead).toContain(path.join(os.homedir(), '.ssh'));
+    expect(sandbox.network.allowedDomains).toEqual(['pypi.org']);
+  });
+});

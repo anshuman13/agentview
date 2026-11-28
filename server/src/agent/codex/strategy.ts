@@ -25,4 +25,6 @@ export const codexStrategy: ProviderStrategy = {
   servers: readCodexServers,
   serversFile: '~/.codex/config.toml',
   modelSet: 'codex',
+  // The driver does not limit unattended chats yet.
+  unattended: { limits: () => ({}) },
 };

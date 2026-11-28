@@ -5,7 +5,8 @@ import { ASK_TOOLS, TOOLS, TOOL_INSTRUCTIONS } from '../tools/index.js';
 import { RUN_CODE_RULES } from '../tools/runCode.js';
 import type { ToolCtx } from '../tools/tool.js';
 import { ownChromeMcp, ownProfile } from '../../chrome/launch.js';
-import { sandboxOf, type Unattended } from './unattended.js';
+import { sandboxOf } from './unattended.js';
+import type { Unattended } from '../unattended.js';
 import { openRouterEnv, type OpenRouterSettings } from './openrouter.js';
 
 export const STATUS_REMINDER = 'You have not called mcp__agentview__set_status for a while, so the user sees no progress. Call it now with what you are doing, what is done and the next steps.';

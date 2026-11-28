@@ -2,7 +2,8 @@ import { editedPath } from '../steps.js';
 import type { HookInput, HookJSONOutput } from '@anthropic-ai/claude-agent-sdk';
 import type { AgentHost } from '../types.js';
 import { STATUS_REMINDER } from './options.js';
-import { denyTool, editDenied, toolDenied, type Unattended } from './unattended.js';
+import { denyTool, editDenied, toolDenied } from './unattended.js';
+import type { Unattended } from '../unattended.js';
 import { bigBroRequest, bigBroVerdict } from './approval.js';
 import { BIG_BRO } from '../../../../shared/protocol.js';
 

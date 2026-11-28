@@ -7,6 +7,7 @@ import { chatMemory, memoryDirs } from './memory.js';
 import { firstCommit, savedEvents } from './savedChat.js';
 import { searchMessages } from './search.js';
 import { fileTail, listSessions, savedSession } from './sessions.js';
+import { claudeRules, sandboxOf } from './unattended.js';
 import { claudeResume } from '../resume.js';
 
 // One store for Claude and OpenRouter, so cross-provider callers see each chat once.
@@ -38,5 +39,6 @@ export function claudeStrategy({ openrouter = false } = {}): ProviderStrategy {
     servers: allowedServers,
     serversFile: '~/.claude.json',
     modelSet: 'claude',
+    unattended: { limits: (worktree, settings) => ({ sandbox: sandboxOf(claudeRules(worktree, settings)) }) },
   };
 }

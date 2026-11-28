@@ -1,5 +1,6 @@
 import type { McpServerDef } from '../integrations/mcpClient.js';
 import type { MemoryFile } from './memory.js';
+import type { UnattendedLimits } from '../settings.js';
 import type { Account, AgentEvent, SavedSession, CacheInfo, Capabilities, ChatEvent, Effort, McpServer, Provider, ServerMessage, ServerState, SessionInfo } from '../../../shared/protocol.js';
 
 export type Decision = { behavior: 'allow'; updatedInput: Record<string, unknown>; updatedPermissions?: unknown[] } | { behavior: 'deny'; message: string };
@@ -162,4 +163,6 @@ export type ProviderStrategy = {
   serversFile: string;
   // Providers with the same model ids share one set, so a client keeps one model list and last model per set.
   modelSet: string;
+  // The driver options that hold a scheduled chat to its worktree and the settings' extra folders and domains.
+  unattended: { limits(worktree: string, settings: UnattendedLimits): Record<string, unknown> };
 };

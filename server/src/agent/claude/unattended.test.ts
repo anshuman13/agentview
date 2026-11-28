@@ -5,7 +5,7 @@ import { afterAll, describe, expect, it, vi } from 'bun:test';
 import type { HookInput } from './sdkTypes.js';
 import { ToolHooks } from './toolHooks.js';
 import { UNATTENDED_DOMAINS, unattendedLimits } from '../../settings.js';
-import { unattendedRules } from './unattended.js';
+import { unattendedRules } from '../unattended.js';
 
 const root = realpathSync(mkdtempSync(path.join(os.tmpdir(), 'unattended-')));
 // The temp folder is writable, so the folder the edits must not reach is made outside it.

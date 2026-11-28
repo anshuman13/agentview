@@ -2,20 +2,14 @@ import { realpathSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import type { HookJSONOutput } from './sdkTypes.js';
+import { ACCOUNT_LABEL, type Account } from '../../../../shared/protocol.js';
 import type { UnattendedLimits } from '../../settings.js';
 import { inside } from '../../../../shared/util.js';
+import { unattendedRules, type Unattended } from '../unattended.js';
+import { configDir } from './accounts.js';
 
-// What a scheduled coding chat may touch: its worktree, the temp folder and the settings' extra folders and domains.
-export type Unattended = { worktree: string; allowWrite: string[]; domains: string[]; denyRead: string[] };
-
-const SECRET_DIRS = ['.ssh', '.aws', '.config/gh', '.agentview', '.claude', '.claude-alt', '.claude-alt2'];
-
-export const unattendedRules = (worktree: string, limits: UnattendedLimits, configDirs: (string | undefined)[]): Unattended => ({
-  worktree: path.resolve(worktree),
-  allowWrite: limits.allowWrite,
-  domains: limits.allowedDomains,
-  denyRead: [...new Set([...SECRET_DIRS.map((d) => path.join(os.homedir(), d)), ...configDirs.filter((d): d is string => Boolean(d))])],
-});
+// The rules for a Claude chat, which may not read any account's config folder either.
+export const claudeRules = (worktree: string, limits: UnattendedLimits) => unattendedRules(worktree, limits, Object.keys(ACCOUNT_LABEL).map((a) => configDir(a as Account)));
 
 const gitDir = (u: Unattended) => path.join(u.worktree, '.git');
 
