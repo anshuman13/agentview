@@ -36,6 +36,7 @@ vi.mock('../session/nested.js', () => ({ listNests: async () => ({}), setNest: a
 vi.mock('../session/sections.js', () => ({ listSections: async () => ({}), setSection: async () => ({}) }));
 vi.mock('../agent/claude/savedChat.js', () => ({ savedEvents: mocks.savedEvents, firstCommit: mocks.firstCommit }));
 vi.mock('../agent/claude/search.js', () => ({ searchMessages: mocks.searchMessages }));
+vi.mock('../agent/allChats.js', () => ({ searchAll: (words: string[]) => mocks.searchMessages(words), listAll: async () => (await mocks.listSessions()).map((s: { summary: string }) => ({ ...s, title: s.summary })), otherChats: async () => [] }));
 vi.mock('../workspace/terminal.js', () => ({ listTerminals: mocks.listTerminals, createTerminal: vi.fn(), closeTerminal: vi.fn() }));
 
 import type { RouteDeps } from './routes.js';

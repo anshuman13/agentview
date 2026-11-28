@@ -91,7 +91,11 @@ type ChatSearchDeps = {
   titles: () => Promise<Map<string, string>>;
   summaries: () => Promise<Summaries>;
   read: typeof readFile;
+  // Chats of the other transcript stores that hold every word, with their folder and title.
+  others: (words: string[]) => Promise<OtherChat[]>;
 };
+
+export type OtherChat = { sessionId: string; cwd: string; title: string; hits: MessageHit[] };
 
 const defaultDeps: ChatSearchDeps = {
   dirs: () => [CLAUDE_DIR, ...loggedInAccounts().map(configDir).filter((d): d is string => !!d)],
@@ -99,6 +103,7 @@ const defaultDeps: ChatSearchDeps = {
   titles: async () => new Map((await listSessions({ limit: 1000 })).map((s) => [s.sessionId, s.summary ?? ''])),
   summaries: readSummaries,
   read: readFile,
+  others: async () => [],
 };
 
 async function refreshIndex(dirs: string[], read: typeof readFile) {
@@ -134,7 +139,8 @@ export async function searchChats(query: string, cwd: string, self: string | nul
   const skip = new Set(binned);
   if (self) skip.add(self);
   const profile = profileOf(cwd);
-  const ranked: { chat: IndexedChat; distinct: number; lines: number; newest: string; best: IndexedLine; bestWords: string[] }[] = [];
+  type Ranked = { sessionId: string; cwd: string; title: string; distinct: number; lines: number; newest: string; at: string; snippet: string };
+  const ranked: Ranked[] = [];
   for (const chat of index.values()) {
     if (skip.has(chat.sessionId) || !chat.cwd || profileOf(chat.cwd) !== profile) continue;
     const all = new Set<string>();
@@ -148,12 +154,13 @@ export async function searchChats(query: string, cwd: string, self: string | nul
       if (l.at > newest) newest = l.at;
       if (!best || hit.length > bestWords.length || (hit.length === bestWords.length && l.at > best.at)) { best = l; bestWords = hit; }
     }
-    if (best) ranked.push({ chat, distinct: all.size, lines, newest, best, bestWords });
+    if (best) ranked.push({ sessionId: chat.sessionId, cwd: chat.cwd, title: titles.get(chat.sessionId) || chat.first.slice(0, 80), distinct: all.size, lines, newest, at: best.at, snippet: snippetAround(best.text, best.low.indexOf(bestWords[0])) });
+  }
+  for (const o of await d.others(words).catch(() => [] as OtherChat[])) {
+    if (skip.has(o.sessionId) || !o.hits.length || !o.cwd || profileOf(o.cwd) !== profile) continue;
+    ranked.push({ sessionId: o.sessionId, cwd: o.cwd, title: o.title, distinct: words.length, lines: o.hits.length, newest: o.hits[0].at, at: o.hits[0].at, snippet: o.hits[0].text });
   }
   ranked.sort((a, b) => b.distinct - a.distinct || b.lines - a.lines || b.newest.localeCompare(a.newest));
   if (!ranked.length) return 'No past chats match.';
-  return ranked.slice(0, 8).map(({ chat, best, bestWords }) => {
-    const title = titles.get(chat.sessionId) || chat.first.slice(0, 80) || 'Untitled';
-    return `- ${title} | ${homeRelative(chat.cwd)} | ${best.at.slice(0, 10)} | ${chat.sessionId}\n  ${snippetAround(best.text, best.low.indexOf(bestWords[0]))}`;
-  }).join('\n');
+  return ranked.slice(0, 8).map((r) => `- ${r.title || 'Untitled'} | ${homeRelative(r.cwd)} | ${r.at.slice(0, 10)} | ${r.sessionId}\n  ${r.snippet}`).join('\n');
 }

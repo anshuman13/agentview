@@ -75,6 +75,17 @@ describe('searchChats', () => {
     expect(out).toContain('needle');
   });
 
+  it('ranks chats from other providers next to Claude chats, in the same profile only', async () => {
+    const dir = base('mixed');
+    chat(dir, 'c1', [msg('c1', work, '2026-05-01T00:00:00Z', 'quokka only')]);
+    const others = async () => [
+      { sessionId: 'thr', cwd: work, title: 'Codex chat', hits: [{ sessionId: 'thr', role: 'user' as const, text: 'quokka habitat', at: '2026-05-02T00:00:00Z' }] },
+      { sessionId: 'far', cwd: personal, title: 'Other profile', hits: [{ sessionId: 'far', role: 'user' as const, text: 'quokka habitat', at: '2026-05-03T00:00:00Z' }] },
+    ];
+    const out = await searchChats('quokka habitat', work, null, { dirs: () => [dir], binned: async () => [], titles: async () => new Map(), others });
+    expect(out.split('\n').filter((l) => l.startsWith('- '))).toEqual(['- Codex chat | /srv/repo | 2026-05-02 | thr', '- quokka only | /srv/repo | 2026-05-01 | c1']);
+  });
+
   it('reads a chat once through two config dirs and again only after it changes', async () => {
     const dir = base('dup');
     chat(dir, 'x', [msg('x', work, '2026-04-01T00:00:00Z', 'zebra crossing')]);

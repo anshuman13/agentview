@@ -12,7 +12,7 @@ import { emptyBin, listBin, restoreSession } from '../agent/claude/bin.js';
 import { pinsRoute, removeChat } from '../agent/claude/pins.js';
 import { openRouterView, saveOpenRouter } from '../agent/claude/openrouter.js';
 import { resolvedRoute } from '../agent/claude/resolved.js';
-import { searchMessages } from '../agent/claude/search.js';
+import { listAll, searchAll } from '../agent/allChats.js';
 import { seenRoute } from '../agent/claude/seen.js';
 import { listSpawned, rowOf } from '../session/spawned.js';
 import { listNests, setNest } from '../session/nested.js';
@@ -135,12 +135,13 @@ export function sessionRoutes(d: RouteDeps): Record<string, Entry<Ctx>> {
       }
     }),
     'ANY /api/sessions/search': entry(async ({ url }) => {
-      const [hits, list, bin, links] = await Promise.all([searchMessages(url.searchParams.get('q') ?? ''), listSessions({ limit: 1000 }), listBin(), listLinks()]);
+      const words = (url.searchParams.get('q') ?? '').toLowerCase().split(/\s+/).filter(Boolean);
+      const [hits, list, bin, links] = await Promise.all([searchAll(words), listAll(), listBin(), listLinks()]);
       const binned = new Set(bin.map((b) => b.sessionId));
       const byId = new Map(list.map((x) => [x.sessionId, x]));
       return hits
         .filter((h) => byId.has(h.sessionId) && !binned.has(h.sessionId))
-        .map((h) => ({ ...h, title: byId.get(h.sessionId)!.summary, cwd: byId.get(h.sessionId)!.cwd ?? '', ...(links[h.sessionId] && { parentId: links[h.sessionId].parent }) }));
+        .map((h) => ({ ...h, title: byId.get(h.sessionId)!.title, cwd: byId.get(h.sessionId)!.cwd ?? '', ...(links[h.sessionId] && { parentId: links[h.sessionId].parent }) }));
     }),
   };
 }

@@ -27,6 +27,7 @@ export async function providerOptions(): Promise<ProviderOption[]> {
 }
 
 export const provider = (id: Provider) => PROVIDERS[id];
+export const providerIds = () => Object.keys(PROVIDERS) as Provider[];
 export const isProvider = (v: unknown): v is Provider => typeof v === 'string' && v in PROVIDERS;
 
 // The provider each chat was last on, so a reopened chat goes back to it; a chat not listed runs on Claude.
