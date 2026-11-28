@@ -6,7 +6,7 @@ export type AskForApproval = 'untrusted' | 'on-request' | 'never';
 export type SandboxMode = 'read-only' | 'workspace-write' | 'danger-full-access';
 export type SandboxPolicy = { type: 'readOnly'; networkAccess: boolean } | { type: 'workspaceWrite'; writableRoots: string[]; networkAccess: boolean; excludeTmpdirEnvVar: boolean; excludeSlashTmp: boolean };
 
-export type UserInput = { type: 'text'; text: string; text_elements: [] };
+export type UserInput = { type: 'text'; text: string; text_elements: [] } | { type: 'localImage'; path: string };
 
 export type FileUpdateChange = { path: string; kind: { type: 'add' } | { type: 'delete' } | { type: 'update'; move_path: string | null }; diff: string };
 
@@ -18,7 +18,19 @@ export type ThreadItem =
   | { type: 'mcpToolCall'; id: string; server: string; tool: string; status: string; arguments: unknown; result: { content: unknown[] } | null; error: { message: string } | null }
   | { type: 'webSearch'; id: string; query: string }
   | { type: 'contextCompaction'; id: string }
-  | { type: 'reasoning' | 'plan' | 'other'; id: string };
+  | { type: 'reasoning'; id: string; summary: string[]; content: string[] }
+  | { type: 'plan'; id: string; text: string }
+  | { type: 'other'; id: string };
+
+// `turn/plan/updated`: the whole update_plan checklist each time. Plans are not thread items, so a reloaded thread has none.
+export type TurnPlanStepStatus = 'pending' | 'inProgress' | 'completed';
+export type TurnPlanUpdatedNotification = { threadId: string; turnId: string; explanation: string | null; plan: Array<{ step: string; status: TurnPlanStepStatus }> };
+
+// `item/reasoning/summaryTextDelta` and `item/reasoning/textDelta`; the completed `reasoning` item carries the joined text.
+export type ReasoningDeltaNotification = { threadId: string; turnId: string; itemId: string; delta: string; summaryIndex?: number; contentIndex?: number };
+
+export type TurnSteerParams = { threadId: string; input: UserInput[]; expectedTurnId: string };
+export type TurnSteerResponse = { turnId: string };
 
 export type TurnStatus = 'completed' | 'interrupted' | 'failed' | 'inProgress';
 export type Turn = { id: string; items: ThreadItem[]; status: TurnStatus; startedAt: number | null; error: { message: string } | null };
