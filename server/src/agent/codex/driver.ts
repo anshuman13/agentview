@@ -92,8 +92,7 @@ export class CodexDriver implements AgentDriver {
     if (init) await rpc.initialize();
     const { account, requiresOpenaiAuth } = await rpc.request<{ account: unknown; requiresOpenaiAuth: boolean }>('account/read', { refreshToken: false });
     if (!account && requiresOpenaiAuth) throw new Error(NOT_SIGNED_IN);
-    const { approvalPolicy, sandbox } = policyFor(this.mode);
-    const params = { cwd: this.host.cwd, approvalPolicy, sandbox, ...threadParams(this.host.state.session.id, this.host.cwd) };
+    const params = this.threadStart();
     const method = this.threadId ? (this.fork ? 'thread/fork' : 'thread/resume') : 'thread/start';
     const res = await rpc.request<{ thread: Thread; model: string }>(method, this.threadId ? { threadId: this.threadId, ...params, ...(!this.fork && { excludeTurns: true }) } : params);
     if (this.fork) this.host.system('Forked into a new chat');
@@ -106,6 +105,11 @@ export class CodexDriver implements AgentDriver {
     clearInterval(this.usageTimer);
     this.usageTimer = setInterval(() => void this.loadUsage(), USAGE_EVERY);
     this.usageTimer.unref?.();
+  }
+
+  private threadStart() {
+    const { approvalPolicy, sandbox } = policyFor(this.mode);
+    return { cwd: this.host.cwd, approvalPolicy, sandbox, ...threadParams(this.host.state.session.id, this.host.cwd) };
   }
 
   private get mode() {
@@ -281,6 +285,25 @@ export class CodexDriver implements AgentDriver {
       } catch (err) {
         this.host.compactFailed(errText(err));
         this.host.turnResult({ id: randomUUID(), ok: true, text: '', costUsd: 0, isError: false });
+      }
+    });
+  }
+
+  // /clear starts a new thread in the same process; the old thread becomes a sub-chat.
+  clear() {
+    this.start();
+    this.queue = this.queue.then(async () => {
+      try {
+        await this.ready;
+        const res = await this.rpc!.request<{ thread: Thread; model: string }>('thread/start', this.threadStart());
+        this.threadId = res.thread.id;
+        this.turnId = null;
+        this.titled = false;
+        this.host.setSession({ sessionId: res.thread.id });
+        void noteThread(res.thread.id, { cwd: this.host.cwd, ...(res.thread.path && { path: res.thread.path }) });
+        this.host.turnResult({ id: randomUUID(), ok: true, text: '', costUsd: 0, isError: false });
+      } catch (err) {
+        this.host.turnResult({ id: randomUUID(), ok: false, text: errText(err), costUsd: 0, isError: true });
       }
     });
   }

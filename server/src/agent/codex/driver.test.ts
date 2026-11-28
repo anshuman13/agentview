@@ -112,3 +112,22 @@ describe('start', () => {
     d.close();
   });
 });
+
+describe('clear', () => {
+  it('starts a new thread, takes its id and ends the turn', async () => {
+    const { d, calls, results } = setup(false, () => Promise.resolve());
+    const sessions: unknown[] = [];
+    d.host.setSession = (s: unknown) => void sessions.push(s);
+    d.start = () => undefined;
+    d.rpc.request = async (method: string, params: any) => {
+      calls.push({ method, params });
+      return { thread: { id: 't2' }, model: 'gpt-5' };
+    };
+    d.clear();
+    await d.queue;
+    expect(calls.map((c) => c.method)).toEqual(['thread/start']);
+    expect(d.threadId).toBe('t2');
+    expect(sessions).toEqual([{ sessionId: 't2' }]);
+    expect(results).toMatchObject([{ ok: true, isError: false }]);
+  });
+});
