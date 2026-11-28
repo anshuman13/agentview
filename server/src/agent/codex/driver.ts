@@ -368,19 +368,22 @@ export class CodexDriver implements AgentDriver {
   }
 
   // A new thread holding this one through the turn with the reply, or all of it without one; returns its id.
+  // In a process of its own: the one that forks a thread keeps writing it, so the new chat could not resume it.
   async forkAt(sessionId: string, reply: { id: string } | null, title?: string): Promise<string> {
-    this.start();
-    await this.ready;
-    const rpc = this.rpc!;
-    let lastTurnId: string | undefined;
-    if (reply) {
-      const { thread } = await rpc.request<{ thread: Thread }>('thread/read', { threadId: sessionId, includeTurns: true });
-      lastTurnId = thread.turns.find((t) => t.items.some((i) => i.id === reply.id))?.id;
-      if (!lastTurnId) throw new Error('That reply is not saved yet');
+    const rpc = await CodexRpc.openQuiet(this.host.cwd);
+    try {
+      let lastTurnId: string | undefined;
+      if (reply) {
+        const { thread } = await rpc.request<{ thread: Thread }>('thread/read', { threadId: sessionId, includeTurns: true });
+        lastTurnId = thread.turns.find((t) => t.items.some((i) => i.id === reply.id))?.id;
+        if (!lastTurnId) throw new Error('That reply is not saved yet');
+      }
+      const res = await rpc.request<{ thread: Thread }>('thread/fork', { threadId: sessionId, ...(lastTurnId && { lastTurnId }), excludeTurns: true });
+      await noteThread(res.thread.id, { cwd: this.host.cwd, ...(title && { summary: title }), ...(res.thread.path && { path: res.thread.path }) });
+      return res.thread.id;
+    } finally {
+      await rpc.close();
     }
-    const res = await rpc.request<{ thread: Thread }>('thread/fork', { threadId: sessionId, ...(lastTurnId && { lastTurnId }), excludeTurns: true });
-    await noteThread(res.thread.id, { cwd: this.host.cwd, ...(title && { summary: title }), ...(res.thread.path && { path: res.thread.path }) });
-    return res.thread.id;
   }
 
   async stopTask() {

@@ -66,6 +66,7 @@ export class CodexRpc {
   close() {
     this.end(new Error('The codex process was closed'), false);
     this.proc?.kill();
+    return this.proc?.exited;
   }
 
   private send(msg: object) {

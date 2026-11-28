@@ -1,5 +1,6 @@
-import { describe, expect, it } from 'bun:test';
+import { describe, expect, it, spyOn } from 'bun:test';
 import { CodexDriver, userInput } from './driver.js';
+import { CodexRpc } from './rpc.js';
 import { codexThread } from './threads.js';
 import { waitFor } from '../../../../testing.js';
 
@@ -162,14 +163,19 @@ describe('clear', () => {
 });
 
 describe('forkAt', () => {
-  it('forks through the turn holding the reply, or the whole thread', async () => {
-    const { d, calls } = setup(false, () => Promise.resolve());
-    d.start = () => undefined;
-    d.rpc.request = async (method: string, params: any) => {
-      calls.push({ method, params });
-      if (method === 'thread/read') return { thread: { turns: [{ id: 'u1', items: [{ id: 'a1' }] }, { id: 'u2', items: [{ id: 'a2' }] }] } };
-      return { thread: { id: 'f1', path: null } };
+  it('forks through the turn holding the reply, or the whole thread, in a process it closes', async () => {
+    const calls: Array<{ method: string; params: any }> = [];
+    let closed = 0;
+    const rpc: any = {
+      request: async (method: string, params: any) => {
+        calls.push({ method, params });
+        if (method === 'thread/read') return { thread: { turns: [{ id: 'u1', items: [{ id: 'a1' }] }, { id: 'u2', items: [{ id: 'a2' }] }] } };
+        return { thread: { id: 'f1', path: null } };
+      },
+      close: async () => void closed++,
     };
+    const open = spyOn(CodexRpc, 'openQuiet').mockImplementation(async () => rpc);
+    const { d } = setup(false, () => Promise.resolve());
     expect(await d.forkAt('t1', { id: 'a1', text: 'One' }, 'Plan (fork)')).toBe('f1');
     expect(calls.map((c) => c.method)).toEqual(['thread/read', 'thread/fork']);
     expect(calls[1].params).toMatchObject({ threadId: 't1', lastTurnId: 'u1' });
@@ -177,5 +183,7 @@ describe('forkAt', () => {
     await d.forkAt('t1', null);
     expect(calls.at(-1)!.params.lastTurnId).toBeUndefined();
     await expect(d.forkAt('t1', { id: 'zz', text: '' })).rejects.toThrow('not saved yet');
+    expect(closed).toBe(3);
+    open.mockRestore();
   });
 });
