@@ -13,14 +13,16 @@
       { "toolUseId": "b", "label": "Run tests", "startedAt": 0, "endedAt": 4200, "command": "bun test", "output": "12 pass\n0 fail" },
       { "toolUseId": "c", "label": "", "startedAt": 0, "endedAt": 3725000, "command": "make build", "failed": true },
       { "toolUseId": "f", "label": "Deploy", "startedAt": 0, "endedAt": 2000, "output": "error: no access", "failed": true, "exitCode": 3 },
-      { "toolUseId": "g", "label": "Check", "startedAt": 0, "endedAt": 2000, "output": "ok", "exitCode": 0 }
+      { "toolUseId": "g", "label": "Check", "startedAt": 0, "endedAt": 2000, "output": "ok", "exitCode": 0 },
+      { "toolUseId": "h", "label": "Sleep a minute", "startedAt": 0, "endedAt": 5000, "command": "sleep 60", "stopped": true }
     ],
     "running": [],
     "finished": [
       { "toolUseId": "b", "label": "Run tests", "time": "4s", "failed": false, "detail": "$ bun test\n12 pass\n0 fail" },
       { "toolUseId": "c", "label": "make build", "time": "Failed", "failed": true, "detail": "$ make build\nNo output" },
       { "toolUseId": "f", "label": "Deploy", "time": "Failed", "failed": true, "detail": "error: no access\n[exited with code 3]" },
-      { "toolUseId": "g", "label": "Check", "time": "2s", "failed": false, "detail": "ok" }
+      { "toolUseId": "g", "label": "Check", "time": "2s", "failed": false, "detail": "ok" },
+      { "toolUseId": "h", "label": "Sleep a minute", "time": "Stopped", "failed": false, "detail": "$ sleep 60\nNo output\n[killed]" }
     ]
   },
   {

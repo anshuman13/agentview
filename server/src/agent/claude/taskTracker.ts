@@ -76,13 +76,13 @@ export class TaskTracker {
   }
 
   // A background shell that ended joins the finished ones with its command; the notification adds how it ended and its last output.
-  private shellEnded(task: RunningTask, failed: boolean, outputFile?: string, summary?: string) {
+  private shellEnded(task: RunningTask, status: string, outputFile?: string, summary?: string) {
     if (!task.shell || !task.toolUseId) return this.syncShells();
     const prev = this.host.state.session.shells?.find((t) => t.toolUseId === task.toolUseId && t.endedAt);
     const command = this.commandOf(task.toolUseId);
     const code = summary?.match(/exit code (\d+)/)?.[1];
     const exitCode = code !== undefined ? Number(code) : prev?.exitCode;
-    const ended: BackgroundShell = { toolUseId: task.toolUseId, label: task.description, startedAt: task.startedAt ?? Date.now(), endedAt: prev?.endedAt ?? Date.now(), ...(command && { command }), ...((failed || prev?.failed) && { failed: true }), ...(exitCode !== undefined && { exitCode }) };
+    const ended: BackgroundShell = { toolUseId: task.toolUseId, label: task.description, startedAt: task.startedAt ?? Date.now(), endedAt: prev?.endedAt ?? Date.now(), ...(command && { command }), ...((status === 'failed' || prev?.failed) && { failed: true }), ...((ENDED[status] === 'stopped' || prev?.stopped) && { stopped: true }), ...(exitCode !== undefined && { exitCode }) };
     this.syncShells(ended);
     const file = outputFile ?? this.outputFiles.get(task.toolUseId);
     if (file) void outputTail(file).then((output) => this.setOutput(task.toolUseId, output, true));
@@ -137,7 +137,7 @@ export class TaskTracker {
       this.running.delete(msg.task_id);
       if (task?.shell !== undefined) {
         this.endedShells.set(msg.task_id, task);
-        this.shellEnded(task, msg.patch.status === 'failed');
+        this.shellEnded(task, msg.patch.status);
       }
     } else if (task?.shell !== undefined) this.syncShells();
     const toolUseId = taskToolUse(this.taskIds, this.agents, msg.task_id);
@@ -153,7 +153,7 @@ export class TaskTracker {
     this.running.delete(msg.task_id);
     this.endedShells.delete(msg.task_id);
     const toolUseId = msg.tool_use_id ? agentToolUse(this.host, msg.tool_use_id) : taskToolUse(this.taskIds, this.agents, msg.task_id);
-    if (task?.shell !== undefined) this.shellEnded(task, msg.status === 'failed', msg.output_file, msg.summary);
+    if (task?.shell !== undefined) this.shellEnded(task, msg.status, msg.output_file, msg.summary);
     if (task) this.outputFiles.delete(task.toolUseId);
     if (!toolUseId) return;
     // A stopped shell command gets no turn of its own: mark its step stopped and say so in the transcript.

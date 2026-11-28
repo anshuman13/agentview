@@ -261,7 +261,7 @@ data class TurnMeter(val startedAt: Long = 0, val tokens: Long = 0)
 
 // shared/protocol.ts BackgroundShell: a shell command the agent left running in the background; endedAt, command and output once it has finished.
 @Serializable
-data class BackgroundShell(val toolUseId: String, val label: String = "", val startedAt: Long = 0, val endedAt: Long? = null, val command: String? = null, val output: String? = null, val failed: Boolean = false, val exitCode: Int? = null)
+data class BackgroundShell(val toolUseId: String, val label: String = "", val startedAt: Long = 0, val endedAt: Long? = null, val command: String? = null, val output: String? = null, val failed: Boolean = false, val stopped: Boolean = false, val exitCode: Int? = null)
 
 @Serializable
 data class UsageWindow(val pct: Double = 0.0)
