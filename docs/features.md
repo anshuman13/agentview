@@ -367,7 +367,8 @@ cost so far. The status bar usage tooltip adds a Spend block with today's and th
   upload is marked `[Image: path]` or `[File: path]` by its type (`attachMark`, used by the web and the phone composer)
 - On the phone, images inserted from the keyboard (Gboard stickers, GIFs, clipboard images) upload into the composer's image chips (`KeyboardImages` in `Attach.kt`); Paste from the text field's menu does not take images yet
 - "Side chat" in the web chat settings menu, or ⌘; (Ctrl+; off Mac), forks the chat into the side column and keeps the original in the
-  main column, so a side question does not land in the running chat (like Claude desktop's side chat)
+  main column, so a side question does not land in the running chat (like Claude desktop's side chat).
+  The fork starts untitled and takes its name from the first question asked in it
 - "Continue in terminal" in the web chat settings menu copies `cd <repo> && claude --resume <id>`, with `CLAUDE_CONFIG_DIR` for
   a Work account, to pick the chat up in the Claude CLI (the server builds the line, `session.resumeCommand`). Stop the chat first so two processes do not write to it. The phone Tools sheet has the same Continue in terminal, copying to the clipboard
 - A prompt that changed files has a Rewind files button under the turn's last reply, beside Copy, on web and phone, while the

@@ -153,7 +153,11 @@ export async function newChat(cwd: string, from: AgentSession | undefined, fork?
   const dir = path.resolve(cwd);
   if (dir !== from?.cwd && dir !== PROJECT && !allowedFolder(dir)) throw new Error(`Not a workspace folder: ${dir}`);
   if (!(await isDir(dir))) throw new Error(`Folder no longer exists: ${dir}`);
-  return fork ? createChat(dir, fork, from?.title ?? '', true) : createChat(dir, undefined, '', false, choice);
+  if (!fork) return createChat(dir, undefined, '', false, choice);
+  // A side chat starts untitled, so its first question names it.
+  const chat = await createChat(dir, fork, '', true);
+  chat.titleFrom = chat.state.events.length;
+  return chat;
 }
 
 // Fork from here: a new chat holding the conversation up to and with one reply (all of it without one), with a line that opens the parent.

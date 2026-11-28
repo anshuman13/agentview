@@ -25,7 +25,7 @@ function scanOf(chat: AgentSession) {
   for (let i = s.length; i < events.length; i++) {
     const e = events[i];
     if (e.kind === 'status') s.status = e;
-    else if (e.kind === 'user') s.firstUser ??= e;
+    else if (e.kind === 'user' && i >= chat.titleFrom) s.firstUser ??= e;
     else if (e.kind === 'agent') s.agents.push(e);
   }
   s.length = events.length;

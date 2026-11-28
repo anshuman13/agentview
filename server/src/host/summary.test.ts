@@ -7,6 +7,7 @@ const chat = (text: string, title = '') => ({
   id: 'c1',
   cwd: '/repo',
   title,
+  titleFrom: 0,
   created: 1,
   state: { events: [{ kind: 'user', text, at: 2 }], pending: [], status: '', session: { running: false, mcp: [], sessionId: 's1' } },
 }) as unknown as AgentSession;
@@ -19,6 +20,13 @@ describe('summary title', () => {
   });
   it('keeps a title the user set', () => {
     expect(title(chat('@chat:3f2a also check the importer', 'My name'))).toBe('My name');
+  });
+  it('names a side fork from its first question, not the copied history', () => {
+    const c = chat('the parent question');
+    c.state.events.push({ kind: 'user', text: 'what does this flag do', at: 3 } as never);
+    Object.assign(c, { titleFrom: 1 });
+    expect(title(c)).toBe('what does this flag do');
+    expect(title(chat('the parent question'))).toBe('the parent question');
   });
 });
 

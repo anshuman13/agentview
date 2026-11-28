@@ -37,6 +37,8 @@ export class AgentSession implements AgentHost {
   crons: Cron[] = [];
   id = randomUUID();
   title = '';
+  // Events before this index are a side fork's copied history, so the first prompt after it names the chat.
+  titleFrom = 0;
   onIdle: (() => void) | null = null;
   onJobTurn: ((runId: string, failed: boolean) => void) | null = null;
   created = Date.now();
