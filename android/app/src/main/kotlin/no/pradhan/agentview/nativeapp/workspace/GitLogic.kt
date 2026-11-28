@@ -149,6 +149,14 @@ fun appendPrompt(draft: String, prompt: String) = if (draft.isBlank()) prompt el
 
 fun parseBranchDiff(body: String): BranchDiff = protocolJson.decodeFromString(BranchDiff.serializer(), body)
 
+// shared: server/src/workspace/git.ts branchList, the local and remote branches the Changes screen can compare against.
+@Serializable data class BranchList(val branches: List<String> = emptyList(), val base: String = "")
+
+fun parseBranchList(body: String): BranchList = protocolJson.decodeFromString(BranchList.serializer(), body)
+
+// web/src/workspace/Changes.tsx BASES_KEY: the picked compare-against branch, kept per folder.
+fun compareBaseKey(cwd: String) = "compareBase:$cwd"
+
 // One commit's files and patch, from /api/git/show; base and commits stay empty.
 fun parseCommitDiff(body: String): BranchDiff = parseBranchDiff(body)
 

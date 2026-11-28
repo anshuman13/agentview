@@ -23,6 +23,7 @@ import no.pradhan.agentview.nativeapp.workspace.parseDir
 import no.pradhan.agentview.nativeapp.workspace.parseFile
 import no.pradhan.agentview.nativeapp.workspace.parseGitStatus
 import no.pradhan.agentview.nativeapp.workspace.parseSearch
+import no.pradhan.agentview.nativeapp.workspace.parseBranchList
 import no.pradhan.agentview.nativeapp.workspace.parseSketches
 import no.pradhan.agentview.nativeapp.workspace.parseTerms
 
@@ -32,7 +33,8 @@ suspend fun Hub.readDir(path: String) = parseDir(read("/api/dir?path=${enc(path)
 suspend fun Hub.searchFiles(q: String) = parseSearch(read("/api/search?q=${enc(q)}"))
 suspend fun Hub.chatFiles(chat: String): List<String> = protocolJson.decodeFromString(api.get("/api/files", chat))
 suspend fun Hub.gitStatus() = parseGitStatus(read("/api/git/status"))
-suspend fun Hub.branchDiff() = parseBranchDiff(read("/api/git/branch"))
+suspend fun Hub.branchDiff(base: String? = null) = parseBranchDiff(read(if (base == null) "/api/git/branch" else "/api/git/branch?base=${enc(base)}"))
+suspend fun Hub.branches() = parseBranchList(read("/api/git/branches"))
 suspend fun Hub.commitDiff(hash: String) = parseCommitDiff(read("/api/git/show?hash=${enc(hash)}"))
 fun Hub.git(action: String, body: String, failure: String, done: (Boolean) -> Unit) = write("/api/git/$action", body, failure, done)
 suspend fun Hub.terminals() = parseTerms(read("/api/terms"))

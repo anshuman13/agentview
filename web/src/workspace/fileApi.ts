@@ -17,7 +17,9 @@ export type DiffFiles = { files: { path: string; additions: number; deletions: n
 
 export type BranchDiff = DiffFiles & { base: string; commits?: GitCommit[] };
 
-export const fetchBranchDiff = () => fetchJson<BranchDiff>(api('/api/git/branch'));
+export const fetchBranchDiff = (base?: string) => fetchJson<BranchDiff>(api(base ? `/api/git/branch?base=${encodeURIComponent(base)}` : '/api/git/branch'));
+
+export const fetchBranches = () => fetchJson<{ branches: string[]; base: string }>(api('/api/git/branches'));
 
 export const fetchCommitDiff = (hash: string) => fetchJson<DiffFiles>(api(`/api/git/show?hash=${encodeURIComponent(hash)}`));
 

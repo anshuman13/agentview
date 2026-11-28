@@ -29,6 +29,8 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import no.pradhan.agentview.nativeapp.app.Hub
 import no.pradhan.agentview.nativeapp.app.branchDiff
+import no.pradhan.agentview.nativeapp.app.branches
+import no.pradhan.agentview.nativeapp.ui.ChoiceRow
 import no.pradhan.agentview.nativeapp.app.commitDiff
 import no.pradhan.agentview.nativeapp.app.git
 import no.pradhan.agentview.nativeapp.app.gitStatus
@@ -71,6 +73,13 @@ fun ChangesScreen(hub: Hub, onBack: () -> Unit) {
     val shownId by hub.store.state.select { it.shownId }
     val provider by hub.store.state.select { it.session?.provider }
     val chat = shownId
+    val cwd by hub.store.state.select { s -> s.session?.cwd ?: s.live.firstOrNull { it.id == s.shownId }?.cwd ?: "" }
+    var base by remember(cwd) { mutableStateOf(hub.prefs.getString(compareBaseKey(cwd), null)) }
+    var basePick by remember { mutableStateOf<BranchList?>(null) }
+    val pickBase = { b: String? ->
+        hub.prefs.edit().apply { if (b == null) remove(compareBaseKey(cwd)) else putString(compareBaseKey(cwd), b) }.apply()
+        base = b
+    }
     var open by rememberSaveable(chat) { mutableStateOf<String?>(null) }
     var openLine by rememberSaveable(chat) { mutableStateOf<Int?>(null) }
     var pager by rememberSaveable(chat) { mutableStateOf<List<String>?>(null) }
@@ -91,7 +100,9 @@ fun ChangesScreen(hub: Hub, onBack: () -> Unit) {
         }, onBack = { pager = null; reload() })
         return
     }
-    val (branchLoad, reloadBranch) = rememberLoad(chat) { hub.branchDiff() }
+    val (branchLoad, reloadBranch) = rememberLoad(chat, base) { hub.branchDiff(base) }
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    val openBases = { scope.launch { basePick = runCatching { hub.branches() }.getOrElse { BranchList() } }; Unit }
     val pick = rememberSaveable(chat) { mutableStateOf<String?>(null) }
     val (commitLoad, _) = rememberLoad(chat, pick.value) { pick.value?.let { hub.commitDiff(it) } }
     // A file the agent or watcher reports changed refreshes after the burst; the slow poll catches git commands run outside.
@@ -110,7 +121,18 @@ fun ChangesScreen(hub: Hub, onBack: () -> Unit) {
                 MenuItem("Review changes with $label", "sparkle", { close(); hub.askChat(REVIEW_LOCAL) }, enabled = files.isNotEmpty())
             }
         }
-        PageBody { ChangesList(hub, load, branchLoad.data, Picked(pick, commitLoad), ops, message, shownPatch) { open = it.file; openLine = it.line } }
+        PageBody { ChangesList(hub, load, branchLoad.data, base != null, openBases, Picked(pick, commitLoad), ops, message, shownPatch) { open = it.file; openLine = it.line } }
+    }
+    basePick?.let { list ->
+        val current = branchLoad.data?.base
+        Sheet({ basePick = null }, "Compare against", padded = false, full = false) {
+            Group {
+                list.branches.forEachIndexed { i, b ->
+                    if (i > 0) Hairline()
+                    ChoiceRow(b, if (b == list.base) "default" else null, checked = b == current, onClick = { basePick = null; pickBase(b.takeIf { it != list.base }) })
+                }
+            }
+        }
     }
     ask?.let { list ->
         ConfirmDialog(discardTitle(list), discardDetail(list), if (list.any { it.status == "?" }) "Discard and Delete" else "Discard", { ops.run("discard", pathsBody(list)) }, onDismiss = { ask = null })
@@ -118,7 +140,7 @@ fun ChangesScreen(hub: Hub, onBack: () -> Unit) {
 }
 
 @Composable
-private fun ChangesList(hub: Hub, load: Loaded<GitStatus>, branch: BranchDiff?, picked: Picked, ops: GitOps, message: MutableState<String>, shownPatch: MutableState<String?>, onOpenFinding: (Finding) -> Unit) {
+private fun ChangesList(hub: Hub, load: Loaded<GitStatus>, branch: BranchDiff?, basePicked: Boolean, onBases: () -> Unit, picked: Picked, ops: GitOps, message: MutableState<String>, shownPatch: MutableState<String?>, onOpenFinding: (Finding) -> Unit) {
     val status = load.data
     val files = status?.files ?: emptyList()
     val staged = files.filter { it.staged }
@@ -140,7 +162,7 @@ private fun ChangesList(hub: Hub, load: Loaded<GitStatus>, branch: BranchDiff?, 
         stagedSection(staged, ops)
         changesSection(changes, ops)
         if (status != null && files.isEmpty()) item { EmptyState("No changes", icon = "source-control", small = false) }
-        branch?.takeIf { it.files.isNotEmpty() }?.let { committedSection(it, status?.branch, picked, shownPatch) }
+        branch?.takeIf { it.files.isNotEmpty() || basePicked }?.let { committedSection(it, status?.branch, onBases, picked, shownPatch) }
         item { Column { Findings(hub, "local", onOpenFinding) } }
         item { Spacer(Modifier.padding(bottom = Tokens.sp16)) }
     }
@@ -178,10 +200,10 @@ private fun LazyListScope.changesSection(changes: List<GitFile>, ops: GitOps) {
 private class Picked(val hash: MutableState<String?>, val load: Loaded<BranchDiff?>)
 
 // Claude Code's Commits list: "All changes", then each commit with its sha and age; a picked commit shows only its files.
-private fun LazyListScope.committedSection(b: BranchDiff, branch: String?, picked: Picked, shownPatch: MutableState<String?>) {
+private fun LazyListScope.committedSection(b: BranchDiff, branch: String?, onBases: () -> Unit, picked: Picked, shownPatch: MutableState<String?>) {
     val pick = picked.hash.value?.takeIf { h -> b.commits.any { it.hash == h } }
     val shown = if (pick == null) b else picked.load.data
-    item { SectionHeader(committedLabel(branch, b.base), b.files.size.toString()) }
+    item { SectionHeader(committedLabel(branch, b.base), b.files.size.toString(), action = if (branch == b.base) null else ({ IconBtn("git-branch", "Compare against", onBases, iconSize = Tokens.icon) })) }
     if (b.commits.size > 1) item {
         val now = System.currentTimeMillis()
         Group(Modifier.padding(bottom = Tokens.sp8)) {

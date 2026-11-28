@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState, type MouseEvent, type ReactNode }
 import type { GitFile, GitStatus } from '../../../shared/protocol';
 import { errText } from '../../../shared/util';
 import { setUi, useStore } from '../app/store';
-import { fetchBranchDiff, fetchCommitDiff, postGit, type BranchDiff, type DiffFiles } from './fileApi';
+import { fetchBranchDiff, fetchBranches, fetchCommitDiff, postGit, type BranchDiff, type DiffFiles } from './fileApi';
 import { Row } from '../ui/Row';
 import { Icon } from '../ui/Icon';
 import { Button, IconButton } from '../ui/Button';
@@ -13,7 +13,8 @@ import { Confirm, type ConfirmRequest } from '../ui/Confirm';
 import { FileIcon } from './FileIcon';
 import { refresh, useGit } from './gitStatus';
 import { Findings, REVIEW_LOCAL } from '../ops/Findings';
-import { ago, clickOnKey, usePoll } from '../ui/util';
+import { ago, clickOnKey, save, stored, usePoll } from '../ui/util';
+import { QuickPick } from '../ui/QuickPick';
 import { askChat } from '../chat/chatActions';
 import { providerLabel } from '../../../shared/providers';
 import '../styles/features/changes.css';
@@ -100,11 +101,47 @@ function Section({ label, files, isSelected, actions, rowActions, onRowClick }: 
   );
 }
 
+// The branch each folder's Changes pane compares against, when not the default branch.
+const BASES_KEY = 'agentview.compareBase';
+const savedBase = (cwd: string): string | undefined => stored<Record<string, string>>(BASES_KEY, {})[cwd];
+function saveBase(cwd: string, base: string | null) {
+  const all = stored<Record<string, string>>(BASES_KEY, {});
+  if (base) all[cwd] = base; else delete all[cwd];
+  save(BASES_KEY, all);
+}
+
+// "Committed since <base>" opens a list of local and remote branches; the default branch clears the choice.
+function BasePick({ base, onPick }: { base: string; onPick: (base: string | null) => void }) {
+  const [at, setAt] = useState<DOMRect | null>(null);
+  const [list, setList] = useState<{ branches: string[]; base: string } | null>(null);
+  const open = (e: MouseEvent<HTMLButtonElement>) => {
+    setAt(e.currentTarget.getBoundingClientRect());
+    fetchBranches().then(setList, () => setList({ branches: [], base }));
+  };
+  return (
+    <>
+      <button type="button" className="scm-base" aria-haspopup="dialog" title="Compare against another branch" onClick={open}>
+        Committed since {base}<Icon name="chevron-down" small />
+      </button>
+      {at && list && (
+        <QuickPick
+          anchor={at}
+          title="Compare against"
+          items={list.branches.map((b) => ({ value: b, label: b, detail: b === list.base ? 'default' : undefined }))}
+          current={base}
+          onPick={(b) => { setAt(null); onPick(b === list.base ? null : b); }}
+          onClose={() => setAt(null)}
+        />
+      )}
+    </>
+  );
+}
+
 const patches = (d: DiffFiles) => (d.diff ? splitDiff(d.diff) : new Map(d.files.map((f) => [f.path, 'Diff too large to show'])));
 
 // What the branch committed since it left the default branch, on the default branch itself what it has not pushed; rows expand to their patch.
 // With more than one commit, a list above the files picks "All changes" or one commit, whose files are loaded on their own.
-function Committed({ branch, current }: { branch: BranchDiff; current?: string }) {
+function Committed({ branch, current, onBase }: { branch: BranchDiff; current?: string; onBase: (base: string | null) => void }) {
   const commits = branch.commits ?? [];
   const [pick, setPick] = useState<string | null>(null);
   const [one, setOne] = useState<{ hash: string; data: DiffFiles | null; error?: string } | null>(null);
@@ -122,7 +159,7 @@ function Committed({ branch, current }: { branch: BranchDiff; current?: string }
   const diffs = useMemo(() => (shown ? patches(shown) : new Map<string, string>()), [shown]);
   return (
     <>
-      <ListSection label={current === branch.base ? 'Not pushed' : `Committed since ${branch.base}`} count={branch.files.length} />
+      <ListSection label={current === branch.base ? 'Not pushed' : <BasePick base={branch.base} onPick={onBase} />} count={branch.files.length} />
       {commits.length > 1 && (
         <div className="as-group scm-commits" aria-label="Commits">
           <Row title="All changes" lines={1} aria-current={!pick} trailing={<span className="muted">{commits.length} commits</span>} onClick={() => setPick(null)} />
@@ -144,6 +181,8 @@ export function Changes() {
   const { status, error } = useGit();
   const openFile = useStore((s) => s.ui.openFile);
   const id = useStore((s) => s.session.id);
+  const cwd = useStore((s) => s.session.cwd);
+  const [base, setBase] = useState(() => savedBase(cwd));
   const label = useStore((s) => providerLabel(s.session.provider));
   const [failed, setFailed] = useState('');
   const [ask, setAsk] = useState<ConfirmRequest | null>(null);
@@ -156,13 +195,18 @@ export function Changes() {
   const reload = () => {
     void refresh();
     const n = ++branchSeq.current;
-    fetchBranchDiff().then((b) => n === branchSeq.current && setBranch(b), () => {});
+    fetchBranchDiff(base).then((b) => n === branchSeq.current && setBranch(b), () => {});
   };
 
+  useEffect(() => setBase(savedBase(cwd)), [cwd]);
   useEffect(() => {
     setBranch(null);
     reload();
-  }, [id]);
+  }, [id, base]);
+  const pickBase = (b: string | null) => {
+    saveBase(cwd, b);
+    setBase(b ?? undefined);
+  };
   // ChangesBadge refreshes after each file change; this catches git commands run outside.
   usePoll(root, 30_000, () => void refresh(), [id]);
 
@@ -266,7 +310,7 @@ export function Changes() {
           )}
         />
         {status && !files.length && <EmptyState size="sm" title="No changes" />}
-        {branch && branch.files.length > 0 && <Committed branch={branch} current={status?.branch} />}
+        {branch && (branch.files.length > 0 || base) && <Committed branch={branch} current={status?.branch} onBase={pickBase} />}
         <Findings target="local" />
       </div>
       {ask && <Confirm {...ask} onClose={() => setAsk(null)} />}

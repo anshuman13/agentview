@@ -1,6 +1,7 @@
 package no.pradhan.agentview.nativeapp.ops
 
 import no.pradhan.agentview.nativeapp.workspace.parseBranchDiff
+import no.pradhan.agentview.nativeapp.workspace.parseBranchList
 import no.pradhan.agentview.nativeapp.workspace.splitDiff
 import no.pradhan.agentview.nativeapp.ui.DotState
 import org.junit.Assert.assertEquals
@@ -39,6 +40,12 @@ class BranchPrTest {
         assertEquals(1, b.files.single().additions)
         assertEquals(true, splitDiff(b.diff)["README.md"]?.contains("+y"))
         assertEquals(emptyList<Any>(), b.commits)
+    }
+
+    @Test fun readsTheBranchesToCompareAgainst() {
+        val l = parseBranchList("""{"branches":["main","origin/main","feature"],"base":"main"}""")
+        assertEquals(listOf("main", "origin/main", "feature"), l.branches)
+        assertEquals("main", l.base)
     }
 
     @Test fun readsTheBranchCommits() {

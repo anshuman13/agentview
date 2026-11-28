@@ -50,3 +50,5 @@
 .scm-commits { margin-bottom: var(--sp-3); }
 .scm-sha { font-family: var(--mono); font-size: var(--fs-sm); white-space: nowrap; }
 .scm-loading { padding: var(--sp-3) var(--sp-6); font-size: var(--fs-sm); }
+.scm-base { display: inline-flex; align-items: center; gap: var(--sp-2); padding: 0; border: 0; background: none; font: inherit; color: inherit; text-transform: inherit; letter-spacing: inherit; cursor: pointer; }
+.scm-base:hover { color: var(--fg-strong); }

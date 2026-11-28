@@ -154,13 +154,27 @@ async function diffSince(cwd: string, since: string, to: string[] = [], env?: Re
   return { files: parseNumstat(numstat).map((f) => ({ path: f.path, additions: f.add, deletions: f.del })), diff: diff.length > MAX_BRANCH_DIFF ? '' : diff };
 }
 
-// What this branch committed since it left the default branch, for review before a PR.
-async function branchDiff(cwd: string) {
-  const base = await defaultBase(cwd);
+// A branch the user picked to compare against, when it still names a commit; null falls back to the default branch.
+async function pickedBase(cwd: string, base: string | null) {
+  if (!base || base.startsWith('-')) return null;
+  return (await safeGit(cwd, ['rev-parse', '--verify', '-q', `${base}^{commit}`]).catch(() => '')).trim() ? base : null;
+}
+
+// Local and remote branches to compare against, without origin/HEAD.
+async function branchList(cwd: string) {
+  const out = await safeGit(cwd, ['for-each-ref', '--format=%(refname:short)', 'refs/heads', 'refs/remotes']);
+  return { branches: out.split('\n').filter((b) => b && !b.endsWith('/HEAD') && b !== 'origin'), base: (await defaultBase(cwd)).replace(/^origin\//, '') };
+}
+
+// What this branch committed since it left the base (the default branch unless one is picked), for review before a PR.
+async function branchDiff(cwd: string, picked: string | null = null) {
+  const chosen = await pickedBase(cwd, picked);
+  const base = chosen ?? (await defaultBase(cwd));
+  const label = chosen ?? base.replace(/^origin\//, '');
   const since = await mergeBase(cwd, base);
-  if (!since) return { base: base.replace(/^origin\//, ''), files: [], diff: '', commits: [] };
+  if (!since) return { base: label, files: [], diff: '', commits: [] };
   const [diff, log] = await Promise.all([diffSince(cwd, since, ['HEAD']), safeGit(cwd, ['log', `--max-count=${MAX_BRANCH_COMMITS}`, LOG_FORMAT, `${since}..HEAD`])]);
-  return { base: base.replace(/^origin\//, ''), ...diff, commits: parseLog(log) };
+  return { base: label, ...diff, commits: parseLog(log) };
 }
 
 const MAX_BRANCH_COMMITS = 50;
@@ -223,7 +237,8 @@ export function parseLog(out: string): GitCommit[] {
 
 export async function gitRoute(cwd: string, route: string, query: URLSearchParams, body: Record<string, unknown> | null) {
   if (route === 'status') return gitStatus(cwd);
-  if (route === 'branch') return branchDiff(cwd);
+  if (route === 'branch') return branchDiff(cwd, query.get('base'));
+  if (route === 'branches') return branchList(cwd);
   if (route === 'log') {
     const since = Number(query.get('since'));
     if (!query.get('since') || !Number.isFinite(since) || since < 0) throw new Error('since must be a time in milliseconds');

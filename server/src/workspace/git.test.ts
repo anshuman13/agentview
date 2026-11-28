@@ -143,6 +143,17 @@ describe('branch commits and one commit', () => {
       const first = repoSh(dir, 'rev-list', '--max-parents=0', 'HEAD').trim();
       expect(((await gitRoute(dir, 'show', new URLSearchParams({ hash: first }), null)) as { files: unknown[] }).files).toEqual([]);
       await expect(gitRoute(dir, 'show', new URLSearchParams({ hash: '--output=x' }), null)).rejects.toThrow('hash');
+      repoSh(dir, 'branch', 'mid', b.commits[1].hash);
+      const list = (await gitRoute(dir, 'branches', new URLSearchParams(), null)) as { branches: string[]; base: string };
+      expect(list).toEqual({ branches: ['jobs/test-1', 'main', 'mid', 'origin/main'], base: 'main' });
+      const mid = (await gitRoute(dir, 'branch', new URLSearchParams({ base: 'mid' }), null)) as { base: string; files: { path: string }[] };
+      expect(mid.base).toBe('mid');
+      expect(mid.files.map((f) => f.path)).toEqual(['two.txt']);
+      for (const base of ['gone', '--output=x']) {
+        const back = (await gitRoute(dir, 'branch', new URLSearchParams({ base }), null)) as { base: string; files: unknown[] };
+        expect(back.base).toBe('main');
+        expect(back.files).toHaveLength(2);
+      }
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
