@@ -1,6 +1,10 @@
-import type { Account } from '../../../shared/protocol.js';
+import type { Account, UsageWindow } from '../../../shared/protocol.js';
 import { errText } from '../../../shared/util.js';
 import { liveUsage, loggedInAccounts } from '../agent/claude/accounts.js';
+import { codexSignedIn } from '../agent/codex/binary.js';
+import type { RateLimits } from '../agent/codex/protocol.js';
+import { codexAdmin } from '../agent/codex/rpc.js';
+import { planUsage } from '../agent/codex/usage.js';
 import { backfillOnce } from './backfill.js';
 import { saveSample, type RawUsage } from './store.js';
 
@@ -17,9 +21,29 @@ export async function sampleAll(read: (a: Account) => Promise<RawUsage> = (a) =>
   }
 }
 
+async function readCodexLimits(): Promise<RateLimits | null> {
+  if (!(await codexSignedIn())) return null;
+  const rpc = await codexAdmin();
+  return (await rpc.request<{ rateLimits: RateLimits }>('account/rateLimits/read')).rateLimits;
+}
+
+const rateWindow = (w: UsageWindow | null) => (w ? { utilization: w.pct, resets_at: w.resetsAt ? new Date(w.resetsAt).toISOString() : null } : null);
+
+// Codex plan limits go in the same samples under the key 'codex'; nothing is saved when Codex is signed out.
+export async function sampleCodex(read: () => Promise<RateLimits | null> = readCodexLimits) {
+  try {
+    const limits = await read();
+    if (!limits) return;
+    const u = planUsage(limits);
+    saveSample('codex', { rate_limits: { five_hour: rateWindow(u.fiveHour), seven_day: rateWindow(u.week) } });
+  } catch (err) {
+    console.error('usage sample codex:', errText(err));
+  }
+}
+
 export function startSampler() {
   backfillOnce();
-  const run = () => void sampleAll();
+  const run = () => void sampleAll().then(() => sampleCodex());
   run();
   setInterval(run, EVERY_MS).unref();
 }

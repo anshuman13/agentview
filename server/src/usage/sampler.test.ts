@@ -3,7 +3,7 @@ import path from 'node:path';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'bun:test';
 import type { Account } from '../../../shared/protocol.js';
 import { configDir, STATE_DIR } from '../agent/claude/accounts.js';
-import { sampleAll } from './sampler.js';
+import { sampleAll, sampleCodex } from './sampler.js';
 import { closeStore, latestSample, type RawUsage } from './store.js';
 
 const reset = () => {
@@ -64,5 +64,14 @@ describe('usage sampler', () => {
     expect(asked).toEqual(['main', 'alt']);
     expect(latestSample('alt2')).toBe(null);
     writeFileSync(path.join(logins[1], '.claude.json'), JSON.stringify({ oauthAccount: {} }));
+  });
+
+  it('saves Codex rate limits under codex, and nothing when signed out', async () => {
+    const reply = { rateLimits: { primary: { usedPercent: 12.4, windowDurationMins: 300, resetsAt: 1794260000 }, secondary: { usedPercent: 40, windowDurationMins: 10080, resetsAt: null } } };
+    await sampleCodex(async () => reply.rateLimits);
+    expect(latestSample('codex')).toMatchObject({ fiveHour: { pct: 12, resetsAt: 1794260000_000 }, week: { pct: 40, resetsAt: null }, models: [] });
+    reset();
+    await sampleCodex(async () => null);
+    expect(latestSample('codex')).toBe(null);
   });
 });

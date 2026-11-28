@@ -70,7 +70,7 @@ export function closeStore() {
 
 const resetMs = (s: string | null) => (s ? Date.parse(s) : null);
 
-export function saveSample(account: Account, raw: RawUsage, at = Date.now()) {
+export function saveSample(account: UsageKey, raw: RawUsage, at = Date.now()) {
   const d = store();
   d.transaction(() => {
     const id = Number(d.query('INSERT INTO samples(account, at, raw) VALUES (?, ?, ?)').run(account, at, JSON.stringify(raw)).lastInsertRowid);
@@ -98,7 +98,7 @@ export function saveSample(account: Account, raw: RawUsage, at = Date.now()) {
 type WindowRow = { sample: number; kind: string; label: string | null; pct: number; resets_at: number | null };
 const window = (w: WindowRow): UsageWindow => ({ pct: Math.round(w.pct), resetsAt: w.resets_at });
 
-export function latestSample(account: Account): UsageLatest | null {
+export function latestSample(account: UsageKey): UsageLatest | null {
   const d = store();
   const s = d.query('SELECT id, at FROM samples WHERE account = ? ORDER BY at DESC, id DESC LIMIT 1').get(account) as { id: number; at: number } | null;
   if (!s) return null;
@@ -116,7 +116,7 @@ export function latestSample(account: Account): UsageLatest | null {
   };
 }
 
-export function samplesSince(account: Account, since: number) {
+export function samplesSince(account: UsageKey, since: number) {
   const rows = store()
     .query(
       `SELECT s.at, f.pct AS five, w.pct AS week FROM samples s
