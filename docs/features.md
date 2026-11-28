@@ -703,7 +703,7 @@ or a page puts focus back on what opened it.
 | n | New task for today (opens Tasks from Overview or other Codex pages) |
 | / | Search tasks (on Tasks) |
 
-The palette's Keyboard shortcuts command shows the same list.
+The palette's Keyboard shortcuts command shows the same list. A search field at its top filters the rows by label or key as you type (Ctrl+Shift+I finds ⇧⌘I off a Mac); Esc clears it, a second Esc closes the list.
 
 ## Keyboard and screen readers
 

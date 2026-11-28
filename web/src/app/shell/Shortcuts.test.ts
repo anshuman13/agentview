@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import { buildCommands } from '../palette/paletteLogic';
-import { SHORTCUTS } from './Shortcuts';
+import { filterShortcuts, SHORTCUTS } from './Shortcuts';
 
 describe('shortcuts', () => {
   it('lists every palette key and no empty group', () => {
@@ -16,5 +16,15 @@ describe('shortcuts', () => {
     const documented = table.split('\n').filter((l) => l.startsWith('| ') && !l.startsWith('| Key |') && !l.startsWith('| ---')).map((l) => l.slice(2).split(' | ')[0]);
     expect(documented.length).toBeGreaterThan(10);
     expect(new Set(documented)).toEqual(new Set(SHORTCUTS.flatMap((g) => g.rows.map((r) => r.key))));
+  });
+
+  it('filters rows by label or key and drops empty groups', () => {
+    expect(filterShortcuts(SHORTCUTS, '  ')).toBe(SHORTCUTS);
+    const terminal = filterShortcuts(SHORTCUTS, 'TERMINAL');
+    expect(terminal.map((g) => g.group)).toEqual(['Panels']);
+    expect(terminal[0].rows.map((r) => r.key)).toEqual(['⌘J', '⌘K']);
+    expect(filterShortcuts(SHORTCUTS, '⇧⌘i', true).flatMap((g) => g.rows.map((r) => r.key))).toEqual(['⇧⌘I']);
+    expect(filterShortcuts(SHORTCUTS, 'ctrl+shift+i', false).flatMap((g) => g.rows.map((r) => r.key))).toEqual(['⇧⌘I']);
+    expect(filterShortcuts(SHORTCUTS, 'zzzz')).toEqual([]);
   });
 });

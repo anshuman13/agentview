@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { embedded } from '../store';
 import { Back } from '../touch/back';
 import { useReturnFocus } from '../../ui/util';
-import { keyText } from './keys';
+import { keyText, MAC } from './keys';
 import '../../styles/features/palette.css';
 
 export const SHORTCUTS: { group: string; rows: { key: string; label: string }[] }[] = [
@@ -51,14 +51,22 @@ export const SHORTCUTS: { group: string; rows: { key: string; label: string }[] 
   ] },
 ];
 
+export function filterShortcuts(groups: typeof SHORTCUTS, query: string, mac = MAC) {
+  const q = query.trim().toLowerCase();
+  if (!q) return groups;
+  const hit = (r: { key: string; label: string }) => [r.label, r.key, keyText(r.key, mac)].some((t) => t.toLowerCase().includes(q));
+  return groups.map((g) => ({ ...g, rows: g.rows.filter(hit) })).filter((g) => g.rows.length);
+}
+
 const inField = (el: Element | null) => !!el && (/^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName) || (el as HTMLElement).isContentEditable);
 
 export function Shortcuts() {
   const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState('');
 
   useEffect(() => {
     if (embedded) return;
-    const onOpen = () => setOpen(true);
+    const onOpen = () => { setQuery(''); setOpen(true); };
     window.addEventListener('agentview:shortcuts', onOpen);
     return () => window.removeEventListener('agentview:shortcuts', onOpen);
   }, []);
@@ -69,7 +77,8 @@ export function Shortcuts() {
       if (open && e.key === 'Escape') {
         e.preventDefault();
         e.stopPropagation();
-        setOpen(false);
+        if (query) setQuery('');
+        else setOpen(false);
         return;
       }
       if (e.key !== '?' || e.ctrlKey || e.metaKey || e.altKey || inField(document.activeElement)) return;
@@ -84,23 +93,28 @@ export function Shortcuts() {
     };
     window.addEventListener('keydown', onKey, true);
     return () => window.removeEventListener('keydown', onKey, true);
-  }, [open]);
+  }, [open, query]);
 
   if (!open) return null;
-  return <Sheet close={() => setOpen(false)} />;
+  return <Sheet query={query} setQuery={setQuery} close={() => setOpen(false)} />;
 }
 
-function Sheet({ close }: { close: () => void }) {
-  const ref = useRef<HTMLDivElement>(null);
+function Sheet({ query, setQuery, close }: { query: string; setQuery: (q: string) => void; close: () => void }) {
+  const ref = useRef<HTMLInputElement>(null);
   useReturnFocus();
   useEffect(() => ref.current?.focus({ preventScroll: true }), []);
+  const groups = filterShortcuts(SHORTCUTS, query);
   return (
     <div className="overlay" onClick={close}>
       <Back close={close} />
-      <div ref={ref} tabIndex={-1} className="shortcuts" role="dialog" aria-label="Keyboard shortcuts" onClick={(e) => e.stopPropagation()}>
+      <div className="shortcuts" role="dialog" aria-label="Keyboard shortcuts" onClick={(e) => e.stopPropagation()}>
         <h2>Keyboard shortcuts</h2>
+        <div className="palette-input shortcuts-search">
+          <input ref={ref} value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search shortcuts" aria-label="Search shortcuts" spellCheck={false} />
+        </div>
         <div className="shortcuts-list">
-          {SHORTCUTS.map((g) => (
+          {!groups.length && <p className="palette-empty">No shortcuts match</p>}
+          {groups.map((g) => (
             <section key={g.group}>
               <h3>{g.group}</h3>
               <ul>
