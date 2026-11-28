@@ -27,10 +27,10 @@ describe('readOnlyCommand', () => {
     expect(unwrapShell('make build')).toBe('make build');
   });
   it('accepts reads on the list, piped into other reads', () => {
-    for (const c of ['/bin/zsh -lc ls', "/bin/zsh -lc 'git status'", "/bin/zsh -lc 'git diff --stat'", `/bin/zsh -lc "rg -n 'a|b' src | head -20"`, "/bin/zsh -lc \"sed -n '1,40p' a.ts\"", 'cat *.md']) expect(readOnlyCommand(c)).toBe(true);
+    for (const c of ['/bin/zsh -lc ls', "/bin/zsh -lc 'git status'", "/bin/zsh -lc 'git diff --stat'", `/bin/zsh -lc "rg -n 'a|b' src | head -20"`, "/bin/zsh -lc \"sed -n '1,40p' a.ts\"", 'cat *.md', "/bin/zsh -lc \"nl -ba f | sed -n '1,20p'\"", "find . -name '*.ts'", "/bin/zsh -lc 'git status && git log -1'", 'pwd || ls', 'rg --files src']) expect(readOnlyCommand(c)).toBe(true);
   });
   it('refuses writers, redirects, substitutions and risky flags', () => {
-    for (const c of ['touch x', "/bin/zsh -lc 'cat a > b'", "/bin/zsh -lc 'ls; rm x'", 'ls && rm x', 'cat $(ls)', 'ls | xargs rm', "sed -i '' s/a/b/ f", "sed -n '1w out' f", 'git commit -m x', 'git diff --output=x', 'rg --pre sh x', 'ls |']) expect(readOnlyCommand(c)).toBe(false);
+    for (const c of ['touch x', "/bin/zsh -lc 'cat a > b'", "/bin/zsh -lc 'ls; rm x'", 'ls && rm x', 'cat $(ls)', 'ls | xargs rm', "sed -i '' s/a/b/ f", "sed -n '1w out' f", 'git commit -m x', 'git diff --output=x', 'rg --pre sh x', 'ls |', 'find . -delete', "find . -name '*.ts' -exec rm {} +", 'find . -execdir rm x', 'find . -fprint out', 'ls > x', 'ls &', 'ls & rm x', 'ls &&', 'ls || rm x']) expect(readOnlyCommand(c)).toBe(false);
   });
 });
 

@@ -29,7 +29,7 @@ export function unwrapShell(command: string) {
   return words?.length === 1 && typeof words[0] === 'string' ? words[0] : command;
 }
 
-// Splits a command into words and `|` pipes; null when it uses anything else the shell would interpret.
+// Splits a command into words and `|`, `&&` or `||` separators; null when it uses anything else the shell would interpret.
 function shellWords(s: string): (string | { pipe: true })[] | null {
   const out: (string | { pipe: true })[] = [];
   let word: string | null = null;
@@ -50,10 +50,11 @@ function shellWords(s: string): (string | { pipe: true })[] | null {
     } else if (c === ' ' || c === '\t') {
       if (word !== null) out.push(word);
       word = null;
-    } else if (c === '|') {
+    } else if (c === '|' || (c === '&' && s[i + 1] === '&')) {
       if (word !== null) out.push(word);
       word = null;
       out.push({ pipe: true });
+      if (s[i + 1] === c) i++;
     } else if (/[;&<>$`\\\n(){}!~]/.test(c)) {
       return null;
     } else word = (word ?? '') + c;
@@ -66,7 +67,8 @@ const GIT_READ = new Set(['status', 'diff', 'log', 'show']);
 
 function readOnlyStep([cmd, ...args]: string[]) {
   switch (cmd) {
-    case 'ls': case 'cat': case 'grep': case 'head': case 'tail': case 'wc': return true;
+    case 'ls': case 'cat': case 'grep': case 'head': case 'tail': case 'wc': case 'nl': case 'pwd': return true;
+    case 'find': return !args.some((a) => /^-(exec|ok|delete|fprint|fls)/.test(a));
     case 'rg': return !args.some((a) => a.startsWith('--pre'));
     case 'sed': return args[0] === '-n' && args.length >= 2 && /^\d*(,\d*)?p$/.test(args[1]) && !args.slice(2).some((a) => a.startsWith('-'));
     case 'git': return GIT_READ.has(args[0]) && !args.some((a) => a.startsWith('--output') || a.startsWith('--ext-diff') || a === '-o');
@@ -74,7 +76,7 @@ function readOnlyStep([cmd, ...args]: string[]) {
   }
 }
 
-// A command Codex Default runs without a card: every step of the pipe is on the read-only list, with no redirects or substitutions.
+// A command Codex Default runs without a card: every step of the pipe or `&&`/`||` chain is on the read-only list, with no redirects or substitutions.
 export function readOnlyCommand(command: string) {
   const words = shellWords(unwrapShell(command));
   if (!words?.length) return false;
