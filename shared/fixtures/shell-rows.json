@@ -3,7 +3,7 @@
     "name": "running only",
     "now": 75000,
     "shells": [{ "toolUseId": "a", "label": "Sleep a minute", "startedAt": 6000 }],
-    "running": [{ "toolUseId": "a", "label": "Sleep a minute", "time": "1m 09s", "failed": false, "detail": "" }],
+    "running": [{ "toolUseId": "a", "label": "Sleep a minute", "time": "1m 09s", "failed": false, "detail": "No output yet" }],
     "finished": []
   },
   {
@@ -23,10 +23,10 @@
     "name": "running beside finished",
     "now": 10000,
     "shells": [
-      { "toolUseId": "d", "label": "Dev server", "startedAt": 0 },
+      { "toolUseId": "d", "label": "Dev server", "startedAt": 0, "command": "bun run dev", "output": "ready on :5173" },
       { "toolUseId": "e", "label": "Lint", "startedAt": 0, "endedAt": 600, "output": "ok" }
     ],
-    "running": [{ "toolUseId": "d", "label": "Dev server", "time": "10s", "failed": false, "detail": "" }],
+    "running": [{ "toolUseId": "d", "label": "Dev server", "time": "10s", "failed": false, "detail": "$ bun run dev\nready on :5173" }],
     "finished": [{ "toolUseId": "e", "label": "Lint", "time": "1s", "failed": false, "detail": "ok" }]
   }
 ]

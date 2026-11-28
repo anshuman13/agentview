@@ -30,10 +30,14 @@ export class TaskTracker {
     this.syncShells();
   }
 
-  // Background shell commands go to the clients with their start time, so they can show elapsed time and a Stop; finished ones stay until the user clears them.
+  // Background shell commands go to the clients with their command and start time, so they can show elapsed time and a Stop; finished ones stay until the user clears them.
   private syncShells(ended?: BackgroundShell) {
-    const running: BackgroundShell[] = [...this.running.values()].filter((t) => t.shell && t.toolUseId).map((t) => ({ toolUseId: t.toolUseId, label: t.description, startedAt: t.startedAt ?? Date.now() }));
     const old = this.host.state.session.shells ?? [];
+    const running: BackgroundShell[] = [...this.running.values()].filter((t) => t.shell && t.toolUseId).map((t) => {
+      const command = this.commandOf(t.toolUseId);
+      const output = old.find((o) => o.toolUseId === t.toolUseId)?.output;
+      return { toolUseId: t.toolUseId, label: t.description, startedAt: t.startedAt ?? Date.now(), ...(command && { command }), ...(output && { output }) };
+    });
     const finished = old.filter((t) => t.endedAt && t.toolUseId !== ended?.toolUseId);
     const shells = [...running, ...(ended ? [ended] : []), ...finished];
     if (shells.length || old.length) this.host.setSession({ shells });
@@ -43,14 +47,18 @@ export class TaskTracker {
   private shellEnded(task: RunningTask, failed: boolean, outputFile?: string) {
     if (!task.shell || !task.toolUseId) return this.syncShells();
     const prev = this.host.state.session.shells?.find((t) => t.toolUseId === task.toolUseId && t.endedAt);
-    const use = this.host.eventById(task.toolUseId);
-    const command = use?.kind === 'tool_use' && typeof use.input.command === 'string' ? use.input.command : undefined;
+    const command = this.commandOf(task.toolUseId);
     const ended: BackgroundShell = { toolUseId: task.toolUseId, label: task.description, startedAt: task.startedAt ?? Date.now(), endedAt: prev?.endedAt ?? Date.now(), ...(command && { command }), ...((failed || prev?.failed) && { failed: true }) };
     this.syncShells(ended);
     if (outputFile) void outputTail(outputFile).then((output) => {
       const shells = this.host.state.session.shells ?? [];
       if (output && shells.some((t) => t.toolUseId === task.toolUseId)) this.host.setSession({ shells: shells.map((t) => (t.toolUseId === task.toolUseId ? { ...t, output } : t)) });
     });
+  }
+
+  private commandOf(toolUseId: string) {
+    const use = this.host.eventById(toolUseId);
+    return use?.kind === 'tool_use' && typeof use.input.command === 'string' ? use.input.command : undefined;
   }
 
   isRunning(taskId: string) {

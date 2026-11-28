@@ -1058,7 +1058,7 @@ describe('restart resume', () => {
     handle({ type: 'assistant', parent_tool_use_id: null, message: { content: [{ type: 'tool_use', id: 'tu1', name: 'Bash', input: { command: 'sleep 60', run_in_background: true } }] } });
     handle({ type: 'system', subtype: 'task_started', task_id: 't1', tool_use_id: 'tu1', task_type: 'local_bash', description: 'Sleep a minute', is_backgrounded: true });
     result('r1');
-    expect(s.state.session.shells).toMatchObject([{ toolUseId: 'tu1', label: 'Sleep a minute' }]);
+    expect(s.state.session.shells).toMatchObject([{ toolUseId: 'tu1', label: 'Sleep a minute', command: 'sleep 60' }]);
     handle({ type: 'system', subtype: 'task_updated', task_id: 't1', patch: { status: 'killed' } });
     handle({ type: 'system', subtype: 'task_notification', task_id: 't1', tool_use_id: 'tu1', status: 'stopped', summary: 'Sleep a minute' });
     expect(s.state.session.shells).toMatchObject([{ toolUseId: 'tu1', label: 'Sleep a minute', command: 'sleep 60', endedAt: expect.any(Number) }]);

@@ -162,7 +162,8 @@ fun Composer(hub: Hub, chatId: String, sessionId: String?, session: SessionInfo?
     ComposerSheets(hub, s, uploading, session, sheet, attach) { sheet = it }
 }
 
-// Shell commands the agent left running in the background, with how long each has run and a Stop, then the finished ones (web BackgroundShells.tsx).
+// Shell commands the agent left running in the background under "Running N", each with how long it has run and a Stop, then
+// "Finished N"; every row opens to its command and output (web BackgroundShells.tsx).
 @Composable
 private fun BackgroundShells(hub: Hub) {
     val shells by hub.store.state.select { it.session?.shells.orEmpty() }
@@ -170,33 +171,29 @@ private fun BackgroundShells(hub: Hub) {
     val now by rememberNow(shells.any { it.endedAt == null })
     val rows = shellRows(shells, now)
     var open by remember { mutableStateOf<String?>(null) }
-    Column(Modifier.fillMaxWidth().semantics { contentDescription = "Background tasks" }) {
-        rows.running.forEach { t ->
-            Row(Modifier.fillMaxWidth().padding(start = Tokens.sp4), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Tokens.sp3)) {
-                AvIcon("terminal", tint = av.fgMuted)
-                Text(t.label, Modifier.weight(1f), style = Type.footnote, color = av.fg, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Text(t.time, style = Type.footnote, color = av.fgMuted)
-                IconBtn("debug-stop", "Stop ${t.label}", { hub.stopTask(t.toolUseId) }, enabled = !hub.readOnly, iconSize = Tokens.icon)
-            }
+    @Composable fun ShellLine(t: ShellRow, stop: Boolean) {
+        val expanded = open == t.toolUseId
+        Row(Modifier.fillMaxWidth().heightIn(min = Tokens.touch).clickable { open = if (expanded) null else t.toolUseId }.padding(start = Tokens.sp4, end = if (stop) Tokens.sp2 else Tokens.sp4).semantics { contentDescription = "${t.label}, ${t.time}" }, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Tokens.sp3)) {
+            AvIcon(if (t.failed) "error" else "terminal", tint = if (t.failed) av.danger else av.fgMuted)
+            Text(t.label, Modifier.weight(1f), style = Type.footnote, color = av.fg, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(t.time, style = Type.footnote, color = av.fgMuted)
+            AvIcon("chevron-right", null, Tokens.icon, Modifier.rotate(if (expanded) 90f else 0f), tint = av.fgMuted)
+            if (stop) IconBtn("debug-stop", "Stop ${t.label}", { hub.stopTask(t.toolUseId) }, enabled = !hub.readOnly, iconSize = Tokens.icon)
         }
+        if (expanded) Text(
+            t.detail,
+            Modifier.fillMaxWidth().padding(horizontal = Tokens.sp4).heightIn(max = Tokens.touch * 5).clip(RoundedCornerShape(Tokens.radiusSm)).background(av.sunken).verticalScroll(rememberScrollState()).padding(Tokens.sp3),
+            style = Type.footnote.copy(fontFamily = FontFamily.Monospace), color = av.fg,
+        )
+    }
+    Column(Modifier.fillMaxWidth().semantics { contentDescription = "Background tasks" }) {
+        if (rows.running.isNotEmpty()) Text("Running ${rows.running.size}", Modifier.padding(start = Tokens.sp4, top = Tokens.sp2, bottom = Tokens.sp2), style = Type.footnote, color = av.fgMuted)
+        rows.running.forEach { ShellLine(it, true) }
         if (rows.finished.isNotEmpty()) Row(Modifier.fillMaxWidth().padding(start = Tokens.sp4), verticalAlignment = Alignment.CenterVertically) {
-            Text("Finished", Modifier.weight(1f), style = Type.footnote, color = av.fgMuted)
+            Text("Finished ${rows.finished.size}", Modifier.weight(1f), style = Type.footnote, color = av.fgMuted)
             Button("Clear", { hub.clearShells() }, variant = ButtonVariant.Plain, size = ButtonSize.Sm, enabled = !hub.readOnly)
         }
-        rows.finished.forEach { t ->
-            val expanded = open == t.toolUseId
-            Row(Modifier.fillMaxWidth().heightIn(min = Tokens.touch).clickable { open = if (expanded) null else t.toolUseId }.padding(start = Tokens.sp4, end = Tokens.sp4).semantics { contentDescription = "${t.label}, ${t.time}" }, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Tokens.sp3)) {
-                AvIcon(if (t.failed) "error" else "terminal", tint = if (t.failed) av.danger else av.fgMuted)
-                Text(t.label, Modifier.weight(1f), style = Type.footnote, color = av.fg, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Text(t.time, style = Type.footnote, color = av.fgMuted)
-                AvIcon("chevron-right", null, Tokens.icon, Modifier.rotate(if (expanded) 90f else 0f), tint = av.fgMuted)
-            }
-            if (expanded) Text(
-                t.detail,
-                Modifier.fillMaxWidth().padding(horizontal = Tokens.sp4).heightIn(max = Tokens.touch * 5).clip(RoundedCornerShape(Tokens.radiusSm)).background(av.sunken).verticalScroll(rememberScrollState()).padding(Tokens.sp3),
-                style = Type.footnote.copy(fontFamily = FontFamily.Monospace), color = av.fg,
-            )
-        }
+        rows.finished.forEach { ShellLine(it, false) }
     }
 }
 

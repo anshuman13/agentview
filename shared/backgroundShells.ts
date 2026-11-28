@@ -1,6 +1,6 @@
 import type { BackgroundShell } from './protocol';
 
-// The composer's background list: running shells first, then the finished ones with a muted duration and their command and last output.
+// The composer's background list: running shells, then the finished ones, each with a muted duration and opening to its command and output.
 // Android: chat/BackgroundShellsLogic.kt.
 export type ShellRow = { toolUseId: string; label: string; time: string; failed: boolean; detail: string };
 
@@ -17,7 +17,7 @@ export function shellRows(shells: BackgroundShell[], now: number) {
     label: t.label || t.command || 'Shell command',
     time: shellDuration((t.endedAt ?? now) - t.startedAt),
     failed: Boolean(t.failed),
-    detail: [t.command && `$ ${t.command}`, t.output || (t.endedAt ? 'No output' : '')].filter(Boolean).join('\n'),
+    detail: [t.command && `$ ${t.command}`, t.output || (t.endedAt ? 'No output' : 'No output yet')].filter(Boolean).join('\n'),
   });
   return { running: shells.filter((t) => !t.endedAt).map(row), finished: shells.filter((t) => t.endedAt).map(row) };
 }
