@@ -172,7 +172,7 @@ export class CodexDriver implements AgentDriver {
   }
 
   private onNotification(method: string, params: any) {
-    if (method === 'turn/started') this.turnId = params.turn.id;
+    if (method === 'turn/started' && (!params.threadId || params.threadId === this.threadId)) this.turnId = params.turn.id;
     else if (method === 'turn/completed' && params.turn?.id === this.turnId) this.turnId = null;
     else if (method === 'item/started' && params.item?.type === 'fileChange') this.checkpoints.keep(this.host.cwd, params.item.changes);
     else if (method === 'account/rateLimits/updated') return this.host.setSession({ usage: planUsage(params.rateLimits) });

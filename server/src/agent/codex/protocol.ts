@@ -20,7 +20,24 @@ export type ThreadItem =
   | { type: 'contextCompaction'; id: string }
   | { type: 'reasoning'; id: string; summary: string[]; content: string[] }
   | { type: 'plan'; id: string; text: string }
+  | CollabItem
   | { type: 'other'; id: string };
+
+// Multi-agent tool calls. receiverThreadIds names the spawned thread once it exists; agentsStates is the last known state of each target.
+export type CollabAgentTool = 'spawnAgent' | 'sendInput' | 'resumeAgent' | 'wait' | 'closeAgent' | 'sendMessage' | 'followupTask' | 'interruptAgent' | 'listAgents';
+export type CollabAgentState = { status: 'pendingInit' | 'running' | 'interrupted' | 'completed' | 'errored' | 'shutdown' | 'notFound'; message?: string | null };
+export type CollabItem = {
+  type: 'collabAgentToolCall';
+  id: string;
+  tool: CollabAgentTool;
+  status: 'inProgress' | 'completed' | 'failed' | 'interrupted';
+  senderThreadId: string;
+  receiverThreadIds: string[];
+  prompt?: string | null;
+  model?: string | null;
+  reasoningEffort?: string | null;
+  agentsStates: Record<string, CollabAgentState>;
+};
 
 // `turn/plan/updated`: the whole update_plan checklist each time. Plans are not thread items; a reloaded thread reads the last one from its rollout file.
 export type TurnPlanStepStatus = 'pending' | 'inProgress' | 'completed';
@@ -34,7 +51,7 @@ export type TurnSteerResponse = { turnId: string };
 
 export type TurnStatus = 'completed' | 'interrupted' | 'failed' | 'inProgress';
 export type Turn = { id: string; items: ThreadItem[]; status: TurnStatus; startedAt: number | null; error: { message: string } | null };
-export type Thread = { id: string; cwd: string; path: string | null; preview: string; name: string | null; createdAt?: number; updatedAt: number; turns: Turn[]; gitInfo?: { branch: string | null } | null };
+export type Thread = { id: string; cwd: string; path: string | null; preview: string; name: string | null; createdAt?: number; updatedAt: number; turns: Turn[]; gitInfo?: { branch: string | null } | null; parentThreadId?: string | null };
 export type ThreadListResponse = { data: Thread[]; nextCursor: string | null };
 
 export type RateLimitWindow = { usedPercent: number; windowDurationMins: number | null; resetsAt: number | null };

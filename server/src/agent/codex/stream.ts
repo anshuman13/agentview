@@ -4,9 +4,11 @@ import { finishedEvents, planEvents, reasoningEvent, startedEvents } from './eve
 import { storeCall } from '../../usage/calls.js';
 import { addUsage, limitUntil, turnCall, turnTokens } from './usage.js';
 import { LiveText } from '../liveText.js';
+import { CodexCollab } from './collab.js';
+import type { ChatEvent } from '../../../../shared/protocol.js';
 import type { FileUpdateChange, ReasoningDeltaNotification, ThreadItem, TokenUsage, TokenUsageBreakdown, Turn, TurnPlanUpdatedNotification } from './protocol.js';
 
-type Sink = Pick<AgentHost, 'cwd' | 'state' | 'limit' | 'pushEvent' | 'emit' | 'system' | 'setSession' | 'turnResult' | 'compacted' | 'noteFile' | 'captureEdit'>;
+type Sink = Pick<AgentHost, 'cwd' | 'state' | 'limit' | 'pushEvent' | 'emit' | 'system' | 'setSession' | 'turnResult' | 'compacted' | 'noteFile' | 'captureEdit' | 'agentOf'>;
 
 // Turns the app-server's notifications into chat events: assistant text streams in, commands, file changes and MCP calls become tool steps.
 export class CodexStream {
@@ -24,12 +26,16 @@ export class CodexStream {
   private raw = new Map<string, string>();
   // The files each file change item announced, for its approval card.
   readonly files = new Map<string, FileUpdateChange[]>();
+  private collab: CodexCollab;
 
   constructor(private host: Sink) {
     this.text = new LiveText(host);
+    this.collab = new CodexCollab(host);
   }
 
   handle(method: string, params: any) {
+    if (method === 'thread/started') return this.collab.threadStarted(params.thread);
+    if (this.collab.isChild(params?.threadId)) return this.child(method, params);
     switch (method) {
       case 'item/started': return this.started(params.item);
       case 'item/agentMessage/delta': return this.text.delta(params.itemId, params.delta);
@@ -57,19 +63,33 @@ export class CodexStream {
     this.raw.clear();
   }
 
-  private started(item: ThreadItem) {
+  // A sub-agent thread's items become steps under its Agent step; its turns, text deltas and usage are not the chat's.
+  private child(method: string, p: any) {
+    const push = (ev: ChatEvent) => this.collab.step(p.threadId, ev);
+    if (method === 'item/started') this.started(p.item, push);
+    else if (method === 'item/completed' && p.item.type === 'agentMessage') push({ id: p.item.id, kind: 'assistant', text: p.item.text, streaming: false, at: Date.now() });
+    else if (method === 'item/completed' && p.item.type !== 'reasoning' && p.item.type !== 'contextCompaction') this.done(p.item, push);
+  }
+
+  private started(item: ThreadItem, push = (ev: ChatEvent) => this.host.pushEvent(ev)) {
+    if (item.type === 'collabAgentToolCall') return this.collab.started(item, Date.now());
     if (item.type === 'fileChange') {
       this.files.set(item.id, item.changes);
       for (const c of item.changes) this.host.captureEdit(this.abs(c.path));
     }
-    for (const ev of startedEvents(item, Date.now())) this.host.pushEvent(ev);
+    for (const ev of startedEvents(item, Date.now())) push(ev);
   }
 
   private completed(item: ThreadItem, turnId: string) {
     if (item.type === 'agentMessage') return this.message(item.id, item.text);
     if (item.type === 'contextCompaction') return this.compacted(turnId);
     if (item.type === 'reasoning') return this.reasoning(item);
-    for (const ev of finishedEvents(item, Date.now())) this.host.pushEvent(ev);
+    this.done(item, (ev) => this.host.pushEvent(ev));
+  }
+
+  private done(item: ThreadItem, push: (ev: ChatEvent) => void) {
+    if (item.type === 'collabAgentToolCall') return this.collab.completed(item, Date.now());
+    for (const ev of finishedEvents(item, Date.now())) push(ev);
     if (item.type === 'fileChange') this.files.delete(item.id);
     if (item.type === 'fileChange' && item.status === 'completed') for (const c of item.changes) this.host.noteFile(path.relative(this.host.cwd, this.abs(c.path)), 'tool');
   }
