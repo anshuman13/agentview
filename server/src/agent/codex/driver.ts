@@ -1,5 +1,4 @@
 import { randomUUID } from 'node:crypto';
-import { readFile } from 'node:fs/promises';
 import type { Account, Capabilities, Effort, McpServer, Provider } from '../../../../shared/protocol.js';
 import { reviewPrompt } from '../../../../shared/reviewPrompt.js';
 import { errText } from '../../../../shared/util.js';
@@ -7,14 +6,14 @@ import type { AgentDriver, AgentHost, Decision, DriverFactory, History } from '.
 import { answersFor, askFor, decisionFor, elicitationAsk, elicitationFor, hasFields, permissionsAsk, permissionsFor, policyFor, questionsAsk, readOnlyCommand, type Ask } from './approvals.js';
 import { NOT_SIGNED_IN } from './binary.js';
 import { Checkpoints } from './checkpoints.js';
-import { historyEvents, rolloutPlan } from './events.js';
 import { addedDirs, saveAddedDirs } from '../claude/addedDirs.js';
 import { codexInstructionFiles } from './instructions.js';
 import { threadParams } from './options.js';
 import type { ApprovalMethod, CodexModel, ElicitationParams, McpServerStatus, PermissionProfile, RateLimits, Thread, UserInput, UserInputQuestion } from './protocol.js';
 import { CodexRpc, type RpcHandlers } from './rpc.js';
 import { CodexStream } from './stream.js';
-import { codexTranscript, noteThread } from './threads.js';
+import { noteThread } from './threads.js';
+import { threadEvents } from './transcripts.js';
 import { planUsage } from './usage.js';
 
 const USAGE_EVERY = 10 * 60_000;
@@ -449,9 +448,7 @@ export class CodexDriver implements AgentDriver {
     try {
       const { thread } = await rpc.request<{ thread: Thread }>('thread/read', { threadId: this.threadId, includeTurns: true });
       this.keepSpare(rpc);
-      const rollout = thread.path ?? codexTranscript(this.threadId);
-      const plan = rollout ? rolloutPlan(await readFile(rollout, 'utf8').catch(() => '')) : null;
-      return { events: historyEvents(thread.turns, thread.updatedAt * 1000, plan), context: null, cache: null };
+      return { events: await threadEvents(thread), context: null, cache: null };
     } catch {
       rpc.close();
       return null;

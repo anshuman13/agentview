@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'bun:test';
 
 const reply = { config: { mcp_servers: { grafana: { command: 'mcp-grafana' } } } };
-vi.mock('./rpc.js', () => ({ CodexRpc: { openQuiet: async () => ({ request: async () => reply, close: () => {} }) } }));
+vi.mock('./rpc.js', () => ({ CodexRpc: { openQuiet: async () => ({ request: async () => reply, close: () => {} }) }, codexAdmin: async () => ({ request: async () => reply }) }));
 vi.mock('../claude/mcp.js', () => ({ probeCached: async (_cwd: string, name: string, scope: string, def: { command?: string; env?: Record<string, string> }) => ({ name, scope, command: def.command, chat: def.env?.AGENTVIEW_CHAT }) }));
 const { codexMcpProbe, codexServers } = await import('./mcp.js');
 
