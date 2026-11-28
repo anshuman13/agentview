@@ -10,7 +10,7 @@ import { providerMark, shortModel } from '../../../shared/providers';
 import { save } from '../ui/util';
 import { RenameInput } from './RenameInput';
 import { ChatPr } from '../ops/pulls';
-import { archiveChat, buildsState, chatMenuItems, chatSwipe, chatLine, chatBranch, chatState, closeChat, openChatWindow, renameChat, repoName, removeRequest, restoreChat, rootLookup, rowsById, since, type ChatSession, type ChatState, type Folder } from './folders';
+import { archiveChat, buildsState, chatMenuItems, nestChat, savedChats, chatSwipe, chatLine, chatBranch, chatState, closeChat, openChatWindow, renameChat, repoName, removeRequest, restoreChat, rootLookup, rowsById, since, type ChatSession, type ChatState, type Folder } from './folders';
 import { askLine } from './runLogic';
 import { Swipe } from '../codex/gestures/Swipe';
 import { copyText, showSnack } from '../codex/view';
@@ -20,6 +20,8 @@ import { clock } from '../../../shared/util';
 import { useChatRun } from './useChatRun';
 import { BuildRows } from './BuildRows';
 import { AskHover } from './AskHover';
+import { QuickPick } from '../ui/QuickPick';
+import { nestTargets } from '../../../shared/nest';
 
 type SetChats = (f: (l: SavedSession[]) => SavedSession[]) => void;
 type Pin = (on: boolean) => Promise<boolean>;
@@ -62,7 +64,25 @@ type ChatRowProps = {
   onPin?: Pin;
   onBeside?: () => void;
   onClose?: () => void;
+  nestedIn?: string;
 };
+
+// Nest under: the other chats as a searchable list, folder on the right.
+function NestPick({ id, onClose }: { id: string; onClose: () => void }) {
+  const items = nestTargets(savedChats().filter((c) => !c.parentId), id).map((c) => ({ value: c.sessionId, label: c.title || 'Untitled', detail: c.cwd.split('/').pop() }));
+  return <QuickPick title="Nest under" items={items} onPick={(parent) => { void nestChat(id, parent); onClose(); }} onClose={onClose} />;
+}
+
+// The chats nested under a row, indented below it; a tap opens one.
+export function NestedRows({ chats }: { chats?: ChatSession[] }) {
+  if (!chats?.length) return null;
+  return <>{chats.map((c) => (
+    <div key={c.sessionId} className="chat-row chat-build">
+      <Row lines={1} data-chat-row title={c.title} meta={since(c.lastModified)} leading={<Icon name="indent" small />} onClick={() => send({ type: 'open_session', sessionId: c.sessionId })}
+        menu={<MenuItem icon="debug-step-out" onClick={() => void nestChat(c.sessionId, '')}>Un-nest</MenuItem>} />
+    </div>
+  ))}</>;
+}
 
 function RunTag({ run }: { run: ChatRun }) {
   const paused = run.state === 'paused';
@@ -73,8 +93,9 @@ const DOT = { needs: ['waiting', 'Needs you'], failed: ['bad', 'Failed'], runnin
 
 export const StateDot = ({ state }: { state?: ChatState | null }) => (state ? <span className={`dot ${DOT[state][0]}`} role="img" aria-label={DOT[state][1]} /> : <span className="dot idle" />);
 
-function ChatRow({ sessionId, title, cwd, lastModified, live, opening, meta, state, selected, pinned, actions, onOpen, onPin, onBeside, onClose }: ChatRowProps) {
+function ChatRow({ sessionId, title, cwd, lastModified, live, opening, meta, state, selected, pinned, actions, onOpen, onPin, onBeside, onClose, nestedIn }: ChatRowProps) {
   const [renaming, setRenaming] = useState(false);
+  const [nesting, setNesting] = useState(false);
   const [retrying, setRetrying] = useState(false);
   const [muted, setMute] = useState(() => isMuted(sessionId));
   const run = useChatRun(live?.id);
@@ -130,7 +151,7 @@ function ChatRow({ sessionId, title, cwd, lastModified, live, opening, meta, sta
         onClick={onOpen}
         onDoubleClick={sessionId ? (e) => { if ((e.target as HTMLElement).closest('.ui-row-title')) setRenaming(true); } : undefined}
         onLongPress={sessionId ? () => setRenaming(true) : undefined}
-        menu={chatMenuItems({ failed: state === 'failed' && !!live, stalled: !!live?.stalled, canPin: !!sessionId && !!onPin, beside: !!onBeside, ownWindow: !!live && !embedded && !tauriInvoke(), closable: !!onClose, unread: !!sessionId && !shown && !selected }).map((key) => {
+        menu={chatMenuItems({ failed: state === 'failed' && !!live, stalled: !!live?.stalled, canPin: !!sessionId && !!onPin, beside: !!onBeside, ownWindow: !!live && !embedded && !tauriInvoke(), closable: !!onClose, unread: !!sessionId && !shown && !selected, nested: !!nestedIn }).map((key) => {
           switch (key) {
             case 'resume': return <MenuItem key={key} icon="play" onClick={resume}>Resume</MenuItem>;
             case 'retry': return <MenuItem key={key} icon="refresh" disabled={retrying} onClick={retry}>Retry</MenuItem>;
@@ -139,6 +160,8 @@ function ChatRow({ sessionId, title, cwd, lastModified, live, opening, meta, sta
             case 'mute': return <MenuItem key={key} icon={muted ? 'bell' : 'bell-slash'} onClick={() => { setMuted(sessionId!, !muted); setMute(!muted); }}>{muted ? 'Unmute' : 'Mute'}</MenuItem>;
             case 'link': return <MenuItem key={key} icon="link" onClick={() => copyText(`${location.origin}/?session=${sessionId}`, 'Link copied')}>Copy link</MenuItem>;
             case 'rename': return <MenuItem key={key} icon="edit" disabled={!sessionId} onClick={() => setRenaming(true)}>Rename</MenuItem>;
+            case 'nest': return <MenuItem key={key} icon="indent" onClick={() => setNesting(true)}>Nest under…</MenuItem>;
+            case 'unnest': return <MenuItem key={key} icon="debug-step-out" onClick={() => void nestChat(sessionId!, '')}>Un-nest</MenuItem>;
             case 'beside': return <MenuItem key={key} icon="split-horizontal" className="desktop-only" onClick={onBeside!}>Open beside</MenuItem>;
             case 'window': return <MenuItem key={key} icon="multiple-windows" className="desktop-only" onClick={() => openChatWindow(live!.id)}>Open in new window</MenuItem>;
             case 'close': return <MenuItem key={key} icon="close" onClick={onClose!}>Close chat</MenuItem>;
@@ -149,18 +172,22 @@ function ChatRow({ sessionId, title, cwd, lastModified, live, opening, meta, sta
       />
     </div>
   );
-  if (!sessionId || !onPin) return row;
+  const picked = nesting && sessionId ? <NestPick id={sessionId} onClose={() => setNesting(false)} /> : null;
+  if (!sessionId || !onPin) return <>{row}{picked}</>;
   return (
-    <Swipe
-      rightLabel={swipe.right === 'pin' ? 'Pin' : 'Unpin'}
-      rightIcon={swipe.right === 'pin' ? 'pin' : 'pinned'}
-      onRight={swipePin}
-      leftLabel="Archive"
-      leftIcon="archive"
-      onLeft={swipe.left ? () => actions.archiveNow(saved, !!pinned, onPin) : undefined}
-    >
-      {row}
-    </Swipe>
+    <>
+      <Swipe
+        rightLabel={swipe.right === 'pin' ? 'Pin' : 'Unpin'}
+        rightIcon={swipe.right === 'pin' ? 'pin' : 'pinned'}
+        onRight={swipePin}
+        leftLabel="Archive"
+        leftIcon="archive"
+        onLeft={swipe.left ? () => actions.archiveNow(saved, !!pinned, onPin) : undefined}
+      >
+        {row}
+      </Swipe>
+      {picked}
+    </>
   );
 }
 
@@ -168,11 +195,11 @@ export const metaLine = (...parts: (string | undefined)[]) => parts.filter(Boole
 
 const draftMeta = (draft: string) => <><span className="chat-draft">Draft:</span> {draft}</>;
 
-export function SavedRow({ s, repo, branch, opening, pinned, actions, onOpen, onPin }: { s: ChatSession; repo?: string; branch?: string; opening: boolean; pinned: boolean; actions: Actions; onOpen: () => void; onPin: Pin }) {
+export function SavedRow({ s, repo, branch, opening, pinned, actions, onOpen, onPin, nested }: { s: ChatSession; repo?: string; branch?: string; opening: boolean; pinned: boolean; actions: Actions; onOpen: () => void; onPin: Pin; nested?: ChatSession[] }) {
   const seen = useStore((x) => x.seen);
   const builds = useStore((x) => buildsState(x.live, s.buildMembers));
   const draft = draftLine(readDraft(s.sessionId));
-  return <><ChatRow sessionId={s.sessionId} title={s.title} cwd={s.cwd} lastModified={s.lastModified} opening={opening} meta={draft ? draftMeta(draft) : s.summary ? metaLine(since(s.lastModified), s.subs, s.summary) : metaLine(repo, chatBranch(s.gitBranch, branch), s.subs, providerMark(s.provider), since(s.lastModified))} state={chatState({ saved: s, builds }, seen)} pinned={pinned} actions={actions} onOpen={onOpen} onPin={onPin} /><BuildRows sessionId={s.sessionId} members={s.buildMembers} state={builds} /></>;
+  return <><ChatRow sessionId={s.sessionId} title={s.title} cwd={s.cwd} lastModified={s.lastModified} opening={opening} meta={draft ? draftMeta(draft) : s.summary ? metaLine(since(s.lastModified), s.subs, s.summary) : metaLine(repo, chatBranch(s.gitBranch, branch), s.subs, providerMark(s.provider), since(s.lastModified))} state={chatState({ saved: s, builds }, seen)} pinned={pinned} actions={actions} onOpen={onOpen} onPin={onPin} nestedIn={s.nestedIn} /><BuildRows sessionId={s.sessionId} members={s.buildMembers} state={builds} /><NestedRows chats={nested} /></>;
 }
 
 export function WaitingRows({ rows, chats, folders, viewing, ask, pins, setPin, setChats }: { rows: LiveChat[]; chats: ChatSession[]; folders: Folder[]; viewing: string; ask: (r: ConfirmRequest) => void; pins: string[]; setPin: (id: string, on: boolean) => Promise<boolean>; setChats: SetChats }) {
@@ -182,7 +209,7 @@ export function WaitingRows({ rows, chats, folders, viewing, ask, pins, setPin, 
   return <>{rows.map((c) => <LiveRow key={c.id} c={c} saved={c.sessionId ? byId.get(c.sessionId) : undefined} repo={repoName(folders, c.cwd)} selected={c.id === viewing} actions={actions} ask={ask} pinned={pins.some((p) => root(p) === root(c.sessionId))} onPin={(on) => setPin(root(c.sessionId)!, on)} />)}</>;
 }
 
-export function LiveRow({ c, saved, repo, branch, selected, pinned, actions, ask, onPin, onBeside }: { c: LiveChat; saved?: ChatSession; repo?: string; branch?: string; selected: boolean; pinned?: boolean; actions: Actions; ask: (r: ConfirmRequest) => void; onPin?: Pin; onBeside?: () => void }) {
+export function LiveRow({ c, saved, repo, branch, selected, pinned, actions, ask, onPin, onBeside, nested }: { c: LiveChat; saved?: ChatSession; repo?: string; branch?: string; selected: boolean; pinned?: boolean; actions: Actions; ask: (r: ConfirmRequest) => void; onPin?: Pin; onBeside?: () => void; nested?: ChatSession[] }) {
   const events = useStore((s) => (s.session.id === c.id ? s.events : null));
   const seen = useStore((s) => s.seen);
   const builds = useStore((s) => buildsState(s.live, saved?.buildMembers));
@@ -199,11 +226,12 @@ export function LiveRow({ c, saved, repo, branch, selected, pinned, actions, ask
       {line.edits && <> · <span className="chat-add">+{line.edits.add}</span> <span className="chat-del">-{line.edits.del}</span></>}
     </>
   );
-  const row = <ChatRow sessionId={saved?.sessionId ?? rootOf(c.sessionId) ?? undefined} title={c.title} cwd={c.cwd} lastModified={saved?.lastModified ?? c.lastActive} live={c} meta={main} state={chatState({ live: c, saved, builds }, seen)} selected={selected} pinned={pinned} actions={actions} onOpen={() => { if (!selected) send({ type: 'view', id: c.id }); }} onPin={onPin} onBeside={onBeside} onClose={() => closeChat(c, ask)} />;
+  const row = <ChatRow sessionId={saved?.sessionId ?? rootOf(c.sessionId) ?? undefined} title={c.title} cwd={c.cwd} lastModified={saved?.lastModified ?? c.lastActive} live={c} meta={main} state={chatState({ live: c, saved, builds }, seen)} selected={selected} pinned={pinned} actions={actions} onOpen={() => { if (!selected) send({ type: 'view', id: c.id }); }} onPin={onPin} onBeside={onBeside} onClose={() => closeChat(c, ask)} nestedIn={saved?.nestedIn} />;
   return (
     <>
       {selected ? row : <AskHover c={c}>{row}</AskHover>}
       <BuildRows sessionId={saved?.sessionId} members={saved?.buildMembers} state={builds} />
+      <NestedRows chats={nested} />
     </>
   );
 }

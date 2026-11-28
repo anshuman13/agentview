@@ -14,6 +14,7 @@ import { chatOrder, nextUnread, stepChat } from './chatNav';
 import { byUrgency, chatFinder, chatState, doneChats, findHere, flip, folderBadge, groupByRepo, groupGlance, rootLookup, rowsById, holdOrder, newChatGroups, orderGroups, waitingChats, repoName, usePins, useWorkspace, type ChatSession, type Folder, type HeldOrder, type RepoGroup } from './folders';
 import { FilterInput } from './FilterInput';
 import { LiveRow, SavedRow, chatActions, metaLine } from './ChatRows';
+import { nestedRows, withoutNested } from '../../../shared/nest';
 import { searchMessages } from './sessionApi';
 import { searchHitRows } from '../../../shared/subChats';
 import { NeedsYou } from './NeedsYou';
@@ -101,7 +102,9 @@ export function OpenChats() {
   const current = useStore((s) => s.session.sessionId);
   const cwd = useStore((s) => s.session.cwd);
   const live = useStore((s) => s.live);
-  const { folders, chats, setChats } = useWorkspace(current + cwd);
+  const { folders, chats: all, setChats } = useWorkspace(current + cwd);
+  const under = useMemo(() => nestedRows(all), [all]);
+  const chats = useMemo(() => withoutNested(all, under), [all, under]);
   const savedById = useMemo(() => rowsById(chats), [chats]);
   const root = useMemo(() => rootLookup(chats), [chats]);
   const [filter, setFilter] = useState('');
@@ -161,10 +164,10 @@ export function OpenChats() {
     setCollapsed(next);
     save(KEY, next);
   };
-  const row = (c: LiveChat, repo?: string) => <LiveRow key={c.id} c={c} saved={savedById.get(c.sessionId ?? '')} repo={repo} branch={findHere(folders, c.cwd).folder?.repo?.branch} selected={c.id === viewing} actions={actions} ask={setAsk} pinned={pinSet.has(root(c.sessionId) ?? '')} onPin={(on) => setPin(root(c.sessionId)!, on)} onBeside={c.id === viewing || embedded ? undefined : () => setUi({ beside: c.id })} />;
+  const row = (c: LiveChat, repo?: string) => <LiveRow key={c.id} c={c} saved={savedById.get(c.sessionId ?? '')} repo={repo} branch={findHere(folders, c.cwd).folder?.repo?.branch} selected={c.id === viewing} actions={actions} ask={setAsk} nested={under.get(root(c.sessionId) ?? '')} pinned={pinSet.has(root(c.sessionId) ?? '')} onPin={(on) => setPin(root(c.sessionId)!, on)} onBeside={c.id === viewing || embedded ? undefined : () => setUi({ beside: c.id })} />;
 
   const savedRow = (s: ChatSession, repo?: string) => (
-    <SavedRow key={s.sessionId} s={s} repo={repo} branch={findHere(folders, s.cwd).folder?.repo?.branch} opening={opening === s.sessionId} pinned={pinSet.has(s.sessionId)} onOpen={() => { setOpening(s.sessionId); send({ type: 'open_session', sessionId: s.sessionId }); }} actions={actions} onPin={(on) => setPin(s.sessionId, on)} />
+    <SavedRow key={s.sessionId} s={s} repo={repo} branch={findHere(folders, s.cwd).folder?.repo?.branch} opening={opening === s.sessionId} pinned={pinSet.has(s.sessionId)} onOpen={() => { setOpening(s.sessionId); send({ type: 'open_session', sessionId: s.sessionId }); }} actions={actions} nested={under.get(s.sessionId)} onPin={(on) => setPin(s.sessionId, on)} />
   );
 
   // A hit in a sub-chat opens its chat (the latest session) with that sub-chat expanded at the hit.

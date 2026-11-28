@@ -2,6 +2,9 @@ package no.pradhan.agentview.nativeapp.sessions
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import no.pradhan.agentview.nativeapp.app.nest
+import no.pradhan.agentview.nativeapp.ui.SearchField
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -107,12 +110,27 @@ class SessionDialogs {
     var renaming by mutableStateOf<Pair<String, String>?>(null)
     var archiving by mutableStateOf<Pair<String, String>?>(null)
     var closing by mutableStateOf<LiveChat?>(null)
+    var nesting by mutableStateOf<String?>(null)
 
     @Composable
     fun Show(hub: Hub) {
+        nesting?.let { id -> NestSheet(hub, id) { nesting = null } }
         renaming?.let { (id, title) -> RenameDialog(title, onSave = { hub.rename(id, it) }, onDismiss = { renaming = null }) }
         archiving?.let { (id, title) -> ConfirmDialog("Archive this chat?", "$title\n\nYou can restore it from the bin for 7 days.", "Archive", { hub.archive(id) }) { archiving = null } }
         closing?.let { c -> ConfirmDialog("Close this chat?", "${c.title}\n\nThe agent is still working on it and will stop. The transcript is kept.", "Close", { hub.closeChat(c.id) }) { closing = null } }
+    }
+}
+
+// Nest under: the other chats as a searchable list, folder on the right.
+@Composable
+private fun NestSheet(hub: Hub, id: String, onDismiss: () -> Unit) {
+    var query by remember { mutableStateOf("") }
+    val chats by hub.workspace.collectAsState()
+    Sheet(onDismiss, "Nest under") {
+        SearchField(query, { query = it }, "Search chats")
+        nestTargets(chats.saved, id, query).take(50).forEach { c ->
+            ListRow(c.title.ifBlank { "Untitled" }, AnnotatedString(c.cwd.substringAfterLast('/')), lines = 1, metaLines = 1, onClick = { hub.nest(id, c.sessionId); onDismiss() })
+        }
     }
 }
 
@@ -142,6 +160,8 @@ class ChatRows(
             pinned = sessionId != null && sessionId in pins,
             onPin = { sessionId?.let { hub.pin(it, it !in pins) } },
             onRename = { sessionId?.let { dialogs.renaming = it to title } },
+            onNest = { sessionId?.let { dialogs.nesting = it } },
+            onUnnest = sessionId?.takeIf { saved[it]?.nestedIn != null }?.let { id -> { hub.nest(id, "") } },
             onClose = liveChat?.let { c -> { if (busy) dialogs.closing = c else hub.closeChat(c.id) } },
             onArchive = { sessionId?.let { dialogs.archiving = it to title } },
             canPin = sessionId != null,
@@ -189,7 +209,8 @@ class ChatRows(
             onResume = if (c.stalled) ({ hub.resume(c.id) }) else null,
             onClick = { hub.open(c.id); onOpen() },
         )
-        BuildRows(hub, s?.sessionId, s?.buildMembers, builds, onOpen) }
+        BuildRows(hub, s?.sessionId, s?.buildMembers, builds, onOpen)
+        id?.let { NestedRows(it) } }
     }
 
     @Composable
@@ -232,7 +253,22 @@ class ChatRows(
             actions = actions(s.sessionId, s.title, null),
             onClick = { scope.launch { opening.value = s.sessionId; if (hub.openSaved(s.sessionId)) onOpen(); opening.value = null } },
         )
-        BuildRows(hub, s.sessionId, s.buildMembers, builds, onOpen) }
+        BuildRows(hub, s.sessionId, s.buildMembers, builds, onOpen)
+        NestedRows(s.sessionId) }
+    }
+
+    private val nested by lazy { nestedRows(ws.saved) }
+
+    // The chats nested under a row, indented below it; a tap opens one.
+    @Composable
+    private fun NestedRows(parent: String) {
+        nested[parent]?.forEach { c ->
+            Box(Modifier.padding(start = Tokens.sp16)) {
+                ListRow(c.title.ifBlank { "Untitled" }, AnnotatedString(since(c.lastModified)), lines = 1, metaLines = 1, leading = { AvIcon("indent", tint = av.fgMuted) },
+                    onClick = { openSaved(c.sessionId) },
+                    menu = if (hub.readOnly) null else { close -> MenuItem("Un-nest", "debug-step-out", { close(); hub.nest(c.sessionId, "") }) })
+            }
+        }
     }
 }
 
@@ -242,7 +278,7 @@ private fun draftMeta(draft: String) = buildAnnotatedString {
     append(draft)
 }
 
-class RowActions(val pinned: Boolean, val canPin: Boolean, val onPin: () -> Unit, val onRename: () -> Unit, val onClose: (() -> Unit)?, val onArchive: () -> Unit, val onUnread: () -> Unit = {}, val muted: Boolean = false, val onMute: () -> Unit = {}, val onLink: () -> Unit = {}, val onRetry: (() -> Unit)? = null, val onSwipePin: (() -> Unit)? = null, val onSwipeArchive: (() -> Unit)? = null)
+class RowActions(val pinned: Boolean, val canPin: Boolean, val onPin: () -> Unit, val onRename: () -> Unit, val onClose: (() -> Unit)?, val onArchive: () -> Unit, val onUnread: () -> Unit = {}, val muted: Boolean = false, val onMute: () -> Unit = {}, val onLink: () -> Unit = {}, val onRetry: (() -> Unit)? = null, val onSwipePin: (() -> Unit)? = null, val onSwipeArchive: (() -> Unit)? = null, val onNest: () -> Unit = {}, val onUnnest: (() -> Unit)? = null)
 
 @Composable
 fun RepoRow(g: RepoGroup, seen: Map<String, Long>, live: List<LiveChat>, onClick: () -> Unit) {
@@ -336,6 +372,8 @@ internal fun ChatListRow(title: String, meta: AnnotatedString, shown: ChatState?
             if (actions.canPin) MenuItem(if (actions.muted) "Unmute" else "Mute", if (actions.muted) "bell" else "bell-slash", { close(); actions.onMute() })
             if (actions.canPin) MenuItem("Copy link", "link", { close(); actions.onLink() })
             if (actions.canPin) MenuItem("Rename", "edit", { close(); actions.onRename() })
+            if (actions.canPin && !false) MenuItem("Nest under…", "indent", { close(); actions.onNest() })
+            actions.onUnnest?.let { u -> MenuItem("Un-nest", "debug-step-out", { close(); u() }) }
             actions.onClose?.let { c -> MenuItem("Close chat", "close", { close(); c() }) }
             if (actions.canPin) { MenuSeparator(); MenuItem("Archive", "archive", { close(); actions.onArchive() }, danger = true) }
         },

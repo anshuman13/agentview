@@ -357,6 +357,7 @@ export type SavedSession = {
   via?: SubVia;
   startedAt?: number;
   spawnedBy?: string;
+  nestedIn?: string;
 };
 
 // How a sub-chat started: a /clear typed in the chat, or one sent by the chat's build run.

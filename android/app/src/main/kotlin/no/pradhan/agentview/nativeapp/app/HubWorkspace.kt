@@ -113,6 +113,11 @@ fun Hub.rename(sessionId: String, title: String) = write("Could not rename the c
     workspace.value = workspace.value.let { w -> w.copy(saved = w.saved.map { if (it.sessionId == sessionId) it.copy(title = title) else it }) }
 }
 
+fun Hub.nest(sessionId: String, parent: String) = write(if (parent.isEmpty()) "Could not un-nest the chat." else "Could not nest the chat.") {
+    api.nest(sessionId, parent)
+    workspace.value = workspace.value.let { w -> w.copy(saved = w.saved.map { if (it.sessionId == sessionId) it.copy(nestedIn = parent.ifEmpty { null }) else it }) }
+}
+
 fun Hub.archive(sessionId: String) = write("Could not archive the chat. It is still in the list.") {
     val row = workspace.value.saved.firstOrNull { it.sessionId == sessionId }
     val pinned = sessionId in workspace.value.pins

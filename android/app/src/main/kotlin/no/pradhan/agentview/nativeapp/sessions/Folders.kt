@@ -23,6 +23,7 @@ data class SavedSession(
     val via: String? = null,
     val startedAt: Long? = null,
     val spawnedBy: String? = null,
+    val nestedIn: String? = null,
     val subs: String? = null,
     val members: List<String>? = null,
     val buildMembers: List<String>? = null,
@@ -218,6 +219,28 @@ fun binMatches(filter: String, bin: List<BinnedSession>, repo: (BinnedSession) -
     return if (words.isEmpty()) bin else bin.filter { chatMatches(words, it.title, null, repo(it)) }
 }
 
+// shared/nest.ts: true when nesting child under parent would loop.
+fun nestLoops(nests: Map<String, String>, child: String, parent: String): Boolean {
+    var at: String? = parent
+    var n = 0
+    while (at != null && n++ < 100) { if (at == child) return true; at = nests[at] }
+    return false
+}
+
+// shared/nest.ts nestTargets: the chats id can nest under, matching query in the title or folder.
+fun nestTargets(chats: List<SavedSession>, id: String, query: String = ""): List<SavedSession> {
+    val nests = chats.mapNotNull { c -> c.nestedIn?.let { c.sessionId to it } }.toMap()
+    val q = query.trim().lowercase()
+    val current = chats.firstOrNull { it.sessionId == id }?.nestedIn
+    return chats.filter { c -> !nestLoops(nests, id, c.sessionId) && c.sessionId != current && (q.isEmpty() || q in c.title.lowercase() || q in c.cwd.lowercase()) }
+}
+
+// shared/nest.ts nestedRows: the chats nested under each listed chat, newest first.
+fun nestedRows(chats: List<SavedSession>): Map<String, List<SavedSession>> {
+    val ids = chats.mapTo(mutableSetOf()) { it.sessionId }
+    return chats.filter { it.nestedIn != null && it.nestedIn in ids }.groupBy { it.nestedIn!! }.mapValues { (_, l) -> l.sortedByDescending { it.lastModified } }
+}
+
 // ws.saved holds the grouped rows (groupChats), so an open chat on a sub-chat stands for its root's row.
 fun groupByRepo(live: List<LiveChat>, ws: Workspace, filter: String = "", held: HeldOrder? = null): List<RepoGroup> {
     val words = queryWords(filter)
@@ -244,7 +267,7 @@ fun groupByRepo(live: List<LiveChat>, ws: Workspace, filter: String = "", held: 
         g.open += c
         if (c.pending > 0) g.waiting++
     }
-    val ids = open.mapNotNull { saved.rowId(it.sessionId) }.toSet()
+    val ids = open.mapNotNull { saved.rowId(it.sessionId) }.toSet() + nestedRows(ws.saved).values.flatten().map { it.sessionId }
     for (s in ws.saved) if (s.sessionId !in ids) add(s.cwd, s.title, s.sessionId, s.lastModified)?.recent?.add(s)
     for (c in folded) {
         val id = builds.getValue(c.sessionId!!)

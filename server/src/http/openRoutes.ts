@@ -15,6 +15,7 @@ import { resolvedRoute } from '../agent/claude/resolved.js';
 import { searchMessages } from '../agent/claude/search.js';
 import { seenRoute } from '../agent/claude/seen.js';
 import { listSpawned, rowOf } from '../session/spawned.js';
+import { listNests, setNest } from '../session/nested.js';
 import { groupOf, listLinks, roundOf } from '../session/subChats.js';
 import { pageBefore } from '../session/eventLog.js';
 import { readSummaries } from '../agent/claude/summaryStore.js';
@@ -62,17 +63,23 @@ export function sessionRoutes(d: RouteDeps): Record<string, Entry<Ctx>> {
       return { ok: true };
     }),
     'ANY /api/sessions/bin': entry(() => listBin()),
+    // Nest under: places chat id under parent's row; an empty parent un-nests it.
+    'POST /api/sessions/nest': entry(async ({ url }) => {
+      const id = url.searchParams.get('id') ?? '';
+      if (!id) return failed(400, 'Missing chat id');
+      return (await setNest(id, url.searchParams.get('parent') ?? '')) ? { ok: true } : failed(400, 'A chat cannot nest under itself or a chat nested under it');
+    }),
     'POST /api/sessions/restore': entry(async ({ url }) => {
       for (const id of await rowOf(url.searchParams.get('id') ?? '')) await restoreSession(id);
       return { ok: true };
     }),
     'ANY /api/sessions': entry(async () => {
-      const [list, codex, bin, summaries, links, spawned] = await Promise.all([listSessions({ limit: 1000 }), codexSessions(), listBin(), readSummaries(), listLinks(), listSpawned()]);
+      const [list, codex, bin, summaries, links, spawned, nests] = await Promise.all([listSessions({ limit: 1000 }), codexSessions(), listBin(), readSummaries(), listLinks(), listSpawned(), listNests()]);
       const binned = new Set(bin.map((b) => b.sessionId));
       const linked = (s: SavedSession): SavedSession => {
         const l = links[s.sessionId];
         const by = spawned[s.sessionId]?.parent;
-        return { ...s, ...(l && { parentId: l.parent, via: l.via, startedAt: l.at }), ...(by && { spawnedBy: by }) };
+        return { ...s, ...(l && { parentId: l.parent, via: l.via, startedAt: l.at }), ...(by && { spawnedBy: by }), ...(nests[s.sessionId] && { nestedIn: nests[s.sessionId] }) };
       };
       return [...list.filter((x) => !binned.has(x.sessionId)).map((x) => linked(savedSession(x, summaries[x.sessionId]?.text))), ...codex].sort((a, b) => b.lastModified - a.lastModified);
     }),

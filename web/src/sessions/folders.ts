@@ -213,8 +213,8 @@ export const archiveChat = (s: { sessionId: string; title: string }, onDone: () 
   run: removeRequest(s.sessionId, '&archive', onDone, onError),
 });
 
-export const chatMenuItems = ({ failed, stalled, canPin, beside, ownWindow = false, closable, unread = false }: { failed: boolean; stalled: boolean; canPin: boolean; beside: boolean; ownWindow?: boolean; closable: boolean; unread?: boolean }) =>
-  [stalled && !failed && 'resume', failed && 'retry', canPin && 'pin', unread && 'unread', canPin && 'mute', canPin && 'link', 'rename', beside && 'beside', ownWindow && 'window', closable && 'close', 'separator', 'archive'].filter(Boolean) as ('resume' | 'retry' | 'pin' | 'unread' | 'mute' | 'link' | 'rename' | 'beside' | 'window' | 'close' | 'separator' | 'archive')[];
+export const chatMenuItems = ({ failed, stalled, canPin, beside, ownWindow = false, closable, unread = false, nested = false }: { failed: boolean; stalled: boolean; canPin: boolean; beside: boolean; ownWindow?: boolean; closable: boolean; unread?: boolean; nested?: boolean }) =>
+  [stalled && !failed && 'resume', failed && 'retry', canPin && 'pin', unread && 'unread', canPin && 'mute', canPin && 'link', 'rename', canPin && 'nest', nested && 'unnest', beside && 'beside', ownWindow && 'window', closable && 'close', 'separator', 'archive'].filter(Boolean) as ('resume' | 'retry' | 'pin' | 'unread' | 'mute' | 'link' | 'rename' | 'nest' | 'unnest' | 'beside' | 'window' | 'close' | 'separator' | 'archive')[];
 
 export const chatWindowUrl = (id: string) => `/?chat=${encodeURIComponent(id)}&alone=1`;
 export const openChatWindow = (id: string) => window.open(chatWindowUrl(id), `chat-${id}`, 'popup,width=760,height=900');
@@ -239,6 +239,17 @@ export async function renameChat(sessionId: string, title: string) {
   if (!r?.ok) return void notice('Could not rename the chat. The old title is kept.');
   invalidateWorkspace();
   cached.chats = cached.chats.map((x) => (x.sessionId === sessionId ? { ...x, title } : x));
+  listeners.forEach((on) => on('chats', cached.chats));
+}
+
+// The saved chat rows, for pickers that list other chats.
+export const savedChats = () => cached.chats;
+
+// Nest under: places chat id under parent's row, or un-nests it when parent is empty.
+export async function nestChat(sessionId: string, parent: string) {
+  const r = await fetch(apiUrl(`/api/sessions/nest?id=${encodeURIComponent(sessionId)}&parent=${encodeURIComponent(parent)}`), { method: 'POST' }).catch(() => null);
+  if (!r?.ok) return void notice(parent ? 'Could not nest the chat.' : 'Could not un-nest the chat.');
+  cached.chats = cached.chats.map((x) => (x.sessionId === sessionId ? { ...x, nestedIn: parent || undefined } : x));
   listeners.forEach((on) => on('chats', cached.chats));
 }
 
