@@ -213,6 +213,12 @@ data class ModelInfo(val value: String, val displayName: String = "", val descri
 data class Capabilities(val rewind: Boolean = true, val mcp: Boolean = true, val mcpEdit: Boolean = true, val connectors: Boolean = true, val effort: Boolean = true, val stopTask: Boolean = true, val subagents: Boolean = true, val forkAt: Boolean = true, val contextUsage: Boolean = true, val addDir: Boolean = true)
 
 @Serializable
+data class Connector(val id: String, val name: String = id, val status: String = "off", val enabled: Boolean = false, val signInUrl: String? = null, val icon: String? = null)
+
+@Serializable
+data class ConnectorGroup(val label: String = "", val connectors: List<Connector> = emptyList())
+
+@Serializable
 data class CommandInfo(val name: String, val description: String = "")
 
 // shared/protocol.ts SessionInfo, the fields the chat screen reads.

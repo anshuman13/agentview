@@ -233,6 +233,10 @@ export type McpConfigEntry = { name: string; scope: 'user' | 'local' | 'project'
 
 export const MCP_BAD = ['failed', 'needs-auth'];
 
+export type ConnectorStatus = 'connected' | 'needs-auth' | 'off' | 'failed';
+export type Connector = { id: string; name: string; status: ConnectorStatus; enabled: boolean; signInUrl?: string; icon?: string };
+export type ConnectorGroup = { label: string; connectors: Connector[] };
+
 export type CacheInfo = { at: number; ttlMs: number; readTokens: number; writeTokens: number };
 
 export const PERMISSION_MODES = ['default', 'acceptEdits', 'plan', 'auto', 'dontAsk'] as const;

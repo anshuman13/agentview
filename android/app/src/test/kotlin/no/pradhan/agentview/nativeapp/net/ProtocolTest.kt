@@ -14,6 +14,19 @@ import org.junit.Test
 
 class ProtocolTest {
     @Test
+    fun decodesConnectorGroup() {
+        val g = protocolJson.decodeFromString(
+            ConnectorGroup.serializer(),
+            """{"label":"Main","connectors":[{"id":"gmail","name":"Gmail","status":"needs-auth","enabled":true,"signInUrl":"https://x/auth","extra":1},{"id":"drive","name":"Drive","status":"connected","enabled":false}]}""",
+        )
+        assertEquals("Main", g.label)
+        assertEquals(listOf("needs-auth", "connected"), g.connectors.map { it.status })
+        assertEquals("https://x/auth", g.connectors[0].signInUrl)
+        assertNull(g.connectors[1].icon)
+        assertTrue(g.connectors[0].enabled)
+    }
+
+    @Test
     fun parsesInitWithTailAndUnknownKeys() {
         val m = parseMessage(
             """{"type":"init","boot":1,"state":{"session":{"id":"c1","model":"x"},"status":"Idle","earlier":12,"extra":true,
