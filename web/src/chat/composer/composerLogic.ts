@@ -182,7 +182,7 @@ export const handoffText = (sessionId: string) =>
 export type ContextRow = { name: string; tokens: string; share: string; tone: number | null; gap: boolean };
 export type ContextPanel = { used: string; amount: string; fill: number; rows: ContextRow[] };
 
-// The context panel: the total against the window, then the agent's rows; tone numbers the rows in the window, gap opens the reserve and free rows.
+// The context panel: the meter's percent (share of the auto-compact point), then the total against the window, then the agent's rows; tone numbers the rows in the window, gap opens the reserve and free rows.
 export function contextPanel(usage: ContextUsage | null | undefined, context: number | null, contextWindow?: number | null): ContextPanel | null {
   const total = usage?.total ?? context;
   const max = usage?.max || contextWindow || 0;
@@ -196,5 +196,5 @@ export function contextPanel(usage: ContextUsage | null | undefined, context: nu
     tone: r.kind === 'used' ? tone++ : null,
     gap: r.kind !== 'used' && (i === 0 || all[i - 1].kind === 'used'),
   }));
-  return { used: `${Math.round((total / max) * 100)}% used`, amount: `${tokens(total)} / ${tokens(max)}`, fill: Math.min(1, total / max), rows };
+  return { used: `${contextPercent(context ?? total, contextWindow || max)}% context`, amount: `${tokens(total)} / ${tokens(max)}`, fill: Math.min(1, total / max), rows };
 }

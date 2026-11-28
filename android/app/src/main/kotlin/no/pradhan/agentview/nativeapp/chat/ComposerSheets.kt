@@ -90,7 +90,7 @@ private fun AddSheet(s: ComposerState, uploading: Int, session: SessionInfo?, at
             ListRow("Chat settings", settings, leading = icon("settings-gear"), onClick = { onSheet(Picker.Settings) }, trailing = { Chevron() })
             if (pct != null) {
                 Hairline(lead = true)
-                ListRow("Context", "$pct% used", leading = icon("pulse"), onClick = { onSheet(Picker.Context) }, trailing = { Chevron() })
+                ListRow("Context", "$pct% context", leading = icon("pulse"), onClick = { onSheet(Picker.Context) }, trailing = { Chevron() })
             }
             val conns = composerConnectors(session?.mcp.orEmpty())
             if (conns.isNotEmpty() && session?.capabilities?.can("mcp") != false) {

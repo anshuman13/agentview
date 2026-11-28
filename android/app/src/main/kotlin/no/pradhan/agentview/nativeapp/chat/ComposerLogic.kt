@@ -115,7 +115,7 @@ fun compactAt(contextWindow: Long?): Long = contextWindow?.takeIf { it > 0 }?.le
 data class ContextRow(val name: String, val tokens: String, val share: String, val tone: Int?, val gap: Boolean)
 data class ContextPanel(val used: String, val amount: String, val fill: Double, val rows: List<ContextRow>)
 
-// web composerLogic contextPanel: the total against the window, then the agent's rows; tone numbers the rows in the window, gap opens the reserve and free rows.
+// web composerLogic contextPanel: the meter's percent (share of the auto-compact point), then the total against the window, then the agent's rows; tone numbers the rows in the window, gap opens the reserve and free rows.
 fun contextPanel(usage: ContextUsage?, context: Long?, contextWindow: Long?): ContextPanel? {
     val total = usage?.total ?: context ?: return null
     val max = usage?.max?.takeIf { it > 0 } ?: contextWindow?.takeIf { it > 0 } ?: return ContextPanel("", "${tokens(total)} tokens", 0.0, emptyList())
@@ -124,7 +124,7 @@ fun contextPanel(usage: ContextUsage?, context: Long?, contextWindow: Long?): Co
     val rows = list.mapIndexed { i, r ->
         ContextRow(r.name, tokens(r.tokens), String.format(java.util.Locale.US, "%.1f%%", r.tokens * 100.0 / max), if (r.kind == "used") tone++ else null, r.kind != "used" && (i == 0 || list[i - 1].kind == "used"))
     }
-    return ContextPanel("${Math.round(total * 100.0 / max)}% used", "${tokens(total)} / ${tokens(max)}", minOf(1.0, total.toDouble() / max), rows)
+    return ContextPanel("${contextPercent(context ?: total, contextWindow?.takeIf { it > 0 } ?: max)}% context", "${tokens(total)} / ${tokens(max)}", minOf(1.0, total.toDouble() / max), rows)
 }
 
 fun contextPercent(context: Long?, contextWindow: Long?): Int? = context?.let { minOf(100, Math.round(it.toDouble() / compactAt(contextWindow) * 100).toInt()) }
