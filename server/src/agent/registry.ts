@@ -1,92 +1,18 @@
 import path from 'node:path';
-import type { Account, ChatEvent, McpServer, Provider, ProviderOption } from '../../../shared/protocol.js';
+import type { Provider, ProviderOption } from '../../../shared/protocol.js';
 import { providerLabel } from '../../../shared/providers.js';
 import { readJsonSync, writeJsonSync } from '../json.js';
-import { STATE_DIR, loggedInAccounts, verifyLimit } from './claude/accounts.js';
-import { claudeTranscript } from './claude/chatMentions.js';
-import { firstCommit, savedEvents } from './claude/savedChat.js';
-import { chatMemory, memoryDirs } from './claude/memory.js';
-import { allowedServers, mcpProbe } from './claude/mcp.js';
-import { claudeDriver } from './claude/driver.js';
-import { NOT_SIGNED_IN, codexSignedIn } from './codex/binary.js';
-import { codexDriver } from './codex/driver.js';
-import { codexInstructionFiles } from './codex/instructions.js';
-import { codexMcpProbe, readCodexServers } from './codex/mcp.js';
-import { codexTranscript } from './codex/threads.js';
+import { STATE_DIR } from './claude/accounts.js';
 import { loadOpenRouter } from './claude/openrouter.js';
-import { readMemory, type MemoryFile } from './memory.js';
-import { claudeResume, codexResume } from './resume.js';
-import type { McpServerDef } from '../integrations/mcpClient.js';
-import type { DriverFactory } from './types.js';
+import { claudeStrategy } from './claude/strategy.js';
+import { NOT_SIGNED_IN, codexSignedIn } from './codex/binary.js';
+import { codexStrategy } from './codex/strategy.js';
+import type { ProviderStrategy } from './types.js';
 
-type Entry = {
-  // A picked account is pinned: the chat stays on it at its usage limit.
-  driver(cwd: string, resume?: string, fork?: boolean, unattended?: boolean, account?: Account): DriverFactory;
-  // Clears a limit mark the provider no longer deserves, so a chat does not start on a wrong one.
-  verifyLimits(): Promise<unknown>;
-  // The file that holds a chat's transcript, or null when this provider has no such chat.
-  transcriptPath(id: string): string | null;
-  // A saved chat's events and the first commit it made, read without starting the agent; null when the provider cannot.
-  savedEvents(id: string): Promise<ChatEvent[] | null>;
-  firstCommit(id: string): Promise<{ hash: string; subject: string } | null>;
-  // The instruction files the Memory list shows for a folder.
-  memory(cwd: string): Promise<MemoryFile[]>;
-  // The folders the provider writes memory files in for a folder, where a removed one may be restored.
-  memoryDirs(cwd: string): string[];
-  // The shell line that continues a chat in the provider's own CLI, or null when it has none.
-  resume(cwd: string, sessionId: string, account: Account): string | null;
-  // The MCP servers the provider's own config defines for a folder, probed, and the plain definitions of those it would start.
-  mcpProbe(cwd: string, refresh: boolean): Promise<McpServer[]>;
-  servers(cwd: string): Promise<Record<string, McpServerDef>>;
-  // Where those servers are configured, as the pages name it.
-  serversFile: string;
-  // Providers with the same model ids share one set, so a client keeps one model list and last model per set.
-  modelSet: string;
-};
-
-const PROVIDERS: Record<Provider, Entry> = {
-  claude: {
-    driver: (cwd, resume, fork, unattended, account) => claudeDriver(cwd, { resume, fork, unattended, account, pinned: account != null }),
-    verifyLimits: () => Promise.all(loggedInAccounts().map((a) => verifyLimit(a))),
-    transcriptPath: claudeTranscript,
-    savedEvents,
-    firstCommit,
-    memory: (cwd) => chatMemory(cwd),
-    memoryDirs: (cwd) => memoryDirs(cwd),
-    resume: claudeResume,
-    mcpProbe,
-    servers: allowedServers,
-    serversFile: '~/.claude.json',
-    modelSet: 'claude',
-  },
-  openrouter: {
-    driver: (cwd, resume, fork, unattended) => claudeDriver(cwd, { resume, fork, openrouter: true, unattended }),
-    verifyLimits: () => Promise.resolve(),
-    transcriptPath: claudeTranscript,
-    savedEvents,
-    firstCommit,
-    memory: (cwd) => chatMemory(cwd),
-    memoryDirs: (cwd) => memoryDirs(cwd),
-    resume: () => null,
-    mcpProbe,
-    servers: allowedServers,
-    serversFile: '~/.claude.json',
-    modelSet: 'claude',
-  },
-  codex: {
-    driver: (_cwd, resume, fork) => codexDriver(resume, fork),
-    verifyLimits: () => Promise.resolve(),
-    transcriptPath: codexTranscript,
-    savedEvents: async () => null,
-    firstCommit: async () => null,
-    memory: (cwd) => readMemory(codexInstructionFiles(cwd)),
-    memoryDirs: () => [],
-    resume: (cwd, sessionId) => codexResume(cwd, sessionId),
-    mcpProbe: codexMcpProbe,
-    servers: readCodexServers,
-    serversFile: '~/.codex/config.toml',
-    modelSet: 'codex',
-  },
+const PROVIDERS: Record<Provider, ProviderStrategy> = {
+  claude: claudeStrategy(),
+  openrouter: claudeStrategy({ openrouter: true }),
+  codex: codexStrategy,
 };
 
 // What a new chat can run on: OpenRouter once it has a key and models, Codex once this Mac is signed in to it.

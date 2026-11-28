@@ -1,3 +1,5 @@
+import type { McpServerDef } from '../integrations/mcpClient.js';
+import type { MemoryFile } from './memory.js';
 import type { Account, AgentEvent, CacheInfo, Capabilities, ChatEvent, Effort, McpServer, Provider, ServerMessage, ServerState, SessionInfo } from '../../../shared/protocol.js';
 
 export type Decision = { behavior: 'allow'; updatedInput: Record<string, unknown>; updatedPermissions?: unknown[] } | { behavior: 'deny'; message: string };
@@ -123,3 +125,29 @@ export interface AgentHost {
 }
 
 export type DriverFactory = (host: AgentHost) => AgentDriver;
+
+// What a chat feature asks a provider for; registry.ts holds one per provider.
+export type ProviderStrategy = {
+  // A picked account is pinned: the chat stays on it at its usage limit.
+  driver(cwd: string, resume?: string, fork?: boolean, unattended?: boolean, account?: Account): DriverFactory;
+  // Clears a limit mark the provider no longer deserves, so a chat does not start on a wrong one.
+  verifyLimits(): Promise<unknown>;
+  // The file that holds a chat's transcript, or null when this provider has no such chat.
+  transcriptPath(id: string): string | null;
+  // A saved chat's events and the first commit it made, read without starting the agent; null when the provider cannot.
+  savedEvents(id: string): Promise<ChatEvent[] | null>;
+  firstCommit(id: string): Promise<{ hash: string; subject: string } | null>;
+  // The instruction files the Memory list shows for a folder.
+  memory(cwd: string): Promise<MemoryFile[]>;
+  // The folders the provider writes memory files in for a folder, where a removed one may be restored.
+  memoryDirs(cwd: string): string[];
+  // The shell line that continues a chat in the provider's own CLI, or null when it has none.
+  resume(cwd: string, sessionId: string, account: Account): string | null;
+  // The MCP servers the provider's own config defines for a folder, probed, and the plain definitions of those it would start.
+  mcpProbe(cwd: string, refresh: boolean): Promise<McpServer[]>;
+  servers(cwd: string): Promise<Record<string, McpServerDef>>;
+  // Where those servers are configured, as the pages name it.
+  serversFile: string;
+  // Providers with the same model ids share one set, so a client keeps one model list and last model per set.
+  modelSet: string;
+};
