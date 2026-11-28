@@ -32,6 +32,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -180,20 +181,25 @@ private fun BackgroundShells(hub: Hub) {
             AvIcon("chevron-right", null, Tokens.icon, Modifier.rotate(if (expanded) 90f else 0f), tint = av.fgMuted)
             if (stop) IconBtn("debug-stop", "Stop ${t.label}", { hub.stopTask(t.toolUseId) }, enabled = !hub.readOnly, iconSize = Tokens.icon)
         }
-        if (expanded) Text(
-            t.detail,
-            Modifier.fillMaxWidth().padding(horizontal = Tokens.sp4).heightIn(max = Tokens.touch * 5).clip(RoundedCornerShape(Tokens.radiusSm)).background(av.sunken).verticalScroll(rememberScrollState()).padding(Tokens.sp3),
-            style = Type.footnote.copy(fontFamily = FontFamily.Monospace), color = av.fg,
-        )
+        if (expanded) {
+            // The open output follows its end as a running command writes more.
+            val scroll = rememberScrollState()
+            LaunchedEffect(t.detail, scroll.maxValue) { scroll.scrollTo(scroll.maxValue) }
+            Text(
+                t.detail,
+                Modifier.fillMaxWidth().padding(horizontal = Tokens.sp4).heightIn(max = Tokens.touch * 5).clip(RoundedCornerShape(Tokens.radiusSm)).background(av.sunken).verticalScroll(scroll).padding(Tokens.sp3),
+                style = Type.footnote.copy(fontFamily = FontFamily.Monospace), color = av.fg,
+            )
+        }
     }
     Column(Modifier.fillMaxWidth().semantics { contentDescription = "Background tasks" }) {
         if (rows.running.isNotEmpty()) Text("Running ${rows.running.size}", Modifier.padding(start = Tokens.sp4, top = Tokens.sp2, bottom = Tokens.sp2), style = Type.footnote, color = av.fgMuted)
-        rows.running.forEach { ShellLine(it, true) }
+        rows.running.forEach { key(it.toolUseId) { ShellLine(it, true) } }
         if (rows.finished.isNotEmpty()) Row(Modifier.fillMaxWidth().padding(start = Tokens.sp4), verticalAlignment = Alignment.CenterVertically) {
             Text("Finished ${rows.finished.size}", Modifier.weight(1f), style = Type.footnote, color = av.fgMuted)
             Button("Clear", { hub.clearShells() }, variant = ButtonVariant.Plain, size = ButtonSize.Sm, enabled = !hub.readOnly)
         }
-        rows.finished.forEach { ShellLine(it, false) }
+        rows.finished.forEach { key(it.toolUseId) { ShellLine(it, false) } }
     }
 }
 

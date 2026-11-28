@@ -72,6 +72,7 @@ export class Messages {
     this.edits.delete(block.tool_use_id);
     if (edited && !block.is_error) host.noteFile(path.relative(host.cwd, edited), 'tool');
     const text = toolResultText(block);
+    this.tasks.noteResult(block.tool_use_id, text);
     const agent = isAgent(host, block.tool_use_id);
     if (agent) agentResult(host, block.tool_use_id, text, Boolean(block.is_error), output);
     if (!parent && text.startsWith(ASYNC_LAUNCH)) {

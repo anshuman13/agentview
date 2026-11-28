@@ -13,6 +13,9 @@ export class TaskTracker {
   private taskIds = new Map<string, string>();
   // Shell commands the CLI reported ended, until their notification says how.
   private endedShells = new Map<string, RunningTask>();
+  // Where each background shell writes its output, from its tool result, read again every 2 s while it runs.
+  private outputFiles = new Map<string, string>();
+  private poll: ReturnType<typeof setInterval> | null = null;
 
   constructor(private host: AgentHost) {}
 
@@ -27,7 +30,36 @@ export class TaskTracker {
   clear() {
     this.running.clear();
     this.endedShells.clear();
+    this.outputFiles.clear();
     this.syncShells();
+  }
+
+  // A background Bash result names the file its output goes to.
+  noteResult(toolUseId: string, text: string) {
+    const file = /Output is being written to: (\S+)/.exec(text)?.[1];
+    if (!file) return;
+    this.outputFiles.set(toolUseId, file);
+    this.watchOutput();
+  }
+
+  private watchOutput() {
+    const live = () => [...this.running.values()].filter((t) => t.shell && this.outputFiles.has(t.toolUseId));
+    if (this.poll || !live().length) return;
+    this.poll = setInterval(() => {
+      const tasks = live();
+      if (!tasks.length) {
+        clearInterval(this.poll!);
+        this.poll = null;
+        return;
+      }
+      for (const t of tasks) void outputTail(this.outputFiles.get(t.toolUseId)!).then((output) => this.setOutput(t.toolUseId, output, false));
+    }, 2000);
+  }
+
+  private setOutput(toolUseId: string, output: string, ended: boolean) {
+    const shells = this.host.state.session.shells ?? [];
+    const shell = shells.find((t) => t.toolUseId === toolUseId && (ended || !t.endedAt));
+    if (output && shell && shell.output !== output) this.host.setSession({ shells: shells.map((t) => (t === shell ? { ...t, output } : t)) });
   }
 
   // Background shell commands go to the clients with their command and start time, so they can show elapsed time and a Stop; finished ones stay until the user clears them.
@@ -50,10 +82,8 @@ export class TaskTracker {
     const command = this.commandOf(task.toolUseId);
     const ended: BackgroundShell = { toolUseId: task.toolUseId, label: task.description, startedAt: task.startedAt ?? Date.now(), endedAt: prev?.endedAt ?? Date.now(), ...(command && { command }), ...((failed || prev?.failed) && { failed: true }) };
     this.syncShells(ended);
-    if (outputFile) void outputTail(outputFile).then((output) => {
-      const shells = this.host.state.session.shells ?? [];
-      if (output && shells.some((t) => t.toolUseId === task.toolUseId)) this.host.setSession({ shells: shells.map((t) => (t.toolUseId === task.toolUseId ? { ...t, output } : t)) });
-    });
+    const file = outputFile ?? this.outputFiles.get(task.toolUseId);
+    if (file) void outputTail(file).then((output) => this.setOutput(task.toolUseId, output, true));
   }
 
   private commandOf(toolUseId: string) {
@@ -79,7 +109,10 @@ export class TaskTracker {
     const use = call?.kind === 'tool_use' ? call : undefined;
     const shell = msg.task_type === 'local_bash' && Boolean(msg.is_backgrounded);
     this.running.set(msg.task_id, { toolUseId: toolUseId || '', tool: use?.name ?? msg.task_type ?? 'task', description: msg.description || use?.summary || '', startedAt: Date.now(), ...(msg.task_type === 'local_bash' && { shell }) });
-    if (shell) this.syncShells();
+    if (shell) {
+      this.syncShells();
+      this.watchOutput();
+    }
     if (!toolUseId) return;
     this.taskIds.set(toolUseId, msg.task_id);
     this.host.adopt(toolUseId);
@@ -94,7 +127,10 @@ export class TaskTracker {
 
   updated(msg: Extract<SystemMessage, { subtype: 'task_updated' }>) {
     const task = this.running.get(msg.task_id);
-    if (task?.shell === false && msg.patch.is_backgrounded) task.shell = true;
+    if (task?.shell === false && msg.patch.is_backgrounded) {
+      task.shell = true;
+      this.watchOutput();
+    }
     if (msg.patch.status && !['pending', 'running', 'paused'].includes(msg.patch.status)) {
       this.running.delete(msg.task_id);
       if (task?.shell !== undefined) {
@@ -116,6 +152,7 @@ export class TaskTracker {
     this.endedShells.delete(msg.task_id);
     const toolUseId = msg.tool_use_id ? agentToolUse(this.host, msg.tool_use_id) : taskToolUse(this.taskIds, this.agents, msg.task_id);
     if (task?.shell !== undefined) this.shellEnded(task, msg.status === 'failed', msg.output_file);
+    if (task) this.outputFiles.delete(task.toolUseId);
     if (!toolUseId) return;
     // A stopped shell command gets no turn of its own: mark its step stopped and say so in the transcript.
     if (task?.shell !== undefined && msg.status === 'stopped') return this.shellStopped(toolUseId, msg.summary || task.description);
@@ -134,6 +171,7 @@ export class TaskTracker {
 
 // The last lines a background command wrote, read from the CLI's output file.
 async function outputTail(path: string) {
-  const text = await Bun.file(path).slice(-8192).text().catch(() => '');
+  const file = Bun.file(path);
+  const text = await file.slice(Math.max(0, file.size - 8192)).text().catch(() => '');
   return text.split('\n').slice(-40).join('\n').trimEnd();
 }

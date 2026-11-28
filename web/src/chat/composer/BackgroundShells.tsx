@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useLayoutEffect, useRef, useState } from 'react';
 import { shellRows, type ShellRow } from '../../../../shared/backgroundShells';
 import { useStore } from '../../app/store';
 import { Icon } from '../../ui/Icon';
@@ -27,7 +27,7 @@ export function BackgroundShells() {
         </button>
         {stop && <IconButton icon="debug-stop" label={`Stop ${t.label}`} size="sm" onClick={() => stopTask(t.toolUseId)} />}
       </div>
-      {open === t.toolUseId && <pre className="cp-bg-out">{t.detail}</pre>}
+      {open === t.toolUseId && <ShellOutput text={t.detail} />}
     </div>
   );
   return (
@@ -47,4 +47,13 @@ export function BackgroundShells() {
       {finished.map((t) => row(t, false))}
     </div>
   );
+}
+
+// The open output follows its end as a running command writes more.
+function ShellOutput({ text }: { text: string }) {
+  const ref = useRef<HTMLPreElement>(null);
+  useLayoutEffect(() => {
+    if (ref.current) ref.current.scrollTop = ref.current.scrollHeight;
+  }, [text]);
+  return <pre ref={ref} className="cp-bg-out">{text}</pre>;
 }

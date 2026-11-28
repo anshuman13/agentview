@@ -11,7 +11,7 @@ import type { History } from '../agent/types.js';
 import { appendTo, BIG_BRO, ROW_WINDOW, type ChatEvent, type ServerMessage } from '../../../shared/protocol.js';
 import { sketchPrompt } from '../../../shared/sketches.js';
 import { specReviewPrompt } from '../../../shared/specTasks.js';
-import { waitFor } from '../../../testing.js';
+import { advanceTimersByTimeAsync, waitFor } from '../../../testing.js';
 
 function fakeSession() {
   const s = claudeSession('/tmp/project');
@@ -1066,6 +1066,29 @@ describe('restart resume', () => {
     expect(s.state.session.shells).toEqual([]);
     expect(s.state.session.running).toBe(false);
     expect(s.state.events.slice(-2)).toMatchObject([{ kind: 'tool_result', toolUseId: 'tu1', stopped: true }, { kind: 'system', text: 'Background task stopped · Sleep a minute' }]);
+  });
+
+  it('shows a running background shell its output so far', async () => {
+    const file = `${require('node:os').tmpdir()}/bg-live-${Date.now()}.out`;
+    await Bun.write(file, 'line 1\n');
+    vi.useFakeTimers();
+    try {
+      const { s, handle, result } = fakeSession();
+      handle({ type: 'assistant', parent_tool_use_id: null, message: { content: [{ type: 'tool_use', id: 'tu1', name: 'Bash', input: { command: 'tail -f x', run_in_background: true } }] } });
+      handle({ type: 'system', subtype: 'task_started', task_id: 't1', tool_use_id: 'tu1', task_type: 'local_bash', description: 'Follow x', is_backgrounded: true });
+      handle({ type: 'user', parent_tool_use_id: null, message: { content: [{ type: 'tool_result', tool_use_id: 'tu1', content: `Command running in background with ID: t1. Output is being written to: ${file}` }] } });
+      result('r1');
+      await advanceTimersByTimeAsync(2000);
+      await waitFor(() => expect(s.state.session.shells?.[0].output).toBe('line 1'));
+      await Bun.write(file, 'line 1\nline 2\n');
+      await advanceTimersByTimeAsync(2000);
+      await waitFor(() => expect(s.state.session.shells?.[0].output).toBe('line 1\nline 2'));
+      handle({ type: 'system', subtype: 'task_notification', task_id: 't1', tool_use_id: 'tu1', status: 'completed', summary: 'done' });
+      await waitFor(() => expect(s.state.session.shells?.[0]).toMatchObject({ endedAt: expect.anything(), output: 'line 1\nline 2' }));
+    } finally {
+      vi.useRealTimers();
+      require('node:fs').rmSync(file, { force: true });
+    }
   });
 
   it('resumeStopped adds one user event with the run id, and an untouched chat has none', () => {
