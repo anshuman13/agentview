@@ -69,18 +69,20 @@ import no.pradhan.agentview.nativeapp.ui.lineDiff
 fun PendingList(pending: List<Pending>, mode: String, hub: Hub, provider: String? = null) {
     if (pending.isEmpty()) return
     Column(Modifier.heightIn(max = Tokens.scrollMax).verticalScroll(rememberScrollState()).padding(horizontal = Tokens.sp4, vertical = Tokens.sp2), verticalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
-        for (p in pending) PendingCard(p, mode, hub, p is Pending.Permission && canSwitchToAuto(p.toolName, mode, provider))
+        for (p in pending) PendingCard(p, mode, hub, p is Pending.Permission && canSwitchToAuto(p.toolName, mode, provider), provider)
     }
 }
+
+private val PLAN_MODE_ICONS = mapOf("acceptEdits" to "edit", "auto" to "zap")
 
 // The chat a card answers for, when it is not the one on screen (the session list's answer sheet).
 val LocalCardChat = staticCompositionLocalOf<String?> { null }
 
 @Composable
-fun PendingCard(p: Pending, mode: String, hub: Hub, auto: Boolean = false) {
+fun PendingCard(p: Pending, mode: String, hub: Hub, auto: Boolean = false, provider: String? = null) {
     when {
         p is Pending.Question -> QuestionCard(p, hub)
-        p is Pending.Permission && p.toolName == "ExitPlanMode" -> PlanCard(p, mode, hub)
+        p is Pending.Permission && p.toolName == "ExitPlanMode" -> PlanCard(p, mode, hub, provider)
         p is Pending.Permission -> PermissionCard(p, mode, hub, auto)
     }
 }
@@ -122,13 +124,19 @@ fun PermissionCard(p: Pending.Permission, mode: String, hub: Hub, auto: Boolean 
 }
 
 @Composable
-private fun PlanCard(p: Pending.Permission, mode: String, hub: Hub) {
+private fun PlanCard(p: Pending.Permission, mode: String, hub: Hub, provider: String?) {
     val paragraphs = remember(p.input) { planParagraphs(p.input.s("plan")) }
     var notes by remember(p.id) { mutableStateOf(emptyMap<Int, String>()) }
     var editing by remember(p.id) { mutableStateOf<Int?>(null) }
     val chat = LocalCardChat.current
+    val modes = planApproveModes(mode, provider)
     Panel {
-        Title(p.title)
+        if (modes.isNotEmpty()) Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.weight(1f)) { Title(p.title) }
+            MoreButton("More ways to approve") { close ->
+                for ((m, label) in modes) MenuItem(label, PLAN_MODE_ICONS.getValue(m), { close(); hub.setMode(m); hub.permission(p.id, true) })
+            }
+        } else Title(p.title)
         if (paragraphs.isNotEmpty()) Column(Modifier.heightIn(max = Tokens.scrollTall).well(av).verticalScroll(rememberScrollState()).padding(Tokens.sp5), verticalArrangement = Arrangement.spacedBy(Tokens.sp4)) {
             paragraphs.forEachIndexed { i, text ->
                 Column(Modifier.fillMaxWidth().clickable { editing = i }) {

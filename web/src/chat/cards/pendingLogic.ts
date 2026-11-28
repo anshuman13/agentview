@@ -12,6 +12,12 @@ export const MODE_HINTS: Record<string, string> = {
 export const canSwitchToAuto = (tool: string, mode: string, provider?: Provider) =>
   tool !== 'ExitPlanMode' && !!mode && mode !== 'auto' && providerModes(provider).some((m) => m.value === 'auto');
 
+const PLAN_APPROVE: Record<string, string> = { acceptEdits: 'Approve and allow edits', auto: 'Approve and use Auto' };
+
+// The plan card's Approve menu (Android planApproveModes): approve and switch to each mode the provider has, not when the mode is unknown (the session list's cards).
+export const planApproveModes = (mode: string, provider?: Provider) =>
+  mode ? providerModes(provider).filter((m) => PLAN_APPROVE[m.value]).map((m) => ({ mode: m.value, label: PLAN_APPROVE[m.value] })) : [];
+
 const QUOTE_MAX = 80;
 
 // The plan's blocks split at blank lines, leaving fenced code whole.

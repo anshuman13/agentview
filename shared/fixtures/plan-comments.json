@@ -109,5 +109,22 @@
    "provider": "claude",
    "expected": false
   }
+ ],
+ "planApprove": [
+  {
+   "name": "plan mode on Claude",
+   "mode": "plan",
+   "provider": "claude",
+   "expected": [
+    "acceptEdits",
+    "auto"
+   ]
+  },
+  {
+   "name": "unknown mode on the session list",
+   "mode": "",
+   "provider": "claude",
+   "expected": []
+  }
  ]
 }

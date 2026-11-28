@@ -13,7 +13,7 @@ import { FEATURES, featureRows, paletteFeature, shownFeature, type UseDays } fro
 import type { Capabilities, ContextUsage, ChatEvent, Finding, ChatRun, Effort, LiveChat, Provider, SavedSession, SpawnedBuild, Try } from '../../shared/protocol';
 import { START_MODES, billing, checkedModel, menuModes, modeSteps, modelRow, newestModels, providerLabel, providerMark, providerModes, settingsLabel, shortModel, startModeFor, startTexts, type Billing } from '../../shared/providers';
 import { recentInRepo } from './app/newChat';
-import { blockedRule, canSwitchToAuto, planFeedback, planParagraphs } from './chat/cards/pendingLogic';
+import { blockedRule, canSwitchToAuto, planApproveModes, planFeedback, planParagraphs } from './chat/cards/pendingLogic';
 import { needsEarlier } from './chat/transcript/window';
 import { binLeft, buildFolders, chatBranch, chatPlace, folderBadge, since } from './sessions/folders';
 import { findingFixPrompt, findingsFixPrompt } from '../../shared/reviewPrompt';
@@ -217,11 +217,12 @@ describe('cases shared with the Android app', () => {
   }
 
   {
-    const f = JSON.parse(readFileSync(new URL('../../shared/fixtures/plan-comments.json', import.meta.url), 'utf8')) as { paragraphs: { name: string; plan: string; expected: string[] }[]; feedback: { name: string; paragraphs: string[]; notes: Record<number, string>; expected: string }[]; blocked: { rule: string; expected: string }[]; switchToAuto: { name: string; tool: string; mode: string; provider: Provider; expected: boolean }[] };
+    const f = JSON.parse(readFileSync(new URL('../../shared/fixtures/plan-comments.json', import.meta.url), 'utf8')) as { paragraphs: { name: string; plan: string; expected: string[] }[]; feedback: { name: string; paragraphs: string[]; notes: Record<number, string>; expected: string }[]; blocked: { rule: string; expected: string }[]; switchToAuto: { name: string; tool: string; mode: string; provider: Provider; expected: boolean }[]; planApprove: { name: string; mode: string; provider: Provider; expected: string[] }[] };
     for (const c of f.paragraphs) it(`planParagraphs: ${c.name}`, () => expect(planParagraphs(c.plan)).toEqual(c.expected));
     for (const c of f.feedback) it(`planFeedback: ${c.name}`, () => expect(planFeedback(c.paragraphs, c.notes)).toBe(c.expected));
     for (const c of f.blocked) it(`blockedRule: ${c.rule}`, () => expect(blockedRule(c.rule)).toBe(c.expected));
     for (const c of f.switchToAuto) it(`canSwitchToAuto: ${c.name}`, () => expect(canSwitchToAuto(c.tool, c.mode, c.provider)).toBe(c.expected));
+    for (const c of f.planApprove) it(`planApproveModes: ${c.name}`, () => expect(planApproveModes(c.mode, c.provider).map((m) => m.mode)).toEqual(c.expected));
   }
 
   for (const c of cases<{ name: string; replies: number; earlier: number; autoLoads: number; expected: boolean }>('needs-earlier')) {

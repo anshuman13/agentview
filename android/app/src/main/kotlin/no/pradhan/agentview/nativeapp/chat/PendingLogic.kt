@@ -38,3 +38,9 @@ fun blockedRule(rule: String): String =
 // "Allow and switch to Auto" (web canSwitchToAuto): not for plan approval, not when the mode is unknown (the session list's cards) or already auto, and only where the provider has auto.
 fun canSwitchToAuto(tool: String, mode: String, provider: String?) =
     tool != "ExitPlanMode" && mode.isNotEmpty() && mode != "auto" && providerModes(provider).any { it.value == "auto" }
+
+private val PLAN_APPROVE = mapOf("acceptEdits" to "Approve and allow edits", "auto" to "Approve and use Auto")
+
+// web planApproveModes: the plan card's Approve menu, approve and switch to each mode the provider has, not when the mode is unknown (the session list's cards).
+fun planApproveModes(mode: String, provider: String?): List<Pair<String, String>> =
+    if (mode.isEmpty()) emptyList() else providerModes(provider).mapNotNull { m -> PLAN_APPROVE[m.value]?.let { m.value to it } }

@@ -9,9 +9,9 @@ import { pressable, useOnUnmount } from '../../ui/util';
 import { touch } from '../../app/touch/touch';
 import { Markdown } from '../Chat';
 import { str } from '../transcript/steps';
-import type { ChatEvent, PendingPermission, PendingRequest } from '../../../../shared/protocol';
+import type { ChatEvent, PendingPermission, PendingRequest, Provider } from '../../../../shared/protocol';
 import { lineDiff } from '../../../../shared/lineDiff';
-import { blockedRule, canSwitchToAuto, MODE_HINTS, planFeedback, planParagraphs } from './pendingLogic';
+import { blockedRule, canSwitchToAuto, MODE_HINTS, planApproveModes, planFeedback, planParagraphs } from './pendingLogic';
 import { QuestionCard } from './QuestionCard';
 import { useCardKeys } from './useCardKeys';
 import { CardChat } from './cardChat';
@@ -33,14 +33,14 @@ export function Pending() {
   if (!pending.length) return null;
   return (
     <div className="pd-list" ref={list}>
-      {pending.map((p, n) => <PendingCard key={p.id} p={p} mode={mode} first={n === 0} auto={canSwitchToAuto(p.kind === 'question' ? '' : p.toolName, mode, provider)} />)}
+      {pending.map((p, n) => <PendingCard key={p.id} p={p} mode={mode} first={n === 0} auto={canSwitchToAuto(p.kind === 'question' ? '' : p.toolName, mode, provider)} provider={provider} />)}
     </div>
   );
 }
 
-export function PendingCard({ p, mode, first, auto }: { p: PendingRequest; mode: string; first: boolean; auto?: boolean }) {
+export function PendingCard({ p, mode, first, auto, provider }: { p: PendingRequest; mode: string; first: boolean; auto?: boolean; provider?: Provider }) {
   if (p.kind === 'question') return <QuestionCard q={p} first={first} />;
-  if (p.toolName === 'ExitPlanMode') return <PlanCard p={p} mode={mode} first={first} />;
+  if (p.toolName === 'ExitPlanMode') return <PlanCard p={p} mode={mode} first={first} provider={provider} />;
   return <PermissionCard p={p} mode={mode} first={first} auto={auto} />;
 }
 
@@ -66,7 +66,7 @@ function PermissionCard({ p, mode, first, auto }: CardProps & { auto?: boolean }
   );
 }
 
-function PlanCard({ p, mode, first }: CardProps) {
+function PlanCard({ p, mode, first, provider }: CardProps & { provider?: Provider }) {
   const ref = useRef<HTMLElement>(null);
   const paragraphs = useMemo(() => planParagraphs(str(p.input.plan)), [p.input.plan]);
   const [notes, setNotes] = useState<Record<number, string>>({});
@@ -111,17 +111,20 @@ function PlanCard({ p, mode, first }: CardProps) {
         </div>
       )}
       {p.detail && <div className="pd-desc">{p.detail}</div>}
-      <Decision p={p} mode={mode} first={first} cardRef={ref} yes="Approve" no="Keep planning" onNo={keep} />
+      <Decision p={p} mode={mode} first={first} cardRef={ref} yes="Approve" no="Keep planning" onNo={keep} modes={planApproveModes(mode, provider)} />
     </Panel>
   );
 }
 
-function Decision({ p, mode, first, cardRef, yes, no, onNo, auto }: CardProps & { cardRef: RefObject<HTMLElement | null>; yes: string; no: string; onNo?: () => void; auto?: boolean }) {
+type ModeItem = { mode: string; label: string };
+
+function Decision({ p, mode, first, cardRef, yes, no, onNo, auto, modes }: CardProps & { cardRef: RefObject<HTMLElement | null>; yes: string; no: string; onNo?: () => void; auto?: boolean; modes?: ModeItem[] }) {
   const always = p.canAlwaysAllow && p.toolName !== 'ExitPlanMode';
   const keys = !p.confirmFirst;
   const chat = useContext(CardChat);
   const reply = (allow: boolean, all?: boolean) => answerPermission(p.id, allow, all, chat);
   const decline = onNo ?? (() => reply(false));
+  const items = modes ?? (auto ? [{ mode: 'auto', label: 'Allow and switch to Auto' }] : []);
   useCardKeys(cardRef, first, (k) => {
     if (k === 'n') decline();
     else if (k === 'y' && keys) reply(true);
@@ -133,7 +136,7 @@ function Decision({ p, mode, first, cardRef, yes, no, onNo, auto }: CardProps & 
     <>
       <div className="pd-actions">
         <Button size="sm" variant="filled" onClick={() => reply(true)}>{yes}{keys && <kbd>Y</kbd>}</Button>
-        {auto && <AutoMenu onPick={() => { setMode({ mode: 'auto', review: null }); reply(true); }} />}
+        {items.length > 0 && <ModeMenu items={items} label={`More ways to ${yes.toLowerCase()}`} onPick={(m) => { setMode({ mode: m, review: null }); reply(true); }} />}
         {always && <Button size="sm" onClick={() => reply(true, true)}>Always allow{keys && <kbd>A</kbd>}</Button>}
         <Button size="sm" autoFocus={p.confirmFirst} onClick={decline}>{no}<kbd>N</kbd></Button>
       </div>
@@ -142,15 +145,15 @@ function Decision({ p, mode, first, cardRef, yes, no, onNo, auto }: CardProps & 
   );
 }
 
-function AutoMenu({ onPick }: { onPick: () => void }) {
+function ModeMenu({ items, label, onPick }: { items: ModeItem[]; label: string; onPick: (mode: string) => void }) {
   const [open, setOpen] = useState(false);
   const trigger = useRef<HTMLButtonElement>(null);
   return (
     <>
-      <IconButton ref={trigger} icon="chevron-down" label="More ways to allow" size="sm" small aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen((v) => !v)} />
+      <IconButton ref={trigger} icon="chevron-down" label={label} size="sm" small aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen((v) => !v)} />
       {open && (
         <Menu trigger={trigger} onClose={() => setOpen(false)}>
-          <MenuItem icon="zap" onClick={() => { setOpen(false); onPick(); }}>Allow and switch to Auto</MenuItem>
+          {items.map((it) => <MenuItem key={it.mode} icon={it.mode === 'auto' ? 'zap' : 'edit'} onClick={() => { setOpen(false); onPick(it.mode); }}>{it.label}</MenuItem>)}
         </Menu>
       )}
     </>
