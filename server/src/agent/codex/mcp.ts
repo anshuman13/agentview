@@ -1,6 +1,7 @@
 import type { McpServer } from '../../../../shared/protocol.js';
 import type { McpServerDef } from '../../integrations/mcpClient.js';
 import { probeCached } from '../claude/mcp.js';
+import { agentviewServer } from './options.js';
 import { CodexRpc } from './rpc.js';
 
 type RawServer = { command?: string; args?: string[]; env?: Record<string, string>; url?: string; http_headers?: Record<string, string>; enabled?: boolean };
@@ -24,6 +25,6 @@ export async function readCodexServers(cwd: string): Promise<Record<string, McpS
 }
 
 export async function codexMcpProbe(cwd: string, refresh = false): Promise<McpServer[]> {
-  const servers = await readCodexServers(cwd);
+  const servers = { agentview: agentviewServer('mcp-probe'), ...(await readCodexServers(cwd)) };
   return Promise.all(Object.entries(servers).map(([name, def]) => probeCached(cwd, name, 'codex', def, refresh)));
 }

@@ -6,11 +6,13 @@ import { preferencesText } from '../tools/wiki.js';
 
 const STDIO = path.join(path.dirname(fileURLToPath(import.meta.url)), '../tools/stdio.ts');
 
+export const agentviewServer = (chatId: string) => ({ command: process.execPath, args: [STDIO], env: { AGENTVIEW_CHAT: chatId, AGENTVIEW_HOST_SOCK: SOCK } });
+
 // What a thread gets besides its folder and policy. The dotted key adds our MCP server to the user's own [mcp_servers] table instead of replacing it.
 export const threadParams = (chatId: string, cwd: string) => ({
   developerInstructions: [TOOL_INSTRUCTIONS, preferencesText(cwd)].filter(Boolean).join(' '),
   config: {
     project_doc_fallback_filenames: ['CLAUDE.md'],
-    'mcp_servers.agentview': { command: process.execPath, args: [STDIO], env: { AGENTVIEW_CHAT: chatId, AGENTVIEW_HOST_SOCK: SOCK }, default_tools_approval_mode: 'approve' },
+    'mcp_servers.agentview': { ...agentviewServer(chatId), default_tools_approval_mode: 'approve' },
   },
 });
