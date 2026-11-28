@@ -89,7 +89,9 @@ fun ChangesScreen(hub: Hub, onBack: () -> Unit) {
     var pager by rememberSaveable(chat) { mutableStateOf<List<String>?>(null) }
     var reviewed by rememberSaveable(chat) { mutableStateOf(listOf<String>()) }
     val message = rememberSaveable(chat) { mutableStateOf("") }
-    val shownPatch = rememberSaveable(chat) { mutableStateOf<String?>(null) }
+    val shownPatch = rememberSaveable(chat) { mutableStateOf(listOf<String>()) }
+    var hideWs by remember { mutableStateOf(hub.prefs.getBoolean(HIDE_WS_KEY, false)) }
+    val diffMenu = DiffMenu(hideWs, { hideWs = it; hub.prefs.edit().putBoolean(HIDE_WS_KEY, it).apply() })
     var ask by androidx.compose.runtime.remember { mutableStateOf<List<GitFile>?>(null) }
     val o = open
     if (o != null) { FileScreen(hub, o, onBack = { open = null; openLine = null }, line = openLine); return }
@@ -104,11 +106,11 @@ fun ChangesScreen(hub: Hub, onBack: () -> Unit) {
         }, onBack = { pager = null; reload() })
         return
     }
-    val (branchLoad, reloadBranch) = rememberLoad(chat, base) { hub.branchDiff(base) }
+    val (branchLoad, reloadBranch) = rememberLoad(chat, base, hideWs) { hub.branchDiff(base, hideWs) }
     val scope = androidx.compose.runtime.rememberCoroutineScope()
     val openBases = { scope.launch { basePick = runCatching { hub.branches() }.getOrElse { BranchList() } }; Unit }
     val pick = rememberSaveable(chat) { mutableStateOf<String?>(null) }
-    val (commitLoad, _) = rememberLoad(chat, pick.value) { pick.value?.let { hub.commitDiff(it) } }
+    val (commitLoad, _) = rememberLoad(chat, pick.value, hideWs) { pick.value?.let { hub.commitDiff(it, hideWs) } }
     // A file the agent or watcher reports changed refreshes after the burst; the slow poll catches git commands run outside.
     LaunchedEffect(hub, chat) { hub.fileChanged.collectLatest { delay(300); reload() } }
     WhileStarted(chat) { while (true) { delay(30_000); reload() } }
@@ -130,7 +132,7 @@ fun ChangesScreen(hub: Hub, onBack: () -> Unit) {
                 MenuItem("Review changes with $label", "sparkle", { close(); hub.askChat(REVIEW_LOCAL) }, enabled = files.isNotEmpty())
             }
         }
-        PageBody { ChangesList(hub, load, branchLoad.data, base != null, openBases, Picked(pick, commitLoad), ops, message, shownPatch) { open = it.file; openLine = it.line } }
+        PageBody { ChangesList(hub, load, branchLoad.data, base != null, openBases, Picked(pick, commitLoad), ops, message, shownPatch, diffMenu) { open = it.file; openLine = it.line } }
     }
     basePick?.let { list ->
         val current = branchLoad.data?.base
@@ -149,7 +151,7 @@ fun ChangesScreen(hub: Hub, onBack: () -> Unit) {
 }
 
 @Composable
-private fun ChangesList(hub: Hub, load: Loaded<GitStatus>, branch: BranchDiff?, basePicked: Boolean, onBases: () -> Unit, picked: Picked, ops: GitOps, message: MutableState<String>, shownPatch: MutableState<String?>, onOpenFinding: (Finding) -> Unit) {
+private fun ChangesList(hub: Hub, load: Loaded<GitStatus>, branch: BranchDiff?, basePicked: Boolean, onBases: () -> Unit, picked: Picked, ops: GitOps, message: MutableState<String>, shownPatch: MutableState<List<String>>, diffMenu: DiffMenu, onOpenFinding: (Finding) -> Unit) {
     val status = load.data
     val files = status?.files ?: emptyList()
     val staged = files.filter { it.staged }
@@ -171,7 +173,7 @@ private fun ChangesList(hub: Hub, load: Loaded<GitStatus>, branch: BranchDiff?, 
         stagedSection(staged, ops)
         changesSection(changes, ops)
         if (status != null && files.isEmpty()) item { EmptyState("No changes", icon = "source-control", small = false) }
-        branch?.takeIf { it.files.isNotEmpty() || basePicked }?.let { committedSection(it, status?.branch, onBases, picked, shownPatch) }
+        branch?.takeIf { it.files.isNotEmpty() || basePicked }?.let { committedSection(it, status?.branch, onBases, picked, shownPatch, diffMenu) }
         item { Column { Findings(hub, "local", onOpenFinding) } }
         item { Spacer(Modifier.padding(bottom = Tokens.sp16)) }
     }
@@ -208,18 +210,30 @@ private fun LazyListScope.changesSection(changes: List<GitFile>, ops: GitOps) {
 // The commit picked in "Committed since <base>" and its loaded files; null shows all of the branch.
 private class Picked(val hash: MutableState<String?>, val load: Loaded<BranchDiff?>)
 
+private class DiffMenu(val hideWs: Boolean, val setHideWs: (Boolean) -> Unit)
+
 // Claude Code's Commits list: "All changes", then each commit with its sha and age; a picked commit shows only its files.
-private fun LazyListScope.committedSection(b: BranchDiff, branch: String?, onBases: () -> Unit, picked: Picked, shownPatch: MutableState<String?>) {
+private fun LazyListScope.committedSection(b: BranchDiff, branch: String?, onBases: () -> Unit, picked: Picked, shownPatch: MutableState<List<String>>, menu: DiffMenu) {
     val pick = picked.hash.value?.takeIf { h -> b.commits.any { it.hash == h } }
     val shown = if (pick == null) b else picked.load.data
-    item { SectionHeader(committedLabel(branch, b.base), b.files.size.toString(), action = if (branch == b.base) null else ({ IconBtn("git-branch", "Compare against", onBases, iconSize = Tokens.icon) })) }
+    item {
+        SectionHeader(committedLabel(branch, b.base), b.files.size.toString(), action = {
+            if (branch != b.base) IconBtn("git-branch", "Compare against", onBases, iconSize = Tokens.icon)
+            MoreButton { close ->
+                MenuItem("Collapse all files", "collapse-all", { close(); shownPatch.value = emptyList() })
+                MenuItem("Expand all files", "expand-all", { close(); shownPatch.value = (if (pick == null) b else picked.load.data)?.files?.map { it.path } ?: emptyList() })
+                MenuSeparator()
+                MenuItem("Hide whitespace changes", "", { close(); menu.setHideWs(!menu.hideWs) }, checked = menu.hideWs)
+            }
+        })
+    }
     if (b.commits.size > 1) item {
         val now = System.currentTimeMillis()
         Group(Modifier.padding(bottom = Tokens.sp8)) {
-            ListRow("All changes", plural(b.commits.size, "commit"), lines = 1, selected = pick == null, onClick = { picked.hash.value = null; shownPatch.value = null })
+            ListRow("All changes", plural(b.commits.size, "commit"), lines = 1, selected = pick == null, onClick = { picked.hash.value = null; shownPatch.value = emptyList() })
             b.commits.forEach { c ->
                 Hairline()
-                ListRow(c.subject, "${c.hash} · ${agoShort(c.at, now)}", lines = 1, metaLines = 1, selected = pick == c.hash, onClick = { picked.hash.value = if (pick == c.hash) null else c.hash; shownPatch.value = null })
+                ListRow(c.subject, "${c.hash} · ${agoShort(c.at, now)}", lines = 1, metaLines = 1, selected = pick == c.hash, onClick = { picked.hash.value = if (pick == c.hash) null else c.hash; shownPatch.value = emptyList() })
             }
         }
     }
@@ -233,8 +247,8 @@ private fun LazyListScope.committedSection(b: BranchDiff, branch: String?, onBas
             shown.files.forEachIndexed { i, f ->
                 if (i > 0) Hairline(lead = true)
                 val name = f.path.substringAfterLast('/')
-                val open = shownPatch.value == f.path
-                ListRow(name, parentOf(f.path).ifEmpty { null }, selected = open, leading = { FileTag(name) }, trailing = { Counts(f.additions, f.deletions) }, onClick = { shownPatch.value = if (open) null else f.path })
+                val open = f.path in shownPatch.value
+                ListRow(name, parentOf(f.path).ifEmpty { null }, selected = open, leading = { FileTag(name) }, trailing = { Counts(f.additions, f.deletions) }, onClick = { shownPatch.value = toggledOpen(shownPatch.value, f.path) })
                 if (open) PatchView(patches[f.path] ?: if (shown.diff.isEmpty()) "Diff too large to show" else "No diff", f.path)
             }
         }

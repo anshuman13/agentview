@@ -177,4 +177,12 @@ fun encodeViewed(m: Map<String, String>): String = protocolJson.encodeToString(v
 fun parseCommitDiff(body: String): BranchDiff = parseBranchDiff(body)
 
 // web/src/workspace/Changes.tsx Committed: on the default branch itself the commits are what origin does not have yet.
+// The Changes ⋯ menu, as web/src/workspace/diffView.ts: unfolded diffs, and ws=0 to hide whitespace-only changes.
+fun toggledOpen(open: List<String>, path: String) = if (path in open) open - path else open + path
+fun diffPath(route: String, params: Map<String, String?>, hideWs: Boolean): String {
+    val q = (params + ("ws" to if (hideWs) "0" else null)).filterValues { !it.isNullOrEmpty() }.map { (k, v) -> "$k=${java.net.URLEncoder.encode(v, "UTF-8").replace("+", "%20")}" }
+    return "/api/git/$route" + if (q.isEmpty()) "" else "?" + q.joinToString("&")
+}
+const val HIDE_WS_KEY = "hideWhitespace"
+
 fun committedLabel(branch: String?, base: String) = if (branch == base) "Not pushed" else "Committed since $base"

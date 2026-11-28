@@ -156,8 +156,10 @@ const mergeBase = async (cwd: string, base: string, env?: Record<string, string>
 const PLAIN_DIFF = ['--no-ext-diff', '--no-textconv'];
 
 // The files and patch from `since` to the working tree, or to the commits in `to`. A patch over MAX_BRANCH_DIFF is left out.
-async function diffSince(cwd: string, since: string, to: string[] = [], env?: Record<string, string>) {
-  const [numstat, diff] = await Promise.all([safeGit(cwd, ['diff', '--numstat', ...PLAIN_DIFF, since, ...to], undefined, env), safeGit(cwd, ['diff', ...PLAIN_DIFF, since, ...to], undefined, env)]);
+// With ws false, whitespace-only changes are left out (git diff -w).
+async function diffSince(cwd: string, since: string, to: string[] = [], env?: Record<string, string>, ws = true) {
+  const flags = ws ? PLAIN_DIFF : [...PLAIN_DIFF, '-w'];
+  const [numstat, diff] = await Promise.all([safeGit(cwd, ['diff', '--numstat', ...flags, since, ...to], undefined, env), safeGit(cwd, ['diff', ...flags, since, ...to], undefined, env)]);
   return { files: parseNumstat(numstat).map((f) => ({ path: f.path, additions: f.add, deletions: f.del })), diff: diff.length > MAX_BRANCH_DIFF ? '' : diff };
 }
 
@@ -174,13 +176,13 @@ async function branchList(cwd: string) {
 }
 
 // What this branch committed since it left the base (the default branch unless one is picked), for review before a PR.
-async function branchDiff(cwd: string, picked: string | null = null) {
+async function branchDiff(cwd: string, picked: string | null = null, ws = true) {
   const chosen = await pickedBase(cwd, picked);
   const base = chosen ?? (await defaultBase(cwd));
   const label = chosen ?? base.replace(/^origin\//, '');
   const since = await mergeBase(cwd, base);
   if (!since) return { base: label, files: [], diff: '', commits: [] };
-  const [diff, log] = await Promise.all([diffSince(cwd, since, ['HEAD']), safeGit(cwd, ['log', `--max-count=${MAX_BRANCH_COMMITS}`, LOG_FORMAT, `${since}..HEAD`])]);
+  const [diff, log] = await Promise.all([diffSince(cwd, since, ['HEAD'], undefined, ws), safeGit(cwd, ['log', `--max-count=${MAX_BRANCH_COMMITS}`, LOG_FORMAT, `${since}..HEAD`])]);
   return { base: label, ...diff, commits: parseLog(log) };
 }
 
@@ -188,10 +190,10 @@ const MAX_BRANCH_COMMITS = 50;
 const EMPTY_TREE = '4b825dc642cb6eb9a060e54bf8d69288fbee4904';
 
 // One commit's files and patch against its first parent, a root commit against the empty tree.
-async function commitDiff(cwd: string, hash: string) {
+async function commitDiff(cwd: string, hash: string, ws = true) {
   if (!/^[0-9a-f]{4,40}$/i.test(hash)) throw new Error('hash must be a commit hash');
   const parent = (await safeGit(cwd, ['rev-parse', '--verify', '-q', `${hash}^`]).catch(() => '')).trim();
-  return diffSince(cwd, parent || EMPTY_TREE, [hash]);
+  return diffSince(cwd, parent || EMPTY_TREE, [hash], undefined, ws);
 }
 const MAX_LOOSE = 200;
 
@@ -244,14 +246,14 @@ export function parseLog(out: string): GitCommit[] {
 
 export async function gitRoute(cwd: string, route: string, query: URLSearchParams, body: Record<string, unknown> | null) {
   if (route === 'status') return gitStatus(cwd);
-  if (route === 'branch') return branchDiff(cwd, query.get('base'));
+  if (route === 'branch') return branchDiff(cwd, query.get('base'), query.get('ws') !== '0');
   if (route === 'branches') return branchList(cwd);
   if (route === 'log') {
     const since = Number(query.get('since'));
     if (!query.get('since') || !Number.isFinite(since) || since < 0) throw new Error('since must be a time in milliseconds');
     return { commits: parseLog(await git(cwd, ['log', `--since=${new Date(since).toISOString()}`, `--max-count=${MAX_COMMITS}`, LOG_FORMAT], [0, 128])) };
   }
-  if (route === 'show') return commitDiff(cwd, query.get('hash') ?? '');
+  if (route === 'show') return commitDiff(cwd, query.get('hash') ?? '', query.get('ws') !== '0');
   if (route === 'diff') return { diff: await diff(cwd, query.get('path') ?? '', query.get('staged') === 'true') };
   if (!body) throw new Error('Use POST');
   if (route === 'commit') {

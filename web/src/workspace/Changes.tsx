@@ -19,6 +19,7 @@ import { askChat, insertText } from '../chat/chatActions';
 import { Menu, MenuItem, MenuSeparator } from '../ui/Menu';
 import { CopyPathItems } from './CopyPathItems';
 import { mentionOf } from './copyPathLogic';
+import { HIDE_WS_KEY } from './diffView';
 import { providerLabel } from '../../../shared/providers';
 import { rowKey, viewedAfter } from '../../../shared/viewed';
 import '../styles/features/changes.css';
@@ -179,9 +180,30 @@ const patches = (d: DiffFiles) => (d.diff ? splitDiff(d.diff) : new Map(d.files.
 
 // What the branch committed since it left the default branch, on the default branch itself what it has not pushed; rows expand to their patch.
 // With more than one commit, a list above the files picks "All changes" or one commit, whose files are loaded on their own.
-function Committed({ branch, current, onBase }: { branch: BranchDiff; current?: string; onBase: (base: string | null) => void }) {
+// The ⋯ menu beside the Committed header, like Claude.app's diff pane menu.
+function DiffMenu({ onFold, hideWs, onHideWs }: { onFold: (open: boolean) => void; hideWs: boolean; onHideWs: (on: boolean) => void }) {
+  const more = useRef<HTMLButtonElement>(null);
+  const [open, setOpen] = useState(false);
+  const close = () => setOpen(false);
+  return (
+    <>
+      <IconButton ref={more} icon="ellipsis" small label="Diff options" aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen(!open)} />
+      {open && (
+        <Menu trigger={more} onClose={close}>
+          <MenuItem icon="collapse-all" onClick={() => { close(); onFold(false); }}>Collapse all files</MenuItem>
+          <MenuItem icon="expand-all" onClick={() => { close(); onFold(true); }}>Expand all files</MenuItem>
+          <MenuSeparator />
+          <MenuItem icon={hideWs ? 'check' : 'blank'} aria-checked={hideWs} onClick={() => { close(); onHideWs(!hideWs); }}>Hide whitespace changes</MenuItem>
+        </Menu>
+      )}
+    </>
+  );
+}
+
+function Committed({ branch, current, onBase, hideWs, onHideWs }: { branch: BranchDiff; current?: string; onBase: (base: string | null) => void; hideWs: boolean; onHideWs: (on: boolean) => void }) {
   const commits = branch.commits ?? [];
   const [pick, setPick] = useState<string | null>(null);
+  const [fold, setFold] = useState<{ open: boolean; n: number } | undefined>();
   const [one, setOne] = useState<{ hash: string; data: DiffFiles | null; error?: string } | null>(null);
   useEffect(() => {
     if (pick && !commits.some((c) => c.hash === pick)) setPick(null);
@@ -190,14 +212,14 @@ function Committed({ branch, current, onBase }: { branch: BranchDiff; current?: 
     if (!pick) return setOne(null);
     let live = true;
     setOne({ hash: pick, data: null });
-    fetchCommitDiff(pick).then((data) => live && setOne({ hash: pick, data }), (err) => live && setOne({ hash: pick, data: null, error: errText(err) }));
+    fetchCommitDiff(pick, hideWs).then((data) => live && setOne({ hash: pick, data }), (err) => live && setOne({ hash: pick, data: null, error: errText(err) }));
     return () => { live = false; };
-  }, [pick]);
+  }, [pick, hideWs]);
   const shown = pick ? (one?.data ?? null) : branch;
   const diffs = useMemo(() => (shown ? patches(shown) : new Map<string, string>()), [shown]);
   return (
     <>
-      <ListSection label={current === branch.base ? 'Not pushed' : <BasePick base={branch.base} onPick={onBase} />} count={branch.files.length} />
+      <ListSection label={current === branch.base ? 'Not pushed' : <BasePick base={branch.base} onPick={onBase} />} count={branch.files.length} action={<DiffMenu onFold={(open) => setFold({ open, n: (fold?.n ?? 0) + 1 })} hideWs={hideWs} onHideWs={onHideWs} />} />
       {commits.length > 1 && (
         <div className="as-group scm-commits" aria-label="Commits">
           <Row title="All changes" lines={1} aria-current={!pick} trailing={<span className="muted">{commits.length} commits</span>} onClick={() => setPick(null)} />
@@ -207,7 +229,7 @@ function Committed({ branch, current, onBase }: { branch: BranchDiff; current?: 
         </div>
       )}
       <div className="as-group gh-group">
-        {shown ? <Files key={pick ?? ''} files={shown.files} diffs={diffs} /> : one?.error ? <div className="scm-error" role="alert">{one.error}</div> : <div className="muted scm-loading">Loading…</div>}
+        {shown ? <Files key={pick ?? ''} files={shown.files} diffs={diffs} fold={fold} /> : one?.error ? <div className="scm-error" role="alert">{one.error}</div> : <div className="muted scm-loading">Loading…</div>}
       </div>
     </>
   );
@@ -221,6 +243,7 @@ export function Changes() {
   const id = useStore((s) => s.session.id);
   const cwd = useStore((s) => s.session.cwd);
   const [base, setBase] = useState(() => savedBase(cwd));
+  const [hideWs, setHideWs] = useState(() => stored(HIDE_WS_KEY, false));
   const label = useStore((s) => providerLabel(s.session.provider));
   const [failed, setFailed] = useState('');
   const [ask, setAsk] = useState<ConfirmRequest | null>(null);
@@ -234,7 +257,7 @@ export function Changes() {
   const reload = () => {
     void refresh();
     const n = ++branchSeq.current;
-    fetchBranchDiff(base).then((b) => n === branchSeq.current && setBranch(b), () => {});
+    fetchBranchDiff(base, hideWs).then((b) => n === branchSeq.current && setBranch(b), () => {});
   };
 
   useEffect(() => {
@@ -244,7 +267,7 @@ export function Changes() {
   useEffect(() => {
     setBranch(null);
     reload();
-  }, [id, base]);
+  }, [id, base, hideWs]);
   const pickBase = (b: string | null) => {
     saveBase(cwd, b);
     setBase(b ?? undefined);
@@ -368,7 +391,7 @@ export function Changes() {
           )}
         />
         {status && !files.length && <EmptyState size="sm" title="No changes" />}
-        {branch && (branch.files.length > 0 || base) && <Committed branch={branch} current={status?.branch} onBase={pickBase} />}
+        {branch && (branch.files.length > 0 || base) && <Committed branch={branch} current={status?.branch} onBase={pickBase} hideWs={hideWs} onHideWs={(on) => { save(HIDE_WS_KEY, on); setHideWs(on); }} />}
         <Findings target="local" />
       </div>
       {ask && <Confirm {...ask} onClose={() => setAsk(null)} />}

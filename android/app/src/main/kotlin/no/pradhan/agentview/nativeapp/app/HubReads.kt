@@ -17,6 +17,7 @@ import no.pradhan.agentview.nativeapp.chat.MessageHit
 import no.pradhan.agentview.nativeapp.codex.autopilot.parseGitLog
 import no.pradhan.agentview.nativeapp.codex.autopilot.parseRunDiff
 import no.pradhan.agentview.nativeapp.net.ChatRun
+import no.pradhan.agentview.nativeapp.workspace.diffPath
 import no.pradhan.agentview.nativeapp.workspace.parseBranchDiff
 import no.pradhan.agentview.nativeapp.workspace.parseCommitDiff
 import no.pradhan.agentview.nativeapp.workspace.parseDir
@@ -33,9 +34,9 @@ suspend fun Hub.readDir(path: String) = parseDir(read("/api/dir?path=${enc(path)
 suspend fun Hub.searchFiles(q: String) = parseSearch(read("/api/search?q=${enc(q)}"))
 suspend fun Hub.chatFiles(chat: String): List<String> = protocolJson.decodeFromString(api.get("/api/files", chat))
 suspend fun Hub.gitStatus() = parseGitStatus(read("/api/git/status"))
-suspend fun Hub.branchDiff(base: String? = null) = parseBranchDiff(read(if (base == null) "/api/git/branch" else "/api/git/branch?base=${enc(base)}"))
+suspend fun Hub.branchDiff(base: String? = null, hideWs: Boolean = false) = parseBranchDiff(read(diffPath("branch", mapOf("base" to base), hideWs)))
 suspend fun Hub.branches() = parseBranchList(read("/api/git/branches"))
-suspend fun Hub.commitDiff(hash: String) = parseCommitDiff(read("/api/git/show?hash=${enc(hash)}"))
+suspend fun Hub.commitDiff(hash: String, hideWs: Boolean = false) = parseCommitDiff(read(diffPath("show", mapOf("hash" to hash), hideWs)))
 fun Hub.git(action: String, body: String, failure: String, done: (Boolean) -> Unit) = write("/api/git/$action", body, failure, done)
 suspend fun Hub.terminals() = parseTerms(read("/api/terms"))
 fun Hub.newTerminal(failure: String, done: (Boolean) -> Unit) = write("/api/terms", "", failure, done)

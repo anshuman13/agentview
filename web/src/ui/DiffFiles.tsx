@@ -1,4 +1,5 @@
-import { Fragment, useState } from 'react';
+import { Fragment, useEffect, useState } from 'react';
+import { toggled } from '../workspace/diffView';
 import { FileIcon } from '../workspace/FileIcon';
 import { Row } from './Row';
 import '../styles/features/github.css';
@@ -19,13 +20,17 @@ const lineClass = (l: string) => (l[0] === '+' ? 'add' : l[0] === '-' ? 'del' : 
 // A folder path that wraps after its slashes before it breaks inside a folder name.
 const breakAtSlashes = (dir: string) => dir.split('/').map((s, i) => <Fragment key={i}>{i > 0 && <>/<wbr /></>}{s}</Fragment>);
 
-export function Files({ files, diffs }: { files: { path: string; additions: number; deletions: number }[]; diffs: Map<string, string> }) {
-  const [open, setOpen] = useState<string | null>(null);
+// fold.n changes each time Collapse all or Expand all is picked.
+export function Files({ files, diffs, fold }: { files: { path: string; additions: number; deletions: number }[]; diffs: Map<string, string>; fold?: { open: boolean; n: number } }) {
+  const [open, setOpen] = useState<ReadonlySet<string>>(new Set());
+  useEffect(() => {
+    if (fold) setOpen(new Set(fold.open ? files.map((f) => f.path) : []));
+  }, [fold?.n]);
   return (
     <>
       {files.map((f) => {
         const name = f.path.split('/').pop()!;
-        const shown = open === f.path;
+        const shown = open.has(f.path);
         return (
           <Fragment key={f.path}>
             <Row
@@ -34,7 +39,7 @@ export function Files({ files, diffs }: { files: { path: string; additions: numb
               meta={f.path.includes('/') && breakAtSlashes(f.path.slice(0, -name.length - 1))}
               trailing={<Counts a={f.additions} d={f.deletions} />}
               aria-expanded={shown}
-              onClick={() => setOpen(shown ? null : f.path)}
+              onClick={() => setOpen(toggled(open, f.path))}
             />
             {shown && (
               <pre className="gh-diff">{(diffs.get(f.path) ?? 'No diff').split('\n').map((l, i) => <div key={i} className={lineClass(l)}>{l || ' '}</div>)}</pre>

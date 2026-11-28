@@ -1,6 +1,7 @@
 import type { GitCommit } from '../../../shared/protocol';
 import { api } from '../app/store';
 import { apiUrl, fetchJson } from '../app/api';
+import { diffPath } from './diffView';
 
 export const fileRequest = (path: string, init?: RequestInit, chat?: string) => {
   const url = `/api/file?path=${encodeURIComponent(path)}`;
@@ -17,11 +18,11 @@ export type DiffFiles = { files: { path: string; additions: number; deletions: n
 
 export type BranchDiff = DiffFiles & { base: string; commits?: GitCommit[] };
 
-export const fetchBranchDiff = (base?: string) => fetchJson<BranchDiff>(api(base ? `/api/git/branch?base=${encodeURIComponent(base)}` : '/api/git/branch'));
+export const fetchBranchDiff = (base?: string, hideWs = false) => fetchJson<BranchDiff>(api(diffPath('branch', { base }, hideWs)));
 
 export const fetchBranches = () => fetchJson<{ branches: string[]; base: string }>(api('/api/git/branches'));
 
-export const fetchCommitDiff = (hash: string) => fetchJson<DiffFiles>(api(`/api/git/show?hash=${encodeURIComponent(hash)}`));
+export const fetchCommitDiff = (hash: string, hideWs = false) => fetchJson<DiffFiles>(api(diffPath('show', { hash }, hideWs)));
 
 export const postGit = (action: string, body: unknown) =>
   fetchJson(api(`/api/git/${action}`), { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
