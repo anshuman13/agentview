@@ -1,7 +1,7 @@
 import os from 'node:os';
 import path from 'node:path';
 import type { McpServerConfig } from '@anthropic-ai/claude-agent-sdk';
-import type { Account, McpConfigEntry, McpSchema, McpServer, McpTool } from '../../../../shared/protocol.js';
+import type { Account, ConnectorGroup, ConnectorStatus, McpConfigEntry, McpSchema, McpServer, McpTool } from '../../../../shared/protocol.js';
 import { errText } from '../../../../shared/util.js';
 import { configDir, loggedInAccounts } from './accounts.js';
 import { callTool, probe, stop, text, type McpServerDef } from '../../integrations/mcpClient.js';
@@ -192,7 +192,7 @@ export function setMcpGroup(service: string, group: string): Promise<McpGroups> 
 }
 
 // claude.ai connector status per Claude account, from `claude mcp list`, so the page knows every account without a chat on each.
-type Connector = { name: string; status: string };
+type Connector = { name: string; status: ConnectorStatus };
 type Connectors = Record<string, Connector[]>;
 
 async function listConnectors(account: Account): Promise<Connector[]> {
@@ -205,11 +205,23 @@ async function listConnectors(account: Account): Promise<Connector[]> {
     if (!err.stdout?.trim()) throw err;
     return err.stdout;
   });
+  return parseConnectors(stdout);
+}
+
+export function parseConnectors(stdout: string): Connector[] {
   return stdout.split('\n').flatMap((line) => {
     const m = /^(claude\.ai [^:]+): .* - (.+)$/.exec(line.trim());
     if (!m) return [];
     return [{ name: m[1], status: /Connected/.test(m[2]) ? 'connected' : /auth/i.test(m[2]) ? 'needs-auth' : 'failed' }];
   });
+}
+
+// One group per account, named by its label; the CLI lists only the connectors that are on.
+export function connectorGroups(status: Connectors, labels: Record<Account, string>): ConnectorGroup[] {
+  return (Object.entries(status) as [Account, Connector[]][]).map(([account, list]) => ({
+    label: labels[account] ?? account,
+    connectors: list.map((c) => ({ id: c.name, name: c.name.replace(/^claude\.ai /, ''), status: c.status, enabled: true })),
+  }));
 }
 
 // One listing runs at a time and is shared by every caller. An expired one is returned at once and refreshed in the background.

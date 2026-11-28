@@ -2,13 +2,14 @@ import type { ProviderStrategy, Transcripts } from '../types.js';
 import { loggedInAccounts, verifyLimit } from './accounts.js';
 import { claudeTranscript } from './chatMentions.js';
 import { claudeDriver } from './driver.js';
-import { allowedServers, mcpProbe } from './mcp.js';
+import { allowedServers, connectorGroups, connectorStatus, mcpProbe } from './mcp.js';
 import { chatMemory, memoryDirs } from './memory.js';
 import { firstCommit, savedEvents } from './savedChat.js';
 import { searchMessages } from './search.js';
 import { fileTail, listSessions, savedSession } from './sessions.js';
 import { claudeRules, sandboxOf } from './unattended.js';
 import { claudeResume } from '../resume.js';
+import { accountLabels } from '../../settings.js';
 
 // One store for Claude and OpenRouter, so cross-provider callers see each chat once.
 // Hoisted, since the registry builds the strategies while this module is still loading.
@@ -32,6 +33,12 @@ export function claudeStrategy({ openrouter = false } = {}): ProviderStrategy {
       : (cwd, resume, fork, unattended, account) => claudeDriver(cwd, { resume, fork, unattended, account, pinned: account != null }),
     verifyLimits: openrouter ? () => Promise.resolve() : () => Promise.all(loggedInAccounts().map((a) => verifyLimit(a))),
     transcripts: claudeTranscripts(),
+    // claude.ai connectors are switched on and signed in on claude.ai, so only the list is served here.
+    connectors: openrouter ? null : {
+      list: async (refresh) => connectorGroups(await connectorStatus(refresh), accountLabels()),
+      toggle: async () => false,
+      signIn: async () => null,
+    },
     memory: (cwd) => chatMemory(cwd),
     memoryDirs: (cwd) => memoryDirs(cwd),
     resume: openrouter ? () => null : claudeResume,

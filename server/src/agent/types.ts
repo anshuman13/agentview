@@ -1,7 +1,7 @@
 import type { McpServerDef } from '../integrations/mcpClient.js';
 import type { MemoryFile } from './memory.js';
 import type { UnattendedLimits } from '../settings.js';
-import type { Account, AgentEvent, SavedSession, CacheInfo, Capabilities, ChatEvent, Effort, McpServer, Provider, ServerMessage, ServerState, SessionInfo } from '../../../shared/protocol.js';
+import type { Account, AgentEvent, SavedSession, CacheInfo, Capabilities, ChatEvent, ConnectorGroup, Effort, McpServer, Provider, ServerMessage, ServerState, SessionInfo } from '../../../shared/protocol.js';
 
 export type Decision = { behavior: 'allow'; updatedInput: Record<string, unknown>; updatedPermissions?: unknown[] } | { behavior: 'deny'; message: string };
 
@@ -144,12 +144,22 @@ export type Transcripts = {
   firstCommit(id: string): Promise<{ hash: string; subject: string } | null>;
 };
 
+// The provider's connectors (claude.ai connectors, ChatGPT apps), grouped by account.
+export type Connectors = {
+  list(refresh: boolean): Promise<ConnectorGroup[]>;
+  // False when the provider cannot switch the connector from here.
+  toggle(id: string, on: boolean): Promise<boolean>;
+  // The page that signs the connector in, or null when there is none.
+  signIn(id: string): Promise<string | null>;
+};
+
 export type ProviderStrategy = {
   // A picked account is pinned: the chat stays on it at its usage limit.
   driver(cwd: string, resume?: string, fork?: boolean, unattended?: boolean, account?: Account): DriverFactory;
   // Clears a limit mark the provider no longer deserves, so a chat does not start on a wrong one.
   verifyLimits(): Promise<unknown>;
   transcripts: Transcripts;
+  connectors: Connectors | null;
   // The instruction files the Memory list shows for a folder.
   memory(cwd: string): Promise<MemoryFile[]>;
   // The folders the provider writes memory files in for a folder, where a removed one may be restored.

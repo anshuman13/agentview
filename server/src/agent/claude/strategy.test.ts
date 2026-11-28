@@ -42,3 +42,27 @@ describe('claude unattended', () => {
     expect(sandbox.network.allowedDomains).toEqual(['pypi.org']);
   });
 });
+
+describe('claude connectors', () => {
+  it('maps claude mcp list output into one group per account', async () => {
+    const { connectorGroups, parseConnectors } = await import('./mcp.js');
+    const stdout = [
+      'Checking MCP server health...',
+      '',
+      'claude.ai Slack: https://mcp.slack.com/mcp - ✓ Connected',
+      'claude.ai Notion: https://mcp.notion.com/mcp - ! Needs authentication',
+      'claude.ai Asana: https://mcp.asana.com/sse - ✗ Failed to connect',
+      'linear: npx -y mcp-remote https://mcp.linear.app/sse - ✓ Connected',
+    ].join('\n');
+    const groups = connectorGroups({ main: parseConnectors(stdout), alt: [] }, { main: 'Personal', alt: 'Work', alt2: 'Account 3' });
+    expect(groups).toEqual([
+      { label: 'Personal', connectors: [
+        { id: 'claude.ai Slack', name: 'Slack', status: 'connected', enabled: true },
+        { id: 'claude.ai Notion', name: 'Notion', status: 'needs-auth', enabled: true },
+        { id: 'claude.ai Asana', name: 'Asana', status: 'failed', enabled: true },
+      ] },
+      { label: 'Work', connectors: [] },
+    ]);
+    expect(claudeStrategy({ openrouter: true }).connectors).toBeNull();
+  });
+});

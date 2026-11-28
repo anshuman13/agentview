@@ -18,6 +18,7 @@ export const codexStrategy: ProviderStrategy = {
     search: (words, max) => searchRollouts(words, max),
     firstCommit: (id) => codexFirstCommit(id),
   },
+  connectors: null,
   memory: (cwd) => readMemory(codexInstructionFiles(cwd)),
   memoryDirs: () => [],
   resume: (cwd, sessionId) => codexResume(cwd, sessionId),
