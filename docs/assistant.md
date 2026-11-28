@@ -22,7 +22,7 @@ so a power cut, an outage or a reboot at home only pauses scans and sync.
   (an edit is always timed after the value it replaces, so a device with a slow clock still wins). A device whose
   saved version is past the hub's, as after a restore from backup, pulls everything again, and so does the phone app
   when an update adds a synced table. The browser saves its version only together with the rows of that pull
-- Backups: at 07:00 and 19:00, `VACUUM INTO` a dated file plus a tarball of `~/.agentview/travel`, kept 14 days in `~/.agentview/assistant/backups`. The AgentView server on any Mac without the hub checks the hub every hour (`GET /backups`, `GET /backups/file`) and copies new ones to `~/.agentview/mini-backups`, also kept 14 days, so the laptop catches up whenever it is awake. No Time Machine.
+- Backups: every 15 minutes `assistant/deploy/backup.sh` snapshots all AgentView data (every database via `VACUUM INTO`, the JSON state in `~/.agentview`, minus the Chrome profile, logs and `claude-ref`) into `~/.agentview/assistant/backups/quarter`, kept 24 hours. The first run of each day also writes the dated hub database, a tarball of `~/.agentview/travel` and a full `state-<date>.tgz`, kept 14 days in `~/.agentview/assistant/backups`. The AgentView server on any Mac without the hub checks the hub every hour (`GET /backups`, `GET /backups/file`) and copies new ones to `~/.agentview/mini-backups`, also kept 14 days, so the laptop catches up whenever it is awake. No Time Machine.
 
 ## Profiles and accounts
 

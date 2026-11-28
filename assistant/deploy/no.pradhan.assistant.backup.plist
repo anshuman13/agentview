@@ -4,11 +4,8 @@
 <dict>
   <key>Label</key><string>no.pradhan.assistant.backup</string>
   <key>Program</key><string>/Users/oda/workspace_personal/agentview/assistant/deploy/backup.sh</string>
-  <key>StartCalendarInterval</key>
-  <array>
-    <dict><key>Hour</key><integer>7</integer><key>Minute</key><integer>0</integer></dict>
-    <dict><key>Hour</key><integer>19</integer><key>Minute</key><integer>0</integer></dict>
-  </array>
+  <key>StartInterval</key><integer>900</integer>
+  <key>RunAtLoad</key><true/>
   <key>StandardOutPath</key><string>/Users/oda/.agentview/assistant/backup.log</string>
   <key>StandardErrorPath</key><string>/Users/oda/.agentview/assistant/backup.log</string>
 </dict>

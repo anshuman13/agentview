@@ -1,31 +1,47 @@
 #!/bin/zsh
+# Runs every 15 minutes: a snapshot of all AgentView data kept 24 hours,
+# and on the first run of each day the dated copies kept 14 days.
 set -euo pipefail
 
-ASSISTANT_DIR="${ASSISTANT_DIR:-$HOME/.agentview/assistant}"
-DB="$ASSISTANT_DIR/assistant.db"
+STATE_DIR="${STATE_DIR:-$HOME/.agentview}"
+ASSISTANT_DIR="${ASSISTANT_DIR:-$STATE_DIR/assistant}"
+TRAVEL_DIR="${TRAVEL_DIR:-$STATE_DIR/travel}"
 BACKUPS_DIR="$ASSISTANT_DIR/backups"
-LOG_DIR="$ASSISTANT_DIR"
-TARGET="$BACKUPS_DIR/assistant-$(date +%Y-%m-%d).db"
-TEMP_TARGET="$TARGET.tmp"
+QUARTER_DIR="$BACKUPS_DIR/quarter"
+DAY=$(date +%Y-%m-%d)
+mkdir -p "$BACKUPS_DIR" "$QUARTER_DIR"
 
-mkdir -p "$BACKUPS_DIR" "$LOG_DIR"
+SNAP=$(mktemp -d)
+trap 'rm -r "$SNAP"' EXIT
+mkdir "$SNAP/databases"
 
-# Run the backup to a temporary file
-if ! sqlite3 "$DB" "VACUUM INTO '$TEMP_TARGET'"; then
-  rm -f "$TEMP_TARGET"
-  exit 1
+# Databases are copied consistently with VACUUM INTO, never as live files.
+sqlite3 "$ASSISTANT_DIR/assistant.db" "VACUUM INTO '$SNAP/databases/assistant.sqlite'"
+for db in "$STATE_DIR"/*.db(N); do
+  sqlite3 "$db" "VACUUM INTO '$SNAP/databases/${db:t:r}.sqlite'"
+done
+
+# state.tgz: every file in ~/.agentview except the browser profile, logs, backups, live databases and travel.
+# $1 is the target, the rest extra tar excludes.
+state_tar() {
+  local target=$1; shift
+  tar -czf "$target.tmp" -C "$STATE_DIR" \
+    --exclude ./chrome --exclude ./logs --exclude ./assistant --exclude ./travel --exclude ./mini-backups \
+    --exclude './*.db' --exclude './*.db-wal' --exclude './*.db-shm' --exclude './*.sock' --exclude ./notify.fifo --exclude './*.log' \
+    "$@" . -C "$SNAP" databases
+  mv -f "$target.tmp" "$target"
+}
+
+state_tar "$QUARTER_DIR/state-$(date +%Y-%m-%d-%H%M).tgz" --exclude ./claude-ref
+find "$QUARTER_DIR" -name 'state-*.tgz' -mmin +1440 -delete
+
+if [ ! -f "$BACKUPS_DIR/state-$DAY.tgz" ]; then
+  cp "$SNAP/databases/assistant.sqlite" "$BACKUPS_DIR/assistant-$DAY.db.tmp"
+  mv -f "$BACKUPS_DIR/assistant-$DAY.db.tmp" "$BACKUPS_DIR/assistant-$DAY.db"
+  if [ -d "$TRAVEL_DIR" ]; then
+    tar -czf "$BACKUPS_DIR/travel-$DAY.tgz.tmp" -C "$TRAVEL_DIR" .
+    mv -f "$BACKUPS_DIR/travel-$DAY.tgz.tmp" "$BACKUPS_DIR/travel-$DAY.tgz"
+  fi
+  state_tar "$BACKUPS_DIR/state-$DAY.tgz"
 fi
-
-# Move temporary file to target, replacing any existing file for the same day
-mv -f "$TEMP_TARGET" "$TARGET"
-
-# Delete backups older than 14 days
-find "$BACKUPS_DIR" -name 'assistant-*.db' -mtime +14 -delete
-
-# Travel receipts and trips, kept the same 14 days
-TRAVEL_DIR="${TRAVEL_DIR:-$HOME/.agentview/travel}"
-if [ -d "$TRAVEL_DIR" ]; then
-  tar -czf "$BACKUPS_DIR/travel-$(date +%Y-%m-%d).tgz.tmp" -C "$TRAVEL_DIR" .
-  mv -f "$BACKUPS_DIR/travel-$(date +%Y-%m-%d).tgz.tmp" "$BACKUPS_DIR/travel-$(date +%Y-%m-%d).tgz"
-  find "$BACKUPS_DIR" -name 'travel-*.tgz' -mtime +14 -delete
-fi
+find "$BACKUPS_DIR" -maxdepth 1 \( -name 'assistant-*.db' -o -name 'travel-*.tgz' -o -name 'state-*.tgz' \) -mtime +14 -delete
