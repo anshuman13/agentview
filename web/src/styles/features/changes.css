@@ -13,7 +13,9 @@
 .scm-commit textarea:focus { outline: 0; border-color: var(--border-strong); }
 .scm-commit-actions { display: flex; gap: var(--sp-3); }
 .scm-commit-actions .primary { flex: 1; }
-.scm-claude { min-width: 0; overflow-x: clip; text-overflow: ellipsis; white-space: nowrap; }
+.scm-claude { min-width: 0; white-space: nowrap; }
+.scm-claude > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.scm-commit textarea::placeholder { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .scm-error { padding: 0 var(--sp-6) var(--sp-3); font-size: var(--fs-sm); color: var(--err); white-space: pre-wrap; word-break: break-word; }
 .scm-error.muted { font-size: var(--fs-md); color: var(--fg-faint); }
 .scm-review { padding: 0 var(--sp-5) var(--sp-4); }
@@ -27,7 +29,8 @@
 .scm-name { flex: none; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
 .scm-dir { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; padding-left: var(--sp-1); font-size: var(--fs-sm); color: var(--fg-faint); }
 .scm-letter { flex: none; width: var(--icon-sm); margin-left: var(--sp-2); text-align: center; font-size: var(--fs-sm); }
-.scm-acts { display: none; flex: none; margin-left: auto; }
+.scm-acts { position: relative; display: none; flex: none; margin-left: auto; }
+.scm .ui-section { position: relative; }
 .scm-acts .icon-btn { width: var(--size-sm); height: var(--size-sm); }
 @media (hover: hover) { .scm-row:hover .scm-acts, .section-head:hover .scm-acts { display: inline-flex; } }
 @media (hover: none) { .scm-acts { display: inline-flex; } }
@@ -41,7 +44,8 @@
 .scm-row.s-D .scm-name { text-decoration: line-through; }
 .scm-viewed.icon-btn { flex: none; width: var(--size-sm); height: var(--size-sm); color: var(--fg-muted); visibility: hidden; }
 @media (hover: hover) { .scm-row:hover .scm-viewed { visibility: visible; } }
-@media (hover: none) { .scm-viewed.icon-btn { visibility: visible; } }
+/* Touch shows at most the row's own actions and More: a tap on the row opens the file, and More has Open file and Mark as viewed. */
+@media (hover: none) { .scm-open.icon-btn, .scm-row:not(.viewed) .scm-viewed.icon-btn { display: none; } }
 .scm-row:focus-within .scm-viewed, .scm-row.viewed .scm-viewed { visibility: visible; }
 .scm-row.viewed .scm-viewed { color: var(--ok); }
 .scm-row.viewed :is(.scm-name, .scm-dir, .scm-letter), .scm-row.viewed > .icon { opacity: 0.55; }
@@ -53,7 +57,7 @@
   .scm-branch .icon-btn, .scm-acts .icon-btn { width: var(--touch-sm); height: var(--touch-sm); }
   .scm-commit textarea { font-size: var(--fs-2xl); line-height: var(--line-lg); }
 }
-.scm-commits { margin-bottom: var(--sp-3); }
+.scm-commits { margin: 0 var(--list-pad) var(--sp-3); }
 .scm-sha { font-family: var(--mono); font-size: var(--fs-sm); white-space: nowrap; }
 .scm-loading { padding: var(--sp-3) var(--sp-6); font-size: var(--fs-sm); }
 .scm-base { display: inline-flex; align-items: center; gap: var(--sp-2); padding: 0; border: 0; background: none; font: inherit; color: inherit; text-transform: inherit; letter-spacing: inherit; cursor: pointer; }

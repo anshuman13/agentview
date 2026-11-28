@@ -30,9 +30,9 @@ const letterOf = (f: GitFile) => (f.status === '?' ? 'U' : f.status);
 const STATUS: Record<string, string> = { M: 'Modified', A: 'Added', D: 'Deleted', R: 'Renamed', U: 'Untracked' };
 const DRAFT_PROMPT = 'Propose a commit subject for the staged changes in this repo. Read them with `git diff --cached`. Reply with one imperative subject line under 50 characters, no trailing period, no body and nothing else.';
 
-function Action({ icon, title, onClick }: { icon: string; title: string; onClick: () => void }) {
+function Action({ icon, title, className, onClick }: { icon: string; title: string; className?: string; onClick: () => void }) {
   return (
-    <IconButton icon={icon} small label={title} onClick={(e) => { e.stopPropagation(); onClick(); }} />
+    <IconButton icon={icon} small label={title} className={className} onClick={(e) => { e.stopPropagation(); onClick(); }} />
   );
 }
 
@@ -67,7 +67,7 @@ function CommitBox({ branch, staged, onCommit }: { branch: string; staged: numbe
       />
       <div className="scm-commit-actions">
         <Button variant="primary" icon="check" disabled={!canCommit} title={staged ? 'Commit the staged changes' : 'Stage changes to commit them'} onClick={() => void commit()}>Commit</Button>
-        <Button variant="quiet" icon="sparkle" className="scm-claude" disabled={staged === 0} title={staged ? 'Ask the agent in the chat for a commit subject' : 'Stage changes first'} onClick={() => askChat(DRAFT_PROMPT)}>Write message with {label}</Button>
+        <Button variant="quiet" icon="sparkle" className="scm-claude" disabled={staged === 0} title={staged ? 'Ask the agent in the chat for a commit subject' : 'Stage changes first'} onClick={() => askChat(DRAFT_PROMPT)}><span>Write message with {label}</span></Button>
       </div>
     </div>
   );
@@ -352,7 +352,7 @@ export function Changes() {
         <>
           <CommitBox branch={status?.branch ?? ''} staged={staged.length} onCommit={(message) => run('commit', { message })} />
           <div className="scm-commit-actions scm-review">
-            <Button variant="quiet" icon="search" className="scm-claude" title={`${label} reviews the working tree, findings show below`} onClick={() => askChat(REVIEW_LOCAL)}>Review changes with {label}</Button>
+            <Button variant="quiet" icon="search" className="scm-claude" title={`${label} reviews the working tree, findings show below`} onClick={() => askChat(REVIEW_LOCAL)}><span>Review changes with {label}</span></Button>
           </div>
         </>
       )}
@@ -369,7 +369,7 @@ export function Changes() {
           actions={<Action icon="remove" title="Unstage All Changes" onClick={() => run('unstage', paths(staged))} />}
           rowActions={(f) => (
             <>
-              <Action icon="go-to-file" title="Open File" onClick={() => open(f)} />
+              <Action icon="go-to-file" title="Open File" className="scm-open" onClick={() => open(f)} />
               <Action icon="remove" title="Unstage Changes" onClick={() => run('unstage', paths(targets(f, staged)))} />
               <RowMenu file={f} cwd={cwd} onOpen={() => open(f)} viewed={viewedItem(f)} />
             </>
@@ -389,7 +389,7 @@ export function Changes() {
           }
           rowActions={(f) => (
             <>
-              <Action icon="go-to-file" title="Open File" onClick={() => open(f)} />
+              <Action icon="go-to-file" title="Open File" className="scm-open" onClick={() => open(f)} />
               <Action icon="discard" title="Discard Changes" onClick={() => discard(targets(f, changes))} />
               <Action icon="add" title="Stage Changes" onClick={() => run('stage', paths(targets(f, changes)))} />
               <RowMenu file={f} cwd={cwd} onOpen={() => open(f)} viewed={viewedItem(f)} />
