@@ -4,14 +4,15 @@ import type { ApprovalDecision, ApprovalMethod, AskForApproval, ElicitationParam
 
 export type Policy = { approvalPolicy: AskForApproval; sandbox: SandboxMode; sandboxPolicy: SandboxPolicy };
 
-const workspace = (approvalPolicy: AskForApproval, networkAccess: boolean): Policy => ({ approvalPolicy, sandbox: 'workspace-write', sandboxPolicy: { type: 'workspaceWrite', writableRoots: [], networkAccess, excludeTmpdirEnvVar: false, excludeSlashTmp: false } });
+const workspace = (approvalPolicy: AskForApproval, networkAccess: boolean, writableRoots: string[]): Policy => ({ approvalPolicy, sandbox: 'workspace-write', sandboxPolicy: { type: 'workspaceWrite', writableRoots, networkAccess, excludeTmpdirEnvVar: false, excludeSlashTmp: false } });
 
 // Default asks before every file edit and every command Codex does not trust as read-only, Auto never asks and has network, Read only, Plan and Don't ask can only read.
-export function policyFor(mode: string | null): Policy {
+// The sandbox keeps .git read-only inside the workspace, so the repo's git folders come in as writable roots and commits work.
+export function policyFor(mode: string | null, gitDirs: string[] = []): Policy {
   switch (mode) {
-    case 'auto': return workspace('never', true);
+    case 'auto': return workspace('never', true, gitDirs);
     case 'readOnly': case 'plan': case 'dontAsk': return { approvalPolicy: 'never', sandbox: 'read-only', sandboxPolicy: { type: 'readOnly', networkAccess: false } };
-    default: return workspace('untrusted', false);
+    default: return workspace('untrusted', false, gitDirs);
   }
 }
 

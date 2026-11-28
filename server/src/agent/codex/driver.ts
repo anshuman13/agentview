@@ -49,6 +49,7 @@ export class CodexDriver implements AgentDriver {
   private titled: boolean;
   // Bumped by Stop, so a prompt still waiting for the process is dropped.
   private stops = 0;
+  private git: string[] | null = null;
   private steered = new Set<string>();
   private models: CodexModel[] = [];
   private asks = new Set<AbortController>();
@@ -117,6 +118,14 @@ export class CodexDriver implements AgentDriver {
   private threadStart() {
     const { approvalPolicy, sandbox } = policyFor(this.mode);
     return { cwd: this.host.cwd, approvalPolicy, sandbox, ...threadParams(this.host.state.session.id, this.host.cwd) };
+  }
+
+  // The repo's git folder and, in a worktree, the shared one; none outside a repo.
+  private gitDirs() {
+    if (this.git) return this.git;
+    const r = Bun.spawnSync(['git', 'rev-parse', '--path-format=absolute', '--git-dir', '--git-common-dir'], { cwd: this.host.cwd, stderr: 'ignore' });
+    this.git = r.success ? [...new Set(r.stdout.toString().split('\n').filter(Boolean))] : [];
+    return this.git;
   }
 
   private get mode() {
@@ -254,7 +263,7 @@ export class CodexDriver implements AgentDriver {
         if (id) this.steered.add(id);
         return void (id && this.host.taken(id));
       }
-      const { approvalPolicy, sandboxPolicy } = policyFor(this.mode);
+      const { approvalPolicy, sandboxPolicy } = policyFor(this.mode, this.gitDirs());
       const { turn } = await rpc.request<{ turn: { id: string } }>('turn/start', { threadId: this.threadId, input, approvalPolicy, sandboxPolicy, ...this.modelParams() });
       this.turnId = turn.id;
       // Stop came while the turn was starting.

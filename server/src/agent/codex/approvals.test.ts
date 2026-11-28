@@ -13,6 +13,11 @@ describe('policyFor', () => {
     expect(policyFor('auto').sandboxPolicy).toMatchObject({ networkAccess: true });
     expect(policyFor('default').sandboxPolicy).toMatchObject({ networkAccess: false });
   });
+  it('makes the git folders writable in the workspace modes so commits work', () => {
+    expect(policyFor('auto', ['/r/.git']).sandboxPolicy).toMatchObject({ writableRoots: ['/r/.git'] });
+    expect(policyFor('default', ['/r/.git']).sandboxPolicy).toMatchObject({ writableRoots: ['/r/.git'] });
+    expect(policyFor('readOnly', ['/r/.git']).sandboxPolicy).toEqual({ type: 'readOnly', networkAccess: false });
+  });
 });
 
 describe('decisionFor', () => {
