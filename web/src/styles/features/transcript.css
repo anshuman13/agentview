@@ -45,7 +45,7 @@
 .tr-assistant .md h2 { font-size: 1.12em; }
 .tr-assistant .md :is(strong, b) { font-weight: 700; }
 .tr-assistant .md table { font-size: var(--fs-subheadline); line-height: var(--lh-snug); }
-.tr-assistant .md code { font-size: 0.82em; }
+.tr-assistant .md pre { line-height: var(--lh-relaxed); }
 .tr-system { font-size: var(--fs-sm); color: var(--fg-muted); }
 .tr-system.err { color: var(--err); }
 .tr-system.link { display: block; padding: 0; border: 0; background: none; font: inherit; font-size: var(--fs-sm); text-align: left; cursor: pointer; }
