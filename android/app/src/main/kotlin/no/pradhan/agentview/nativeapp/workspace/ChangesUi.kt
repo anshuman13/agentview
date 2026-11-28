@@ -64,7 +64,9 @@ import no.pradhan.agentview.nativeapp.ui.select
 import no.pradhan.agentview.nativeapp.ui.Loaded
 import no.pradhan.agentview.nativeapp.ui.rememberLoad
 
-private class GitOps(val hub: Hub, val cwd: String, private val reload: () -> Unit, val onDiscard: (List<GitFile>) -> Unit, val onReview: (GitFile) -> Unit) {
+private class GitOps(val hub: Hub, val cwd: String, private val reload: () -> Unit, val onDiscard: (List<GitFile>) -> Unit, val viewed: Map<String, String>, val hashes: Map<String, String>, val toggleViewed: (GitFile) -> Unit, val onReview: (GitFile) -> Unit) {
+    fun isViewed(f: GitFile) = rowKey(f) in viewed
+    fun canView(f: GitFile) = hashes[rowKey(f)] != null
     fun run(action: String, body: String, done: () -> Unit = {}) = hub.git(action, body, "Could not $action") { if (it) done(); reload() }
 }
 
@@ -77,6 +79,7 @@ fun ChangesScreen(hub: Hub, onBack: () -> Unit) {
     val cwd by hub.store.state.select { s -> s.session?.cwd ?: s.live.firstOrNull { it.id == s.shownId }?.cwd ?: "" }
     var base by remember(cwd) { mutableStateOf(hub.prefs.getString(compareBaseKey(cwd), null)) }
     var basePick by remember { mutableStateOf<BranchList?>(null) }
+    var seen by remember(cwd) { mutableStateOf(decodeViewed(hub.prefs.getString(viewedKey(cwd), null))) }
     val pickBase = { b: String? ->
         hub.prefs.edit().apply { if (b == null) remove(compareBaseKey(cwd)) else putString(compareBaseKey(cwd), b) }.apply()
         base = b
@@ -112,7 +115,12 @@ fun ChangesScreen(hub: Hub, onBack: () -> Unit) {
     val files = load.data?.files ?: emptyList()
     val review = files.map { it.path }.distinct()
     val label = providerLabel(provider)
-    val ops = GitOps(hub, cwd, reload, { ask = it }) { f -> pager = listOf(review.indexOf(f.path).toString()) + review }
+    val hashes = load.data?.hashes ?: emptyMap()
+    val toggleViewed = { f: GitFile ->
+        seen = viewedAfter(seen, hashes, rowKey(f))
+        hub.prefs.edit().putString(viewedKey(cwd), encodeViewed(seen)).apply()
+    }
+    val ops = GitOps(hub, cwd, reload, { ask = it }, viewedAfter(seen, hashes), hashes, toggleViewed) { f -> pager = listOf(review.indexOf(f.path).toString()) + review }
 
     Column(Modifier.fillMaxSize()) {
         WorkspaceHeader(hub, "Source control", onBack) {
@@ -249,14 +257,18 @@ private fun FileGroup(files: List<GitFile>, ops: GitOps, menu: @Composable andro
             val name = f.path.substringAfterLast('/')
             val letter = letterOf(f)
             val open = remember(f.path) { mutableStateOf(false) }
+            val viewed = ops.isViewed(f)
             ListRow(
                 name, parentOf(f.path).ifEmpty { null }, lines = 2, metaLines = 2, strike = f.status == "D",
+                muted = viewed,
                 leading = { FileTag(name) },
                 trailing = {
+                    if (ops.canView(f)) IconBtn(if (viewed) "pass-filled" else "circle-large-outline", if (viewed) "Mark as not viewed" else "Mark as viewed", { ops.toggleViewed(f) }, on = viewed, tint = if (viewed) av.ok else av.fgMuted, iconSize = Tokens.icon)
                     RowLabel(letter, letterColor(letter))
                     MoreButton(expanded = open) { close ->
                         MenuItem("Attach as context", "mention", { close(); ops.hub.draftPrompt(mentionOf(f.path, ops.cwd) + " ") })
                         MenuItem("Open File", "go-to-file", { close(); ops.onReview(f) })
+                        if (ops.canView(f)) MenuItem(if (viewed) "Mark as not viewed" else "Mark as viewed", if (viewed) "circle-large-outline" else "pass", { close(); ops.toggleViewed(f) })
                         menu(f, close)
                         MenuSeparator()
                         CopyPathItems(ops.hub, f.path, ops.cwd, close)

@@ -20,7 +20,7 @@ export const safeGit = (cwd: string, args: string[], ok?: number[], env?: Record
 const KIND: Record<string, GitFile['status']> = { M: 'M', T: 'M', A: 'A', C: 'A', D: 'D', R: 'R' };
 
 export function parseStatus(out: string, prefix = ''): GitStatus {
-  const status: GitStatus = { branch: '', ahead: 0, behind: 0, files: [] };
+  const status: GitStatus = { branch: '', ahead: 0, behind: 0, files: [], hashes: {} };
   const add = (p: string, s: string, staged: boolean) => p.startsWith(prefix) && status.files.push({ path: p.slice(prefix.length), status: s === '?' ? '?' : KIND[s] ?? 'M', staged });
   const parts = out.split('\0');
   for (let i = 0; i < parts.length; i++) {
@@ -31,7 +31,7 @@ export function parseStatus(out: string, prefix = ''): GitStatus {
     else if (f[0] === '1' || f[0] === '2') {
       const p = f.slice(f[0] === '1' ? 8 : 9).join(' ');
       if (f[0] === '2') i++;
-      if (f[1][0] !== '.') add(p, f[1][0], true);
+      if (f[1][0] !== '.' && add(p, f[1][0], true)) status.hashes![`s:${p.slice(prefix.length)}`] = f[7];
       if (f[1][1] !== '.') add(p, f[1][1], false);
     } else if (f[0] === 'u') add(f.slice(10).join(' '), 'M', false);
     else if (f[0] === '?') add(line.slice(2), '?', false);
@@ -39,9 +39,16 @@ export function parseStatus(out: string, prefix = ''): GitStatus {
   return status;
 }
 
+// Staged rows carry their index blob from git status; worktree rows get the blob of the file on disk, so Mark as viewed clears after an edit.
 async function readStatus(cwd: string) {
   const [out, prefix] = await Promise.all([git(cwd, ['status', '--porcelain=v2', '-b', '-z', '-uall']), git(cwd, ['rev-parse', '--show-prefix'])]);
-  return parseStatus(out, prefix.trim());
+  const status = parseStatus(out, prefix.trim());
+  const disk = status.files.filter((f) => !f.staged && f.status !== 'D').map((f) => f.path);
+  if (disk.length && disk.length <= 1000) {
+    const blobs = (await git(cwd, ['hash-object', '--', ...disk]).catch(() => '')).split('\n');
+    if (blobs.length >= disk.length) disk.forEach((p, i) => (status.hashes![`w:${p}`] = blobs[i]));
+  }
+  return status;
 }
 
 const running = new Map<string, Promise<GitStatus>>();

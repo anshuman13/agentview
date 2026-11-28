@@ -1,0 +1,10 @@
+[
+  { "name": "marks a row", "saved": {}, "hashes": { "w:a.ts": "h1" }, "toggle": "w:a.ts", "out": { "w:a.ts": "h1" } },
+  { "name": "unmarks a viewed row", "saved": { "w:a.ts": "h1" }, "hashes": { "w:a.ts": "h1" }, "toggle": "w:a.ts", "out": {} },
+  { "name": "an edit clears it", "saved": { "w:a.ts": "h1" }, "hashes": { "w:a.ts": "h2" }, "out": {} },
+  { "name": "toggling an edited row marks it again", "saved": { "w:a.ts": "h1" }, "hashes": { "w:a.ts": "h2" }, "toggle": "w:a.ts", "out": { "w:a.ts": "h2" } },
+  { "name": "a row that left the list is dropped", "saved": { "w:a.ts": "h1", "w:b.ts": "h3" }, "hashes": { "w:b.ts": "h3" }, "out": { "w:b.ts": "h3" } },
+  { "name": "staged and worktree rows are apart", "saved": { "s:a.ts": "h1" }, "hashes": { "s:a.ts": "h1", "w:a.ts": "h2" }, "toggle": "w:a.ts", "out": { "s:a.ts": "h1", "w:a.ts": "h2" } },
+  { "name": "a row without a blob cannot be marked", "saved": {}, "hashes": {}, "toggle": "w:gone.ts", "out": {} },
+  { "name": "nothing to do", "saved": {}, "hashes": { "w:a.ts": "h1" }, "out": {} }
+]

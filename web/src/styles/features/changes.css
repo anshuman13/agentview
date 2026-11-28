@@ -39,6 +39,12 @@
 .scm-row.s-R { --tone: var(--accent); }
 .scm-row :is(.scm-name, .scm-letter) { color: var(--tone); }
 .scm-row.s-D .scm-name { text-decoration: line-through; }
+.scm-viewed.icon-btn { flex: none; width: var(--size-sm); height: var(--size-sm); color: var(--fg-muted); visibility: hidden; }
+@media (hover: hover) { .scm-row:hover .scm-viewed { visibility: visible; } }
+@media (hover: none) { .scm-viewed.icon-btn { visibility: visible; } }
+.scm-row:focus-within .scm-viewed, .scm-row.viewed .scm-viewed { visibility: visible; }
+.scm-row.viewed .scm-viewed { color: var(--ok); }
+.scm-row.viewed :is(.scm-name, .scm-dir, .scm-letter), .scm-row.viewed > .icon { opacity: 0.55; }
 .scm-empty { padding: var(--sp-2) var(--sp-6) var(--sp-2) 22px; font-size: var(--fs-sm); color: var(--fg-muted); }
 
 @media (max-width: 900px) {

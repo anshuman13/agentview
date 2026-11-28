@@ -20,6 +20,7 @@ import { Menu, MenuItem, MenuSeparator } from '../ui/Menu';
 import { CopyPathItems } from './CopyPathItems';
 import { mentionOf } from './copyPathLogic';
 import { providerLabel } from '../../../shared/providers';
+import { rowKey, viewedAfter } from '../../../shared/viewed';
 import '../styles/features/changes.css';
 
 type Run = (action: string, body: object) => Promise<boolean>;
@@ -72,7 +73,7 @@ function CommitBox({ branch, staged, onCommit }: { branch: string; staged: numbe
 }
 
 // The row's ⋯ menu, like Claude.app's per-file menu in its diff pane.
-function RowMenu({ file, cwd, onOpen }: { file: GitFile; cwd: string; onOpen: () => void }) {
+function RowMenu({ file, cwd, onOpen, viewed }: { file: GitFile; cwd: string; onOpen: () => void; viewed?: { on: boolean; toggle: () => void } }) {
   const more = useRef<HTMLButtonElement>(null);
   const [open, setOpen] = useState(false);
   const close = () => setOpen(false);
@@ -88,6 +89,7 @@ function RowMenu({ file, cwd, onOpen }: { file: GitFile; cwd: string; onOpen: ()
         <Menu trigger={more} onClose={close}>
           <MenuItem icon="mention" onClick={attach}>Attach as context</MenuItem>
           <MenuItem icon="go-to-file" onClick={() => { close(); onOpen(); }}>Open file</MenuItem>
+          {viewed && <MenuItem icon={viewed.on ? 'circle-large-outline' : 'pass'} onClick={() => { close(); viewed.toggle(); }}>{viewed.on ? 'Mark as not viewed' : 'Mark as viewed'}</MenuItem>}
           <MenuSeparator />
           <CopyPathItems path={file.path} cwd={cwd} onDone={close} />
         </Menu>
@@ -97,23 +99,31 @@ function RowMenu({ file, cwd, onOpen }: { file: GitFile; cwd: string; onOpen: ()
 }
 
 type RowClick = (f: GitFile, e: MouseEvent) => void;
+type Viewed = { is: (f: GitFile) => boolean; can: (f: GitFile) => boolean; toggle: (f: GitFile) => void };
 
-function FileRow({ file, selected, actions, onClick }: { file: GitFile; selected: boolean; actions: ReactNode; onClick: RowClick }) {
+// Mark as viewed, per folder; a row stays viewed while its blob is unchanged.
+const VIEWED_KEY = 'agentview.viewedFiles';
+const savedViewed = (cwd: string): Record<string, string> => stored<Record<string, Record<string, string>>>(VIEWED_KEY, {})[cwd] ?? {};
+
+function FileRow({ file, selected, actions, viewed, onClick }: { file: GitFile; selected: boolean; actions: ReactNode; viewed: Viewed; onClick: RowClick }) {
   const name = file.path.split('/').pop()!;
   const dir = file.path.slice(0, -name.length - 1);
   const letter = letterOf(file);
   return (
-    <div className={`scm-row s-${letter}${selected ? ' selected' : ''}`} title={file.path} onMouseDown={(e) => (e.shiftKey || e.metaKey || e.ctrlKey) && e.preventDefault()} onClick={(e) => onClick(file, e)}>
+    <div className={`scm-row s-${letter}${selected ? ' selected' : ''}${viewed.is(file) ? ' viewed' : ''}`} title={file.path} onMouseDown={(e) => (e.shiftKey || e.metaKey || e.ctrlKey) && e.preventDefault()} onClick={(e) => onClick(file, e)}>
       <FileIcon name={name} />
       <span className="scm-name" role="button" tabIndex={0} aria-label={`${file.path}, ${STATUS[letter] ?? letter}`} onKeyDown={clickOnKey}>{name}</span>
       {dir && <span className="scm-dir">{dir}</span>}
       <span className="scm-acts">{actions}</span>
+      {viewed.can(file) && (
+        <IconButton icon={viewed.is(file) ? 'pass-filled' : 'circle-large-outline'} small className="scm-viewed" label={viewed.is(file) ? 'Mark as not viewed' : 'Mark as viewed'} aria-pressed={viewed.is(file)} onClick={(e) => { e.stopPropagation(); viewed.toggle(file); }} />
+      )}
       <span className="scm-letter" title={STATUS[letter]}>{letter}</span>
     </div>
   );
 }
 
-function Section({ label, files, isSelected, actions, rowActions, onRowClick }: { label: string; files: GitFile[]; isSelected: (f: GitFile) => boolean; actions: ReactNode; rowActions: (f: GitFile) => ReactNode; onRowClick: RowClick }) {
+function Section({ label, files, isSelected, actions, rowActions, viewed, onRowClick }: { label: string; files: GitFile[]; isSelected: (f: GitFile) => boolean; actions: ReactNode; rowActions: (f: GitFile) => ReactNode; viewed: Viewed; onRowClick: RowClick }) {
   const [open, setOpen] = useState(true);
   if (!files.length) return null;
   return (
@@ -124,7 +134,7 @@ function Section({ label, files, isSelected, actions, rowActions, onRowClick }: 
         <span className="scm-acts">{actions}</span>
         <span className="badge quiet">{files.length}</span>
       </div>
-      {open && files.map((f) => <FileRow key={f.path} file={f} selected={isSelected(f)} actions={rowActions(f)} onClick={onRowClick} />)}
+      {open && files.map((f) => <FileRow key={f.path} file={f} selected={isSelected(f)} actions={rowActions(f)} viewed={viewed} onClick={onRowClick} />)}
     </>
   );
 }
@@ -218,6 +228,7 @@ export function Changes() {
   const [picked, setPicked] = useState<Set<string>>(new Set());
   const anchor = useRef<string | null>(null);
   const [branch, setBranch] = useState<BranchDiff | null>(null);
+  const [seen, setSeen] = useState(() => savedViewed(cwd));
   const branchSeq = useRef(0);
   // A reply that lands after a newer request is dropped; a failed load keeps the diff shown.
   const reload = () => {
@@ -226,7 +237,10 @@ export function Changes() {
     fetchBranchDiff(base).then((b) => n === branchSeq.current && setBranch(b), () => {});
   };
 
-  useEffect(() => setBase(savedBase(cwd)), [cwd]);
+  useEffect(() => {
+    setBase(savedBase(cwd));
+    setSeen(savedViewed(cwd));
+  }, [cwd]);
   useEffect(() => {
     setBranch(null);
     reload();
@@ -258,6 +272,18 @@ export function Changes() {
   const open = (f: GitFile) => setUi({ openFile: f.path, follow: false });
   const keyOf = (f: GitFile) => `${f.staged ? 's' : 'w'}:${f.path}`;
   const isSelected = (f: GitFile) => (picked.size ? picked.has(keyOf(f)) : f.path === openFile);
+  const hashes = status?.hashes ?? {};
+  const shownSeen = viewedAfter(seen, hashes);
+  const viewed: Viewed = {
+    is: (f) => rowKey(f) in shownSeen,
+    can: (f) => !!hashes[rowKey(f)],
+    toggle: (f) => {
+      const next = viewedAfter(seen, hashes, rowKey(f));
+      setSeen(next);
+      save(VIEWED_KEY, { ...stored<Record<string, Record<string, string>>>(VIEWED_KEY, {}), [cwd]: next });
+    },
+  };
+  const viewedItem = (f: GitFile) => (viewed.can(f) ? { on: viewed.is(f), toggle: () => viewed.toggle(f) } : undefined);
   const targets = (f: GitFile, list: GitFile[]) => (picked.has(keyOf(f)) ? list.filter((g) => picked.has(keyOf(g))) : [f]);
 
   const clickRow = (list: GitFile[]) => (f: GitFile, e: MouseEvent) => {
@@ -309,13 +335,14 @@ export function Changes() {
           label="Staged changes"
           files={staged}
           isSelected={isSelected}
+          viewed={viewed}
           onRowClick={clickRow(staged)}
           actions={<Action icon="remove" title="Unstage All Changes" onClick={() => run('unstage', paths(staged))} />}
           rowActions={(f) => (
             <>
               <Action icon="go-to-file" title="Open File" onClick={() => open(f)} />
               <Action icon="remove" title="Unstage Changes" onClick={() => run('unstage', paths(targets(f, staged)))} />
-              <RowMenu file={f} cwd={cwd} onOpen={() => open(f)} />
+              <RowMenu file={f} cwd={cwd} onOpen={() => open(f)} viewed={viewedItem(f)} />
             </>
           )}
         />
@@ -323,6 +350,7 @@ export function Changes() {
           label="Changes"
           files={changes}
           isSelected={isSelected}
+          viewed={viewed}
           onRowClick={clickRow(changes)}
           actions={
             <>
@@ -335,7 +363,7 @@ export function Changes() {
               <Action icon="go-to-file" title="Open File" onClick={() => open(f)} />
               <Action icon="discard" title="Discard Changes" onClick={() => discard(targets(f, changes))} />
               <Action icon="add" title="Stage Changes" onClick={() => run('stage', paths(targets(f, changes)))} />
-              <RowMenu file={f} cwd={cwd} onOpen={() => open(f)} />
+              <RowMenu file={f} cwd={cwd} onOpen={() => open(f)} viewed={viewedItem(f)} />
             </>
           )}
         />

@@ -961,6 +961,14 @@ class SharedCasesTest {
         for (c in cases("spec-slug")) assertEquals(c.str("name"), c.str("slug"), specSlug(c.str("path")))
     }
 
+    @Test fun viewedRows() {
+        fun map(e: JsonElement?) = e?.jsonObject?.mapValues { it.value.jsonPrimitive.content } ?: emptyMap()
+        for (c in cases("viewed")) {
+            val got = no.pradhan.agentview.nativeapp.workspace.viewedAfter(map(c["saved"]), map(c["hashes"]), (c["toggle"] as? JsonPrimitive)?.contentOrNull)
+            assertEquals(c.str("name"), map(c["out"]), got)
+        }
+    }
+
     @Test fun copyPath() {
         for (c in cases("copy-path")) {
             val got = pathCopies(c.str("path"), c.str("cwd"))

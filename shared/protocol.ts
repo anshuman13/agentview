@@ -453,7 +453,8 @@ export type ClientMessage =
 
 export type GitFile = { path: string; status: 'M' | 'A' | 'D' | 'R' | '?'; staged: boolean };
 
-export type GitStatus = { branch: string; ahead: number; behind: number; files: GitFile[] };
+// hashes: one blob id per row, keyed s:path (staged) or w:path (worktree); a deleted worktree file has none.
+export type GitStatus = { branch: string; ahead: number; behind: number; files: GitFile[]; hashes?: Record<string, string> };
 
 export type GitCommit = { hash: string; subject: string; at: number };
 

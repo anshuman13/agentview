@@ -5,6 +5,7 @@ import no.pradhan.agentview.nativeapp.ui.DiffLine
 import no.pradhan.agentview.nativeapp.ui.lineDiff
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.builtins.ListSerializer
+import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
@@ -19,7 +20,7 @@ import no.pradhan.agentview.nativeapp.ui.Status
 data class GitFile(val path: String, val status: String = "M", val staged: Boolean = false)
 
 @Serializable
-data class GitStatus(val branch: String = "", val ahead: Int = 0, val behind: Int = 0, val files: List<GitFile> = emptyList())
+data class GitStatus(val branch: String = "", val ahead: Int = 0, val behind: Int = 0, val files: List<GitFile> = emptyList(), val hashes: Map<String, String> = emptyMap())
 
 fun parseGitStatus(body: String): GitStatus = protocolJson.decodeFromString(GitStatus.serializer(), body)
 
@@ -156,6 +157,21 @@ fun parseBranchList(body: String): BranchList = protocolJson.decodeFromString(Br
 
 // web/src/workspace/Changes.tsx BASES_KEY: the picked compare-against branch, kept per folder.
 fun compareBaseKey(cwd: String) = "compareBase:$cwd"
+
+// shared/viewed.ts: Mark as viewed keeps a row key (s:path or w:path) to the blob it was viewed at.
+fun rowKey(f: GitFile) = (if (f.staged) "s:" else "w:") + f.path
+
+fun viewedAfter(saved: Map<String, String>, hashes: Map<String, String>, toggle: String? = null): Map<String, String> {
+    val out = saved.filter { (k, h) -> hashes[k] == h && k != toggle }.toMutableMap()
+    val h = toggle?.let { hashes[it] }
+    if (toggle != null && h != null && saved[toggle] != h) out[toggle] = h
+    return out
+}
+
+fun viewedKey(cwd: String) = "viewedFiles:$cwd"
+private val viewedSerializer = kotlinx.serialization.builtins.MapSerializer(String.serializer(), String.serializer())
+fun decodeViewed(s: String?): Map<String, String> = s?.let { runCatching { protocolJson.decodeFromString(viewedSerializer, it) }.getOrNull() } ?: emptyMap()
+fun encodeViewed(m: Map<String, String>): String = protocolJson.encodeToString(viewedSerializer, m)
 
 // One commit's files and patch, from /api/git/show; base and commits stay empty.
 fun parseCommitDiff(body: String): BranchDiff = parseBranchDiff(body)

@@ -23,7 +23,7 @@ const status = () => route('status') as ReturnType<typeof parseStatus>;
 describe('parseStatus', () => {
   it('reads branch, ahead/behind, renames and both index and worktree changes', () => {
     const out = ['# branch.oid abc', '# branch.head main', '# branch.ab +2 -1', '1 MM N... 100644 100644 100644 a b src/x y.ts', '2 R. N... 100644 100644 100644 a b R100 new.ts', 'old.ts', '? src/new.ts', ''].join('\0');
-    expect(parseStatus(out, 'src/')).toEqual({ branch: 'main', ahead: 2, behind: 1, files: [{ path: 'x y.ts', status: 'M', staged: true }, { path: 'x y.ts', status: 'M', staged: false }, { path: 'new.ts', status: '?', staged: false }] });
+    expect(parseStatus(out, 'src/')).toEqual({ branch: 'main', ahead: 2, behind: 1, files: [{ path: 'x y.ts', status: 'M', staged: true }, { path: 'x y.ts', status: 'M', staged: false }, { path: 'new.ts', status: '?', staged: false }], hashes: { 's:x y.ts': 'b' } });
   });
 });
 
@@ -38,6 +38,11 @@ describe('gitRoute', () => {
       { path: 'gone.txt', status: 'D', staged: false },
       { path: 'd/new.txt', status: '?', staged: false },
     ]);
+    const hashes = (await status()).hashes!;
+    expect(Object.keys(hashes).sort()).toEqual(['w:a.txt', 'w:d/new.txt']);
+    writeFileSync(path.join(repo, 'a.txt'), 'c\n');
+    expect((await status()).hashes!['w:a.txt']).not.toBe(hashes['w:a.txt']);
+    writeFileSync(path.join(repo, 'a.txt'), 'b\n');
     expect(((await route('diff', null, 'path=d/new.txt')) as { diff: string }).diff).toContain('+n');
     await route('stage', { paths: ['a.txt', 'gone.txt'] });
     expect(((await route('diff', null, 'path=a.txt&staged=true')) as { diff: string }).diff).toContain('+b');
