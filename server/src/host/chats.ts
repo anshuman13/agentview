@@ -198,7 +198,7 @@ export const pendingSpawns = new Map<string, string>();
 export async function buildChat(cwd: string, line: string, from?: string | null) {
   const args = parseBuild(line);
   if (!args || args === 'usage') throw new Error('Give a request or a spec');
-  const chat = await newChat(cwd, undefined);
+  const chat = await newChat(cwd, undefined, undefined, from ? bySession(from)?.driver.provider : undefined);
   if (from) pendingSpawns.set(chat.id, from);
   chat.build.start(line, args);
   return chat.id;

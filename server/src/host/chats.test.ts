@@ -22,6 +22,7 @@ vi.mock('../agent/registry.js', () => {
 });
 
 const { ClaudeDriver } = await import('../agent/claude/driver.js');
+const { CodexDriver } = await import('../agent/codex/driver.js');
 const { removeChat } = await import('../agent/claude/pins.js');
 const { markLimited } = await import('../agent/claude/accounts.js');
 const { UNATTENDED_INSTRUCTION } = await import('../session/prompts.js');
@@ -34,6 +35,7 @@ const unattended = (chat: { driver: unknown }) => (chat.driver as { unattended: 
 
 beforeEach(() => {
   vi.spyOn(ClaudeDriver.prototype, 'start').mockImplementation(() => {});
+  vi.spyOn(CodexDriver.prototype, 'start').mockImplementation(() => {});
   for (const r of mocks.runs.list().slice()) mocks.runs.end(r.id, 'test');
 });
 
@@ -109,6 +111,13 @@ describe('buildChat', () => {
     const chat = live.get(await buildChat(PROJECT, '/build a small thing'))!.chat;
     chat.setSession({ sessionId: 'child-3' });
     expect(linkSpawned).not.toHaveBeenCalled();
+  });
+
+  it('starts the build chat on the calling chat\'s provider', async () => {
+    const parent = await createChat(PROJECT, undefined, '', false, 'codex');
+    parent.setSession({ sessionId: 'codex-parent' });
+    const chat = live.get(await buildChat(PROJECT, '/build a small thing', 'codex-parent'))!.chat;
+    expect(chat.driver.provider).toBe('codex');
   });
 });
 
