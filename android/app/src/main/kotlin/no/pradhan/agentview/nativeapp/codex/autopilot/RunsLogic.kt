@@ -2,6 +2,8 @@ package no.pradhan.agentview.nativeapp.codex.autopilot
 
 import kotlinx.serialization.Serializable
 import no.pradhan.agentview.nativeapp.codex.clock
+import no.pradhan.agentview.nativeapp.codex.jobs.money
+import no.pradhan.agentview.nativeapp.net.billing
 import no.pradhan.agentview.nativeapp.net.ChatRun
 import no.pradhan.agentview.nativeapp.net.Edits
 import no.pradhan.agentview.nativeapp.net.LiveChat
@@ -78,6 +80,9 @@ fun nextRoundText(at: Long?) = "Next round" + (at?.let { " ${clock(it)}" } ?: ""
 
 // One column of the tries board (web/src/sessions/TriesBoard.tsx tryColumn): the try's state, last report, diff size and cost.
 data class TryColumn(val n: Int, val branch: String, val state: String, val line: String, val edits: Edits?, val cost: Double, val archived: Boolean)
+
+// A run's cost as the run card shows it: its summed tokens priced, or the provider's billing word.
+fun runCost(run: ChatRun) = money(dollars(run.tokens), billing(run.provider))
 
 fun tryColumn(run: ChatRun, t: RunTry, live: List<LiveChat>): TryColumn {
     val chat = live.firstOrNull { it.sessionId == t.sessionId }

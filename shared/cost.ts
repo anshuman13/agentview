@@ -1,9 +1,12 @@
-import type { ChatEvent } from './protocol.js';
-import { dollars } from './prices.js';
-import type { Billing } from './providers.js';
+import type { ChatEvent, Provider } from './protocol.js';
+import { dollars, type TurnTokens } from './prices.js';
+import { billing, type Billing } from './providers.js';
 
 export const money = (n: number, billing: Billing = 'usd') =>
   billing === 'plan' ? 'Plan' : billing === 'none' ? '-' : n > 0 && n < 0.005 ? '<$0.01' : n < 10 ? `$${n.toFixed(2)}` : `$${Math.round(n)}`;
+
+// A run's cost as the run card shows it: its summed tokens priced, or the provider's billing word.
+export const runCost = (r: { tokens?: TurnTokens; provider?: Provider }) => money(dollars(r.tokens), billing(r.provider));
 
 // Dollars of one turn's result, from its tokens and the price table.
 export const resultCost = (e: ChatEvent) => (e.kind === 'result' ? dollars(e.tokens) : 0);

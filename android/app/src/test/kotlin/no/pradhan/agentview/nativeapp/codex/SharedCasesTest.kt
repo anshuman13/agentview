@@ -153,6 +153,7 @@ import no.pradhan.agentview.nativeapp.sessions.heldOrder
 import no.pradhan.agentview.nativeapp.codex.autopilot.LoopNow
 import no.pradhan.agentview.nativeapp.codex.autopilot.nowMeta
 import no.pradhan.agentview.nativeapp.codex.autopilot.tryColumn
+import no.pradhan.agentview.nativeapp.codex.autopilot.runCost
 import no.pradhan.agentview.nativeapp.net.ChatEvent
 import no.pradhan.agentview.nativeapp.net.ChatRun
 import no.pradhan.agentview.nativeapp.net.Edits
@@ -1732,6 +1733,15 @@ class SharedCasesTest {
     @Test fun binLeftCases() {
         val now = 1_000_000_000_000L
         for (c in cases("bin-left")) assertEquals(c.str("name"), c.str("expected"), binLeft(now - c.getValue("agoMs").jsonPrimitive.long, now))
+    }
+
+    @Test fun runCostCases() {
+        for (c in cases("run-cost")) {
+            val run = c.getValue("run").jsonObject
+            val tokens = run.nullable("tokens")?.decode<no.pradhan.agentview.nativeapp.net.TurnTokens>()
+            val provider = run.nullable("provider")?.jsonPrimitive?.content
+            assertEquals(c.str("name"), c.str("expected"), runCost(ChatRun("r", tokens = tokens, provider = provider)))
+        }
     }
 
     @Test fun moneyByBilling() {

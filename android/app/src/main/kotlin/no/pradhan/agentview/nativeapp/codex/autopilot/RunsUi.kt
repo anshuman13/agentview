@@ -18,13 +18,12 @@ import androidx.compose.ui.text.style.TextOverflow
 import kotlinx.coroutines.launch
 import no.pradhan.agentview.nativeapp.codex.clock
 import no.pradhan.agentview.nativeapp.codex.jobs.money
+import no.pradhan.agentview.nativeapp.net.billing
 import no.pradhan.agentview.nativeapp.net.ChatRun
 import no.pradhan.agentview.nativeapp.app.Hub
 import no.pradhan.agentview.nativeapp.net.LiveChat
 import no.pradhan.agentview.nativeapp.net.LiveRun
 import no.pradhan.agentview.nativeapp.net.RunTry
-import no.pradhan.agentview.nativeapp.net.dollars
-import no.pradhan.agentview.nativeapp.net.billing
 import no.pradhan.agentview.nativeapp.app.runControl
 import no.pradhan.agentview.nativeapp.app.triesKeep
 import no.pradhan.agentview.nativeapp.ui.AvIcon
@@ -81,7 +80,7 @@ fun RunRows(hub: Hub, run: ChatRun, live: LiveChat) {
             state.title, nowMeta(state).ifEmpty { null }, lines = 2, compact = true,
             leading = { StatusDot(if (working) DotState.Running else outcomeDot(run.rounds.lastOrNull()?.outcome ?: "quiet")) },
         )
-        ListRow(run.what, money(dollars(run.tokens), billing(run.provider)), compact = true, stateSlot = false)
+        ListRow(run.what, runCost(run), compact = true, stateSlot = false)
     }
 }
 

@@ -62,6 +62,7 @@ import { addCheck, toggleCheck } from './codex/tasks/editor/taskChecklist';
 import { revertBlock } from './workspace/revertBlock';
 import { splitDiff } from './ui/DiffFiles';
 import { ago, markSegments, matchLabel, money, stepMatch } from './ui/util';
+import { runCost } from '../../shared/cost';
 import { notesTemplateCaret, notesTemplateChips, notesTemplateText, type NotesTemplate } from './codex/data/meetings/notesTemplates';
 import { setSystemTime } from '../../testing';
 import { guessProfile, meetingAsk, runAsk, wikiAskText } from './codex/data/ask/ask';
@@ -1019,6 +1020,10 @@ describe('cases shared with the Android app', () => {
 
   for (const c of cases<{ name: string; n: number; billing: Billing; expected: string }>('money')) {
     it(`money: ${c.name}`, () => expect(money(c.n, c.billing)).toBe(c.expected));
+  }
+
+  for (const c of cases<{ name: string; run: Parameters<typeof runCost>[0]; expected: string }>('run-cost')) {
+    it(`runCost: ${c.name}`, () => expect(runCost(c.run)).toBe(c.expected));
   }
 
   for (const c of cases<{ name: string; agoMs: number; expected: string }>('since')) {

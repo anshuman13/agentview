@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { send, useStore } from '../../app/store';
 import { IconButton } from '../../ui/Button';
 import { Row } from '../../ui/Row';
-import { money } from '../../ui/util';
 import { TriesBoard } from '../TriesBoard';
 import { ReviewCard } from '../ReviewCard';
 import { stopRun } from '../openChat';
@@ -10,8 +9,7 @@ import { OUTCOME_DOT, loopNow, nowMeta, runLine } from '../runLogic';
 import { agentsOf } from '../agents';
 import { useChatRun } from '../useChatRun';
 import { useCan } from '../../chat/useCan';
-import { billing } from '../../../../shared/providers';
-import { dollars } from '../../../../shared/prices';
+import { runCost } from '../../../../shared/cost';
 import { APPROVE } from '../../../../shared/build';
 
 // The rail's title with the run's controls, and the run's state under it. With `onBack` (an agent is open), a back arrow leads the title.
@@ -45,7 +43,7 @@ export function RailHead({ titled = true, onClose, onBack }: { titled?: boolean;
       {run && now && (
         <div className="rail-run">
           <Row lines={2} leading={<span className={`dot ${dot}`} />} title={now.title} meta={nowMeta(now) || undefined} plain />
-          <Row lines={1} title={run.what} trailing={money(dollars(run.tokens),billing(run.provider))} plain />
+          <Row lines={1} title={run.what} trailing={runCost(run)} plain />
         </div>
       )}
       {board && <TriesBoard runId={run!.id} onClose={() => setBoard(false)} />}

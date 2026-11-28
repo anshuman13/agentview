@@ -1,0 +1,8 @@
+[
+  { "name": "claude run priced from its tokens", "run": { "provider": "claude", "tokens": { "model": "claude-opus-5-5", "input": 1000, "cachedInput": 200000, "cacheWrite": 5000, "output": 2000, "reasoning": 0 } }, "expected": "$0.11" },
+  { "name": "no provider is claude", "run": { "tokens": { "model": "claude-sonnet-5-5", "input": 6000000, "cachedInput": 0, "cacheWrite": 0, "output": 0, "reasoning": 0 } }, "expected": "$12" },
+  { "name": "run with no tokens yet", "run": {}, "expected": "$0.00" },
+  { "name": "unpriced model shows nothing spent", "run": { "tokens": { "model": "codex-auto-review", "input": 1000, "cachedInput": 0, "cacheWrite": 0, "output": 1000, "reasoning": 0 } }, "expected": "$0.00" },
+  { "name": "codex run is on a plan", "run": { "provider": "codex", "tokens": { "model": "gpt-6.2-sol", "input": 363, "cachedInput": 17920, "cacheWrite": 0, "output": 20, "reasoning": 0 } }, "expected": "Plan" },
+  { "name": "openrouter run is not priced", "run": { "provider": "openrouter", "tokens": { "model": "claude-opus-5-5", "input": 1000, "cachedInput": 0, "cacheWrite": 0, "output": 0, "reasoning": 0 } }, "expected": "-" }
+]
