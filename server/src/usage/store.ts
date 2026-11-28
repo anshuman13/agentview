@@ -17,7 +17,7 @@ export type RawUsage = {
   } | null;
 };
 
-export type UsageKey = Account | 'codex';
+export type UsageKey = Account | 'codex' | 'openrouter';
 
 export type CallRow = {
   id: string;

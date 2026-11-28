@@ -4,7 +4,7 @@ import path from 'node:path';
 import { afterAll, beforeEach, describe, expect, it } from 'bun:test';
 import { STATE_DIR } from '../agent/claude/accounts.js';
 import { recordCall } from './calls.js';
-import { closeStore } from './store.js';
+import { callsSince, closeStore } from './store.js';
 
 const reset = () => {
   closeStore();
@@ -30,5 +30,13 @@ describe('recordCall', () => {
       { id: 'msg_a', at: 1000, account: 'alt', chat: 's1', model: 'claude-opus', input: 10, output: 20, cache_write: 30, cache_read: 40, guessed: 0, provider: 'claude', reasoning: 0 },
       { id: 'msg_b', at: 3000, account: 'alt2', chat: 's2', model: 'claude-sonnet', input: 5, output: 0, cache_write: 0, cache_read: 0, guessed: 0, provider: 'claude', reasoning: 0 },
     ]);
+  });
+
+  it('keeps OpenRouter calls under their own key and provider', () => {
+    expect(recordCall('openrouter', 's4', { id: 'gen_1', model: 'z-ai/glm-4.6', usage: usage(7) }, 4000)).toBe(true);
+    expect(callsSince('openrouter', 0)).toEqual([
+      { id: 'gen_1', at: 4000, account: 'openrouter', provider: 'openrouter', chat: 's4', model: 'z-ai/glm-4.6', input: 7, output: 14, cacheWrite: 21, cacheRead: 28, reasoning: 0, guessed: false },
+    ]);
+    expect(callsSince('main', 0)).toEqual([]);
   });
 });

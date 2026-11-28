@@ -1,5 +1,4 @@
-import type { Account } from '../../../shared/protocol.js';
-import { type CallRow, saveCall } from './store.js';
+import { type CallRow, saveCall, type UsageKey } from './store.js';
 
 export type CallMessage = {
   id?: string;
@@ -12,13 +11,14 @@ export type CallMessage = {
   } | null;
 };
 
-export function callRow(account: Account, chat: string | null, message: CallMessage, at: number, guessed = false): CallRow | null {
+export function callRow(account: UsageKey, chat: string | null, message: CallMessage, at: number, guessed = false): CallRow | null {
   const u = message.usage;
   if (!message.id || !u) return null;
   return {
     id: message.id,
     at,
     account,
+    provider: account === 'openrouter' || account === 'codex' ? account : 'claude',
     chat,
     model: message.model ?? null,
     input: u.input_tokens ?? 0,
@@ -29,7 +29,7 @@ export function callRow(account: Account, chat: string | null, message: CallMess
   };
 }
 
-export function recordCall(account: Account, chat: string | null, message: CallMessage, at = Date.now()) {
+export function recordCall(account: UsageKey, chat: string | null, message: CallMessage, at = Date.now()) {
   const row = callRow(account, chat, message, at);
   return row ? storeCall(row) : false;
 }

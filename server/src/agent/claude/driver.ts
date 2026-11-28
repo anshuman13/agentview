@@ -428,7 +428,7 @@ export class ClaudeDriver implements AgentDriver {
         if (!msg.parent_tool_use_id) this.live.event(msg.event);
         return;
       case 'assistant':
-        if (!this.openrouter) recordCall(this.account, msg.session_id, msg.message);
+        recordCall(this.openrouter ? 'openrouter' : this.account, msg.session_id, msg.message);
         return msg.parent_tool_use_id ? this.messages.subagent(msg, msg.parent_tool_use_id) : this.messages.assistant(msg);
       case 'user':
         return this.messages.user(msg);
