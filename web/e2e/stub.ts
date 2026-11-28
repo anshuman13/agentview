@@ -24,7 +24,7 @@ function initMessages() {
 // A running build on the open chat, so its header shows the task line.
 const buildRun = (at: number) => ({
   id: 'r1', kind: 'build', sessionId: 's1', chatId: 'c1', title: 'Build', what: '', startedAt: at, endedAt: null, state: 'running', why: '',
-  round: 3, max: 9, nextAt: null, costUsd: 0, rounds: [], needsYou: false, phase: 'task', progress: '2 of 9',
+  round: 3, max: 9, nextAt: null, rounds: [], needsYou: false, phase: 'task', progress: '2 of 9',
   task: 'Clean up the session list (user, 27 Nov 21:52, compare the list in the reference shots): (1) a chat subtitle shows a helper branch, (2) idle rows need a ring dot, (3) build rows show Running',
 });
 

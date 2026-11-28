@@ -120,7 +120,7 @@ describe('nested repositories', () => {
 describe('approve', () => {
   it('commits with --no-verify, pushes the branch without force, opens a PR, and a second call gets 409', async () => {
     writeFileSync(path.join(fixture.dir, 'a.txt'), 'a\n');
-    run.rounds = [{ n: 1, outcome: 'progress', line: 'Fixed it', costUsd: 0, at: 0 }];
+    run.rounds = [{ n: 1, outcome: 'progress', line: 'Fixed it', at: 0 }];
     mocks.gh.mockRejectedValueOnce(noPr()).mockResolvedValueOnce({ stdout: 'https://example.test/pr/1\n' });
     expect(await approve()).toEqual({ status: 200, body: { url: 'https://example.test/pr/1' } });
     expect(sh(fixture.dir, 'log', '-1', '--format=%s')).toBe('Fixed it\n');

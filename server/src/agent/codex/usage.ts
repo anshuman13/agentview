@@ -1,4 +1,5 @@
 import type { PlanUsage, UsageWindow } from '../../../../shared/protocol.js';
+import type { TurnTokens } from '../../../../shared/prices.js';
 import type { CallRow } from '../../usage/store.js';
 import type { RateLimitWindow, RateLimits, TokenUsageBreakdown } from './protocol.js';
 
@@ -24,19 +25,12 @@ export function limitUntil(u: PlanUsage | null | undefined, now = Date.now()) {
 
 // A turn's tokens as one calls row; Codex counts cached input inside input, the table keeps it apart.
 export function turnCall(turnId: string, chat: string | null, model: string | null, t: TokenUsageBreakdown, at = Date.now()): CallRow {
-  return {
-    id: `codex:${turnId}`,
-    at,
-    account: 'codex',
-    provider: 'codex',
-    chat,
-    model,
-    input: t.inputTokens - t.cachedInputTokens,
-    output: t.outputTokens,
-    cacheWrite: t.cacheWriteInputTokens ?? 0,
-    cacheRead: t.cachedInputTokens,
-    reasoning: t.reasoningOutputTokens,
-  };
+  const k = turnTokens(model ?? '', t);
+  return { id: `codex:${turnId}`, at, account: 'codex', provider: 'codex', chat, model, input: k.input, output: k.output, cacheWrite: k.cacheWrite, cacheRead: k.cachedInput, reasoning: k.reasoning };
+}
+
+export function turnTokens(model: string, t: TokenUsageBreakdown): TurnTokens {
+  return { model, input: t.inputTokens - t.cachedInputTokens, cachedInput: t.cachedInputTokens, cacheWrite: t.cacheWriteInputTokens ?? 0, output: t.outputTokens, reasoning: t.reasoningOutputTokens };
 }
 
 export function addUsage(sum: TokenUsageBreakdown | null, t: TokenUsageBreakdown): TokenUsageBreakdown {

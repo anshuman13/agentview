@@ -127,7 +127,7 @@ export function historyEvents(turns: Turn[], fallbackAt: number, saved: SavedPla
       } else events.push(...startedEvents(item, at), ...finishedEvents(item, at));
     }
     if (saved && (saved.turnId === turn.id || (turn === turns.at(-1) && !turns.some((t) => t.id === saved.turnId)))) events.push(...planEvents(turn.id, 'saved', saved.plan, at));
-    if (turn.status !== 'inProgress') events.push({ id: `${turn.id}:result`, kind: 'result', text: last, costUsd: 0, isError: turn.status === 'failed', at });
+    if (turn.status !== 'inProgress') events.push({ id: `${turn.id}:result`, kind: 'result', text: last, isError: turn.status === 'failed', at });
   }
   return events;
 }

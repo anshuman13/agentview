@@ -27,6 +27,7 @@ import kotlinx.serialization.json.JsonPrimitive
 import no.pradhan.agentview.nativeapp.app.AppState
 import no.pradhan.agentview.nativeapp.app.Hub
 import no.pradhan.agentview.nativeapp.net.ChatEvent
+import no.pradhan.agentview.nativeapp.net.TurnTokens
 import no.pradhan.agentview.nativeapp.net.ChatRun
 import no.pradhan.agentview.nativeapp.net.LiveChat
 import no.pradhan.agentview.nativeapp.net.ServerMessage
@@ -112,7 +113,7 @@ class Events {
     fun say(text: String) = ChatEvent("a$n", "assistant", text = text, at = at())
     fun use(name: String, vararg input: Pair<String, Any>) = ChatEvent("t$n", "tool_use", name = name, input = obj(*input), at = at())
     fun result(of: ChatEvent, text: String = "ok") = ChatEvent("r$n", "tool_result", toolUseId = of.id, text = text, at = at())
-    fun done(cost: Double) = ChatEvent("d$n", "result", costUsd = cost, at = at())
+    fun done(cost: Double) = ChatEvent("d$n", "result", tokens = TurnTokens("gpt-6-luna", output = Math.round(cost * 2e6)), at = at())
     fun status(done: String, next: List<String>, text: String) =
         use("mcp__agentview__set_status", "done" to done, "next" to JsonArray(next.map(::JsonPrimitive)), "text" to text)
 

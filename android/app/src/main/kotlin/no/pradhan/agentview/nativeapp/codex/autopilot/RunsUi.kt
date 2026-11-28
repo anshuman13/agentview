@@ -23,6 +23,7 @@ import no.pradhan.agentview.nativeapp.app.Hub
 import no.pradhan.agentview.nativeapp.net.LiveChat
 import no.pradhan.agentview.nativeapp.net.LiveRun
 import no.pradhan.agentview.nativeapp.net.RunTry
+import no.pradhan.agentview.nativeapp.net.dollars
 import no.pradhan.agentview.nativeapp.net.billing
 import no.pradhan.agentview.nativeapp.app.runControl
 import no.pradhan.agentview.nativeapp.app.triesKeep
@@ -80,7 +81,7 @@ fun RunRows(hub: Hub, run: ChatRun, live: LiveChat) {
             state.title, nowMeta(state).ifEmpty { null }, lines = 2, compact = true,
             leading = { StatusDot(if (working) DotState.Running else outcomeDot(run.rounds.lastOrNull()?.outcome ?: "quiet")) },
         )
-        ListRow(run.what, money(run.costUsd, billing(run.provider)), compact = true, stateSlot = false)
+        ListRow(run.what, money(dollars(run.tokens), billing(run.provider)), compact = true, stateSlot = false)
     }
 }
 

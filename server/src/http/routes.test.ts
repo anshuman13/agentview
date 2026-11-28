@@ -116,7 +116,7 @@ describe('routes', () => {
     ]);
     mocks.listLinks.mockResolvedValue({ kid: { parent: 'root', via: 'build', at: 10 }, now: { parent: 'root', via: 'build', at: 20 } });
     mocks.firstCommit.mockImplementation(async (id: string) => (id === 'kid' ? { hash: 'a1b2c3d', subject: 'Add the store' } : null) as never);
-    const rounds = [{ n: 1, at: 8, outcome: 'done', line: 'one', costUsd: 0 }, { n: 2, at: 18, outcome: 'done', line: 'two', costUsd: 0, sessionId: 'kid' }];
+    const rounds = [{ n: 1, at: 8, outcome: 'done', line: 'one' }, { n: 2, at: 18, outcome: 'done', line: 'two', sessionId: 'kid' }];
     const r = await call('GET', '/api/chat/subchats?session=now', undefined, { runs: () => [{ sessionId: 'root', rounds }, { sessionId: 'other', rounds: [{ n: 9, at: 9 }] }] } as unknown as Partial<RouteDeps>);
     expect(r.json).toEqual([
       { sessionId: 'root', title: 'Build run, task 1 of 3.', startedAt: 1, round: rounds[0] },

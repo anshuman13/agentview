@@ -59,3 +59,12 @@ export function costOf(t: TurnTokens): number | null {
   if (!pr) return null;
   return (t.input * pr.input + t.cachedInput * pr.cachedInput + t.cacheWrite * pr.cacheWrite + t.output * pr.output) / 1e6;
 }
+
+// Two turns' tokens added up, priced at the later turn's model.
+export function addTokens(a: TurnTokens | undefined, b: TurnTokens | undefined): TurnTokens | undefined {
+  if (!a || !b) return a ?? b;
+  return { model: b.model || a.model, input: a.input + b.input, cachedInput: a.cachedInput + b.cachedInput, cacheWrite: a.cacheWrite + b.cacheWrite, output: a.output + b.output, reasoning: a.reasoning + b.reasoning };
+}
+
+// Dollars for tokens that may be missing or unpriced, 0 then.
+export const dollars = (t: TurnTokens | undefined) => (t && costOf(t)) || 0;

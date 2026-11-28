@@ -1,6 +1,7 @@
 import type { McpServerDef } from '../integrations/mcpClient.js';
 import type { MemoryFile } from './memory.js';
 import type { UnattendedLimits } from '../settings.js';
+import type { TurnTokens } from '../../../shared/prices.js';
 import type { Account, AgentEvent, SavedSession, CacheInfo, Capabilities, ChatEvent, ConnectorGroup, Effort, McpServer, Provider, ServerMessage, ServerState, SessionInfo } from '../../../shared/protocol.js';
 
 export type Decision = { behavior: 'allow'; updatedInput: Record<string, unknown>; updatedPermissions?: unknown[] } | { behavior: 'deny'; message: string };
@@ -21,7 +22,7 @@ export type RunningTask = { toolUseId: string; tool: string; description: string
 
 export type History = { events: ChatEvent[]; context: number | null; cache: CacheInfo | null };
 
-export type TurnResult = { id: string; ok: boolean; text: string; costUsd: number; isError: boolean };
+export type TurnResult = { id: string; ok: boolean; text: string; tokens?: TurnTokens; isError: boolean };
 
 // What a session asks of the agent behind it.
 export interface AgentDriver {

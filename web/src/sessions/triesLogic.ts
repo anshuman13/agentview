@@ -1,5 +1,6 @@
 import type { BadgeSpec } from '../ui/Badge';
 import type { ChatRun, LiveChat, Try } from '../../../shared/protocol';
+import { dollars } from '../../../shared/prices';
 
 export type TryColumn = { n: number; branch: string; state: BadgeSpec; line: string; edits?: LiveChat['edits']; cost: number; archived: boolean };
 
@@ -21,7 +22,7 @@ export function tryColumn(run: ChatRun, t: Try, live: LiveChat[]): TryColumn {
     state,
     line: last?.line.replace(/^Try \d+: /, '') ?? chat?.last ?? '',
     edits: chat?.edits,
-    cost: chat?.cost ?? rounds.reduce((sum, r) => sum + r.costUsd, 0),
+    cost: chat?.cost ?? rounds.reduce((sum, r) => sum + dollars(r.tokens), 0),
     archived: Boolean(t.dropped),
   };
 }

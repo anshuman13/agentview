@@ -47,7 +47,7 @@ export class RunLinks {
 
   record(r: TurnResult) {
     const { runs, state, turn } = this.s;
-    const result = { ...roundResult(r.text, { failed: turn.lastError }), costUsd: turn.cost, sessionId: state.session.sessionId ?? undefined };
+    const result = { ...roundResult(r.text, { failed: turn.lastError }), tokens: turn.tokens, sessionId: state.session.sessionId ?? undefined };
     if (state.session.sessionId) runs.reportTry(state.session.sessionId, result);
     const job = runs.jobOfSession(state.session.sessionId) ?? runs.jobFor(this.s.id);
     if (job) {

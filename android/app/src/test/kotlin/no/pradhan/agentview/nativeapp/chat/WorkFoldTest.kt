@@ -3,6 +3,7 @@ package no.pradhan.agentview.nativeapp.chat
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import no.pradhan.agentview.nativeapp.net.ChatEvent
+import no.pradhan.agentview.nativeapp.net.TurnTokens
 import no.pradhan.agentview.nativeapp.net.protocolJson
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -16,7 +17,7 @@ class WorkFoldTest {
     private fun say(text: String) = ChatEvent(id("a"), "assistant", text = text, at = n * 1000)
     private fun tool(name: String, input: JsonObject = JsonObject(emptyMap())) = ChatEvent(id("t"), "tool_use", name = name, input = input, at = n * 1000)
     private fun result(of: ChatEvent, err: Boolean = false, text: String = "ok") = ChatEvent(id("r"), "tool_result", toolUseId = of.id, text = text, isError = err, at = n * 1000)
-    private fun done(cost: Double) = ChatEvent(id("d"), "result", costUsd = cost, at = n * 1000)
+    private fun done(cost: Double) = ChatEvent(id("d"), "result", tokens = TurnTokens("gpt-6-luna", output = Math.round(cost * 2e6)), at = n * 1000)
     private fun path(p: String) = JsonObject(mapOf("file_path" to JsonPrimitive(p), "content" to JsonPrimitive("x")))
     private fun fold(events: List<ChatEvent>) = foldTurns(buildTranscript(events), events)
     private fun kinds(rows: List<FoldRow>) = rows.map { r -> if (r is FoldRow.Fold) "fold" else (r as FoldRow.Row).it::class.simpleName }
@@ -100,14 +101,14 @@ class WorkFoldTest {
         val refused = tool("Bash")
         val events = listOf(user(), bad, result(bad, true, "boom"), agent, e1, result(e1), e2, result(e2), refused, result(refused, true, "The user doesn't want to proceed"), say("ok"), done(0.3), user(), say("hi"), done(0.5))
         val first = fold(events).filterIsInstance<FoldRow.Fold>().first()
-        assertEquals(Work(5, 2, 1, 1, events.first { it.kind == "result" }.at - events[0].at, 0.0, add = 2, del = 2), first.work)
+        assertEquals(Work(5, 2, 1, 1, events.first { it.kind == "result" }.at - events[0].at, 0.3, add = 2, del = 2), first.work)
     }
 
     @Test
-    fun costIsTheRiseOverThePreviousLoadedResultAndNoneForTheFirst() {
-        val events = listOf(user(), tool("Bash"), say("ok"), done(52.0), user(), tool("Bash"), say("hi"), done(52.3))
+    fun eachTurnIsPricedFromItsOwnResults() {
+        val events = listOf(user(), tool("Bash"), say("ok"), done(0.5), user(), tool("Bash"), say("hi"), done(0.25), done(0.05))
         val costs = fold(events).filterIsInstance<FoldRow.Fold>().map { it.work.cost }
-        assertEquals(0.0, costs[0], 1e-9)
+        assertEquals(0.5, costs[0], 1e-9)
         assertEquals(0.3, costs[1], 1e-9)
     }
 

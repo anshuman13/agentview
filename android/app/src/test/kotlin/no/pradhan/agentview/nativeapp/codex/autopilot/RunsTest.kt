@@ -18,7 +18,7 @@ import org.junit.Test
 class RunsTest {
     @Before fun zone() { codexZone = ZoneId.of("UTC") }
 
-    private fun round(outcome: String) = Round(1, 0, outcome, "x", 0.1)
+    private fun round(outcome: String) = Round(1, 0, outcome, "x")
     private fun run(id: String, state: String = "running", kind: String = "job", rounds: List<Round> = emptyList(), why: String = "") =
         ChatRun(id, kind, round = 4, nextAt = 14 * 3_600_000L + 20 * 60_000L, state = state, why = why, rounds = rounds, branch = "job/x")
 
@@ -34,14 +34,14 @@ class RunsTest {
     }
 
     @Test fun loopNowTakesTheNewerOfStatusAndRound() {
-        val r = run("a", rounds = listOf(Round(1, 400, "progress", "round", 0.0))).copy(startedAt = 100)
+        val r = run("a", rounds = listOf(Round(1, 400, "progress", "round"))).copy(startedAt = 100)
         assertEquals(LoopNow("Working", 500, "status", next = "a", stepsLeft = 2), loopNow(r, LiveNow("Working", 500, next = listOf("a", "b"))))
         assertTrue(Regex("Round 1 · \\d\\d:\\d\\d · progress: round").matches(loopNow(r, LiveNow("Working", 300)).title))
         assertEquals("First round 14:20", loopNow(r.copy(rounds = emptyList()), LiveNow("Old", 50)).title)    }
 
     @Test fun triesColumnsFollowTheChatAndItsLastReport() {
         val tries = listOf(RunTry(1, "c1", "s1", "tries/a-1"), RunTry(2, "c2", "s2", "tries/a-2"), RunTry(3, "c3", "s3", "tries/a-3", dropped = true))
-        val r = run("t", kind = "tries", rounds = listOf(Round(1, 0, "done", "Try 1: patched it", 0.5), Round(2, 0, "question", "Try 2: which one?", 0.2))).copy(tries = tries)
+        val r = run("t", kind = "tries", rounds = listOf(Round(1, 0, "done", "Try 1: patched it"), Round(2, 0, "question", "Try 2: which one?"))).copy(tries = tries)
         val live = listOf(LiveChat("c1", sessionId = "s1", edits = Edits(4, 1), cost = 0.7))
         assertEquals("Tries · 2 chats", runLine(r))
         assertEquals(TryColumn(1, "tries/a-1", "Done", "patched it", Edits(4, 1), 0.7, false), tryColumn(r, tries[0], live))

@@ -2,8 +2,8 @@ import { describe, expect, it } from 'bun:test';
 import type { ChatRun } from '../../../shared/protocol.js';
 import { eveningBefore, morningDigest } from './morningDigest.js';
 
-const run = (p: Partial<ChatRun>): ChatRun => ({ id: 'r', kind: 'job', sessionId: 's', chatId: 'c', title: 'Chat', what: '', startedAt: 0, endedAt: null, state: 'running', why: '', round: 1, max: 0, nextAt: null, costUsd: 1.234, rounds: [], needsYou: false, ...p });
-const round = (at: number, line: string) => ({ n: 1, at, outcome: 'progress' as const, line, costUsd: 0 });
+const run = (p: Partial<ChatRun>): ChatRun => ({ id: 'r', kind: 'job', sessionId: 's', chatId: 'c', title: 'Chat', what: '', startedAt: 0, endedAt: null, state: 'running', why: '', round: 1, max: 0, nextAt: null, tokens: { model: 'gpt-6-luna', input: 0, cachedInput: 0, cacheWrite: 0, output: 2_468_000, reasoning: 0 }, rounds: [], needsYou: false, ...p });
+const round = (at: number, line: string) => ({ n: 1, at, outcome: 'progress' as const, line });
 
 describe('morningDigest', () => {
   it('skips when no run moved since', () => {

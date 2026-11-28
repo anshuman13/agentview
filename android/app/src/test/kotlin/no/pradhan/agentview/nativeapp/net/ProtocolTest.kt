@@ -57,9 +57,10 @@ class ProtocolTest {
 
     @Test
     fun parsesRunsAndTheRunOnALiveChat() {
-        val m = parseMessage("""{"type":"runs","runs":[{"id":"r","kind":"job","chatId":"c","state":"paused","why":"usage limit until 18:00","nextAt":null,"extra":1,"rounds":[{"n":1,"at":5,"outcome":"quiet","line":"ok","costUsd":0.5}]}]}""") as ServerMessage.Runs
+        val m = parseMessage("""{"type":"runs","runs":[{"id":"r","kind":"job","chatId":"c","state":"paused","why":"usage limit until 18:00","nextAt":null,"extra":1,"rounds":[{"n":1,"at":5,"outcome":"quiet","line":"ok","tokens":{"model":"gpt-5","input":10,"output":2}}]}]}""") as ServerMessage.Runs
         assertEquals("paused", m.runs[0].state)
         assertEquals("ok", m.runs[0].rounds[0].line)
+        assertEquals(10L, m.runs[0].rounds[0].tokens?.input)
         val live = parseMessage("""{"type":"live","chats":[{"id":"a","run":{"id":"r","kind":"job","state":"running","nextAt":9,"round":2,"outcome":"blocked"}}]}""") as ServerMessage.Live
         assertEquals("blocked", live.chats[0].run?.outcome)
         assertEquals("""{"type":"run","run":"r","op":"stop"}""", runCmd("r", "stop"))
@@ -159,8 +160,8 @@ class ProtocolTest {
         val m = parseMessage("""{"type":"event","event":{"id":"t","kind":"tool_use","name":"Edit","input":{"file_path":"/a","n":3},"summary":"s","at":1,"parent":"ag"}}""") as ServerMessage.Event
         assertEquals("/a", m.event.input.s("file_path"))
         assertEquals("ag", m.event.parent)
-        val r = parseMessage("""{"type":"event","event":{"id":"r","kind":"result","text":"ok","costUsd":0.25,"isError":false,"at":1}}""") as ServerMessage.Event
-        assertEquals(0.25, r.event.costUsd, 1e-9)
+        val r = parseMessage("""{"type":"event","event":{"id":"r","kind":"result","text":"ok","tokens":{"model":"gpt-5","input":100,"cachedInput":50,"cacheWrite":0,"output":20,"reasoning":5},"isError":false,"at":1}}""") as ServerMessage.Event
+        assertEquals(TurnTokens("gpt-5", 100, 50, 0, 20, 5), r.event.tokens)
     }
 
     @Test

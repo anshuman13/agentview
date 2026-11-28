@@ -2,7 +2,7 @@ import path from 'node:path';
 import type { AgentHost } from '../types.js';
 import { finishedEvents, planEvents, reasoningEvent, startedEvents } from './events.js';
 import { storeCall } from '../../usage/calls.js';
-import { addUsage, limitUntil, turnCall } from './usage.js';
+import { addUsage, limitUntil, turnCall, turnTokens } from './usage.js';
 import { LiveText } from '../liveText.js';
 import type { FileUpdateChange, ReasoningDeltaNotification, ThreadItem, TokenUsage, TokenUsageBreakdown, Turn, TurnPlanUpdatedNotification } from './protocol.js';
 
@@ -119,8 +119,10 @@ export class CodexStream {
     const ok = turn.status === 'completed';
     const text = ok ? this.lastText : turn.error?.message ?? `Turn ended: ${turn.status}`;
     this.lastText = '';
-    if (this.tokens) storeCall(turnCall(turn.id, this.threadId, this.host.state.session.model ?? null, this.tokens));
+    const model = this.host.state.session.model ?? null;
+    if (this.tokens) storeCall(turnCall(turn.id, this.threadId, model, this.tokens));
+    const tokens = this.tokens ? turnTokens(model ?? '', this.tokens) : undefined;
     this.tokens = null;
-    this.host.turnResult({ id: `${turn.id}:result`, ok, text, costUsd: 0, isError: turn.status === 'failed' });
+    this.host.turnResult({ id: `${turn.id}:result`, ok, text, ...(tokens && { tokens }), isError: turn.status === 'failed' });
   }
 }

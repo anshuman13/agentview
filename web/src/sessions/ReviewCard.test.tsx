@@ -14,7 +14,7 @@ stubGlobal('location', { search: '', hash: '' });
 const { ReviewCard, ReviewFiles } = await import('./ReviewCard');
 const { postRunApprove, postRunDiscard, postRunRevise } = await import('./sessionApi');
 
-const run = { id: 'r1', kind: 'job', sessionId: 's', chatId: 'c', title: 'Fix the parser', what: '', startedAt: Date.now(), endedAt: null, state: 'paused', why: 'Ready for review', round: 1, max: 1, nextAt: null, costUsd: 0, needsYou: true, branch: 'job/fix-parser', review: 'pending', rounds: [{ n: 1, at: Date.now(), outcome: 'done', line: 'Patched the parser', costUsd: 0 }] } as ChatRun;
+const run = { id: 'r1', kind: 'job', sessionId: 's', chatId: 'c', title: 'Fix the parser', what: '', startedAt: Date.now(), endedAt: null, state: 'paused', why: 'Ready for review', round: 1, max: 1, nextAt: null, needsYou: true, branch: 'job/fix-parser', review: 'pending', rounds: [{ n: 1, at: Date.now(), outcome: 'done', line: 'Patched the parser' }] } as ChatRun;
 const diff: RunDiff = { base: 'main', diff: '', files: [1, 2, 3, 4, 5].map((n) => ({ path: `src/f${n}.ts`, additions: n, deletions: 0 })) };
 
 describe('review card', () => {

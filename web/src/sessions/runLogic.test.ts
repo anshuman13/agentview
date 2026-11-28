@@ -25,7 +25,7 @@ describe('askLine', () => {
 });
 
 describe('loopNow', () => {
-  const run = (rounds: { at: number; line: string }[], startedAt = 100) => ({ startedAt, nextAt: null, rounds: rounds.map((r) => ({ n: 1, outcome: 'progress', costUsd: 0, ...r })) }) as unknown as ChatRun;
+  const run = (rounds: { at: number; line: string }[], startedAt = 100) => ({ startedAt, nextAt: null, rounds: rounds.map((r) => ({ n: 1, outcome: 'progress', ...r })) }) as unknown as ChatRun;
   it('takes the newer of the status and the last round, and ignores a status from before the run', () => {
     expect(loopNow(run([{ at: 200, line: 'round' }]), { text: 'Working', at: 300, next: ['a', 'b'] })).toMatchObject({ source: 'status', title: 'Working', next: 'a', stepsLeft: 2 });
     expect(loopNow(run([{ at: 400, line: 'round' }]), { text: 'Working', at: 300 })).toMatchObject({ source: 'round', title: expect.stringMatching(/^Round 1 · \d\d:\d\d · progress: round$/) });

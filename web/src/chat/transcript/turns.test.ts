@@ -82,8 +82,8 @@ describe('buildTurns', () => {
   });
 
   it('totals the chat cost', () => {
-    const done = (costUsd: number): ChatEvent => ({ id: `d${at()}`, kind: 'result', text: 'ok', costUsd, isError: false, at: n });
-    expect(chatCost([user('a'), done(0), user('b'), done(2), user('c'), done(2.25), done(0.1)])).toBeCloseTo(2.35);
+    const done = (usd: number): ChatEvent => ({ id: `d${at()}`, kind: 'result', text: 'ok', tokens: { model: 'gpt-6-luna', input: 0, cachedInput: 0, cacheWrite: 0, output: usd * 2e6, reasoning: 0 }, isError: false, at: n });
+    expect(chatCost([user('a'), done(0), user('b'), done(2), user('c'), done(0.25), done(0.1)])).toBeCloseTo(2.35);
   });
 });
 

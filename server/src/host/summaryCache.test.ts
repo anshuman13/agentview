@@ -3,7 +3,7 @@ import { chatCost, costByModel } from '../../../shared/cost.js';
 import type { ChatEvent } from '../../../shared/protocol.js';
 import { costScans, costsOf, modelField } from './summaryCache.js';
 
-const result = (costUsd: number, model = 'm') => ({ kind: 'result', costUsd, at: Date.now(), model, durationMs: 1 }) as unknown as ChatEvent;
+const result = (output: number, model = 'm') => ({ kind: 'result', tokens: { model: 'gpt-6-luna', input: 0, cachedInput: 0, cacheWrite: 0, output: output * 1e6, reasoning: 0 }, at: Date.now(), model, durationMs: 1 }) as unknown as ChatEvent;
 const day = new Date().setHours(0, 0, 0, 0);
 
 afterEach(() => vi.restoreAllMocks());

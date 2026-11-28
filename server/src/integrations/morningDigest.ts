@@ -1,3 +1,4 @@
+import { dollars } from '../../../shared/prices.js';
 import type { ChatRun } from '../../../shared/protocol.js';
 import { APP, pushNtfy } from './notify.js';
 
@@ -13,7 +14,7 @@ export function morningDigest(runs: ChatRun[], since: number) {
   if (!hit.length) return null;
   const needs = hit.filter((r) => r.needsYou).length;
   const title = `Overnight: ${hit.length} ${hit.length === 1 ? 'run' : 'runs'}${needs ? `, ${needs} ${needs === 1 ? 'needs' : 'need'} you` : ''}`;
-  const body = hit.map((r) => `${r.title}: ${(r.state === 'done' ? r.why : r.rounds.at(-1)?.line) || r.why || r.state}, $${r.costUsd.toFixed(2)}${r.needsYou ? ', needs you' : ''}`).join('\n');
+  const body = hit.map((r) => `${r.title}: ${(r.state === 'done' ? r.why : r.rounds.at(-1)?.line) || r.why || r.state}, $${dollars(r.tokens).toFixed(2)}${r.needsYou ? ', needs you' : ''}`).join('\n');
   return { title, body };
 }
 

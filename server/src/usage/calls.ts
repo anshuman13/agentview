@@ -1,3 +1,4 @@
+import type { TurnTokens } from '../../../shared/prices.js';
 import { type CallRow, saveCall, type UsageKey } from './store.js';
 
 export type CallMessage = {
@@ -27,6 +28,11 @@ export function callRow(account: UsageKey, chat: string | null, message: CallMes
     cacheRead: u.cache_read_input_tokens ?? 0,
     guessed,
   };
+}
+
+// A Claude turn's tokens from its result's usage.
+export function claudeTokens(model: string, u: CallMessage['usage']): TurnTokens {
+  return { model, input: u?.input_tokens ?? 0, cachedInput: u?.cache_read_input_tokens ?? 0, cacheWrite: u?.cache_creation_input_tokens ?? 0, output: u?.output_tokens ?? 0, reasoning: 0 };
 }
 
 export function recordCall(account: UsageKey, chat: string | null, message: CallMessage, at = Date.now()) {

@@ -6,6 +6,7 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import no.pradhan.agentview.nativeapp.codex.codexZone
 import no.pradhan.agentview.nativeapp.net.ChatEvent
+import no.pradhan.agentview.nativeapp.net.dollars
 import no.pradhan.agentview.nativeapp.ops.Agent
 
 import no.pradhan.agentview.nativeapp.workspace.isMarkdown
@@ -183,17 +184,12 @@ fun editCount(name: String, input: JsonObject): Pair<Int, Int>? = when (name) {
 // shared/edits.ts editMarks: the added and removed counts as "+12" and "\u22123", each empty when 0.
 fun editMarks(add: Int, del: Int) = (if (add > 0) "+$add" else "") to (if (del > 0) "\u2212$del" else "")
 
-// A result carries the running total of its session, which starts over after /clear (web shared/cost.ts costRise).
-fun costRise(costUsd: Double, last: Double) = if (costUsd >= last) costUsd - last else costUsd
+// Dollars of one turn's result, from its tokens and the price table (web shared/cost.ts resultCost).
+fun resultCost(e: ChatEvent) = if (e.kind == "result") dollars(e.tokens) else 0.0
 
 fun chatCost(events: List<ChatEvent>): Double {
-    var last = 0.0
     var total = 0.0
-    for (e in events) {
-        if (e.kind != "result" || e.costUsd <= 0) continue
-        total += costRise(e.costUsd, last)
-        last = e.costUsd
-    }
+    for (e in events) total += resultCost(e)
     return total
 }
 

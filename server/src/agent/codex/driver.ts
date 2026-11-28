@@ -267,7 +267,7 @@ export class CodexDriver implements AgentDriver {
       if (!rpc) throw new Error('The codex process ended');
       // A new thread has its id only once the process is ready.
       if (title && this.threadId) void noteThread(this.threadId, { cwd: this.host.cwd, summary: text.replace(/\s+/g, ' ').trim().slice(0, 80) });
-      if (stops !== this.stops) return this.host.turnResult({ id: randomUUID(), ok: false, text: 'Stopped', costUsd: 0, isError: true });
+      if (stops !== this.stops) return this.host.turnResult({ id: randomUUID(), ok: false, text: 'Stopped', isError: true });
       // A steer that misses because the turn ended starts a new turn with the text.
       if (steer && (await this.steer(rpc, input))) {
         if (id) {
@@ -284,7 +284,7 @@ export class CodexDriver implements AgentDriver {
       if (stops !== this.stops) return void (await rpc.request('turn/interrupt', { threadId: this.threadId, turnId: turn.id }));
       if (steer && !this.host.state.session.running) this.host.turnStarted('Codex started a turn for your message');
     } catch (err) {
-      this.host.turnResult({ id: randomUUID(), ok: false, text: errText(err), costUsd: 0, isError: true });
+      this.host.turnResult({ id: randomUUID(), ok: false, text: errText(err), isError: true });
     }
   }
 
@@ -321,7 +321,7 @@ export class CodexDriver implements AgentDriver {
         await this.rpc!.request('thread/compact/start', { threadId: this.threadId });
       } catch (err) {
         this.host.compactFailed(errText(err));
-        this.host.turnResult({ id: randomUUID(), ok: true, text: '', costUsd: 0, isError: false });
+        this.host.turnResult({ id: randomUUID(), ok: true, text: '', isError: false });
       }
     });
   }
@@ -339,9 +339,9 @@ export class CodexDriver implements AgentDriver {
         this.titled = false;
         this.host.setSession({ sessionId: res.thread.id });
         void noteThread(res.thread.id, { cwd: this.host.cwd, ...(res.thread.path && { path: res.thread.path }) });
-        this.host.turnResult({ id: randomUUID(), ok: true, text: '', costUsd: 0, isError: false });
+        this.host.turnResult({ id: randomUUID(), ok: true, text: '', isError: false });
       } catch (err) {
-        this.host.turnResult({ id: randomUUID(), ok: false, text: errText(err), costUsd: 0, isError: true });
+        this.host.turnResult({ id: randomUUID(), ok: false, text: errText(err), isError: true });
       }
     });
   }

@@ -1,4 +1,4 @@
-import { costRise } from '../../../shared/cost.js';
+import type { TurnTokens } from '../../../shared/prices.js';
 import { providerLabel } from '../../../shared/providers.js';
 import { clock } from '../../../shared/util.js';
 import type { TurnResult } from '../agent/types.js';
@@ -11,8 +11,7 @@ export class Turn {
   count = 0;
   lastResult = '';
   lastError = false;
-  cost = 0;
-  private lastCost = 0;
+  tokens: TurnTokens | undefined;
   // A message sent mid-turn missed the turn's last step, so the CLI starts a turn for it.
   private expectTurn = false;
   // The waiting message Send now stopped the turn for, until that turn's result arrives.
@@ -63,16 +62,11 @@ export class Turn {
     this.lastResult = r.ok ? r.text : '';
     this.lastError = !r.ok || Boolean(r.isError);
     s.failed = this.lastError;
-    this.noteCost(r.costUsd);
-    s.pushEvent({ id: r.id, kind: 'result', text: r.text, costUsd: r.costUsd, isError: r.isError, at: Date.now(), model: s.state.session.model });
+    this.tokens = r.tokens;
+    s.pushEvent({ id: r.id, kind: 'result', text: r.text, ...(r.tokens && { tokens: r.tokens }), isError: r.isError, at: Date.now(), model: s.state.session.model });
     s.links.record(r);
     if (cancelled) this.resend(cancelled);
     this.ended();
-  }
-
-  private noteCost(costUsd: number) {
-    this.cost = costUsd > 0 ? costRise(costUsd, this.lastCost) : 0;
-    if (costUsd > 0) this.lastCost = costUsd;
   }
 
   // The stop ended the turn with the waiting message in it unanswered, so it goes again as the next prompt, below the stopped turn.
@@ -114,7 +108,7 @@ export class Turn {
     s.usage.clear();
     this.lastResult = '';
     this.lastError = false;
-    this.cost = 0;
+    this.tokens = undefined;
     if (idle && !s.state.session.running && !s.state.pending.length) s.onIdle?.();
   }
 
@@ -137,7 +131,7 @@ export class Turn {
     // Closing the chat also ends the CLI; a job run stays open so its review or a reopened chat can take it back.
     const job = s.closed ? undefined : s.runs.jobFor(s.id);
     if (job && job.review !== 'pending') {
-      s.runs.addRound(job.id, { n: 1, outcome: 'failed', line: `${providerLabel(s.driver.provider)} exited`, costUsd: 0, sessionId: s.state.session.sessionId ?? undefined });
+      s.runs.addRound(job.id, { n: 1, outcome: 'failed', line: `${providerLabel(s.driver.provider)} exited`, sessionId: s.state.session.sessionId ?? undefined });
       s.runs.end(job.id, 'exited');
     }
     // Queued messages are not lost with the process; the first one starts a fresh CLI.

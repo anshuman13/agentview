@@ -4,6 +4,7 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import no.pradhan.agentview.nativeapp.net.ChatEvent
+import no.pradhan.agentview.nativeapp.net.TurnTokens
 import no.pradhan.agentview.nativeapp.ops.Agent
 import no.pradhan.agentview.nativeapp.ui.Tokens
 import org.junit.Assert.assertEquals
@@ -26,7 +27,7 @@ class StepsTest {
 
     @Test
     fun hidesSetStatusAndEmptyAssistantRows() {
-        val items = buildTranscript(listOf(use("s", "mcp__agentview__set_status"), ChatEvent("a", "assistant", text = "  "), ChatEvent("r", "result", costUsd = 1.0)))
+        val items = buildTranscript(listOf(use("s", "mcp__agentview__set_status"), ChatEvent("a", "assistant", text = "  "), ChatEvent("r", "result")))
         assertTrue(items.isEmpty())
     }
 
@@ -98,9 +99,9 @@ class StepsTest {
     }
 
     @Test
-    fun costSumsTheRiseOfARunningTotal() {
-        val r = { c: Double -> ChatEvent("r$c", "result", costUsd = c) }
-        assertEquals(0.5 + 0.3 + 0.2, chatCost(listOf(r(0.5), r(0.8), r(0.2))), 1e-9)
+    fun costAddsEachResultPricedFromItsTokens() {
+        val r = { c: Double -> ChatEvent("r$c", "result", tokens = TurnTokens("gpt-6-luna", output = Math.round(c * 2e6))) }
+        assertEquals(0.5 + 0.8 + 0.2, chatCost(listOf(r(0.5), r(0.8), r(0.2))), 1e-9)
     }
 
     @Test

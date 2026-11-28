@@ -10,6 +10,7 @@ import no.pradhan.agentview.nativeapp.net.LiveRun
 import no.pradhan.agentview.nativeapp.net.Queued
 import no.pradhan.agentview.nativeapp.net.Round
 import no.pradhan.agentview.nativeapp.net.RunTry
+import no.pradhan.agentview.nativeapp.net.dollars
 import no.pradhan.agentview.nativeapp.net.protocolJson
 import no.pradhan.agentview.nativeapp.ui.plural
 import no.pradhan.agentview.nativeapp.sessions.state
@@ -89,7 +90,7 @@ fun tryColumn(run: ChatRun, t: RunTry, live: List<LiveChat>): TryColumn {
         last.outcome == "failed" -> "Failed"
         else -> "Done"
     }
-    return TryColumn(t.n, t.branch, state, last?.line?.replace(Regex("^Try \\d+: "), "") ?: chat?.last ?: "", chat?.edits, chat?.cost ?: rounds.sumOf { it.costUsd }, t.dropped)
+    return TryColumn(t.n, t.branch, state, last?.line?.replace(Regex("^Try \\d+: "), "") ?: chat?.last ?: "", chat?.edits, chat?.cost ?: rounds.sumOf { dollars(it.tokens) }, t.dropped)
 }
 
 private fun roundOutcome(r: Round) = when {

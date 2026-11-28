@@ -144,16 +144,15 @@ private class Span(val at: Long) {
     var cost = 0.0
 }
 
-// Each prompt's time, the time of its last result and the cost its results add over the result before them (the first loaded result has none); rows before the first prompt belong to "".
-private fun spans(events: List<ChatEvent>, lastCost: Double?): Map<String, Span> {
+// Each prompt's time, the time of its last result and the cost of its results' tokens; rows before the first prompt belong to "".
+private fun spans(events: List<ChatEvent>): Map<String, Span> {
     val out = HashMap<String, Span>()
     var cur = Span(events.firstOrNull()?.at ?: 0L).also { out[""] = it }
-    var last = lastCost
     for (e in events) {
         if (e.kind == "user") cur = Span(e.at).also { out[e.id] = it }
         else if (e.kind == "result") {
             cur.end = e.at
-            if (e.costUsd > 0) { last?.let { cur.cost += costRise(e.costUsd, it) }; last = e.costUsd }
+            cur.cost += resultCost(e)
         }
     }
     return out
@@ -185,7 +184,7 @@ private fun workOf(items: List<Item>, span: Span): Work {
 }
 
 // Splits the rows into turns, one per prompt, and moves the work of each into one fold placed above its last reply, or at its end while there is no reply.
-fun foldTurns(items: List<Item>, events: List<ChatEvent>): List<FoldRow> = foldGroups(items, events, docCardIds(items), null, true)
+fun foldTurns(items: List<Item>, events: List<ChatEvent>): List<FoldRow> = foldGroups(items, events, docCardIds(items), true)
 
 private fun <T> samePrefix(a: List<T>, b: List<T>, n: Int) = a.size >= n && b.size >= n && (0 until n).all { a[it] === b[it] }
 
@@ -200,14 +199,13 @@ fun foldTurns(items: List<Item>, events: List<ChatEvent>, prevItems: List<Item>,
     if ((0 until itemCut).any { (items[it].id in cards) != (items[it].id in prevCards) }) return foldTurns(items, events)
     val head = prevFolds.indexOfFirst { it is FoldRow.Row && it.it.id == events[cut].id }
     if (head < 0) return foldTurns(items, events)
-    val lastCost = (cut - 1 downTo 0).firstNotNullOfOrNull { events[it].takeIf { e -> e.kind == "result" && e.costUsd > 0 }?.costUsd }
-    return prevFolds.subList(0, head) + foldGroups(items.subList(itemCut, items.size), events.subList(cut, events.size), cards, lastCost, true)
+    return prevFolds.subList(0, head) + foldGroups(items.subList(itemCut, items.size), events.subList(cut, events.size), cards, true)
 }
 
-// foldTurns over a run of whole turns; lastCost is the cost of the result before them, endsChat whether the run's last turn is the chat's last.
-private fun foldGroups(items: List<Item>, events: List<ChatEvent>, cards: Set<String>, lastCost: Double?, endsChat: Boolean): List<FoldRow> {
+// foldTurns over a run of whole turns; endsChat says whether the run's last turn is the chat's last.
+private fun foldGroups(items: List<Item>, events: List<ChatEvent>, cards: Set<String>, endsChat: Boolean): List<FoldRow> {
     val prompts = events.filter { it.kind == "user" }.mapTo(HashSet()) { it.id }
-    val span = spans(events, lastCost)
+    val span = spans(events)
     val steps = stepsByTurn(events)
     val thoughts = thoughtsByTurn(events)
     val groups = mutableListOf<MutableList<Item>>()

@@ -39,7 +39,7 @@ type HistoryState = {
 };
 
 function endTurn(st: HistoryState) {
-  if (st.inTurn) st.events.push({ id: `${st.prev}:result`, kind: 'result', text: st.lastText, costUsd: 0, isError: false, at: st.lastAt });
+  if (st.inTurn) st.events.push({ id: `${st.prev}:result`, kind: 'result', text: st.lastText, isError: false, at: st.lastAt });
   st.inTurn = false;
 }
 

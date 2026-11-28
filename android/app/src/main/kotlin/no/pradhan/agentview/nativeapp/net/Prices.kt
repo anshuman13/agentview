@@ -65,3 +65,6 @@ fun costOf(t: TurnTokens): Double? {
     val p = priceOf(t.model) ?: return null
     return (t.input * p.input + t.cachedInput * p.cachedInput + t.cacheWrite * p.cacheWrite + t.output * p.output) / 1e6
 }
+
+// Dollars for tokens that may be missing or unpriced, 0 then.
+fun dollars(t: TurnTokens?): Double = t?.let { costOf(it) } ?: 0.0

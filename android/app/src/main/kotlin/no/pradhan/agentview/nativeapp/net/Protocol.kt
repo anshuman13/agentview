@@ -41,7 +41,7 @@ data class ChatEvent(
     val toolUseId: String = "",
     val parent: String? = null,
     val agent: String? = null,
-    val costUsd: Double = 0.0,
+    val tokens: TurnTokens? = null,
     val model: String? = null,
     val stopping: Boolean = false,
     val stopped: Boolean = false,
@@ -151,7 +151,7 @@ data class LiveRun(
 
 // shared/protocol.ts Round and ChatRun, the entries of the 'runs' message.
 @Serializable
-data class Round(val n: Int = 0, val at: Long = 0, val outcome: String = "", val line: String = "", val costUsd: Double = 0.0)
+data class Round(val n: Int = 0, val at: Long = 0, val outcome: String = "", val line: String = "", val tokens: TurnTokens? = null)
 
 // One earlier session of a chat, as /api/chat/subchats returns it (web chat/transcript/subChatsLogic.ts SubChat).
 @Serializable
@@ -187,7 +187,7 @@ data class ChatRun(
     val round: Int = 0,
     val nextAt: Long? = null,
     val provider: String? = null,
-    val costUsd: Double = 0.0,
+    val tokens: TurnTokens? = null,
     val rounds: List<Round> = emptyList(),
     val tries: List<RunTry> = emptyList(),
     val needsYou: Boolean = false,

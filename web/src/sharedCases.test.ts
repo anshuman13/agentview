@@ -695,7 +695,7 @@ describe('cases shared with the Android app', () => {
     it(`latestTodos: ${c.name}`, () => expect(latestTodos(c.events as ChatEvent[])).toEqual(c.expected));
   }
 
-  const run = (over: Partial<ChatRun>): ChatRun => ({ id: 'r', kind: 'job', sessionId: 's', chatId: 'c', title: '', what: '', startedAt: 1, endedAt: null, state: 'running', why: '', round: 0, max: 0, nextAt: null, costUsd: 0, rounds: [], needsYou: false, ...over });
+  const run = (over: Partial<ChatRun>): ChatRun => ({ id: 'r', kind: 'job', sessionId: 's', chatId: 'c', title: '', what: '', startedAt: 1, endedAt: null, state: 'running', why: '', round: 0, max: 0, nextAt: null, rounds: [], needsYou: false, ...over });
 
   for (const c of cases<{ name: string; run: Partial<ChatRun>; expected: string }>('stopped-text')) {
     it(`stoppedText: ${c.name}`, () => expect(stoppedText(run(c.run))).toBe(c.expected));
@@ -843,7 +843,7 @@ describe('cases shared with the Android app', () => {
   type TryCase = { name: string; run: { rounds: Partial<ChatRun['rounds'][number]>[] }; try: Partial<Try>; live: Partial<LiveChat>[]; expected: { n: number; branch: string; state: string; line: string; edits: { add: number; del: number } | null; cost: number; archived: boolean } };
   for (const c of cases<TryCase>('try-column')) {
     it(`tryColumn: ${c.name}`, () => {
-      const col = tryColumn(run({ rounds: c.run.rounds.map((r) => ({ n: 0, at: 0, outcome: 'done', line: '', costUsd: 0, ...r })) }), { chatId: '', ...c.try } as Try, c.live as LiveChat[]);
+      const col = tryColumn(run({ rounds: c.run.rounds.map((r) => ({ n: 0, at: 0, outcome: 'done', line: '', ...r })) }), { chatId: '', ...c.try } as Try, c.live as LiveChat[]);
       const state = col.state.status === 'waiting' ? col.state.label : col.state.status === 'skipped' ? col.state.reason : { running: 'Running', failed: 'Failed', done: 'Done' }[col.state.status as string];
       expect({ ...col, state, edits: col.edits ?? null }).toEqual(c.expected);
     });

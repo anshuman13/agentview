@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { readJsonSync, writeJsonSync } from '../json.js';
 import { roundOf } from '../../../shared/edits.js';
+import { addTokens, type TurnTokens } from '../../../shared/prices.js';
 import type { ChatRun, Round, RoundOutcome } from '../../../shared/protocol.js';
 import { APPROVE, BLOCKED, FAILED } from '../../../shared/build.js';
 
@@ -88,7 +89,7 @@ export class Runs {
   }
 
   start(init: NewRun) {
-    const run: ChatRun = { round: 0, max: 0, nextAt: null, ...init, id: randomUUID(), startedAt: Date.now(), endedAt: null, state: 'running', why: '', costUsd: 0, rounds: [], needsYou: false };
+    const run: ChatRun = { round: 0, max: 0, nextAt: null, ...init, id: randomUUID(), startedAt: Date.now(), endedAt: null, state: 'running', why: '', rounds: [], needsYou: false };
     this.runs.push(run);
     this.touch();
     return run.id;
@@ -120,13 +121,13 @@ export class Runs {
     const run = this.get(id);
     if (!run || run.state === 'done') return;
     run.rounds.push({ ...round, at: Date.now() });
-    run.costUsd += round.costUsd;
+    run.tokens = addTokens(run.tokens, round.tokens);
     run.asked = round.outcome === 'blocked' || round.outcome === 'question';
     this.touch();
   }
 
   // A turn of a try chat ends: its report is a round of the tries run. The last try to report fires onReported once.
-  reportTry(sessionId: string, report: { outcome: RoundOutcome; line: string; costUsd: number }) {
+  reportTry(sessionId: string, report: { outcome: RoundOutcome; line: string; tokens?: TurnTokens }) {
     const run = this.runs.find((r) => r.state !== 'done' && openTries(r).some((t) => t.sessionId === sessionId));
     const n = run && openTries(run).find((t) => t.sessionId === sessionId)?.n;
     if (!run || !n) return;

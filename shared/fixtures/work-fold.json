@@ -44,7 +44,6 @@
         "id": "d1",
         "kind": "result",
         "text": "",
-        "costUsd": 0.4,
         "isError": false,
         "at": 6000
       }
@@ -303,7 +302,7 @@
       {"id": "t5", "kind": "tool_use", "name": "mcp__agentview__wiki_propose", "input": {"text": "Broken"}, "summary": "", "at": 6000},
       {"id": "r5", "kind": "tool_result", "toolUseId": "t5", "text": "Proposed [c5] for the user to approve.", "isError": true, "at": 6100},
       {"id": "a1", "kind": "assistant", "text": "done", "streaming": false, "at": 7000},
-      {"id": "d1", "kind": "result", "text": "", "costUsd": 0.1, "isError": false, "at": 8000},
+      {"id": "d1", "kind": "result", "text": "", "isError": false, "at": 8000},
       {"id": "u2", "kind": "user", "text": "ls", "at": 9000},
       {"id": "t6", "kind": "tool_use", "name": "Bash", "input": {"command": "ls"}, "summary": "ls", "at": 9100},
       {"id": "r6", "kind": "tool_result", "toolUseId": "t6", "text": "Proposed [c6]", "isError": false, "at": 9200},

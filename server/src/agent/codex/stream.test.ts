@@ -64,7 +64,7 @@ describe('CodexStream', () => {
 
   it('ends the turn with the last reply and records the context size', () => {
     const { results, session } = run();
-    expect(results).toEqual([{ id: 'turn1:result', ok: true, text: 'Added the greeting.', costUsd: 0, isError: false }]);
+    expect(results).toEqual([{ id: 'turn1:result', ok: true, text: 'Added the greeting.', tokens: { model: '', input: 400, cachedInput: 600, cacheWrite: 40, output: 234, reasoning: 120 }, isError: false }]);
     expect(session).toEqual([{ context: 1234, contextWindow: 200000 }]);
   });
 
@@ -72,7 +72,7 @@ describe('CodexStream', () => {
     const { stream, results } = run();
     results.length = 0;
     stream.handle('turn/completed', { turn: { id: 'turn2', status: 'failed', error: { message: 'usage limit' }, items: [] } });
-    expect(results).toEqual([{ id: 'turn2:result', ok: false, text: 'usage limit', costUsd: 0, isError: true }]);
+    expect(results).toEqual([{ id: 'turn2:result', ok: false, text: 'usage limit', isError: true }]);
   });
 });
 

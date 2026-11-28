@@ -19,6 +19,6 @@ export function jobRepo() {
   sh(repo, 'update-ref', 'refs/remotes/origin/main', 'HEAD');
   sh(repo, 'symbolic-ref', 'refs/remotes/origin/HEAD', 'refs/remotes/origin/main');
   sh(repo, 'worktree', 'add', '-q', '-b', branch, dir, 'origin/main');
-  const run: ChatRun = { id: 'r1', kind: 'job', sessionId: 's1', chatId: 'c1', title: 'Fix the test', what: 'w', startedAt: 0, endedAt: null, state: 'paused', why: 'Ready for review', round: 0, max: 0, nextAt: null, costUsd: 0, rounds: [], needsYou: true, repo, worktree: dir, branch, paseo: false, review: 'pending' };
+  const run: ChatRun = { id: 'r1', kind: 'job', sessionId: 's1', chatId: 'c1', title: 'Fix the test', what: 'w', startedAt: 0, endedAt: null, state: 'paused', why: 'Ready for review', round: 0, max: 0, nextAt: null, rounds: [], needsYou: true, repo, worktree: dir, branch, paseo: false, review: 'pending' };
   return { root, repo, dir, branch, run };
 }

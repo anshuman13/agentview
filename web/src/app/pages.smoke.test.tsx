@@ -26,7 +26,7 @@ const { SketchFrame, SketchList, Sketches, ThumbFrame } = await import('../works
 
 describe('page smoke', () => {
   it('the rail head of a job run waiting for review is its review card', () => {
-    store.runs = [{ id: 'r1', kind: 'job', sessionId: 's', chatId: 'c1', title: 'Fix the parser', what: '', startedAt: 1, endedAt: null, state: 'paused', why: '', round: 1, max: 1, nextAt: null, costUsd: 0, needsYou: true, branch: 'job/fix-parser', review: 'pending', rounds: [] }];
+    store.runs = [{ id: 'r1', kind: 'job', sessionId: 's', chatId: 'c1', title: 'Fix the parser', what: '', startedAt: 1, endedAt: null, state: 'paused', why: '', round: 1, max: 1, nextAt: null, needsYou: true, branch: 'job/fix-parser', review: 'pending', rounds: [] }];
     const html = renderToStaticMarkup(<RailHead />);
     expect(html).toContain('Commit, push and open a PR');
   });

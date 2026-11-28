@@ -45,7 +45,7 @@
     { "id": "t5", "kind": "tool_use", "name": "mcp__agentview__set_status", "input": { "text": "Fixing", "done": "Read the code", "next": ["Fix the bug"] }, "summary": "", "at": 5000 },
     { "id": "t6", "kind": "tool_use", "name": "mcp__agentview__set_status", "input": { "text": "Done", "done": "Fix the bug", "next": [] }, "summary": "", "at": 5500 },
     { "id": "a1", "kind": "assistant", "text": "Fixed the session length in `login.ts`:\n\n```ts\nconst ttl = 3600;\nconst user = find(id);\nreturn user;\n```\n\nThe login now keeps the user signed in for an hour.", "streaming": false, "at": 6000 },
-    { "id": "res1", "kind": "result", "text": "", "costUsd": 0.12, "isError": false, "at": 6500 },
+    { "id": "res1", "kind": "result", "text": "", "isError": false, "at": 6500 },
     { "id": "u2", "kind": "user", "text": "Now run the tests", "at": 10000 },
     { "id": "t7", "kind": "tool_use", "name": "mcp__agentview__set_status", "input": { "text": "Running the tests", "next": ["Run the tests", "Report"] }, "summary": "", "at": 11000 },
     { "id": "t8", "kind": "tool_use", "name": "Bash", "input": { "command": "bun test", "description": "Run tests" }, "summary": "bun test", "at": 12000 },

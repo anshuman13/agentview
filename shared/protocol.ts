@@ -1,3 +1,5 @@
+import type { TurnTokens } from './prices.js';
+
 
 export type PendingQuestion = {
   id: string;
@@ -57,7 +59,7 @@ export type ChatEvent =
   | { id: string; kind: 'assistant'; text: string; streaming: boolean; at: number; parent?: string }
   | { id: string; kind: 'tool_use'; name: string; input: Record<string, unknown>; summary: string; at: number; parent?: string; agent?: string }
   | { id: string; kind: 'tool_result'; toolUseId: string; text: string; isError: boolean; at: number; parent?: string; stopped?: boolean }
-  | { id: string; kind: 'result'; text: string; costUsd: number; isError: boolean; at: number; model?: string | null }
+  | { id: string; kind: 'result'; text: string; tokens?: TurnTokens; isError: boolean; at: number; model?: string | null }
   | { id: string; kind: 'system'; text: string; at: number; error?: boolean; reset?: number; from?: string }
   | { id: string; kind: 'status'; text: string; at: number; done?: string; next?: string[] }
   | { id: string; kind: 'review'; files: ReviewFile[]; result?: string; at: number }
@@ -164,7 +166,7 @@ export const BIG_BRO = 'big-bro';
 
 export type RoundOutcome = 'done' | 'progress' | 'blocked' | 'question' | 'quiet' | 'failed';
 export type RunOp = 'stop' | 'pause' | 'resume';
-export type Round = { n: number; at: number; outcome: RoundOutcome; line: string; costUsd: number; sessionId?: string };
+export type Round = { n: number; at: number; outcome: RoundOutcome; line: string; tokens?: TurnTokens; sessionId?: string };
 
 // One chat of a /tries run: its Claude session, and the worktree branch it works on. A kept try archives the others.
 export type Try = { n: number; chatId: string; sessionId: string; branch: string; dropped?: boolean };
@@ -185,7 +187,7 @@ export type ChatRun = {
   max: number;
   nextAt: number | null;
   provider?: Provider;
-  costUsd: number;
+  tokens?: TurnTokens;
   rounds: Round[];
   asked?: boolean;
   tries?: Try[];

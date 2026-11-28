@@ -2,7 +2,10 @@ import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it } from 'bun:test';
+import { dollars, type TurnTokens } from '../../../shared/prices.js';
 import { Runs, WAITING, firstSentence, openTries, roundResult } from './runs.js';
+
+const usd = (n: number): TurnTokens => ({ model: 'gpt-6-luna', input: 0, cachedInput: 0, cacheWrite: 0, output: n * 2e6, reasoning: 0 });
 
 const dir = mkdtempSync(path.join(os.tmpdir(), 'runs-'));
 afterEach(() => rmSync(path.join(dir, 'runs.json'), { force: true }));
@@ -22,7 +25,7 @@ describe('roundResult', () => {
 });
 
 describe('Runs needsYou', () => {
-  const round = (n: number, outcome: 'blocked' | 'progress') => ({ n, outcome, line: '', costUsd: 0 });
+  const round = (n: number, outcome: 'blocked' | 'progress') => ({ n, outcome, line: '' });
 
   it('is set by a blocked or question round and cleared by a later round or a user message', () => {
     const runs = new Runs();
@@ -76,7 +79,7 @@ describe('Runs', () => {
     const file = path.join(dir, 'runs.json');
     const runs = new Runs(file);
     const keep = runs.start(init);
-    for (let n = 1; n <= 60; n++) runs.addRound(keep, { n, outcome: 'progress', line: `r${n}`, costUsd: 0.5 });
+    for (let n = 1; n <= 60; n++) runs.addRound(keep, { n, outcome: 'progress', line: `r${n}`, tokens: usd(0.5) });
     for (let i = 0; i < 105; i++) runs.end(runs.start(init), `ended ${i}`);
     runs.flush();
     const saved = JSON.parse(readFileSync(file, 'utf8'));
@@ -85,7 +88,7 @@ describe('Runs', () => {
     const active = new Runs(file).get(keep)!;
     expect(active.rounds).toHaveLength(50);
     expect(active.rounds[0].n).toBe(11);
-    expect(active.costUsd).toBe(30);
+    expect(dollars(active.tokens)).toBeCloseTo(30);
     expect(runs.list()).toHaveLength(101);
   });
 
@@ -114,21 +117,21 @@ describe('Runs', () => {
     const id = runs.start(init);
     runs.end(id, 'you stopped it');
     runs.end(id, 'chat closed');
-    runs.addRound(id, { n: 1, outcome: 'done', line: '', costUsd: 1 });
-    expect(runs.get(id)).toMatchObject({ state: 'done', why: 'you stopped it', rounds: [], costUsd: 0 });
+    runs.addRound(id, { n: 1, outcome: 'done', line: '', tokens: usd(1) });
+    expect(runs.get(id)).toMatchObject({ state: 'done', why: 'you stopped it', rounds: [] });
   });
 });
 
 describe('Runs tries', () => {
   const tries = [1, 2, 3].map((n) => ({ n, chatId: `c${n}`, sessionId: `s${n}`, branch: `tries/x-${n}` }));
-  const report = { outcome: 'done', line: 'ok', costUsd: 1 } as const;
+  const report = { outcome: 'done', line: 'ok', tokens: usd(1) } as const;
 
   it('records each child report as a round of the parent run, prefixed with the try number', () => {
     const runs = new Runs();
     const id = runs.start({ ...init, kind: 'tries', tries });
     runs.reportTry('s2', { ...report, line: 'works' });
     runs.reportTry('other', report);
-    expect(runs.get(id)).toMatchObject({ costUsd: 1, rounds: [{ n: 2, line: 'Try 2: works', outcome: 'done' }] });
+    expect(runs.get(id)).toMatchObject({ tokens: usd(1), rounds: [{ n: 2, line: 'Try 2: works', outcome: 'done' }] });
   });
 
   it('fires once, when the last try reports', () => {

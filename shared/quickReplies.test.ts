@@ -11,7 +11,7 @@ it('offers quick replies only after a finished question from the agent', () => {
   expect(quickReplies([user, say('Should I push it?', true)])).toEqual([]);
   expect(quickReplies([user, say('Done.')])).toEqual([]);
   expect(quickReplies([say('Should I?'), user])).toEqual([]);
-  expect(quickReplies([user, say('Ok?'), { id: 'r', kind: 'result', text: '', costUsd: 0, isError: false, at: 0 }])).toEqual(QUICK_REPLIES);
+  expect(quickReplies([user, say('Ok?'), { id: 'r', kind: 'result', text: '', isError: false, at: 0 }])).toEqual(QUICK_REPLIES);
 });
 
 it('offers the choices the question names', () => {

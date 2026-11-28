@@ -23,7 +23,7 @@ import { continuedTurn } from './subagents.js';
 import { StreamText } from './stream.js';
 import { historyFrom } from './transcript.js';
 import { OPENROUTER_PREFIX } from '../../../../shared/openrouter.js';
-import { recordCall } from '../../usage/calls.js';
+import { claudeTokens, recordCall } from '../../usage/calls.js';
 import { forkAt } from './forkAt.js';
 import { addedDirs, saveAddedDirs } from './addedDirs.js';
 
@@ -473,6 +473,6 @@ export class ClaudeDriver implements AgentDriver {
   private onResult(msg: Extract<SDKMessage, { type: 'result' }>) {
     this.live.end();
     const ok = msg.subtype === 'success';
-    this.host.turnResult({ id: msg.uuid, ok, text: ok ? msg.result : `Turn ended: ${msg.subtype}${'errors' in msg && msg.errors[0] ? `: ${msg.errors[0]}` : ''}`, costUsd: this.openrouter ? 0 : msg.total_cost_usd, isError: msg.is_error });
+    this.host.turnResult({ id: msg.uuid, ok, text: ok ? msg.result : `Turn ended: ${msg.subtype}${'errors' in msg && msg.errors[0] ? `: ${msg.errors[0]}` : ''}`, tokens: claudeTokens(this.state.session.model ?? '', msg.usage), isError: msg.is_error });
   }
 }

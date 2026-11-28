@@ -10,7 +10,7 @@ const user = (text: string): ChatEvent => ({ id: `u${at()}`, kind: 'user', text,
 const say = (text: string): ChatEvent => ({ id: `a${at()}`, kind: 'assistant', text, streaming: false, at: n });
 const tool = (name: string, input: Record<string, unknown> = {}): ChatEvent => ({ id: `t${at()}`, kind: 'tool_use', name, input, summary: name, at: n });
 const result = (toolUseId: string, isError = false, text = 'ok'): ChatEvent => ({ id: `r${at()}`, kind: 'tool_result', toolUseId, text, isError, at: n });
-const done = (costUsd: number): ChatEvent => ({ id: `d${at()}`, kind: 'result', text: '', costUsd, isError: false, at: n });
+const done = (usd: number): ChatEvent => ({ id: `d${at()}`, kind: 'result', text: '', tokens: { model: 'gpt-6-luna', input: 0, cachedInput: 0, cacheWrite: 0, output: usd * 2e6, reasoning: 0 }, isError: false, at: n });
 const fold = (events: ChatEvent[]): FoldRow[] => foldTurns(buildTranscript(events), events);
 const kinds = (rows: FoldRow[]) => rows.map((r) => (r.kind === 'fold' ? 'fold' : r.it.kind));
 const work = { tools: 12, files: 3, agents: 1, failed: 0, ms: 120_000, cost: 0.4 };
@@ -146,10 +146,10 @@ describe('foldTurns', () => {
     expect(first.work.ms).toBe(events.find((e) => e.kind === 'result')!.at - events[0].at);
   });
 
-  it('adds the rise over the previous loaded result, and none for the first loaded result', () => {
-    const events = [user('go'), tool('Bash'), say('ok'), done(52), user('again'), tool('Bash'), say('hi'), done(52.3)];
+  it('prices each turn from its own results', () => {
+    const events = [user('go'), tool('Bash'), say('ok'), done(0.5), user('again'), tool('Bash'), say('hi'), done(0.25), done(0.05)];
     const costs = fold(events).flatMap((r) => (r.kind === 'fold' ? [r.work.cost] : []));
-    expect(costs[0]).toBe(0);
+    expect(costs[0]).toBeCloseTo(0.5);
     expect(costs[1]).toBeCloseTo(0.3);
   });
 });

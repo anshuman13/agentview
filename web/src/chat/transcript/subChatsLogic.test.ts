@@ -31,7 +31,7 @@ describe('subChatRow', () => {
     sessionId: 's1',
     title: taskBrief(SPEC, 1, 3, true),
     startedAt: 1,
-    round: { n: 1, at: 2, outcome: 'done', line: 'added the store', costUsd: 0 },
+    round: { n: 1, at: 2, outcome: 'done', line: 'added the store' },
     commit: { hash: 'a1b2c3d4e5f6', subject: 'Add the store' },
   };
 
