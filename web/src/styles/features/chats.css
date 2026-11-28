@@ -167,4 +167,11 @@
 @media (min-width: 901px) { .as-sheet.gl-sheet { align-self: center; width: min(600px, 100%); } }
 .chat-build { display: flex; }
 .chat-build .ui-row { flex: 1; min-width: 0; min-height: 40px; padding-left: calc(var(--list-pad) + var(--lead-w) + var(--sp-6)); }
-.chat-build .ui-row-title { font-size: var(--fs-sm); }
+.chat-build .ui-row-title { font-size: var(--type-meta-size); }
+/* A chat and the build rows under it read as one group: one hairline under the last child, states in one column beside the More button. */
+@media (min-width: 901px) { .sessions .chat-build:has(> .ui-row) { padding: 0 var(--sp-4); } }
+@media (max-width: 900px) {
+  :is(.as-swipe, .chat-row):has(+ .chat-build) .ui-row-wrap::after { display: none; }
+  .chat-build:not(:has(+ .chat-build)) > :is(.ui-row, .ui-row-wrap)::after { display: block; }
+}
+@media not ((hover: hover) and (pointer: fine)) { .chat-build > .ui-row { padding-right: calc(2 * var(--list-pad) + var(--touch)); } }
