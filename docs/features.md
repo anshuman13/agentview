@@ -325,9 +325,10 @@ cost so far. The status bar usage tooltip adds a Spend block with today's and th
   /api/sessions/search, newest first, at most 3 per chat); a Messages section lists the matching text with the chat,
   You or Claude and the age, and a tap opens that chat, like Slack's message search. The web sidebar Sessions search
   shows the same Messages list under the repos
-- Hovering a sent prompt in the web transcript shows when it was sent ("Sent 5m", "Sent 14:20", "Sent Nov 3 14:20"),
-  then Use again, which puts that prompt in the composer to edit and send again (like editing a Slack message). On the
-  phone a long press on a prompt opens a menu with Use again (not in read-only mode). Queued and stopping prompts have none of these (a queued one has Send now).
+- Hovering a sent prompt in the web transcript shows a muted sent time (Just now, 5m, 2h, then the date such as 27 Nov,
+  with the year when it is not this year; sentAt, shared sent-at cases), then Use again, which puts that prompt in the
+  composer to edit and send again (like editing a Slack message). On the phone a long press on a prompt opens a menu
+  headed "Sent 5m" with Use again (not in read-only mode). Queued and stopping prompts have none of these (a queued one has Send now).
 - On the phone, Use again on a sent prompt focuses the composer with the cursor at the end and the keyboard up, as every insert does on web.
 - A code block with a language names it in
   muted text at its top left, and Copy shows the "Code copied" snack (web and Android), also in a Markdown file in the

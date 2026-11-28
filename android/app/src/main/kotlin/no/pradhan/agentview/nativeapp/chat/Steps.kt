@@ -289,6 +289,20 @@ fun dayDividers(items: List<Item>, now: Long, zone: java.time.ZoneId = codexZone
     return out
 }
 
+private val MONTHS = listOf("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
+
+// web/src/chat/transcript/steps.ts sentAt: Just now, 5m, 2h, then the date.
+fun sentAt(at: Long, now: Long, zone: java.time.ZoneId = codexZone): String {
+    if (at <= 0) return ""
+    val m = maxOf(0L, (now - at) / 60_000)
+    if (m < 1) return "Just now"
+    if (m < 60) return "${m}m"
+    if (m < 1440) return "${m / 60}h"
+    val d = java.time.Instant.ofEpochMilli(at).atZone(zone).toLocalDate()
+    val day = "${d.dayOfMonth} ${MONTHS[d.monthValue - 1]}"
+    return if (d.year == java.time.Instant.ofEpochMilli(now).atZone(zone).year) day else "$day ${d.year}"
+}
+
 // The day label each row falls under, for the date pill shown while scrolling. Rows before the first divider have none.
 fun dayOfRows(items: List<Item>, days: Map<String, String>): Map<String, String> {
     val out = HashMap<String, String>()

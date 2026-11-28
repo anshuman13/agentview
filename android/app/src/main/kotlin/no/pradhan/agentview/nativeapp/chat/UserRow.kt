@@ -38,6 +38,7 @@ import no.pradhan.agentview.nativeapp.ui.ButtonSize
 import no.pradhan.agentview.nativeapp.ui.ButtonVariant
 import no.pradhan.agentview.nativeapp.ui.Menu
 import no.pradhan.agentview.nativeapp.ui.MenuItem
+import no.pradhan.agentview.nativeapp.ui.MenuLabel
 import no.pradhan.agentview.nativeapp.ui.Tokens
 import no.pradhan.agentview.nativeapp.ui.Type
 import no.pradhan.agentview.nativeapp.ui.av
@@ -72,6 +73,7 @@ internal fun UserRow(hub: Hub, it: Item.User, chat: String, readOnly: Boolean = 
     val menuable = !it.queued && !it.stopping && !hub.readOnly && !readOnly
     UserBubble(if (menuable) ({ haptic.performHapticFeedback(HapticFeedbackType.LongPress); menu = true }) else null) {
         Menu(menu, { menu = false }) {
+            if (it.at > 0) MenuLabel("Sent ${sentAt(it.at, System.currentTimeMillis())}")
             MenuItem("Use again", "reply", { menu = false; hub.useAgain(chat, it.text) })
         }
         Row(horizontalArrangement = Arrangement.spacedBy(Tokens.sp3)) {

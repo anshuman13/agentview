@@ -41,6 +41,7 @@ import no.pradhan.agentview.nativeapp.chat.Item
 import no.pradhan.agentview.nativeapp.chat.openAtNew
 import no.pradhan.agentview.nativeapp.chat.duration
 import no.pradhan.agentview.nativeapp.chat.dayDividers
+import no.pradhan.agentview.nativeapp.chat.sentAt
 import no.pradhan.agentview.nativeapp.chat.needsEarlier
 import no.pradhan.agentview.nativeapp.chat.blockedRule
 import no.pradhan.agentview.nativeapp.chat.canSwitchToAuto
@@ -369,6 +370,10 @@ class SharedCasesTest {
             val l = planStep(c.str("plan"), result)
             assertEquals(c.str("name"), listOf(c.str("verb"), c.str("object"), c.nullable("note")?.jsonPrimitive?.content), listOf(l.verb, l.obj, l.note))
         }
+    }
+
+    @Test fun sentAtCases() {
+        for (c in cases("sent-at")) assertEquals(c.str("name"), c.str("expected"), sentAt(c.getValue("at").jsonPrimitive.long, c.getValue("now").jsonPrimitive.long))
     }
 
     @Test fun dayDividerCases() {

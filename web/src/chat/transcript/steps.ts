@@ -252,6 +252,20 @@ export function dayDividers(items: Item[], now: number) {
   return out;
 }
 
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+// When a prompt was sent, for its hover row: Just now, 5m, 2h, then the date.
+export function sentAt(at: number, now: number) {
+  if (at <= 0) return '';
+  const m = Math.max(0, Math.floor((now - at) / 60_000));
+  if (m < 1) return 'Just now';
+  if (m < 60) return `${m}m`;
+  if (m < 1440) return `${Math.floor(m / 60)}h`;
+  const d = new Date(at);
+  const day = `${d.getDate()} ${MONTHS[d.getMonth()]}`;
+  return d.getFullYear() === new Date(now).getFullYear() ? day : `${day} ${d.getFullYear()}`;
+}
+
 export const isDocFile = (path: string) => /\.(md|markdown|mdx)$/i.test(path);
 
 // The item that holds each Markdown file's doc card: its latest successful write or edit. Memory files stay in the work fold for its Remembered chip.

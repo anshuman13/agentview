@@ -6,7 +6,7 @@ import { readBox, saveBox } from './boxOpen';
 import { insertText, sendNow } from '../chatActions';
 import { imageUrl } from '../chatApi';
 import { userParts } from '../composer/composerLogic';
-import type { Item } from './steps';
+import { sentAt, type Item } from './steps';
 
 const FOLD_LINES = 6;
 
@@ -68,7 +68,7 @@ export function UserRow({ it, label, readOnly }: { it: Extract<Item, { kind: 'us
       <UserText id={it.id} text={it.text} />
       {it.stopping && <span className="tr-stop"><Icon name="loading" small spin />{`Stopping ${label} to send this`}</span>}
       {it.queued && <span className="tr-stop"><Icon name="clock" small />{`Waiting for ${label}'s next step`}<Button variant="plain" size="sm" className="tl-send-now" title={`Stop ${label}'s current step and send this now`} onClick={() => sendNow(it.id)}>Send now</Button></span>}
-      {!it.stopping && !it.queued && !readOnly && <span className="tr-acts"><IconButton icon="reply" label="Use again" onClick={() => insertText(it.text)} /></span>}
+      {!it.stopping && !it.queued && !readOnly && <span className="tr-acts">{it.at > 0 && <span className="tr-sent" title={new Date(it.at).toLocaleString()}>{sentAt(it.at, Date.now())}</span>}<IconButton icon="reply" label="Use again" onClick={() => insertText(it.text)} /></span>}
     </div>
   );
 }

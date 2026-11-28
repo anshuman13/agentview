@@ -1,0 +1,12 @@
+[
+  { "name": "no time", "now": 1795867200000, "at": 0, "expected": "" },
+  { "name": "under a minute", "now": 1795867200000, "at": 1795867170000, "expected": "Just now" },
+  { "name": "future is just now", "now": 1795867200000, "at": 1795867500000, "expected": "Just now" },
+  { "name": "five minutes", "now": 1795867200000, "at": 1795866900000, "expected": "5m" },
+  { "name": "59 minutes", "now": 1795867200000, "at": 1795863660000, "expected": "59m" },
+  { "name": "two hours rounds down", "now": 1795867200000, "at": 1795857600000, "expected": "2h" },
+  { "name": "23 hours", "now": 1795867200000, "at": 1795784400000, "expected": "23h" },
+  { "name": "a day ago shows the date", "now": 1795867200000, "at": 1795780800000, "expected": "27 Nov" },
+  { "name": "earlier this year", "now": 1795867200000, "at": 1789300800000, "expected": "13 Sep" },
+  { "name": "last year adds the year", "now": 1795867200000, "at": 1767182400000, "expected": "31 Dec 2025" }
+]

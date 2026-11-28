@@ -36,7 +36,7 @@ import { attachMark } from '../../shared/attachMark';
 import { chatSessionOf } from '../../shared/chatLink';
 import { latestTodos, todoCount, todoCurrent, todoProgress, type TodoItem } from '../../shared/todos';
 import { mergeTail, trimHeld } from './app/runtime/pageEvents';
-import { alarmCard, buildTranscript, dayDividers, duration, newMarker, newReplies, openAtNew, rewindReplies, planStep, rewindTotal, shipStep, stepLabel, stepTone, turnAnswers, type Item } from './chat/transcript/steps';
+import { alarmCard, buildTranscript, dayDividers, duration, newMarker, newReplies, openAtNew, rewindReplies, planStep, rewindTotal, sentAt, shipStep, stepLabel, stepTone, turnAnswers, type Item } from './chat/transcript/steps';
 import { filePath } from './chat/transcript/md';
 import { buildCard, buildRows, type BuildCardInput } from './chat/transcript/buildCardLogic';
 import { foldTurns, proposalState, rememberedOf, usedClaimState, workTitle } from './chat/transcript/workFold';
@@ -200,6 +200,9 @@ describe('cases shared with the Android app', () => {
     });
   }
 
+  for (const c of cases<{ name: string; now: number; at: number; expected: string }>('sent-at')) {
+    it(`sentAt: ${c.name}`, () => expect(sentAt(c.at, c.now)).toBe(c.expected));
+  }
   for (const c of cases<{ name: string; now: number; rows: { id: string; kind: string; at: number }[]; expected: Record<string, string> }>('day-dividers')) {
     it(`dayDividers: ${c.name}`, () => expect(Object.fromEntries(dayDividers(c.rows.map((r) => ({ ...r, text: '' })) as Item[], c.now))).toEqual(c.expected));
   }
