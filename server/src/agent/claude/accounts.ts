@@ -13,6 +13,8 @@ const DIRS: Partial<Record<Account, string>> = {
 };
 const ORDER: Account[] = ['main', 'alt', 'alt2'];
 const AUTO = ORDER.filter((a) => !ACCOUNT_NOTE[a]);
+// bun test only preloads test-setup.ts from a folder with a bunfig.toml; elsewhere tests would delete live state.
+if (process.env.NODE_ENV === 'test' && !process.env.AGENTVIEW_LIMITS_DIR) throw new Error('Run bun test from the repo root or server/, so test-setup.ts isolates ~/.agentview');
 export const STATE_DIR = process.env.AGENTVIEW_LIMITS_DIR ?? path.join(os.homedir(), '.agentview');
 const LIMITS = path.join(STATE_DIR, 'limits.json');
 const CHATS = path.join(STATE_DIR, 'chat-accounts.json');

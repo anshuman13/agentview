@@ -15,6 +15,7 @@ varies by provider follows the Providers section of the same file.
 - `app/`: the Tauri desktop window app (macOS only). The phone app is `android/`.
 
 ## Checks
+- Run `bun test` only from the repo root or a package folder (`server/`, `web/`, `shared/`, `assistant/`), e.g. `cd server && bun test src/http/routes.test.ts`. Only those folders have the bunfig that points tests at a temp home; from anywhere else tests delete live state in `~/.agentview`.
 - Server, web, shared: `bun run test` from the root (`bun test --parallel`, about 3 s), and `bunx --bun tsc --noEmit -p .` in `server/`, `web/`, `assistant/`. The type checks skip test files.
 - Tests use `bun:test`. Helpers for what its `vi` lacks (`setSystemTime`, `stubGlobal`, `stubEnv`, `waitFor`, `advanceTimersByTimeAsync`) are in `testing.ts`. `vi.mock` is not hoisted: mock first, then `await import` the module under test. A mock must export every name its importers use. Never create `expect(p).rejects` before the code that settles `p`: Bun blocks on it.
 - Hub: `cd assistant && bun test`.
