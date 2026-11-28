@@ -101,6 +101,28 @@ describe('historyEvents', () => {
   });
 });
 
+describe('reasoning', () => {
+  const item = (summary: string[], content: string[] = []) => ({ type: 'reasoning', id: 'r1', summary, content }) as ThreadItem;
+
+  it('pushes one thinking row per reasoning item from the streamed summary', () => {
+    const { events, stream } = run();
+    const before = events.length;
+    stream.handle('item/reasoning/textDelta', { itemId: 'r1', delta: 'raw thoughts' });
+    stream.handle('item/reasoning/summaryTextDelta', { itemId: 'r1', delta: '**Checking ' });
+    stream.handle('item/reasoning/summaryTextDelta', { itemId: 'r1', delta: 'the tests**' });
+    stream.handle('item/completed', { turnId: 't', item: item([]) });
+    stream.handle('item/completed', { turnId: 't', item: { ...item([]), id: 'r2' } });
+    expect(events.slice(before)).toEqual([{ id: 'r1', kind: 'thinking', text: 'Checking the tests', at: expect.any(Number) }]);
+  });
+
+  it('rebuilds thinking rows in history, summary before raw text', () => {
+    const turn = (items: ThreadItem[]) => historyEvents([{ id: 't', items, status: 'inProgress', startedAt: 1, error: null }], 0);
+    expect(turn([item(['Reading the spec'], ['raw'])])).toEqual([{ id: 'r1', kind: 'thinking', text: 'Reading the spec', at: 1000 }]);
+    expect(turn([item([], ['Raw only'])])).toMatchObject([{ text: 'Raw only' }]);
+    expect(turn([item([], [])])).toEqual([]);
+  });
+});
+
 describe('turn/plan/updated', () => {
   it('pushes each plan update as its own TodoWrite step', () => {
     const { events, stream } = run();

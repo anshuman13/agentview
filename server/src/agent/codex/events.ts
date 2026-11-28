@@ -1,5 +1,6 @@
 import type { ChatEvent } from '../../../../shared/protocol.js';
 import { clipResult, toolUseEvent } from '../steps.js';
+import { thinkingEvent } from '../claude/transcript.js';
 import type { FileUpdateChange, ThreadItem, Turn, TurnPlanUpdatedNotification } from './protocol.js';
 
 const DENIED = 'User denied this action in the AgentView UI.';
@@ -73,6 +74,11 @@ export function planEvents(turnId: string, n: number, plan: TurnPlanUpdatedNotif
   return [toolUseEvent(id, 'TodoWrite', { todos }, at), result(id, 'completed', 'Plan updated', at)];
 }
 
+// A reasoning item as one thinking row: the summary, else what streamed, else the raw text. Empty reasoning gives none.
+export function reasoningEvent(item: Extract<ThreadItem, { type: 'reasoning' }>, at: number, streamed = ''): ChatEvent | null {
+  return thinkingEvent(item.id, { thinking: item.summary.join('\n') || streamed || item.content.join('\n') }, at);
+}
+
 const userText = (item: Extract<ThreadItem, { type: 'userMessage' }>) => item.content.map((c) => c.text ?? '').join('\n').trim();
 
 // A thread's turns as a transcript, with the same events a live chat produces.
@@ -86,6 +92,9 @@ export function historyEvents(turns: Turn[], fallbackAt: number): ChatEvent[] {
       else if (item.type === 'agentMessage') {
         last = item.text;
         events.push({ id: item.id, kind: 'assistant', text: item.text, streaming: false, at });
+      } else if (item.type === 'reasoning') {
+        const ev = reasoningEvent(item, at);
+        if (ev) events.push(ev);
       } else events.push(...startedEvents(item, at), ...finishedEvents(item, at));
     }
     if (turn.status !== 'inProgress') events.push({ id: `${turn.id}:result`, kind: 'result', text: last, costUsd: 0, isError: turn.status === 'failed', at });

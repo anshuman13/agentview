@@ -265,11 +265,11 @@ export class CodexDriver implements AgentDriver {
     }
   }
 
-  // An effort the model does not list is left out, so the model keeps its own default.
+  // An effort the model does not list is left out, so the model keeps its own default. Reasoning summaries only stream when asked for.
   private modelParams() {
     const { model, effort } = this.host.state.session;
     const info = this.models.find((m) => m.id === model);
-    return { ...(model && { model }), ...(effort && info?.supportedReasoningEfforts.some((e) => e.reasoningEffort === effort) && { effort }) };
+    return { summary: 'auto', ...(model && { model }), ...(effort && info?.supportedReasoningEfforts.some((e) => e.reasoningEffort === effort) && { effort }) };
   }
 
   dropInput() {

@@ -1,9 +1,9 @@
 import path from 'node:path';
 import type { AgentHost } from '../types.js';
-import { finishedEvents, planEvents, startedEvents } from './events.js';
+import { finishedEvents, planEvents, reasoningEvent, startedEvents } from './events.js';
 import { limitUntil } from './usage.js';
 import { LiveText } from '../liveText.js';
-import type { FileUpdateChange, ThreadItem, TokenUsage, Turn, TurnPlanUpdatedNotification } from './protocol.js';
+import type { FileUpdateChange, ReasoningDeltaNotification, ThreadItem, TokenUsage, Turn, TurnPlanUpdatedNotification } from './protocol.js';
 
 type Sink = Pick<AgentHost, 'cwd' | 'state' | 'limit' | 'pushEvent' | 'emit' | 'system' | 'setSession' | 'turnResult' | 'compacted' | 'noteFile' | 'captureEdit'>;
 
@@ -14,6 +14,9 @@ export class CodexStream {
   private context = 0;
   private compactedTurn: string | null = null;
   private plans = 0;
+  // Reasoning text streamed so far per item, summary and raw kept apart so the summary wins.
+  private summaries = new Map<string, string>();
+  private raw = new Map<string, string>();
   // The files each file change item announced, for its approval card.
   readonly files = new Map<string, FileUpdateChange[]>();
 
@@ -25,6 +28,8 @@ export class CodexStream {
     switch (method) {
       case 'item/started': return this.started(params.item);
       case 'item/agentMessage/delta': return this.text.delta(params.itemId, params.delta);
+      case 'item/reasoning/summaryTextDelta': return this.append(this.summaries, params);
+      case 'item/reasoning/textDelta': return this.append(this.raw, params);
       case 'item/completed': return this.completed(params.item, params.turnId);
       case 'turn/completed': return this.turnDone(params.turn);
       case 'turn/plan/updated': return this.plan(params);
@@ -43,6 +48,8 @@ export class CodexStream {
   end() {
     this.text.end();
     this.files.clear();
+    this.summaries.clear();
+    this.raw.clear();
   }
 
   private started(item: ThreadItem) {
@@ -56,9 +63,21 @@ export class CodexStream {
   private completed(item: ThreadItem, turnId: string) {
     if (item.type === 'agentMessage') return this.message(item.id, item.text);
     if (item.type === 'contextCompaction') return this.compacted(turnId);
+    if (item.type === 'reasoning') return this.reasoning(item);
     for (const ev of finishedEvents(item, Date.now())) this.host.pushEvent(ev);
     if (item.type === 'fileChange') this.files.delete(item.id);
     if (item.type === 'fileChange' && item.status === 'completed') for (const c of item.changes) this.host.noteFile(path.relative(this.host.cwd, this.abs(c.path)), 'tool');
+  }
+
+  private append(buf: Map<string, string>, p: ReasoningDeltaNotification) {
+    buf.set(p.itemId, (buf.get(p.itemId) ?? '') + p.delta);
+  }
+
+  private reasoning(item: Extract<ThreadItem, { type: 'reasoning' }>) {
+    const ev = reasoningEvent(item, Date.now(), this.summaries.get(item.id) || this.raw.get(item.id));
+    this.summaries.delete(item.id);
+    this.raw.delete(item.id);
+    if (ev) this.host.pushEvent(ev);
   }
 
   private plan(p: TurnPlanUpdatedNotification) {
