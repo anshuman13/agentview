@@ -216,7 +216,7 @@ describe('runningStep', () => {
     const bash = tool('Bash', { command: 'npm test' });
     const read = tool('Read', { file_path: '/p/a.ts' });
     expect(runningStep(buildTranscript([user('go'), read, result(read.id), bash]), '/p')).toBe('Running npm test…');
-    expect(runningStep(buildTranscript([user('go'), bash, result(bash.id)]), '/p')).toBe('');
+    expect(runningStep(buildTranscript([user('go'), bash, result(bash.id)]), '/p')).toBe('Ran npm test');
     expect(runningStep(buildTranscript([user('go'), tool('mcp__agentview__set_status', { text: 'x' })]), '/p')).toBe('');
   });
 });

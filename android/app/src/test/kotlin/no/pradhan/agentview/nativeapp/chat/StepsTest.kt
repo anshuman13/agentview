@@ -149,7 +149,7 @@ class StepsTest {
     fun runningStepNamesTheStepWaitingOnAResult() {
         val u = ChatEvent("u", "user", text = "go")
         assertEquals("Running npm test\u2026", runningStep(buildTranscript(listOf(u, use("t1", "Read", obj("file_path" to "/p/a.ts")), res("r1", "t1"), use("t2", "Bash", obj("command" to "npm test")))), "/p"))
-        assertEquals("", runningStep(buildTranscript(listOf(u, use("t1", "Bash", obj("command" to "ls")), res("r1", "t1"))), "/p"))
+        assertEquals("Ran ls", runningStep(buildTranscript(listOf(u, use("t1", "Bash", obj("command" to "ls")), res("r1", "t1"))), "/p"))
         assertEquals("", runningStep(buildTranscript(listOf(u, use("s", "mcp__agentview__set_status"))), "/p"))
     }
 }

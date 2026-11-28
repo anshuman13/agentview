@@ -364,16 +364,18 @@ fun rewindReplies(items: List<Item>): Map<String, Item.User> {
 private val DOING = mapOf("Read" to "Reading", "Edited" to "Editing", "Wrote" to "Writing", "Searched" to "Searching", "Listed" to "Listing", "Ran" to "Running", "Fetched" to "Fetching", "Searched the web for" to "Searching the web for", "Delegated" to "Delegating", "Called" to "Calling", "Used" to "Using", "Looked up" to "Looking up", "Loaded" to "Loading", "Pushed" to "Pushing", "Created" to "Creating")
 
 // The step a running turn is on, named as it happens ("Running npm test…"), or "" when none waits on a result (web steps.ts runningStep).
+// A finished step stays named ("Ran npm test") until the next one starts, so a fast tool does not flash by.
 fun runningStep(items: List<Item>, cwd: String = ""): String {
     for (it in items.asReversed()) {
-        val use = when {
-            it is Item.Step && it.result == null -> it.use
-            it is Item.Agent && it.running -> it.use
-            it is Item.File && it.pending -> it.uses.last()
-            else -> null
+        val (use, running) = when (it) {
+            is Item.Step -> it.use to (it.result == null)
+            is Item.Agent -> it.use to it.running
+            is Item.File -> it.uses.last() to it.pending
+            else -> null to false
         }
         if (use == null || use.name.endsWith("__set_status")) continue
         val l = stepLabel(use.name, use.input, cwd)
+        if (!running) return listOf(l.verb, l.obj).filter { it.isNotEmpty() }.joinToString(" ")
         return listOf(DOING[l.verb] ?: l.verb, l.obj).filter { it.isNotEmpty() }.joinToString(" ") + "\u2026"
     }
     return ""

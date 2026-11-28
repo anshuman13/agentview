@@ -330,12 +330,16 @@ export function rewindReplies(items: Item[]) {
 const DOING: Record<string, string> = { Read: 'Reading', Edited: 'Editing', Wrote: 'Writing', Searched: 'Searching', Listed: 'Listing', Ran: 'Running', Fetched: 'Fetching', 'Searched the web for': 'Searching the web for', Delegated: 'Delegating', Called: 'Calling', Used: 'Using', 'Looked up': 'Looking up', Loaded: 'Loading', Pushed: 'Pushing', Created: 'Creating' };
 
 // The step a running turn is on, named as it happens ("Running npm test…"), or '' when none waits on a result. Android Steps.kt runningStep says the same.
+// A finished step stays named ("Ran npm test") until the next one starts, so a fast tool does not flash by.
 export function runningStep(items: Item[], cwd = '') {
   for (let i = items.length - 1; i >= 0; i--) {
     const it = items[i];
-    const use = it.kind === 'step' && !it.result ? it.use : it.kind === 'agent' && it.running ? it.use : it.kind === 'file' && it.pending ? it.uses[it.uses.length - 1] : null;
+    const use = it.kind === 'step' || it.kind === 'agent' ? it.use : it.kind === 'file' ? it.uses[it.uses.length - 1] : null;
     if (!use || use.name.endsWith('__set_status')) continue;
-    return doingLabel(use, cwd);
+    const running = it.kind === 'step' ? !it.result : it.kind === 'agent' ? it.running : it.kind === 'file' && it.pending;
+    if (running) return doingLabel(use, cwd);
+    const l = stepLabel(use.name, use.input, cwd);
+    return [l.verb, l.object].filter(Boolean).join(' ');
   }
   return '';
 }
