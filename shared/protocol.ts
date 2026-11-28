@@ -354,6 +354,7 @@ export type SavedSession = {
   cwd: string;
   gitBranch: string | null;
   lastModified: number;
+  createdAt?: number;
   firstPrompt?: string;
   summary?: string;
   provider?: Provider;

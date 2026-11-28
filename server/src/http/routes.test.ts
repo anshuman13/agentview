@@ -36,7 +36,7 @@ vi.mock('../session/nested.js', () => ({ listNests: async () => ({}), setNest: a
 vi.mock('../session/sections.js', () => ({ listSections: async () => ({}), setSection: async () => ({}) }));
 vi.mock('../agent/claude/savedChat.js', () => ({ savedEvents: mocks.savedEvents, firstCommit: mocks.firstCommit }));
 vi.mock('../agent/claude/search.js', () => ({ searchMessages: mocks.searchMessages }));
-vi.mock('../agent/allChats.js', () => ({ searchAll: (words: string[]) => mocks.searchMessages(words), listAll: async () => (await mocks.listSessions()).map((s: { summary: string }) => ({ ...s, title: s.summary })), otherChats: async () => [] }));
+vi.mock('../agent/allChats.js', () => ({ searchAll: (words: string[]) => mocks.searchMessages(words), listAll: async () => (await mocks.listSessions()).map((s: { summary: string }) => ({ title: s.summary, ...s })), otherChats: async () => [] }));
 vi.mock('../workspace/terminal.js', () => ({ listTerminals: mocks.listTerminals, createTerminal: vi.fn(), closeTerminal: vi.fn() }));
 
 import type { RouteDeps } from './routes.js';
@@ -97,11 +97,10 @@ describe('routes', () => {
     mocks.listLinks.mockResolvedValue({ kid: { parent: 'root', via: 'build', at: 5 } });
     mocks.listSpawned.mockResolvedValue({ kid: { parent: 'other', kind: 'build', at: 6 } });
     expect((await call('GET', '/api/sessions')).json).toEqual([
-      { sessionId: 'kid', lastModified: 2, summary: 'Kid', cwd: '/r', parentId: 'root', via: 'build', startedAt: 5, spawnedBy: 'other' },
-      { sessionId: 'root', lastModified: 1, summary: 'Root', cwd: '/r' },
+      { sessionId: 'kid', title: 'Kid', lastModified: 2, summary: 'Kid', cwd: '/r', parentId: 'root', via: 'build', startedAt: 5, spawnedBy: 'other' },
+      { sessionId: 'root', title: 'Root', lastModified: 1, summary: 'Root', cwd: '/r' },
     ]);
     mocks.listSpawned.mockResolvedValue({});
-    expect(mocks.listSessions).toHaveBeenCalledWith({ limit: 1000 });
     mocks.searchMessages.mockResolvedValue([{ sessionId: 'kid', role: 'user', text: 'x', at: '' }, { sessionId: 'root', role: 'user', text: 'y', at: '' }]);
     expect((await call('GET', '/api/sessions/search?q=x')).json).toEqual([
       { sessionId: 'kid', role: 'user', text: 'x', at: '', title: 'Kid', cwd: '/r', parentId: 'root' },

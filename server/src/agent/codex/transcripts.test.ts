@@ -33,8 +33,8 @@ describe('codex transcripts', () => {
       { sessionId: 'gone', title: 'Old', cwd: '/tmp', gitBranch: null, lastModified: 2, provider: 'codex' },
     ];
     expect(mergeThreads(threads, saved)).toEqual([
-      { sessionId: 'thread1', title: 'Greeting', cwd: '/tmp/proj', gitBranch: 'main', lastModified: 1794249460000, provider: 'codex' },
-      { sessionId: 'thread2', title: 'Build fix', cwd: '/tmp/other', gitBranch: null, lastModified: 1794240100000, provider: 'codex' },
+      { sessionId: 'thread1', title: 'Greeting', cwd: '/tmp/proj', gitBranch: 'main', lastModified: 1794249460000, createdAt: 1794249400000, provider: 'codex' },
+      { sessionId: 'thread2', title: 'Build fix', cwd: '/tmp/other', gitBranch: null, lastModified: 1794240100000, createdAt: 1794240000000, provider: 'codex' },
       saved[1],
     ]);
     expect(mergeThreads([{ ...threads[0], name: null }], [])[0].title).toBe('add a greeting');

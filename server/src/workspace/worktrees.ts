@@ -1,7 +1,7 @@
 import { existsSync } from 'node:fs';
 import { mkdir, readFile, readdir, stat } from 'node:fs/promises';
 import path from 'node:path';
-import { listSessions } from '../agent/claude/sessions.js';
+import { listAll } from '../agent/allChats.js';
 import { STALE_MS, type Repo, type RepoKind, type Worktree } from '../../../shared/protocol.js';
 import { inside } from '../../../shared/util.js';
 import { ROOTS } from './files.js';
@@ -126,7 +126,7 @@ async function triesSpaces(): Promise<Space[]> {
 export async function listWorktrees(openCwds: string[]): Promise<Worktree[]> {
   const spaces = [...(await paseoSpaces()), ...(await triesSpaces())];
   if (!spaces.length) return [];
-  const chats = await listSessions({ limit: 1000 });
+  const chats = await listAll();
   return Promise.all(
     spaces.map(async (w) => {
       const lastCommit = Number(await git(w.cwd, 'log', '-1', '--format=%ct').catch(() => '0')) * 1000;

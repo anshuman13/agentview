@@ -5,7 +5,7 @@ import { linkOlder, SUB_GAP_MS, type ScanRun, type ScanSession, type SubLinks } 
 import { readJson } from '../../json.js';
 import { linkSubChats, listLinks } from '../../session/subChats.js';
 import { projectDir } from './history.js';
-import { listSessions } from './sessions.js';
+import { provider } from '../registry.js';
 
 export type Head = { account: string; startAt?: number; clearAt?: number; branch?: string; done: boolean };
 
@@ -32,7 +32,7 @@ export function headInfo(head: string): Head {
   return { account, startAt, done: false };
 }
 
-type Listed = { sessionId: string; cwd?: string; gitBranch?: string; lastModified: number };
+type Listed = { sessionId: string; cwd?: string; gitBranch?: string | null; lastModified: number };
 
 // The scan input from the listing; a /clear session takes the branch it was on when the /clear ran.
 export function scanInput(list: Listed[], heads: Map<string, Head>): ScanSession[] {
@@ -112,15 +112,17 @@ export async function scanPass(list: Listed[]) {
 
 // Once after start, then whenever the session listing changes.
 export function startSubChatScan() {
-  let last: unknown;
+  let last = '';
   let running = false;
   const pass = async () => {
     if (running) return;
     running = true;
     try {
-      const list = await listSessions({ limit: 1000 });
-      if (list === last) return;
-      last = list;
+      // Only Claude chats start sub-chats with /clear.
+      const list = await provider('claude').transcripts.list();
+      const key = list.map((x) => `${x.sessionId}:${x.lastModified}`).join();
+      if (key === last) return;
+      last = key;
       await scanPass(list);
     } catch (e) {
       console.error('sub-chat scan failed:', e);

@@ -93,7 +93,7 @@ const ownTail = (all: SDKSessionInfo[]) => Promise.all(all.filter((x) => x.cwd).
 
 export function savedSession(x: SDKSessionInfo, summary?: string): SavedSession {
   const firstPrompt = x.firstPrompt?.replace(/\s+/g, ' ').trim().slice(0, 300);
-  return { sessionId: x.sessionId, title: x.customTitle ? x.summary : chatTitle(x.summary.startsWith('@') && x.firstPrompt ? x.firstPrompt : x.summary), cwd: x.cwd ?? '', gitBranch: x.gitBranch ?? null, lastModified: x.lastModified, provider: providerOf(x.sessionId), ...(firstPrompt && { firstPrompt }), ...(summary && { summary }) };
+  return { sessionId: x.sessionId, title: x.customTitle ? x.summary : chatTitle(x.summary.startsWith('@') && x.firstPrompt ? x.firstPrompt : x.summary), cwd: x.cwd ?? '', gitBranch: x.gitBranch ?? null, lastModified: x.lastModified, ...(x.createdAt && { createdAt: x.createdAt }), provider: providerOf(x.sessionId), ...(firstPrompt && { firstPrompt }), ...(summary && { summary }) };
 }
 
 export const renameRoute = async (id: string | null, title: unknown): Promise<{ status: number; body: unknown }> => {

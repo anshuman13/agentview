@@ -23,7 +23,7 @@ export function mergeThreads(threads: Thread[], saved: SavedSession[]): SavedSes
   const listed = threads.map((t): SavedSession => {
     const own = ours.get(t.id);
     ours.delete(t.id);
-    return { sessionId: t.id, title: own?.title || t.name || t.preview, cwd: t.cwd, gitBranch: t.gitInfo?.branch ?? null, lastModified: t.updatedAt * 1000, provider: 'codex' };
+    return { sessionId: t.id, title: own?.title || t.name || t.preview, cwd: t.cwd, gitBranch: t.gitInfo?.branch ?? null, lastModified: t.updatedAt * 1000, ...(t.createdAt && { createdAt: t.createdAt * 1000 }), provider: 'codex' };
   });
   return [...listed, ...ours.values()];
 }

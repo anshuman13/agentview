@@ -2,9 +2,8 @@ import { readFile } from 'node:fs/promises';
 import { mcpIconRoute } from '../integrations/mcpIcons.js';
 import path from 'node:path';
 import { openInChrome } from '../chrome/chrome.js';
-import { listSessions, renameRoute, savedSession } from '../agent/claude/sessions.js';
+import { renameRoute } from '../agent/claude/sessions.js';
 import { loggedInAccounts } from '../agent/claude/accounts.js';
-import { codexSessions } from '../agent/codex/threads.js';
 import { isProvider, provider, providerOf, providerOptions } from '../agent/registry.js';
 import { cancelFocus, scheduleFocus } from '../integrations/focus.js';
 import { connectorStatus, mcpGroups, setMcpGroup } from '../agent/claude/mcp.js';
@@ -82,25 +81,25 @@ export function sessionRoutes(d: RouteDeps): Record<string, Entry<Ctx>> {
       return { ok: true };
     }),
     'ANY /api/sessions': entry(async () => {
-      const [list, codex, bin, summaries, links, spawned, nests, sections] = await Promise.all([listSessions({ limit: 1000 }), codexSessions(), listBin(), readSummaries(), listLinks(), listSpawned(), listNests(), listSections()]);
+      const [list, bin, summaries, links, spawned, nests, sections] = await Promise.all([listAll(), listBin(), readSummaries(), listLinks(), listSpawned(), listNests(), listSections()]);
       const binned = new Set(bin.map((b) => b.sessionId));
       const linked = (s: SavedSession): SavedSession => {
         const l = links[s.sessionId];
         const by = spawned[s.sessionId]?.parent;
         return { ...s, ...(l && { parentId: l.parent, via: l.via, startedAt: l.at }), ...(by && { spawnedBy: by }), ...(nests[s.sessionId] && { nestedIn: nests[s.sessionId] }), ...(sections[s.sessionId] && { section: sections[s.sessionId] }) };
       };
-      return [...list.filter((x) => !binned.has(x.sessionId)).map((x) => linked(savedSession(x, summaries[x.sessionId]?.text))), ...codex].sort((a, b) => b.lastModified - a.lastModified);
+      const summed = (s: SavedSession): SavedSession => { const text = summaries[s.sessionId]?.text; return text ? { ...s, summary: text } : s; };
+      return list.filter((x) => !binned.has(x.sessionId)).map((x) => linked(summed(x))).sort((a, b) => b.lastModified - a.lastModified);
     }),
     // The earlier sessions of a chat, oldest first: each one's first prompt, the build round it ran and the first commit it made.
     'ANY /api/chat/subchats': entry(async ({ url }) => {
       const ids = await groupOf(url.searchParams.get('session') ?? '');
-      const [list, links] = await Promise.all([listSessions({ limit: 1000 }), listLinks()]);
+      const [list, links] = await Promise.all([listAll(), listLinks()]);
       const byId = new Map(list.map((x) => [x.sessionId, x]));
       const members = ids.map((id) => ({ sessionId: id, startedAt: links[id]?.at ?? byId.get(id)?.createdAt ?? 0 }));
       const rounds = d.runs().filter((r) => ids.includes(r.sessionId)).flatMap((r) => r.rounds).sort((a, b) => a.at - b.at);
       return Promise.all(members.slice(0, -1).map(async ({ sessionId, startedAt }) => {
-        const s = byId.get(sessionId);
-        const saved = s && savedSession(s);
+        const saved = byId.get(sessionId);
         const round = roundOf(sessionId, members, rounds);
         const commit = await provider(providerOf(sessionId)).transcripts.firstCommit(sessionId);
         return { sessionId, title: saved?.firstPrompt ?? saved?.title ?? '', startedAt, ...(round && { round }), ...(commit && { commit }) };
@@ -109,7 +108,7 @@ export function sessionRoutes(d: RouteDeps): Record<string, Entry<Ctx>> {
     // The builds a chat started, for the build card: each with its run state, ticked tasks of its spec and last round.
     'ANY /api/chat/spawned': entry(async ({ url }) => {
       const ids = await groupOf(url.searchParams.get('session') ?? '');
-      const [spawned, list] = await Promise.all([listSpawned(), listSessions({ limit: 1000 })]);
+      const [spawned, list] = await Promise.all([listSpawned(), listAll()]);
       const byId = new Map(list.map((x) => [x.sessionId, x]));
       const children = Object.entries(spawned).filter(([, l]) => ids.includes(l.parent)).sort(([, a], [, b]) => a.at - b.at).map(([child]) => child);
       return Promise.all(children.map(async (sessionId): Promise<SpawnedBuild> => {
@@ -119,7 +118,7 @@ export function sessionRoutes(d: RouteDeps): Record<string, Entry<Ctx>> {
         const s = byId.get(sessionId);
         const chatId = run && d.chats().has(run.chatId) ? run.chatId : undefined;
         const round = run?.rounds.at(-1)?.line;
-        return { ...(chatId && { chatId }), sessionId, title: (s && savedSession(s).title) || run?.title || '', state: buildCardState(run), done: tasks.filter((t) => t.done).length, total: tasks.length, ...(round && { round }) };
+        return { ...(chatId && { chatId }), sessionId, title: s?.title || run?.title || '', state: buildCardState(run), done: tasks.filter((t) => t.done).length, total: tasks.length, ...(round && { round }) };
       }));
     }),
     // A saved sub-chat's events, read-only and paged like /api/chat/events, without starting the agent.

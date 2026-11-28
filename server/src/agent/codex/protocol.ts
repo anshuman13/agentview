@@ -34,7 +34,7 @@ export type TurnSteerResponse = { turnId: string };
 
 export type TurnStatus = 'completed' | 'interrupted' | 'failed' | 'inProgress';
 export type Turn = { id: string; items: ThreadItem[]; status: TurnStatus; startedAt: number | null; error: { message: string } | null };
-export type Thread = { id: string; cwd: string; path: string | null; preview: string; name: string | null; updatedAt: number; turns: Turn[]; gitInfo?: { branch: string | null } | null };
+export type Thread = { id: string; cwd: string; path: string | null; preview: string; name: string | null; createdAt?: number; updatedAt: number; turns: Turn[]; gitInfo?: { branch: string | null } | null };
 export type ThreadListResponse = { data: Thread[]; nextCursor: string | null };
 
 export type RateLimitWindow = { usedPercent: number; windowDurationMins: number | null; resetsAt: number | null };
