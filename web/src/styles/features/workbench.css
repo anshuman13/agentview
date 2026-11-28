@@ -8,14 +8,14 @@
   width: var(--activitybar-w); background: var(--surface); border-right: 1px solid var(--border);
   display: flex; flex-direction: column; align-items: center; padding: var(--sp-2) 0;
 }
-.activitybar button {
+.activitybar > button {
   width: 40px; height: 40px; margin: 2px 0; background: transparent; color: var(--fg); padding: 0; border: 0; border-radius: 12px;
   display: flex; align-items: center; justify-content: center; position: relative;
 }
-.activitybar button.active { background: var(--raised); color: var(--fg-strong); }
-@media (hover: hover) { .activitybar button:hover { background: var(--raised); color: var(--fg-strong); } }
-.activitybar .codicon.icon { font-size: var(--icon-lg); }
-.activitybar .badge { position: absolute; right: var(--sp-4); bottom: var(--sp-4); }
+.activitybar > button.active { background: var(--raised); color: var(--fg-strong); }
+@media (hover: hover) { .activitybar > button:hover { background: var(--raised); color: var(--fg-strong); } }
+.activitybar > button .codicon.icon { font-size: var(--icon-lg); }
+.activitybar > button .badge { position: absolute; right: var(--sp-4); bottom: var(--sp-4); }
 .activitybar .divider { width: var(--sp-12); height: 1px; margin: var(--sp-2) auto; background: var(--border-strong); flex: none; }
 
 .sidebar { width: var(--sidebar-w); flex: none; background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; min-height: 0; }
