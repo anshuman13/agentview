@@ -1,3 +1,4 @@
+import os from 'node:os';
 import { eachLine } from '../../exec.js';
 import { errText } from '../../../../shared/util.js';
 import { codexBin } from './binary.js';
@@ -99,4 +100,32 @@ export class CodexRpc {
     } else if (msg.method) this.handlers.notification(msg.method, msg.params);
     else if (msg.id !== undefined) this.calls.settle(msg.id, msg.error && new Error(msg.error.message ?? 'codex request failed'), msg.result);
   }
+}
+
+const ADMIN_IDLE_MS = 5 * 60_000;
+let admin: { rpc: Promise<CodexRpc>; timer?: ReturnType<typeof setTimeout> } | null = null;
+
+// One shared process for reads and config writes made outside a chat, started on first use and stopped after
+// idleMs without a call. It never borrows a chat's process.
+export function codexAdmin(idleMs = ADMIN_IDLE_MS): Promise<CodexRpc> {
+  if (!admin) {
+    const rpc = CodexRpc.open(os.homedir(), { notification: () => undefined, request: () => Promise.reject(new Error('unsupported')), exit: () => dropAdmin(cur) });
+    const cur = { rpc };
+    rpc.catch(() => dropAdmin(cur));
+    admin = cur;
+  }
+  const cur = admin;
+  clearTimeout(cur.timer);
+  cur.timer = setTimeout(() => {
+    dropAdmin(cur);
+    void cur.rpc.then((rpc) => rpc.close(), () => undefined);
+  }, idleMs);
+  cur.timer.unref?.();
+  return cur.rpc;
+}
+
+function dropAdmin(cur: NonNullable<typeof admin>) {
+  if (admin !== cur) return;
+  clearTimeout(cur.timer);
+  admin = null;
 }
